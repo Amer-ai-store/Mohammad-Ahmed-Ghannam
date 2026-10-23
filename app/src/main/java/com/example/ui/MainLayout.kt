@@ -6556,6 +6556,30 @@ fun AdminScreen(viewModel: MarketViewModel) {
     var disputeMerchMsg by remember { mutableStateOf("We securely wrapped it. Transport issue.") }
     var disputeReason by remember { mutableStateOf("Damaged delivery items") }
 
+    // Export for the web dashboard (dashboard/index.html → "استيراد بيانات التطبيق")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val exportScope = rememberCoroutineScope()
+    var exportStatus by remember { mutableStateOf("") }
+    val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            exportScope.launch {
+                exportStatus = try {
+                    val json = viewModel.buildDashboardExport()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                            ?: throw java.io.IOException("No output stream for $uri")
+                    }
+                    if (lang == "ar") "✅ تم حفظ الملف. افتح لوحة الويب واضغط «استيراد بيانات التطبيق»." else "✅ Saved. Open the web dashboard and tap \"Import app data\"."
+                } catch (e: Exception) {
+                    android.util.Log.e("AdminScreen", "Dashboard export failed", e)
+                    if (lang == "ar") "تعذّر حفظ الملف، حاول مجدداً." else "Could not save the file. Try again."
+                }
+            }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -6597,6 +6621,25 @@ fun AdminScreen(viewModel: MarketViewModel) {
                         ) {
                             Text(txt("recalc_opt"), fontSize = 10.sp, color = SecondaryMint)
                         }
+                    }
+
+                    Button(
+                        onClick = { exportLauncher.launch("amer-store-export.json") },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryCyan),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("admin_export_dashboard_btn")
+                    ) {
+                        Text(
+                            if (lang == "ar") "تصدير البيانات للوحة الويب 🌐" else "Export data for web dashboard 🌐",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
+                    if (exportStatus.isNotEmpty()) {
+                        Text(exportStatus, fontSize = 10.sp, color = SecondaryMint)
                     }
                 }
             }
