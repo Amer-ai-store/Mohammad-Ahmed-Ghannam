@@ -306,7 +306,7 @@ object ModelService {
                    - Wholesale price: $12.00 / carton
                    - Retail price: $15.50 / jar
                 2. Sahlool Supermarket - distance: 2.8 km (Registered: No, Social Scraping Page found on Instagram)
-                   - Retail price: ${"$"}$16.00 / jar
+                   - Retail price: $16.00 / jar
                 
                 💡 Recommendation: Purchasing from Al-Baraka is recommended due to certified active stock listing and 10% lower price.
                 """.trimIndent()

@@ -2,13 +2,17 @@ package com.example.ui
 
 import android.app.Application
 import android.util.Log
+import com.example.BuildConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import com.example.data.*
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
+private const val ADMIN_EMAIL = "zxzx.Mohammad91@gmail.com"
 
 class MarketViewModel(
     private val userDao: UserDao,
@@ -244,7 +248,7 @@ class MarketViewModel(
     )
     val deliveryLocations = _deliveryLocations.asStateFlow()
 
-    private val _userPassword = MutableStateFlow("MoAn320222m@")
+    private val _userPassword = MutableStateFlow("")
     val userPassword = _userPassword.asStateFlow()
 
     // AI Features Toggles
@@ -589,7 +593,9 @@ class MarketViewModel(
         // Pre-populate some cool premium products to ensure a beautiful out-of-the-box experience
         viewModelScope.launch {
             _isProductsLoading.value = true
-            products.collect { currentList ->
+            // Read the table once: collecting the `products` StateFlow would see its initial
+            // emptyList() before Room loads and re-seed duplicates on every launch.
+            productDao.getAllProducts().first().let { currentList ->
                 if (currentList.isEmpty()) {
                     val defaultProducts = listOf(
                         ProductEntity(
@@ -794,14 +800,21 @@ class MarketViewModel(
     }
 
     fun login(emailOrPhone: String, password: String): Boolean {
-        if ((emailOrPhone.trim().equals("zxzx.Mohammad91@gmail.com", ignoreCase = true) || emailOrPhone.trim().lowercase() == "admin") && password == "MoAn320222m@") {
+        val isAdminIdentity = emailOrPhone.trim().equals(ADMIN_EMAIL, ignoreCase = true) || emailOrPhone.trim().lowercase() == "admin"
+        val adminPassword = BuildConfig.ADMIN_PASSWORD
+        val adminLoginEnabled = adminPassword.isNotEmpty() && adminPassword != "MY_ADMIN_PASSWORD"
+        if (isAdminIdentity && !(adminLoginEnabled && password == adminPassword)) {
+            // Never fall through to the generic lookup below, which would log in as the Admin row without a password.
+            return false
+        }
+        if (isAdminIdentity) {
             viewModelScope.launch {
-                var adminUser = userDao.getUserByEmailOrPhone("zxzx.Mohammad91@gmail.com", "")
+                var adminUser = userDao.getUserByEmail(ADMIN_EMAIL)
                 if (adminUser == null) {
                     val newAdmin = UserEntity(
                         name = "admin",
                         phoneNumber = "0590000000",
-                        email = "zxzx.Mohammad91@gmail.com",
+                        email = ADMIN_EMAIL,
                         role = "Admin",
                         permissionGranted = true
                     )
@@ -849,7 +862,7 @@ class MarketViewModel(
 
     fun loginWithGoogleSimulated(name: String, email: String, role: String) {
         viewModelScope.launch {
-            var existing = userDao.getUserByEmailOrPhone(email.trim(), "")
+            var existing = userDao.getUserByEmail(email.trim())
             if (existing == null) {
                 val newUser = UserEntity(
                     name = name,
@@ -872,6 +885,8 @@ class MarketViewModel(
         _currentUser.value = null
         _currentRole.value = "Customer"
         _verificationStep.value = 0
+        savedProductsJob?.cancel()
+        savedProductsJob = null
         _savedProducts.value = emptyList()
         clearAiResponse()
     }
@@ -1054,8 +1069,11 @@ class MarketViewModel(
         return false
     }
 
+    private var savedProductsJob: Job? = null
+
     private fun updateSavedProducts(userId: Int) {
-        viewModelScope.launch {
+        savedProductsJob?.cancel()
+        savedProductsJob = viewModelScope.launch {
             savedProductDao.getSavedProductsForUser(userId).collect {
                 _savedProducts.value = it
             }
@@ -1072,7 +1090,6 @@ class MarketViewModel(
             } else {
                 savedProductDao.insertSavedProduct(SavedProductEntity(userId = user.id, productId = productId))
             }
-            updateSavedProducts(user.id)
         }
     }
 
@@ -1524,8 +1541,9 @@ class MarketViewModel(
             if (newQty <= 0) {
                 cartItemDao.deleteCartItemById(item.id)
             } else {
-                item.quantity = newQty
-                cartItemDao.updateCartItem(item)
+                // Copy instead of mutating: the item belongs to the current cartItems list, and mutating it
+                // makes Room's next emission compare equal so the UI never shows the new quantity.
+                cartItemDao.updateCartItem(item.copy(quantity = newQty))
             }
         }
     }

@@ -589,7 +589,6 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                     .fillMaxWidth()
                                     .clickable {
                                         loginEmailOrPhone = "zxzx.mohammad91@gmail.com"
-                                        loginPassword = "MoAn2026"
                                     }
                                     .border(1.dp, WarmAmbar.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
                                 colors = CardDefaults.cardColors(containerColor = SlateDarkBg.copy(alpha = 0.5f))
@@ -611,7 +610,7 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "Email: zxzx.mohammad91@gmail.com\nPassword: MoAn2026\nUsername/Admin: admin",
+                                        text = "Email: zxzx.mohammad91@gmail.com\nUsername/Admin: admin",
                                         fontSize = 8.sp,
                                         color = SoftGrayText,
                                         lineHeight = 11.sp
