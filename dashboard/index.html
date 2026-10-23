@@ -302,6 +302,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
           <div class="toolbar"><span id="store-source" class="pill warn">بيانات تجريبية</span>
             <label class="btn" for="import-file">استيراد بيانات التطبيق</label><input id="import-file" class="sr" type="file" accept="application/json,.json">
             <button id="clear-store" type="button" hidden>العودة للبيانات التجريبية</button></div></div>
+        <div class="panel" id="live-box" aria-live="polite"><h3>المتجر الحي (Firebase)</h3><p class="small muted">جارٍ الفحص...</p></div>
         <div id="store-notice" class="banner"><strong>بيانات تجريبية:</strong> المنتجات هي منتجات التطبيق الافتراضية، والمستخدمون والطلبات والنزاعات أمثلة. لعرض بياناتك صدّرها من شاشة الأدمن في التطبيق (زر «تصدير البيانات للوحة الويب») ثم اضغط «استيراد بيانات التطبيق». تبقى البيانات المستوردة في متصفحك فقط.</div>
         <div class="kpis" id="s-kpis"></div>
         <div class="grid2">
@@ -379,6 +380,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 </form></dialog>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script src="firebase-config.js"></script>
 <script>
 (() => {
   "use strict";
@@ -925,9 +927,9 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   }
   function renderStore() {
     const d = storeData;
-    $("store-notice").hidden = !d.sample; $("clear-store").hidden = !!d.sample;
-    $("store-source").className = "pill " + (d.sample ? "warn" : "ok"); $("store-source").textContent = d.sample ? "بيانات تجريبية" : "بيانات التطبيق";
-    $("store-exported").textContent = d.sample ? "بيانات تطبيق Android: الطلبات والمخزون والنزاعات والمستخدمون." : "آخر تصدير من التطبيق: " + fmtDate(d.exportedAt);
+    $("store-notice").hidden = !d.sample; $("clear-store").hidden = !!d.sample || !!d.live;
+    $("store-source").className = "pill " + (d.sample ? "warn" : "ok"); $("store-source").textContent = d.live ? "مباشر من Firebase" : d.sample ? "بيانات تجريبية" : "بيانات التطبيق";
+    $("store-exported").textContent = d.live ? "يتحدث مباشرة من Firestore مع كل تغيير في التطبيق." : d.sample ? "بيانات تطبيق Android: الطلبات والمخزون والنزاعات والمستخدمون." : "آخر تصدير من التطبيق: " + fmtDate(d.exportedAt);
     const active = d.orders.filter(o => o.status !== "Delivered").length;
     const low = d.products.filter(p => p.stockQuantity < LOW_STOCK).length;
     const open = d.chatReports.filter(r => !r.resolvedTip.trim()).length;
@@ -970,6 +972,70 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     } catch (err) { toast(err && err.message === "size" ? "الملف أكبر من 20 ميغابايت." : "الملف ليس تصديراً من التطبيق. استخدم زر «تصدير البيانات للوحة الويب» في شاشة الأدمن."); }
   });
   $("clear-store").addEventListener("click", () => { try { localStorage.removeItem(STORE_KEY); } catch {} storeData = SAMPLE; renderAll(); });
+
+  // ---------- live store (Firestore, mirrored by the app's FirestoreSync) ----------
+  // Runs only where the page can reach Firebase: the GitHub Pages copy, not the Claude artifact.
+  const FIREBASE_VERSION = "10.14.1";
+  const PAGES_URL = "https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/#store";
+  const LIVE_COLLECTIONS = { users: "users", products: "products", orders: "orders", chat_reports: "chatReports" };
+  let liveUnsubs = [];
+  const liveRows = {};
+  function savedStore() { try { const s = localStorage.getItem(STORE_KEY); if (s) return normalize(JSON.parse(s)); } catch {} return SAMPLE; }
+  function liveBox(...kids) { $("live-box").replaceChildren(el("h3", null, "المتجر الحي (Firebase)"), ...kids); }
+  function stopLive() {
+    for (const u of liveUnsubs) u(); liveUnsubs = [];
+    for (const k of Object.keys(liveRows)) delete liveRows[k];
+    if (storeData.live) { storeData = savedStore(); renderAll(); }
+  }
+  function loadScript(src) {
+    return new Promise((resolve, reject) => { const s = document.createElement("script"); s.src = src; s.onload = resolve; s.onerror = () => reject(new Error(src)); document.head.append(s); });
+  }
+  async function initLive() {
+    const cfg = window.AMER_FIREBASE_CONFIG;
+    if (typeof window.claude?.use === "function") {
+      liveBox(el("p", { class: "small muted" }, "صفحة Claude لا تتصل بالإنترنت، فالمتجر الحي يعمل على نسخة GitHub Pages من هذه اللوحة."), el("div", null, el("a", { class: "btn primary", href: PAGES_URL, target: "_blank", rel: "noopener" }, "فتح المتجر الحي")));
+      return;
+    }
+    if (!cfg || typeof cfg !== "object" || !cfg.apiKey || !cfg.projectId) {
+      liveBox(el("p", { class: "small muted" }, "لم تُضبط إعدادات Firebase بعد. اتبع الدليل docs/firebase-setup.md ثم ضع إعدادات تطبيق الويب في dashboard/firebase-config.js."));
+      return;
+    }
+    try { for (const m of ["app", "auth", "firestore"]) await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-${m}-compat.js`); }
+    catch { liveBox(el("p", { class: "small", style: "color:var(--coral)" }, "تعذّر تحميل مكتبة Firebase. تحقق من الاتصال ثم أعد تحميل الصفحة.")); return; }
+    const fb = window.firebase;
+    const app = fb.apps.length ? fb.app() : fb.initializeApp(cfg);
+    const auth = app.auth(), firestore = app.firestore();
+    const signIn = async () => {
+      const provider = new fb.auth.GoogleAuthProvider();
+      try { await auth.signInWithPopup(provider); }
+      catch (e) {
+        if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) await auth.signInWithRedirect(provider);
+        else if (e && e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast("تعذّر تسجيل الدخول: " + S(e.code || e.message, 120));
+      }
+    };
+    auth.onAuthStateChanged((user) => {
+      stopLive();
+      if (!user || user.isAnonymous) {
+        liveBox(el("p", { class: "small muted" }, "سجّل الدخول بحساب Google الخاص بمالك المتجر لعرض البيانات الحية."), el("div", null, el("button", { type: "button", class: "primary", onclick: signIn }, "تسجيل الدخول بـ Google")));
+        return;
+      }
+      const status = el("span", { class: "pill warn" }, "جارٍ التحميل...");
+      liveBox(el("div", { class: "toolbar" }, status, el("span", { class: "small ltr" }, S(user.email, 200)), el("button", { type: "button", class: "tiny", onclick: () => auth.signOut() }, "تسجيل الخروج")));
+      for (const [coll, key] of Object.entries(LIVE_COLLECTIONS)) {
+        liveUnsubs.push(firestore.collection(coll).onSnapshot((snap) => {
+          liveRows[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          if (Object.keys(LIVE_COLLECTIONS).every(c => liveRows[LIVE_COLLECTIONS[c]])) {
+            storeData = { ...normalize({ format: FORMAT, version: 1, exportedAt: Date.now(), ...liveRows }), live: true };
+            status.className = "pill ok"; status.textContent = "مباشر";
+            renderAll();
+          }
+        }, (err) => {
+          status.className = "pill bad";
+          status.textContent = err && err.code === "permission-denied" ? "هذا الحساب لا يملك صلاحية قراءة المتجر" : "انقطع الاتصال بـ Firestore";
+        }));
+      }
+    });
+  }
 
   // ---------- AI (sample capability) ----------
   let sample = null;
@@ -1100,6 +1166,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   show(location.hash.slice(1));
   renderAll(); renderChat();
   initStore();
+  initLive();
   if (typeof window.claude?.use !== "function") aiOff();
   else window.claude.use("sample").then(s => { if (s) { sample = s; aiOn(); } else aiOff(); }, aiOff);
 })();
