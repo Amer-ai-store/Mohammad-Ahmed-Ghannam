@@ -10,7 +10,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.room.Room
 import com.example.data.AppDatabase
 import com.example.ui.AuthScreen
 import com.example.ui.MainLayout
@@ -23,7 +22,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "aicommerce.db").fallbackToDestructiveMigration().build()
+            val db = AppDatabase.getInstance(applicationContext)
             val viewModelFactory = MarketViewModelFactory(
                 db.userDao(),
                 db.productDao(),

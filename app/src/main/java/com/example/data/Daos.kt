@@ -14,6 +14,9 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE email = :email OR phoneNumber = :phone LIMIT 1")
     suspend fun getUserByEmailOrPhone(email: String, phone: String): UserEntity?
 
+    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+    suspend fun getUserByEmail(email: String): UserEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: UserEntity): Long
 
@@ -198,5 +201,17 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun searchQueryDao(): SearchQueryDao
     abstract fun familyShoppingListDao(): FamilyShoppingListDao
     abstract fun storedOrganicItemDao(): StoredOrganicItemDao
+
+    companion object {
+        @Volatile private var instance: AppDatabase? = null
+
+        fun getInstance(context: android.content.Context): AppDatabase =
+            instance ?: synchronized(this) {
+                instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "aicommerce.db")
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { instance = it }
+            }
+    }
 }
 

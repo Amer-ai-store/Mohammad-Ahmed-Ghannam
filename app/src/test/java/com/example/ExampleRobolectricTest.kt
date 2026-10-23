@@ -10,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,6 +53,15 @@ class ExampleRobolectricTest {
     @Test
     fun testViewModelInitialization() {
         assertNotNull(viewModel)
+    }
+
+    @Test
+    fun testGetUserByEmailIgnoresUsersWithBlankPhone() = runBlocking {
+        db.userDao().insertUser(UserEntity(name = "Email User", phoneNumber = "", email = "someone@example.com", role = "Customer"))
+
+        // Looking up by email alone must not match another account just because its phone number is blank.
+        assertNull(db.userDao().getUserByEmail("new@example.com"))
+        assertEquals("someone@example.com", db.userDao().getUserByEmail("someone@example.com")?.email)
     }
 
     @Test
