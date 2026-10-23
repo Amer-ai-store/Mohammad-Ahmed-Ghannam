@@ -26,9 +26,10 @@ jobs:
           distribution: temurin
           java-version: '21'
       # The ubuntu-26.04 runner image no longer ships the Android SDK; this installs cmdline-tools and accepts licenses.
+      # Its default package list includes the removed 'tools' package, so name the packages explicitly.
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
-      - name: Install required Android SDK platform
-        run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
+        with:
+          packages: 'platform-tools platforms;android-36.1 build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
           gradle-version: '9.3.1'
