@@ -1288,6 +1288,47 @@ class MarketViewModel(
     /**
      * Admin Feature 4.4: Dynamic commission optimizer
      */
+    /**
+     * Builds the JSON snapshot imported by the web dashboard (dashboard/index.html).
+     * Bank cards, cart items and search history are deliberately left out.
+     */
+    suspend fun buildDashboardExport(): String {
+        val users = userDao.getAllUsers().first().map { u ->
+            org.json.JSONObject()
+                .put("id", u.id).put("name", u.name).put("phoneNumber", u.phoneNumber).put("email", u.email)
+                .put("role", u.role).put("permissionGranted", u.permissionGranted)
+                .put("loyaltyPoints", u.loyaltyPoints).put("createdAt", u.createdAt)
+        }
+        val products = productDao.getAllProducts().first().map { p ->
+            org.json.JSONObject()
+                .put("id", p.id).put("name", p.name).put("category", p.category)
+                .put("retailPrice", p.retailPrice).put("wholesalePrice", p.wholesalePrice)
+                .put("stockQuantity", p.stockQuantity).put("isRegisteredMerchant", p.isRegisteredMerchant)
+                .put("merchantName", p.merchantName).put("salesHistory", p.salesHistory)
+        }
+        val orders = orderDao.getAllOrders().first().map { o ->
+            org.json.JSONObject()
+                .put("id", o.id).put("customerName", o.customerName).put("productName", o.productName)
+                .put("quantity", o.quantity).put("totalPrice", o.totalPrice).put("orderType", o.orderType)
+                .put("merchantName", o.merchantName).put("status", o.status).put("createdAt", o.createdAt)
+        }
+        val reports = chatReportDao.getAllChatReports().first().map { r ->
+            org.json.JSONObject()
+                .put("id", r.id).put("orderId", r.orderId).put("customerMessage", r.customerMessage)
+                .put("merchantMessage", r.merchantMessage).put("disputeReason", r.disputeReason)
+                .put("resolvedTip", r.resolvedTip)
+        }
+        return org.json.JSONObject()
+            .put("format", "amer-store-export")
+            .put("version", 1)
+            .put("exportedAt", System.currentTimeMillis())
+            .put("users", org.json.JSONArray(users))
+            .put("products", org.json.JSONArray(products))
+            .put("orders", org.json.JSONArray(orders))
+            .put("chatReports", org.json.JSONArray(reports))
+            .toString()
+    }
+
     fun performAdminCommissionOptimization() {
         executeAiTask(
             "Commission Multi-Param Optimization",
