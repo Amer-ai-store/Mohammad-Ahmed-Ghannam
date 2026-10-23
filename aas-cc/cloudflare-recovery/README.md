@@ -25,9 +25,8 @@ Changes against the 1.2.0 candidate above (the artifact SHA256 refers to 1.2.0, 
 Example `wrangler.toml` binding (limits to be set by the owner against the free-tier budget):
 
 ```toml
-[[unsafe.bindings]]
+[[ratelimits]]
 name = "AAS_RATE_LIMITER"
-type = "ratelimit"
 namespace_id = "1001"
 simple = { limit = 30, period = 60 }
 ```
