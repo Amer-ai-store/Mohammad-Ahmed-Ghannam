@@ -12,3 +12,24 @@ Governance:
 - Independent QA and Security pending. Local mock tests 20/20, not runtime tests.
 
 Do not publish credential values. Supabase Vault row existence does not create a Deno.env Edge secret binding.
+
+## v1.2.1 hardening (security review follow-up)
+
+Changes against the 1.2.0 candidate above (the artifact SHA256 refers to 1.2.0, not this revision):
+- Request bodies are read as a stream capped at 12000 bytes, so a missing or non-numeric Content-Length can no longer bypass the size limit (non-numeric → 400, over limit → 413).
+- Required Rate Limiting binding `AAS_RATE_LIMITER` (key `aas-bridge`), checked after auth and before any body read or model call. Missing or failing binding → 503, limit exceeded → 429.
+- Key rotation: `AAS_BRIDGE_SECRET_NEXT` is accepted alongside `AAS_BRIDGE_SECRET`. Rotate by setting NEXT on the Worker, switching the Supabase Edge secret to it, then promoting it to `AAS_BRIDGE_SECRET` and removing NEXT.
+- Unauthenticated `/health` no longer reports the model or whether bindings/secrets are configured.
+- The Supabase adapter stops reading a Worker response once it exceeds 18000 bytes instead of buffering it first.
+
+Example `wrangler.toml` binding (limits to be set by the owner against the free-tier budget):
+
+```toml
+[[unsafe.bindings]]
+name = "AAS_RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }
+```
+
+Still open: a daily budget cap in the dispatcher itself, independent Security PASS, live inference, live canaries, and independent QA.

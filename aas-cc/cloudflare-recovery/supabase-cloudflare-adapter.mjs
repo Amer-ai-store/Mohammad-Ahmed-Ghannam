@@ -13,7 +13,23 @@ function config(env){
  if(u.origin!==APPROVED_WORKER_ORIGIN||u.pathname!=='/'||u.search||u.hash)throw new Error('UNAPPROVED_CLOUDFLARE_ORIGIN');
  return {secret,origin:u.origin};
 }
+const MAX_RESPONSE_BYTES=18000;
 function safeErr(code,status){const e=new Error(code);e.status=status;return e}
+// Stops reading once the body exceeds max bytes instead of buffering the whole response first.
+async function readCappedText(res,max){
+ if(!res.body)return '';
+ const reader=res.body.getReader();const chunks=[];let size=0;
+ for(;;){
+  const {done,value}=await reader.read();
+  if(done)break;
+  size+=value.byteLength;
+  if(size>max){await reader.cancel().catch(()=>{});return null}
+  chunks.push(value);
+ }
+ const out=new Uint8Array(size);let offset=0;
+ for(const c of chunks){out.set(c,offset);offset+=c.byteLength}
+ return new TextDecoder().decode(out);
+}
 export async function cloudflareGenerate({system,prompt,correlationId='',env,fetchFn=fetch,timeoutMs=15000}){
  const {secret,origin}=config(env);
  const controller=new AbortController();
@@ -25,8 +41,8 @@ export async function cloudflareGenerate({system,prompt,correlationId='',env,fet
    body:JSON.stringify({system,prompt,correlation_id:correlationId}),
    signal:controller.signal});
   if(!res.ok)throw safeErr('CLOUDFLARE_INFER_HTTP_'+res.status,res.status);
-  const responseText=await res.text();
-  if(responseText.length>18000)throw safeErr('CLOUDFLARE_OVERSIZED_RESPONSE',502);
+  const responseText=await readCappedText(res,MAX_RESPONSE_BYTES);
+  if(responseText===null)throw safeErr('CLOUDFLARE_OVERSIZED_RESPONSE',502);
   let data;try{data=JSON.parse(responseText)}catch{throw safeErr('CLOUDFLARE_MALFORMED_JSON',502)}
   if(data?.ok!==true||data?.inference_executed!==true||data?.provider_family!=='cloudflare'||typeof data?.text!=='string'||!data.text.trim())throw safeErr('CLOUDFLARE_INVALID_INFERENCE_PROOF',502);
   if(data?.correlation_id!==correlationId)throw safeErr('CLOUDFLARE_CORRELATION_MISMATCH',502);
