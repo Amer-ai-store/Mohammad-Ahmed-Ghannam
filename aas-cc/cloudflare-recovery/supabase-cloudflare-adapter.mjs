@@ -4,7 +4,7 @@
  */
 export const CLOUDFLARE_PROVIDER='cloudflare-workers-ai';
 export const CLOUDFLARE_FAMILY='cloudflare';
-export const APPROVED_WORKER_ORIGIN='https://aas-free-generative-canaryaas-free-generative-canary.zxzx-mohammad2027.workers.dev';
+export const APPROVED_WORKER_ORIGIN='https://aas-free-generative-canary.zxzx-mohammad2027.workers.dev';
 function config(env){
  const secret=env.CLOUDFLARE_AAS_BRIDGE_SECRET;
  const origin=env.AAS_CLOUDFLARE_WORKER_URL||APPROVED_WORKER_ORIGIN;
