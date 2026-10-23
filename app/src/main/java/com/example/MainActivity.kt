@@ -21,6 +21,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Mirrors store data to Firestore for the live dashboard; does nothing until Firebase keys are set.
+        com.example.data.FirestoreSync.start(applicationContext, AppDatabase.getInstance(applicationContext))
         setContent {
             val db = AppDatabase.getInstance(applicationContext)
             val viewModelFactory = MarketViewModelFactory(

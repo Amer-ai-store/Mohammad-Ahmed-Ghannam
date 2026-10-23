@@ -33,6 +33,22 @@ jobs:
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
           gradle-version: '9.3.1'
+      # Firebase keys turn on live store sync in the APK. They identify the project and are not secret,
+      # but ADMIN_PASSWORD is deliberately left out: the APK artifact is downloadable from this public repo.
+      - name: Write Firebase keys from repository secrets (optional)
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          cp .env.example .env
+          for k in FIREBASE_API_KEY FIREBASE_APP_ID FIREBASE_PROJECT_ID; do
+            v="${!k}"
+            if [ -n "$v" ]; then
+              grep -v "^$k=" .env > .env.tmp && mv .env.tmp .env
+              printf '%s=%s\n' "$k" "$v" >> .env
+            fi
+          done
       - name: Compile, run unit tests and build the debug APK
         run: gradle :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --no-daemon
       - name: Upload debug APK
