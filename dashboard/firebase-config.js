@@ -1,12 +1,11 @@
 // Firebase web app settings for the live store section of dashboard/index.html.
-// Firebase Console > Project settings > Your apps > Web app > "SDK setup and configuration" > Config.
+// Project "AmERAiStore" (ameraistore-1c81d), web app "Amer Live Dashboard".
 // These values identify the project and are not secret: firestore.rules decides who can read the data.
-// Leave null until the Firebase project exists (see docs/firebase-setup.md).
-window.AMER_FIREBASE_CONFIG = null;
-// Example:
-// window.AMER_FIREBASE_CONFIG = {
-//   apiKey: "AIza...",
-//   authDomain: "your-project.firebaseapp.com",
-//   projectId: "your-project",
-//   appId: "1:1234567890:web:abc123"
-// };
+window.AMER_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAEhAFZctT3NJQy6dLjJ6BbJh7ocLa8rqQ",
+  authDomain: "ameraistore-1c81d.firebaseapp.com",
+  projectId: "ameraistore-1c81d",
+  storageBucket: "ameraistore-1c81d.firebasestorage.app",
+  messagingSenderId: "350618456564",
+  appId: "1:350618456564:web:efd5022118a118993a69a1"
+};
