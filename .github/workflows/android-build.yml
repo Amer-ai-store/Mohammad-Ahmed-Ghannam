@@ -1,0 +1,48 @@
+name: Android build and unit tests
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@7a445ee88d4e23b52c33bf736b0d604a5cf98d4d # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install required Android SDK platform
+        run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Compile, run unit tests and build the debug APK
+        run: gradle :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --no-daemon
+      - name: Upload debug APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: amer-store-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload unit test reports
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unit-test-reports
+          path: app/build/reports/tests/
+          retention-days: 7

@@ -65,6 +65,25 @@ class ExampleRobolectricTest {
     }
 
     @Test
+    fun testDashboardExportFormatExcludesBankCards() = runBlocking {
+        db.userDao().insertUser(UserEntity(name = "Buyer", phoneNumber = "0790000001", email = "buyer@example.com", role = "Customer"))
+        db.orderDao().insertOrder(OrderEntity(customerId = 1, customerName = "Buyer", productId = 1, productName = "Honey", quantity = 2, totalPrice = 49.98, orderType = "Retail", merchantName = "Al-Baraka"))
+        db.chatReportDao().insertChatReport(ChatReportEntity(orderId = 1, customerMessage = "Broken", merchantMessage = "Courier", disputeReason = "Damaged"))
+        db.bankCardDao().insertBankCard(BankCardEntity(cardNumber = "4111111111111111", userId = 1, cardHolder = "Buyer", expiryDate = "12/30", cvv = "123"))
+
+        val json = viewModel.buildDashboardExport()
+        val root = org.json.JSONObject(json)
+
+        // Must match FORMAT in dashboard/index.html, which rejects anything else.
+        assertEquals("amer-store-export", root.getString("format"))
+        assertEquals("buyer@example.com", root.getJSONArray("users").getJSONObject(0).getString("email"))
+        assertEquals(49.98, root.getJSONArray("orders").getJSONObject(0).getDouble("totalPrice"), 0.001)
+        assertEquals("Damaged", root.getJSONArray("chatReports").getJSONObject(0).getString("disputeReason"))
+        assertNotNull(root.getJSONArray("products"))
+        assertEquals(false, json.contains("4111111111111111") || json.contains("cvv"))
+    }
+
+    @Test
     fun testSearchHistoryFlowAndStateTransitions() = runBlocking {
         // Assert initial state is empty
         var recentSearches = viewModel.searchHistory.value
