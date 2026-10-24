@@ -1236,7 +1236,13 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   function extractHtml(text) {
     const fence = text.match(/```(?:html)?\s*([\s\S]*?)```/i);
     let html = fence ? fence[1] : text.slice(Math.max(0, text.search(/<!doctype|<html/i)));
-    return html.replace(/<script[\s\S]*?<\/script>/gi, "").trim();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    doc.querySelectorAll("script").forEach((n) => n.remove());
+    const sanitized = doc.documentElement && doc.documentElement.outerHTML
+      ? doc.documentElement.outerHTML
+      : doc.body.innerHTML;
+    return sanitized.trim();
   }
   function fillDesignForm() {
     const kind = $("d-kind");
