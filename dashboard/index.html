@@ -188,6 +188,14 @@ details.coll pre{margin:0 .8rem .8rem}
 .suggest{display:flex;flex-direction:column;gap:.5rem}
 .suggest button{justify-content:flex-start;text-align:start;font-weight:500;background:var(--surface);width:100%}
 
+/* Designer */
+.designer{display:grid;grid-template-columns:320px minmax(0,1fr);gap:1rem;align-items:start}
+@media (max-width:980px){.designer{grid-template-columns:minmax(0,1fr)}}
+.preview{position:relative;width:100%;overflow:hidden;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.preview iframe{position:absolute;top:0;left:0;border:0;transform-origin:top left;background:#fff}
+.preview .empty{position:absolute;inset:0;border:0;justify-content:center}
+.design-card .preview{max-height:220px}
+
 /* Dialog + toast */
 dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);padding:0;width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 48px)}
 dialog::backdrop{background:rgb(0 0 0 / .55)}
@@ -294,6 +302,28 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
             <button type="button" class="ghost tiny" id="chat-clear">مسح المحادثة</button>
           </div>
         </div>
+      </section>
+
+      <!-- DESIGNER -->
+      <section class="view" data-view="designer" aria-labelledby="h-designer" hidden>
+        <div class="view-head"><div><span class="eyebrow">الذكاء الاصطناعي</span><h1 id="h-designer">وكيل التصميم</h1><p>صف ما تريد، فيصمم الوكيل بانراً أو منشوراً أو شاشة تطبيق بهوية المتجر، وتراه مباشرة. احفظ ما يعجبك في مكتبة التصاميم.</p></div></div>
+        <div id="designer-off" class="banner info" hidden><strong>وكيل التصميم غير متاح هنا:</strong> يعمل عند فتح مركز القيادة داخل Claude وبعد السماح له باستخدام Claude.</div>
+        <div class="designer">
+          <form class="panel" id="design-form">
+            <label class="field">نوع التصميم<select id="d-kind"></select></label>
+            <label class="field">المنتج (اختياري)<select id="d-product"></select></label>
+            <label class="field">الأسلوب<select id="d-style"><option value="brand">هوية المتجر (أخضر داكن)</option><option value="light">فاتح ونظيف</option><option value="bold">جريء وملوّن</option><option value="luxury">فاخر (أسود وذهبي)</option><option value="ramadan">موسمي: رمضان والأعياد</option></select></label>
+            <label class="field">الوصف<textarea id="d-brief" maxlength="1500">عرض نهاية الأسبوع: خصم 20% على العسل الجبلي الطبيعي، مع زر «اطلب الآن»</textarea></label>
+            <div class="toolbar"><button class="primary" type="submit" id="design-btn">صمّم</button><button type="button" id="design-stop" hidden>إيقاف</button></div>
+            <p class="small muted" id="design-status" aria-live="polite"></p>
+          </form>
+          <div class="panel">
+            <div class="panel-head"><h3 id="design-title">المعاينة</h3><div class="toolbar"><button type="button" class="tiny" id="design-copy" disabled>نسخ كود HTML</button><button type="button" class="tiny primary" id="design-save" disabled>حفظ في المكتبة</button></div></div>
+            <div class="preview" id="design-preview"><div class="empty" id="design-empty">اكتب وصفاً واضغط «صمّم». يظهر التصميم هنا بمقاسه الحقيقي مصغّراً.</div></div>
+          </div>
+        </div>
+        <h2>مكتبة التصاميم</h2>
+        <div class="grid3" id="design-list"></div>
       </section>
 
       <!-- STORE -->
@@ -420,7 +450,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 
   // ---------- navigation ----------
   const NAV = [
-    ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"]]],
+    ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"]]],
     ["المتجر", [["store", "لوحة المتجر"]]],
     ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
   ];
@@ -449,8 +479,8 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 
   // ---------- state & persistence ----------
-  const COLLS = ["workspaces", "tasks", "stages", "agents", "servers", "bridges"];
-  const state = { workspaces: [], tasks: [], stages: [], agents: [], servers: [], bridges: [], activity: [], settings: {} };
+  const COLLS = ["workspaces", "tasks", "stages", "agents", "servers", "bridges", "designs"];
+  const state = { workspaces: [], tasks: [], stages: [], agents: [], servers: [], bridges: [], designs: [], activity: [], settings: {} };
   const LOCAL_KEY = "amer-cc-local";
   let mode = "loading"; // "db" | "local"
   let db = null, readOnly = false;
@@ -825,7 +855,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
       el("div", { class: "actions" }, editButton(() => bridgeForm(b)), deleteButton("الجسر", async () => { if (await remove("bridges", b.id)) logActivity("حذف جسر: " + S(b.name, 80)); }))))
       : [emptyState("لم يُعرَّف أي جسر.", "new-bridge", "تعريف جسر")]));
     const coll = (path, label, items) => el("details", { class: "coll" }, el("summary", null, el("span", null, el("span", { class: "ltr num" }, path), " · ", label), pill("docs: " + items.length, "warn")), el("pre", { class: "code" }, items.length ? items.slice(0, 5).map(x => JSON.stringify(x)).join("\n") : "// فارغة"));
-    $("cc-collections").replaceChildren(...[["workspaces", "مساحات العمل"], ["tasks", "المهام"], ["stages", "مسارات التنفيذ"], ["agents", "الوكلاء"], ["servers", "الخوادم"], ["bridges", "الجسور"], ["activity", "سجل النشاط (آخر 60)"]].map(([c, l]) => coll("/" + c, l, state[c])));
+    $("cc-collections").replaceChildren(...[["workspaces", "مساحات العمل"], ["tasks", "المهام"], ["stages", "مسارات التنفيذ"], ["agents", "الوكلاء"], ["servers", "الخوادم"], ["bridges", "الجسور"], ["designs", "التصاميم"], ["activity", "سجل النشاط (آخر 60)"]].map(([c, l]) => coll("/" + c, l, c === "designs" ? state[c].map(({ html, ...rest }) => ({ ...rest, html: "[" + S(html).length + " chars]" })) : state[c])));
     $("store-collections").replaceChildren(coll("/users", "حسابات المستخدمين", storeData.users), coll("/products", "مخزون التجار", storeData.products), coll("/orders", "طلبات العملاء", storeData.orders), coll("/chat_reports", "تقارير النزاعات", storeData.chatReports));
   }
   function renderGithub() {
@@ -1043,7 +1073,8 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   const AI_OFF_CODES = ["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"];
   function aiOff() {
     sample = null;
-    for (const id of ["commission-btn", "arb-btn", "chat-send", "propose-btn"]) $(id).disabled = true;
+    for (const id of ["commission-btn", "arb-btn", "chat-send", "propose-btn", "design-btn"]) $(id).disabled = true;
+    $("designer-off").hidden = false;
     for (const b of document.querySelectorAll("#suggest button")) b.disabled = true;
     $("advisor-off").hidden = false;
     $("ai-dot").className = "dot"; $("ai-status").textContent = "المستشار: غير متاح هنا";
@@ -1158,8 +1189,120 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   });
 
   // ---------- boot ----------
+  // ---------- design agent ----------
+  const DESIGN_KINDS = {
+    banner: ["بانر إعلاني", 1200, 628], post: ["منشور مربع", 1080, 1080], story: ["قصة (ستوري)", 1080, 1920],
+    screen: ["شاشة تطبيق", 390, 844], palette: ["هوية ولوحة ألوان", 1200, 800], logo: ["شعار", 800, 800]
+  };
+  const DESIGN_STYLES = {
+    brand: "هوية المتجر: خلفية خضراء داكنة (#0c140f و#121e17)، لون مميز ليموني (#b9e769)، نص فاتح (#e3eee6)",
+    light: "فاتح ونظيف: خلفية بيضاء أو كريمية، لون مميز أخضر (#3f7d1d)، مساحات بيضاء واسعة",
+    bold: "جريء وملوّن: تدرجات قوية، أشكال هندسية كبيرة، تباين عالٍ",
+    luxury: "فاخر: أسود عميق وذهبي (#c9a227)، خطوط رفيعة، أناقة وهدوء",
+    ramadan: "موسمي لرمضان والأعياد: هلال وفوانيس بأشكال SVG، ألوان ليلية دافئة"
+  };
+  let designHtml = "", designMeta = null, designCtl = null;
+  // Renders a design at its real pixel size inside a sandboxed iframe (no scripts) scaled to the container.
+  function designFrame(container, html, w, h) {
+    const frame = el("iframe", { sandbox: "", title: "معاينة التصميم", referrerpolicy: "no-referrer" });
+    frame.srcdoc = html; frame.style.width = w + "px"; frame.style.height = h + "px";
+    container.style.aspectRatio = w + " / " + h;
+    const fit = () => { frame.style.transform = "scale(" + (container.clientWidth / w) + ")"; };
+    container.replaceChildren(frame); fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(container);
+  }
+  function extractHtml(text) {
+    const fence = text.match(/```(?:html)?\s*([\s\S]*?)```/i);
+    let html = fence ? fence[1] : text.slice(Math.max(0, text.search(/<!doctype|<html/i)));
+    return html.replace(/<script[\s\S]*?<\/script>/gi, "").trim();
+  }
+  function fillDesignForm() {
+    const kind = $("d-kind");
+    if (!kind.options.length) kind.replaceChildren(...Object.entries(DESIGN_KINDS).map(([v, [l, w, h]]) => el("option", { value: v }, l + " · " + w + "×" + h)));
+    const prod = $("d-product"), cur = prod.value;
+    prod.replaceChildren(el("option", { value: "" }, "بدون منتج محدد"), ...storeData.products.map(p => el("option", { value: String(p.id) }, S(p.name, 80))));
+    prod.value = storeData.products.some(p => String(p.id) === cur) ? cur : "";
+  }
+  let designsKey = null;
+  function renderDesigns() {
+    fillDesignForm();
+    const list = [...state.designs].sort((a, b) => N(b.createdAt) - N(a.createdAt));
+    // Thumbnails are iframes: rebuild them only when the saved designs change, not on every snapshot.
+    const key = list.map(d => d.id + ":" + N(d.updatedAt)).join("|") + "|" + readOnly;
+    if (key === designsKey) return;
+    designsKey = key;
+    $("design-list").replaceChildren(...(list.length ? list.map(d => {
+      const [label, w, h] = DESIGN_KINDS[d.kind] || DESIGN_KINDS.post;
+      const thumb = el("div", { class: "preview" });
+      const card = el("div", { class: "panel design-card" }, thumb,
+        el("div", { class: "top" }, el("span", { class: "title" }, S(d.title, 80)), pill(label, "accent")),
+        el("span", { class: "small muted num" }, fmtTime(d.createdAt)),
+        el("div", { class: "toolbar" },
+          el("button", { type: "button", class: "tiny", onclick: () => { showDesign(S(d.html, 200000), d.kind, S(d.title, 80), true); $("design-preview").scrollIntoView({ block: "nearest" }); } }, "فتح"),
+          deleteButton("التصميم", async () => { if (await remove("designs", d.id)) logActivity("حذف تصميم: " + S(d.title, 80)); })));
+      requestAnimationFrame(() => designFrame(thumb, S(d.html, 200000), w, h));
+      return card;
+    }) : [el("div", { class: "empty" }, "لا توجد تصاميم محفوظة بعد.")]));
+  }
+  function showDesign(html, kind, title, saved) {
+    const [, w, h] = DESIGN_KINDS[kind] || DESIGN_KINDS.post;
+    designHtml = html; designMeta = { kind, title };
+    $("design-title").textContent = title || "المعاينة";
+    designFrame($("design-preview"), html, w, h);
+    $("design-copy").disabled = !html; $("design-save").disabled = !html || saved || readOnly;
+  }
+  $("design-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!sample || designCtl) return;
+    const kind = $("d-kind").value, [label, w, h] = DESIGN_KINDS[kind];
+    const brief = $("d-brief").value.trim().slice(0, 1500);
+    if (!brief) { toast("اكتب وصفاً للتصميم."); return; }
+    const p = storeData.products.find(x => String(x.id) === $("d-product").value);
+    const prompt = `أنت «وكيل التصميم» لمتجر إلكتروني عربي اسمه «${S(state.settings.name, 80) || "Amer AI Store"}». صمّم ${label} بمقاس ${w}×${h} بكسل بالضبط.
+
+الطلب: ${brief}
+${p ? `المنتج: ${p.name} — الفئة: ${p.category} — السعر: $${N(p.retailPrice).toFixed(2)} — التاجر: ${p.merchantName}` : ""}
+الأسلوب: ${DESIGN_STYLES[$("d-style").value]}
+
+القواعد:
+- أعد مستند HTML واحداً كاملاً فقط، داخل كتلة \`\`\`html.
+- <html dir="rtl" lang="ar">، و html وbody بمقاس ${w}px × ${h}px بالضبط مع overflow:hidden وmargin:0.
+- CSS داخل <style> فقط. لا <script> إطلاقاً.
+- لا صور خارجية (لن تُحمَّل): استخدم تدرجات CSS وأشكالاً وSVG مضمّناً ورموزاً تعبيرية.
+- مسموح خطوط Google عبر <link> من fonts.googleapis.com، مثل Reem Kufi للعناوين وIBM Plex Sans Arabic للنص.
+- نص عربي حقيقي ومقنع (عنوان، نص قصير، دعوة لاتخاذ إجراء)، بخط كبير واضح، وتسلسل بصري قوي. لا نص وهمي.`;
+    designCtl = new AbortController();
+    $("design-btn").disabled = true; $("design-stop").hidden = false;
+    $("design-status").textContent = "يفكّر وكيل التصميم...";
+    try {
+      const { text } = await sample(prompt, { signal: designCtl.signal, cache: false, onText: ({ text: t }) => { $("design-status").textContent = "يكتب التصميم... " + t.length + " حرف"; } });
+      const html = extractHtml(text);
+      if (!/<html|<body|<div/i.test(html)) { $("design-status").textContent = "لم يصل تصميم صالح. أعد المحاولة أو وضّح الوصف."; return; }
+      showDesign(html, kind, brief.slice(0, 60), false);
+      $("design-status").textContent = "اكتمل التصميم. احفظه إن أعجبك، أو عدّل الوصف وصمّم من جديد.";
+      logActivity("وكيل التصميم صمّم: " + brief.slice(0, 60));
+    } catch (err) {
+      if (err && AI_OFF_CODES.includes(err.code)) { $("design-status").textContent = ""; aiOff(); }
+      else $("design-status").textContent = err && err.code === "cancelled" ? "أُوقف التصميم." : aiErrorText(err);
+    } finally {
+      designCtl = null; $("design-btn").disabled = !sample; $("design-stop").hidden = true;
+    }
+  });
+  $("design-stop").addEventListener("click", () => designCtl && designCtl.abort());
+  $("design-save").addEventListener("click", async () => {
+    if (!designHtml || !designMeta) return;
+    if (designHtml.length > 200000) { toast("التصميم أكبر من أن يُحفظ. اطلب تصميماً أبسط."); return; }
+    $("design-save").disabled = true;
+    const id = await put("designs", null, { title: designMeta.title, kind: designMeta.kind, brief: $("d-brief").value.trim().slice(0, 1500), html: designHtml, createdAt: Date.now() });
+    if (id) { logActivity("حفظ تصميم: " + designMeta.title); toast("حُفظ التصميم في المكتبة."); } else $("design-save").disabled = false;
+  });
+  $("design-copy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(designHtml); toast("نُسخ كود HTML."); }
+    catch { toast("تعذّر النسخ في هذا العرض. جرّب من متصفح آخر."); }
+  });
+
   function renderAll() {
-    renderCounts(); renderHome(); renderTasks(); renderStages(); renderWorkspaces(); renderMap(); renderAgents(); renderServers(); renderDatabase(); renderGithub(); renderActivity(); renderSettings(); renderStore();
+    renderCounts(); renderHome(); renderTasks(); renderStages(); renderWorkspaces(); renderMap(); renderAgents(); renderServers(); renderDatabase(); renderGithub(); renderActivity(); renderSettings(); renderStore(); renderDesigns();
     if (readOnly) applyWriteState();
   }
   buildNav();
