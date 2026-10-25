@@ -11,7 +11,7 @@
 ## الإعداد (مرة واحدة)
 تحتاج المراجعة إلى سرّ واحد في المستودع: **Settings → Secrets and variables → Actions → New repository secret**
 
-- **باشتراك Claude (Pro أو Max):** على حاسوبك شغّل `claude setup-token`، وانسخ **الرمز وحده** (سطر واحد يبدأ بـ `sk-ant-oat`) إلى سرّ باسم `CLAUDE_CODE_OAUTH_TOKEN`. لا تنسخ باقي النص الذي يطبعه الأمر؛ إن احتوى السر على أكثر من سطر يفشل الفحص برسالة «CLAUDE_CODE_OAUTH_TOKEN is malformed».
+- **باشتراك Claude (Pro أو Max):** على حاسوبك شغّل `claude setup-token`، وانسخ **الرمز وحده** (سطر واحد يبدأ بـ `sk-ant-oat`) إلى سرّ باسم `CLAUDE_CODE_OAUTH_TOKEN`. إن نسخت معه باقي النص أو انقسم الرمز على عدة أسطر، يستخرج الفحص الرمز بنفسه ويعرض تنبيهاً؛ وإن لم يجد رمزاً صالحاً يفشل برسالة «CLAUDE_CODE_OAUTH_TOKEN is malformed».
 - **أو بمفتاح API:** أنشئ مفتاحاً من https://console.anthropic.com وضعه في سرّ باسم `ANTHROPIC_API_KEY`.
 
 بدون أحدهما يمرّ فحص «Claude code review» دون مراجعة، مع ملاحظة «Claude review skipped» في صفحة الفحص.
