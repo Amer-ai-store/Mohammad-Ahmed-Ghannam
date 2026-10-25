@@ -77,7 +77,7 @@ data class CartItemEntity(
     val productName: String,
     val imageUrl: String,
     val price: Double,
-    var quantity: Int,
+    val quantity: Int,
     val orderType: String // "Retail" or "Wholesale"
 )
 
@@ -87,7 +87,7 @@ data class BankCardEntity(
     val userId: Int,
     val cardHolder: String,
     val expiryDate: String,
-    val cvv: String,
+    val cvv: String = "", // Always blank: card security codes are never stored.
     val isPrimary: Boolean = false
 )
 

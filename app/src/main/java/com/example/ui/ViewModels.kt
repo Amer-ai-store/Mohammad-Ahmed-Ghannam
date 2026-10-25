@@ -13,6 +13,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 private const val ADMIN_EMAIL = "zxzx.Mohammad91@gmail.com"
+private val ALL_ROLES = listOf("Customer", "Merchant", "Delivery", "Admin")
+private val SELF_SERVICE_ROLES = listOf("Customer", "Merchant", "Delivery")
+
+/** Sign-up and Google sign-in can never create an admin; that role belongs to the ADMIN_PASSWORD login. */
+private fun selfServiceRole(requested: String): String = if (requested in SELF_SERVICE_ROLES) requested else "Customer"
 
 class MarketViewModel(
     private val userDao: UserDao,
@@ -155,6 +160,11 @@ class MarketViewModel(
 
     private val _currentRole = MutableStateFlow("Customer") // "Customer", "Merchant", "Delivery", "Admin"
     val currentRole = _currentRole.asStateFlow()
+
+    /** Roles the signed-in user may switch between. Only the admin account (signed in with ADMIN_PASSWORD) gets "Admin". */
+    val availableRoles = _currentUser
+        .map { user -> if (user?.role == "Admin") ALL_ROLES else SELF_SERVICE_ROLES }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, SELF_SERVICE_ROLES)
 
     val products = productDao.getAllProducts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -350,6 +360,8 @@ class MarketViewModel(
     }
 
     fun performDailyCheckIn(): Double? {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+        if (_lastCheckInDate.value == today) return null
         val randomVal = Math.random()
         val reward = when {
             randomVal < 0.60 -> 0.02 + Math.random() * (0.1 - 0.02) // 60%
@@ -365,8 +377,6 @@ class MarketViewModel(
         val roundedReward = Math.round(reward * 100.0) / 100.0
         _cryptoWalletUsdt.value += roundedReward
         _walletTransactions.value = _walletTransactions.value + "Daily Check-in Reward: +$$roundedReward USDT"
-        
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         _lastCheckInDate.value = today
         return roundedReward
     }
@@ -590,6 +600,7 @@ class MarketViewModel(
     }
 
     init {
+        viewModelScope.launch { bankCardDao.clearStoredCvvs() }
         // Pre-populate some cool premium products to ensure a beautiful out-of-the-box experience
         viewModelScope.launch {
             _isProductsLoading.value = true
@@ -773,7 +784,7 @@ class MarketViewModel(
                 name = name,
                 phoneNumber = phoneNumber,
                 email = email,
-                role = role,
+                role = selfServiceRole(role),
                 permissionGranted = true // auto opt-in for behavioral analytics by default
             )
             _verificationStep.value = 1
@@ -834,7 +845,10 @@ class MarketViewModel(
         } else {
             viewModelScope.launch {
                 val existing = userDao.getUserByEmailOrPhone(emailOrPhone.trim(), emailOrPhone.trim())
-                if (existing != null) {
+                if (existing?.role == "Admin") {
+                    // e.g. the admin's phone number: never open the admin account without ADMIN_PASSWORD.
+                    triggerError("هذا الحساب يتطلب كلمة مرور المدير.")
+                } else if (existing != null) {
                     _currentUser.value = existing
                     _currentRole.value = existing.role
                     _verificationStep.value = 0
@@ -863,12 +877,17 @@ class MarketViewModel(
     fun loginWithGoogleSimulated(name: String, email: String, role: String) {
         viewModelScope.launch {
             var existing = userDao.getUserByEmail(email.trim())
+            if (existing?.role == "Admin") {
+                // The admin account only opens with ADMIN_PASSWORD through login().
+                triggerError("هذا الحساب يتطلب كلمة مرور المدير.")
+                return@launch
+            }
             if (existing == null) {
                 val newUser = UserEntity(
                     name = name,
                     phoneNumber = "",
                     email = email,
-                    role = role,
+                    role = selfServiceRole(role),
                     permissionGranted = true
                 )
                 val id = userDao.insertUser(newUser)
@@ -892,6 +911,7 @@ class MarketViewModel(
     }
 
     fun switchRole(role: String) {
+        if (role !in availableRoles.value) return
         _currentRole.value = role
         clearAiResponse()
     }
@@ -1096,7 +1116,12 @@ class MarketViewModel(
     // Placing customer orders
     fun placeOrder(product: ProductEntity, quantity: Int, orderType: String) {
         val user = _currentUser.value ?: return
+        if (quantity <= 0) return
         viewModelScope.launch {
+            if (!reserveStock(product.id, quantity)) {
+                triggerError("الكمية المطلوبة من ${product.name} غير متوفرة في المخزون.")
+                return@launch
+            }
             val pricePerUnit = if (orderType == "Wholesale") product.wholesalePrice else product.retailPrice
             val total = pricePerUnit * quantity
             val newOrder = OrderEntity(
@@ -1115,6 +1140,13 @@ class MarketViewModel(
             clearAiResponse()
         }
     }
+
+    /**
+     * Takes [quantity] out of the product's stock. AI trending picks are not stored products and have no
+     * inventory to track, so they always succeed.
+     */
+    private suspend fun reserveStock(productId: Int, quantity: Int): Boolean =
+        productDao.getProductByIdSuspend(productId) == null || productDao.reserveStock(productId, quantity) > 0
 
     fun updateOrderStatus(orderId: Int, status: String) {
         viewModelScope.launch {
@@ -1383,11 +1415,11 @@ class MarketViewModel(
 
     fun addProductToCart(product: ProductEntity, quantity: Int, orderType: String) {
         val user = _currentUser.value ?: return
+        if (quantity <= 0) return
         viewModelScope.launch {
             val existing = cartItemDao.getCartItemSpecific(user.id, product.id, orderType)
             if (existing != null) {
-                existing.quantity += quantity
-                cartItemDao.updateCartItem(existing)
+                cartItemDao.updateCartItem(existing.copy(quantity = existing.quantity + quantity))
             } else {
                 val price = if (orderType == "Wholesale") product.wholesalePrice else product.retailPrice
                 cartItemDao.insertCartItem(
@@ -1421,11 +1453,19 @@ class MarketViewModel(
     fun checkoutCart(selectedCardNumber: String? = null) {
         val user = _currentUser.value ?: return
         viewModelScope.launch {
-            val items = cartItems.value
+            // Read the table directly: cartItems is WhileSubscribed and is empty when no screen collects it.
+            val items = cartItemDao.getCartItemsOnce(user.id)
             if (items.isEmpty()) return@launch
-            
+
             var totalSpent = 0.0
+            val outOfStock = mutableListOf<String>()
             for (item in items) {
+                if (!reserveStock(item.productId, item.quantity)) {
+                    // Leave it in the cart so the customer can lower the quantity and try again.
+                    outOfStock += item.productName
+                    continue
+                }
+                val merchant = productDao.getProductByIdSuspend(item.productId)?.merchantName ?: "AI Smart Marketplace"
                 totalSpent += item.price * item.quantity
                 val newOrder = OrderEntity(
                     customerId = user.id,
@@ -1435,7 +1475,7 @@ class MarketViewModel(
                     quantity = item.quantity,
                     totalPrice = item.price * item.quantity,
                     orderType = item.orderType,
-                    merchantName = "AI Smart Marketplace",
+                    merchantName = merchant,
                     status = "Pending",
                     routeAddress = "Avenue " + (1..10).random() + ", Block " + (1..20).random() + ", Area " + (1..9).random()
                 )
@@ -1462,15 +1502,19 @@ class MarketViewModel(
                     )
                     storedOrganicItemDao.insertStoredItem(storedItem)
                 }
+                cartItemDao.deleteCartItemById(item.id)
             }
-            
+
+            if (outOfStock.isNotEmpty()) {
+                triggerError("غير متوفر بالكمية المطلوبة: ${outOfStock.joinToString("، ")}")
+            }
+            if (outOfStock.size == items.size) return@launch
+
             val pointsToAdd = totalSpent.toInt()
             val updatedUser = user.copy(loyaltyPoints = user.loyaltyPoints + pointsToAdd)
             userDao.updateUser(updatedUser)
             _currentUser.value = updatedUser
-            
-            cartItemDao.clearCart(user.id)
-            
+
             if (selectedCardNumber != null) {
                 _aiResponse.value = "🛒 Checkout succeeded using linked Card ****${selectedCardNumber.takeLast(4)}! Orders placed in live tracking ledger."
             } else {
@@ -1479,6 +1523,8 @@ class MarketViewModel(
         }
     }
 
+    /** [cvv] is only checked by the form; it is never written to the database. */
+    @Suppress("UNUSED_PARAMETER")
     fun linkBankCard(cardNumber: String, cardHolder: String, expiryDate: String, cvv: String, isPrimary: Boolean = false) {
         val user = _currentUser.value ?: return
         viewModelScope.launch {
@@ -1487,7 +1533,6 @@ class MarketViewModel(
                 userId = user.id,
                 cardHolder = cardHolder,
                 expiryDate = expiryDate,
-                cvv = cvv,
                 isPrimary = isPrimary
             )
             bankCardDao.insertBankCard(card)

@@ -1135,7 +1135,7 @@ fun MainLayout(viewModel: MarketViewModel) {
     // Helper translation accessor
     fun txt(key: String): String = Localization.get(key, lang)
 
-    val roles = listOf("Customer", "Merchant", "Delivery", "Admin")
+    val roles by viewModel.availableRoles.collectAsState()
     val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()
     var showProfileDialog by remember { mutableStateOf(false) }
     var profileDialogInitialTab by remember { mutableStateOf(0) }
@@ -5215,11 +5215,25 @@ fun CustomerScreen(viewModel: MarketViewModel) {
                                 Icon(Icons.Default.Menu, contentDescription = "Minus", tint = AccentCoral)
                             }
                             Text("$orderQuantity", fontSize = 14.sp, fontWeight = FontWeight.Black, color = PolarLight)
-                            IconButton(onClick = { orderQuantity++ }) {
+                            IconButton(
+                                onClick = { orderQuantity++ },
+                                enabled = orderQuantity < prod.stockQuantity
+                            ) {
                                 Icon(Icons.Default.Add, contentDescription = "Add", tint = SecondaryMint)
                             }
                         }
                     }
+
+                    Text(
+                        text = when {
+                            prod.stockQuantity <= 0 -> if (lang == "ar") "نفدت الكمية" else "Out of stock"
+                            prod.stockQuantity <= 10 -> if (lang == "ar") "متبقٍ ${prod.stockQuantity} فقط!" else "Only ${prod.stockQuantity} left!"
+                            else -> if (lang == "ar") "متوفر: ${prod.stockQuantity}" else "In stock: ${prod.stockQuantity}"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (prod.stockQuantity <= 10) AccentCoral else SecondaryMint
+                    )
                 }
             },
             confirmButton = {
@@ -5232,6 +5246,7 @@ fun CustomerScreen(viewModel: MarketViewModel) {
                             viewModel.addProductToCart(prod, orderQuantity, orderTypeChosen)
                             selectedProductForDetail = null
                         },
+                        enabled = prod.stockQuantity >= orderQuantity,
                         colors = ButtonDefaults.buttonColors(containerColor = SecondaryMint),
                         modifier = Modifier.weight(1f)
                     ) {
@@ -5248,6 +5263,7 @@ fun CustomerScreen(viewModel: MarketViewModel) {
                             viewModel.placeOrder(prod, orderQuantity, orderTypeChosen)
                             selectedProductForDetail = null
                         },
+                        enabled = prod.stockQuantity >= orderQuantity,
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryCyan),
                         modifier = Modifier.weight(1f)
                     ) {
@@ -5432,15 +5448,15 @@ fun CustomerScreen(viewModel: MarketViewModel) {
             confirmButton = {
                 Button(
                     onClick = {
-                        val trimmedCard = cardNumberState.replace(" ", "")
-                        if (trimmedCard.length < 16) {
-                            cardError = if (lang == "ar") "رقم البطاقة يجب أن يكون مكوناً من 16 رقماً!" else "Card number must contain exactly 16 digits!"
+                        val trimmedCard = cardNumberState.filterNot { it == ' ' || it == '-' }
+                        if (!PaymentValidation.isValidCardNumber(trimmedCard)) {
+                            cardError = if (lang == "ar") "رقم البطاقة غير صحيح، تحقق من الأرقام!" else "Invalid card number, please check the digits!"
                         } else if (cardHolderState.isBlank()) {
                             cardError = if (lang == "ar") "اسم صاحب البطاقة لا يمكن أن يكون فارغاً!" else "Cardholder name cannot be blank!"
-                        } else if (expiryDateState.length < 5 || !expiryDateState.contains("/")) {
-                            cardError = if (lang == "ar") "تاريخ الصلاحية غير صحيح! استخدم صيغة MM/YY" else "Invalid Expiry! Use MM/YY format."
-                        } else if (cvvState.length < 3) {
-                            cardError = if (lang == "ar") "الرمز السري CVV يجب أن يكون من 3 أرقام!" else "CVV must be 3 digits!"
+                        } else if (!PaymentValidation.isValidExpiry(expiryDateState)) {
+                            cardError = if (lang == "ar") "تاريخ الصلاحية غير صحيح أو منتهٍ! استخدم صيغة MM/YY" else "Invalid or expired date! Use MM/YY format."
+                        } else if (!PaymentValidation.isValidCvv(cvvState)) {
+                            cardError = if (lang == "ar") "الرمز السري CVV يجب أن يكون من 3 أو 4 أرقام!" else "CVV must be 3 or 4 digits!"
                         } else {
                             viewModel.linkBankCard(
                                 cardNumber = trimmedCard,

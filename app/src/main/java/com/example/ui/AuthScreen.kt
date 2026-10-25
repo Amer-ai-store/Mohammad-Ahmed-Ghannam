@@ -83,6 +83,16 @@ fun AuthScreen(viewModel: MarketViewModel) {
     val codeSent by viewModel.verificationCodeSent.collectAsState()
     val lang by viewModel.appLanguage.collectAsState()
 
+    // Sign-in errors (e.g. the admin account without its password) are raised in the view model.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+        }
+    }
+
     // Helper to get localized strings
     fun txt(key: String): String = Localization.get(key, lang)
 
@@ -105,7 +115,8 @@ fun AuthScreen(viewModel: MarketViewModel) {
 
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    val roles = listOf("Customer", "Merchant", "Delivery", "Admin")
+    // Admin is not offered at sign-up: that account opens only with ADMIN_PASSWORD on the sign-in tab.
+    val roles = listOf("Customer", "Merchant", "Delivery")
 
     Box(
         modifier = Modifier

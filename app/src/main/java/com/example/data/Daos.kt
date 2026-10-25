@@ -46,6 +46,10 @@ interface ProductDao {
 
     @Query("DELETE FROM products WHERE id = :id")
     suspend fun deleteProduct(id: Int)
+
+    /** Takes [quantity] units out of stock; returns 0 (and changes nothing) when there are not enough left. */
+    @Query("UPDATE products SET stockQuantity = stockQuantity - :quantity, salesHistory = salesHistory + :quantity WHERE id = :id AND stockQuantity >= :quantity")
+    suspend fun reserveStock(id: Int, quantity: Int): Int
 }
 
 @Dao
@@ -101,6 +105,9 @@ interface CartItemDao {
     @Update
     suspend fun updateCartItem(item: CartItemEntity)
 
+    @Query("SELECT * FROM cart_items WHERE userId = :userId ORDER BY id DESC")
+    suspend fun getCartItemsOnce(userId: Int): List<CartItemEntity>
+
     @Query("SELECT * FROM cart_items WHERE userId = :userId AND productId = :productId AND orderType = :orderType LIMIT 1")
     suspend fun getCartItemSpecific(userId: Int, productId: Int, orderType: String): CartItemEntity?
 
@@ -121,6 +128,10 @@ interface BankCardDao {
 
     @Query("DELETE FROM bank_cards WHERE cardNumber = :cardNumber AND userId = :userId")
     suspend fun deleteBankCard(cardNumber: String, userId: Int)
+
+    /** CVVs must never be kept after a card is linked; clears any saved by older app versions. */
+    @Query("UPDATE bank_cards SET cvv = '' WHERE cvv != ''")
+    suspend fun clearStoredCvvs()
 }
 
 @Dao
