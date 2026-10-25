@@ -14,7 +14,7 @@
 - **باشتراك Claude (Pro أو Max):** على حاسوبك شغّل `claude setup-token`، وانسخ الرمز الناتج إلى سرّ باسم `CLAUDE_CODE_OAUTH_TOKEN`.
 - **أو بمفتاح API:** أنشئ مفتاحاً من https://console.anthropic.com وضعه في سرّ باسم `ANTHROPIC_API_KEY`.
 
-بدون أحدهما يفشل فحص «Claude code review» برسالة «Claude review is not set up».
+بدون أحدهما يمرّ فحص «Claude code review» دون مراجعة، مع ملاحظة «Claude review skipped» في صفحة الفحص.
 
 ## ملاحظات
 - التعليقات تظهر باسم `github-actions`، لأن الـ workflow يستخدم الرمز المدمج في GitHub بدل تطبيق Claude؛ هكذا تعمل المراجعة أيضاً على الـ PR التي تعدّل ملفات الـ workflows.

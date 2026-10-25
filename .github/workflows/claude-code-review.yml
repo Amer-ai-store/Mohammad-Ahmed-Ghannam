@@ -1,7 +1,7 @@
 name: Claude code review
 # Reviews every pull request with Claude: inline comments on specific lines plus one summary comment.
 # Needs one repository secret, CLAUDE_CODE_OAUTH_TOKEN (Claude subscription) or ANTHROPIC_API_KEY (API key).
-# See docs/code-review-setup.md.
+# Until one exists the job passes with a notice instead of failing every PR. See docs/code-review-setup.md.
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
@@ -18,21 +18,19 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      CLAUDE_CONFIGURED: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' || secrets.ANTHROPIC_API_KEY != '' }}
     steps:
-      - name: Check for a Claude credential
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error title=Claude review is not set up::Add the repository secret CLAUDE_CODE_OAUTH_TOKEN (run 'claude setup-token') or ANTHROPIC_API_KEY. See docs/code-review-setup.md."
-            exit 1
-          fi
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Skip when Claude is not set up
+        if: env.CLAUDE_CONFIGURED != 'true'
+        run: echo "::notice title=Claude review skipped::Add the repository secret CLAUDE_CODE_OAUTH_TOKEN (run 'claude setup-token') or ANTHROPIC_API_KEY. See docs/code-review-setup.md."
+      - if: env.CLAUDE_CONFIGURED == 'true'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 1
           persist-credentials: false
       - name: Review the pull request
+        if: env.CLAUDE_CONFIGURED == 'true'
         uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
