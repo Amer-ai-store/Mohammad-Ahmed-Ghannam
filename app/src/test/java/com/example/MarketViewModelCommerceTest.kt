@@ -123,7 +123,8 @@ class MarketViewModelCommerceTest {
         awaitUntil { db.cartItemDao().getCartItemsOnce(user.id).size == 2 }
 
         viewModel.checkoutCart()
-        awaitUntil { db.cartItemDao().getCartItemsOnce(user.id).size == 1 }
+        // Loyalty points are awarded last (3 x 5.0 = 15), so wait for them rather than the cart, which empties earlier.
+        awaitUntil { viewModel.currentUser.value?.loyaltyPoints == 15 }
 
         runBlocking {
             val orders = db.orderDao().getOrdersForCustomer(user.id).first()
