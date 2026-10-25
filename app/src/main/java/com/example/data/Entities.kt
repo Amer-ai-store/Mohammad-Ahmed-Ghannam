@@ -122,3 +122,13 @@ data class StoredOrganicItemEntity(
 )
 
 
+
+/** Password hash for LocalAuthBackend (builds without Firebase). Kept apart from users so exports never carry it. */
+@Entity(tableName = "local_credentials")
+data class CredentialEntity(
+    @PrimaryKey val email: String, // normalizeEmail()
+    val passwordHash: String,
+    val salt: String,
+    val algorithm: String,
+    val iterations: Int
+)

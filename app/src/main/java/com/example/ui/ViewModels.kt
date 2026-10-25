@@ -16,8 +16,12 @@ private const val ADMIN_EMAIL = "zxzx.Mohammad91@gmail.com"
 private val ALL_ROLES = listOf("Customer", "Merchant", "Delivery", "Admin")
 private val SELF_SERVICE_ROLES = listOf("Customer", "Merchant", "Delivery")
 
-/** Sign-up and Google sign-in can never create an admin; that role belongs to the ADMIN_PASSWORD login. */
+/** Sign-up can never create an admin; that role belongs to the ADMIN_PASSWORD login. */
 private fun selfServiceRole(requested: String): String = if (requested in SELF_SERVICE_ROLES) requested else "Customer"
+
+/** At least 6 characters (Firebase's minimum) with at least one letter and one digit. */
+fun isStrongPassword(password: String): Boolean =
+    password.length >= 6 && password.any { it.isLetter() } && password.any { it.isDigit() }
 
 class MarketViewModel(
     private val userDao: UserDao,
@@ -29,7 +33,8 @@ class MarketViewModel(
     private val bankCardDao: BankCardDao,
     private val searchQueryDao: SearchQueryDao,
     private val familyShoppingListDao: FamilyShoppingListDao,
-    private val storedOrganicItemDao: StoredOrganicItemDao
+    private val storedOrganicItemDao: StoredOrganicItemDao,
+    private val authBackend: AuthBackend
 ) : ViewModel() {
 
     private val TAG = "MarketViewModel"
@@ -258,9 +263,6 @@ class MarketViewModel(
     )
     val deliveryLocations = _deliveryLocations.asStateFlow()
 
-    private val _userPassword = MutableStateFlow("")
-    val userPassword = _userPassword.asStateFlow()
-
     // AI Features Toggles
     private val _aiVoiceEnabled = MutableStateFlow(true)
     val aiVoiceEnabled = _aiVoiceEnabled.asStateFlow()
@@ -274,10 +276,11 @@ class MarketViewModel(
     private val _lastCheckInDate = MutableStateFlow<String?>(null)
     val lastCheckInDate = _lastCheckInDate.asStateFlow()
 
-    fun updateProfile(name: String, email: String, phone: String, gender: String, age: Int, address: String) {
+    /** The email is not editable here: it is the sign-in identity held by the auth backend. */
+    fun updateProfile(name: String, phone: String, gender: String, age: Int, address: String) {
         val user = _currentUser.value ?: return
         viewModelScope.launch {
-            val updatedUser = user.copy(name = name, email = email, phoneNumber = phone)
+            val updatedUser = user.copy(name = name, phoneNumber = phone)
             userDao.updateUser(updatedUser)
             _currentUser.value = updatedUser
             
@@ -287,13 +290,35 @@ class MarketViewModel(
         }
     }
 
-    fun changePassword(newPassword: String): Boolean {
-        val regex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{6,}$".toRegex()
-        return if (newPassword.matches(regex)) {
-            _userPassword.value = newPassword
-            true
-        } else {
-            false
+    /** Re-checks [currentPassword] with the auth backend, then sets [newPassword]. [onResult] gets null on success. */
+    fun changePassword(currentPassword: String, newPassword: String, onResult: (AuthError?) -> Unit) {
+        val user = _currentUser.value ?: return
+        if (!isStrongPassword(newPassword)) {
+            onResult(AuthError.WEAK_PASSWORD)
+            return
+        }
+        viewModelScope.launch {
+            val error = try {
+                authBackend.changePassword(user.email, currentPassword, newPassword)
+                null
+            } catch (e: AuthException) {
+                e.error
+            }
+            onResult(error)
+        }
+    }
+
+    fun authErrorMessage(error: AuthError): String {
+        val ar = _appLanguage.value == "ar"
+        return when (error) {
+            AuthError.INVALID_CREDENTIALS -> if (ar) "البريد/الهاتف أو كلمة المرور غير صحيحة." else "Incorrect email/phone or password."
+            AuthError.EMAIL_IN_USE -> if (ar) "هذا البريد مسجّل مسبقاً، سجّل الدخول بدلاً من ذلك." else "This email is already registered; sign in instead."
+            AuthError.WEAK_PASSWORD -> if (ar) "كلمة المرور ضعيفة: 6 خانات فأكثر مع حرف ورقم على الأقل." else "Weak password: 6+ characters with at least one letter and one digit."
+            AuthError.RECENT_LOGIN_REQUIRED -> if (ar) "لأمانك، سجّل الخروج ثم الدخول مجدداً قبل تغيير كلمة المرور." else "For your security, sign out and back in before changing the password."
+            AuthError.TOO_MANY_ATTEMPTS -> if (ar) "محاولات كثيرة، انتظر قليلاً ثم أعد المحاولة." else "Too many attempts. Wait a moment and try again."
+            AuthError.NETWORK -> if (ar) "تحقق من اتصالك بالإنترنت." else "Check your internet connection."
+            AuthError.PROVIDER_DISABLED -> if (ar) "الدخول بالبريد وكلمة المرور غير مفعّل في Firebase بعد." else "Email/password sign-in is not enabled in Firebase yet."
+            AuthError.UNKNOWN -> if (ar) "تعذّر إكمال العملية، حاول مجدداً." else "Could not complete that. Please try again."
         }
     }
 
@@ -562,6 +587,11 @@ class MarketViewModel(
     val verificationCodeSent = _verificationCodeSent.asStateFlow()
 
     private val _pendingUserToRegister = MutableStateFlow<UserEntity?>(null)
+    // Held between the two sign-up steps only; never written to the database or a StateFlow.
+    private var pendingPassword: String? = null
+
+    private val _isAuthLoading = MutableStateFlow(false)
+    val isAuthLoading = _isAuthLoading.asStateFlow()
 
     // Language State ("ar" for Arabic, "en" for English)
     private val _appLanguage = MutableStateFlow("ar")
@@ -600,6 +630,8 @@ class MarketViewModel(
     }
 
     init {
+        // Firebase keeps the session across launches; reopen that account.
+        authBackend.signedInEmail()?.let { email -> viewModelScope.launch { openAccount(email) } }
         viewModelScope.launch { bankCardDao.clearStoredCvvs() }
         // Pre-populate some cool premium products to ensure a beautiful out-of-the-box experience
         viewModelScope.launch {
@@ -776,14 +808,29 @@ class MarketViewModel(
         }
     }
 
-    fun initiateRegister(name: String, phoneNumber: String, email: String, role: String) {
+    /** Step 1 of sign-up. The account itself is created in [confirmCode]. */
+    fun initiateRegister(name: String, phoneNumber: String, email: String, role: String, password: String) {
+        val normalizedEmail = normalizeEmail(email)
+        val problem = when {
+            !Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches(normalizedEmail) ->
+                if (_appLanguage.value == "ar") "أدخل بريداً إلكترونياً صحيحاً." else "Enter a valid email address."
+            // That email is the "admin" sign-in (ADMIN_PASSWORD); it cannot be registered as a normal account.
+            normalizedEmail == normalizeEmail(ADMIN_EMAIL) -> authErrorMessage(AuthError.EMAIL_IN_USE)
+            !isStrongPassword(password) -> authErrorMessage(AuthError.WEAK_PASSWORD)
+            else -> null
+        }
+        if (problem != null) {
+            triggerError(problem)
+            return
+        }
+        pendingPassword = password
         viewModelScope.launch {
             val code = (100000..999999).random().toString()
             _verificationCodeSent.value = code
             _pendingUserToRegister.value = UserEntity(
                 name = name,
                 phoneNumber = phoneNumber,
-                email = email,
+                email = normalizedEmail,
                 role = selfServiceRole(role),
                 permissionGranted = true // auto opt-in for behavioral analytics by default
             )
@@ -793,21 +840,62 @@ class MarketViewModel(
     }
 
     fun confirmCode(enteredCode: String): Boolean {
-        if (enteredCode == _verificationCodeSent.value) {
-            val user = _pendingUserToRegister.value
-            if (user != null) {
-                viewModelScope.launch {
-                    val newUserId = userDao.insertUser(user)
-                    val registeredUser = user.copy(id = newUserId.toInt())
-                    _currentUser.value = registeredUser
-                    _currentRole.value = registeredUser.role
-                    _verificationStep.value = 0
-                    updateSavedProducts(registeredUser.id)
+        if (enteredCode != _verificationCodeSent.value) return false
+        val user = _pendingUserToRegister.value ?: return false
+        val password = pendingPassword ?: return false
+        viewModelScope.launch {
+            _isAuthLoading.value = true
+            try {
+                authBackend.register(user.email, password)
+                // Older versions signed people in without a password and may have left a row for this email: reuse it.
+                val existing = userDao.getUserByEmailIgnoreCase(user.email)
+                val registered = if (existing != null) {
+                    existing.copy(
+                        name = user.name,
+                        phoneNumber = user.phoneNumber.ifBlank { existing.phoneNumber },
+                        email = user.email,
+                        role = user.role
+                    ).also { userDao.updateUser(it) }
+                } else {
+                    user.copy(id = userDao.insertUser(user).toInt())
                 }
-                return true
+                pendingPassword = null
+                _pendingUserToRegister.value = null
+                openSession(registered)
+            } catch (e: AuthException) {
+                _verificationStep.value = 0
+                triggerError(authErrorMessage(e.error))
+            } finally {
+                _isAuthLoading.value = false
             }
         }
-        return false
+        return true
+    }
+
+    private fun openSession(user: UserEntity) {
+        _currentUser.value = user
+        _currentRole.value = user.role
+        _verificationStep.value = 0
+        updateSavedProducts(user.id)
+    }
+
+    /** Opens the profile for an email the auth backend accepted, creating one when this device has none yet. */
+    private suspend fun openAccount(email: String) {
+        val existing = userDao.getUserByEmailIgnoreCase(email)
+        if (existing?.role == "Admin") {
+            // The admin account opens only through the ADMIN_PASSWORD sign-in in login().
+            authBackend.signOut()
+            triggerError(if (_appLanguage.value == "ar") "هذا الحساب يتطلب كلمة مرور المدير." else "This account needs the admin password.")
+            return
+        }
+        val user = existing ?: UserEntity(
+            name = email.substringBefore("@"),
+            phoneNumber = "",
+            email = normalizeEmail(email),
+            role = "Customer",
+            permissionGranted = true
+        ).let { it.copy(id = userDao.insertUser(it).toInt()) }
+        openSession(user)
     }
 
     fun login(emailOrPhone: String, password: String): Boolean {
@@ -842,65 +930,33 @@ class MarketViewModel(
                 updateSavedProducts(adminUser.id)
             }
             return true
-        } else {
-            viewModelScope.launch {
-                val existing = userDao.getUserByEmailOrPhone(emailOrPhone.trim(), emailOrPhone.trim())
-                if (existing?.role == "Admin") {
-                    // e.g. the admin's phone number: never open the admin account without ADMIN_PASSWORD.
-                    triggerError("هذا الحساب يتطلب كلمة مرور المدير.")
-                } else if (existing != null) {
-                    _currentUser.value = existing
-                    _currentRole.value = existing.role
-                    _verificationStep.value = 0
-                    updateSavedProducts(existing.id)
-                } else {
-                    val isEmail = emailOrPhone.contains("@")
-                    val newUser = UserEntity(
-                        name = if (isEmail) emailOrPhone.split("@").firstOrNull() ?: "User" else "User_$emailOrPhone",
-                        phoneNumber = if (isEmail) "" else emailOrPhone,
-                        email = if (isEmail) emailOrPhone else "",
-                        role = "Customer",
-                        permissionGranted = true
-                    )
-                    val id = userDao.insertUser(newUser)
-                    val registered = newUser.copy(id = id.toInt())
-                    _currentUser.value = registered
-                    _currentRole.value = "Customer"
-                    _verificationStep.value = 0
-                    updateSavedProducts(registered.id)
-                }
-            }
-            return true
         }
-    }
-
-    fun loginWithGoogleSimulated(name: String, email: String, role: String) {
+        val identifier = emailOrPhone.trim()
+        if (identifier.isEmpty() || password.isEmpty()) return false
         viewModelScope.launch {
-            var existing = userDao.getUserByEmail(email.trim())
-            if (existing?.role == "Admin") {
-                // The admin account only opens with ADMIN_PASSWORD through login().
-                triggerError("هذا الحساب يتطلب كلمة مرور المدير.")
-                return@launch
+            _isAuthLoading.value = true
+            try {
+                // A phone number signs in through the email saved on that account.
+                val email = if (identifier.contains("@")) {
+                    identifier
+                } else {
+                    userDao.getUserByPhone(identifier)?.email?.takeIf { it.isNotBlank() }
+                        ?: throw AuthException(AuthError.INVALID_CREDENTIALS)
+                }
+                authBackend.signIn(email, password)
+                openAccount(email)
+            } catch (e: AuthException) {
+                triggerError(authErrorMessage(e.error))
+            } finally {
+                _isAuthLoading.value = false
             }
-            if (existing == null) {
-                val newUser = UserEntity(
-                    name = name,
-                    phoneNumber = "",
-                    email = email,
-                    role = selfServiceRole(role),
-                    permissionGranted = true
-                )
-                val id = userDao.insertUser(newUser)
-                existing = newUser.copy(id = id.toInt())
-            }
-            _currentUser.value = existing
-            _currentRole.value = existing.role
-            _verificationStep.value = 0
-            updateSavedProducts(existing.id)
         }
+        return true
     }
 
     fun logout() {
+        authBackend.signOut()
+        pendingPassword = null
         _currentUser.value = null
         _currentRole.value = "Customer"
         _verificationStep.value = 0

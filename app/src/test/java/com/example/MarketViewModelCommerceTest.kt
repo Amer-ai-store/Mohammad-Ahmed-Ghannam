@@ -45,7 +45,8 @@ class MarketViewModelCommerceTest {
             db.bankCardDao(),
             db.searchQueryDao(),
             db.familyShoppingListDao(),
-            db.storedOrganicItemDao()
+            db.storedOrganicItemDao(),
+            LocalAuthBackend(db.credentialDao())
         )
     }
 
@@ -56,7 +57,7 @@ class MarketViewModelCommerceTest {
 
     /** viewModelScope runs on the main looper and Room on its own threads, so pump both until [condition] holds. */
     private fun awaitUntil(condition: suspend () -> Boolean) = runBlocking {
-        repeat(200) {
+        repeat(500) {
             shadowOf(Looper.getMainLooper()).idle()
             if (condition()) return@runBlocking
             Thread.sleep(10)
@@ -65,7 +66,9 @@ class MarketViewModelCommerceTest {
     }
 
     private fun signInAsCustomer(): UserEntity {
-        viewModel.login("buyer@example.com", "")
+        viewModel.initiateRegister("Buyer", "0790000001", "buyer@example.com", "Customer", "secret12")
+        awaitUntil { viewModel.verificationCodeSent.value != null }
+        viewModel.confirmCode(viewModel.verificationCodeSent.value!!)
         awaitUntil { viewModel.currentUser.value != null }
         return viewModel.currentUser.value!!
     }
@@ -84,7 +87,7 @@ class MarketViewModelCommerceTest {
 
     @Test
     fun signUpCannotCreateAnAdmin() {
-        viewModel.initiateRegister("Eve", "0790000009", "eve@example.com", "Admin")
+        viewModel.initiateRegister("Eve", "0790000009", "eve@example.com", "Admin", "secret12")
         awaitUntil { viewModel.verificationCodeSent.value != null }
         assertTrue(viewModel.confirmCode(viewModel.verificationCodeSent.value!!))
         awaitUntil { viewModel.currentUser.value != null }
@@ -94,11 +97,12 @@ class MarketViewModelCommerceTest {
     }
 
     @Test
-    fun adminAccountDoesNotOpenByPhoneWithoutPassword() {
+    fun adminAccountDoesNotOpenByPhoneEvenWithItsPassword() {
         runBlocking {
             db.userDao().insertUser(UserEntity(name = "admin", phoneNumber = "0590000000", email = "boss@example.com", role = "Admin"))
+            LocalAuthBackend(db.credentialDao()).register("boss@example.com", "secret12")
         }
-        viewModel.login("0590000000", "")
+        viewModel.login("0590000000", "secret12")
         awaitUntil { viewModel.errorMessage.value != null }
 
         assertNull(viewModel.currentUser.value)

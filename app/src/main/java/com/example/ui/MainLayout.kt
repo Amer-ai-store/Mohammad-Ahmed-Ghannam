@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -8627,7 +8628,6 @@ fun ProfileSettings(
     val genderState by viewModel.userGender.collectAsState()
     val ageState by viewModel.userAge.collectAsState()
     val addressState by viewModel.userAddress.collectAsState()
-    val passwordState by viewModel.userPassword.collectAsState()
 
     val aiVoice by viewModel.aiVoiceEnabled.collectAsState()
     val aiDashboard by viewModel.aiDashboardEnabled.collectAsState()
@@ -8638,7 +8638,7 @@ fun ProfileSettings(
 
     // Form editing states
     var nameInput by remember(currentUser) { mutableStateOf(currentUser?.name ?: "") }
-    var emailInput by remember(currentUser) { mutableStateOf(currentUser?.email ?: "") }
+    val emailInput = currentUser?.email ?: ""
     var phoneInput by remember(currentUser) { mutableStateOf(currentUser?.phoneNumber ?: "") }
     var genderInput by remember(genderState) { mutableStateOf(genderState) }
     var ageInput by remember(ageState) { mutableStateOf(ageState.toString()) }
@@ -8789,8 +8789,16 @@ fun ProfileSettings(
                                 // Email Input
                                 OutlinedTextField(
                                     value = emailInput,
-                                    onValueChange = { emailInput = it },
+                                    onValueChange = {},
+                                    readOnly = true,
                                     label = { Text(if (lang == "ar") "البريد الإلكتروني" else "Email Address") },
+                                    supportingText = {
+                                        Text(
+                                            text = if (lang == "ar") "يُستخدم لتسجيل الدخول ولا يمكن تغييره من هنا" else "Used to sign in; it can't be changed here",
+                                            fontSize = 9.sp,
+                                            color = SoftGrayText
+                                        )
+                                    },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = PrimaryCyan,
@@ -8991,7 +8999,6 @@ fun ProfileSettings(
                                         if (nameInput.trim().length >= 3 && !nameInput.contains(" ")) {
                                             viewModel.updateProfile(
                                                 name = nameInput.trim(),
-                                                email = emailInput.trim(),
                                                 phone = phoneInput.trim(),
                                                 gender = genderInput,
                                                 age = ageNum,
@@ -9025,16 +9032,13 @@ fun ProfileSettings(
                                     color = SecondaryMint
                                 )
 
-                                Text(
-                                    text = if (lang == "ar") "كلمة السر الحالية: $passwordState" else "Current Saved Password: $passwordState",
-                                    fontSize = 10.sp,
-                                    color = SoftGrayText
-                                )
-
                                 OutlinedTextField(
                                     value = oldPassInput,
                                     onValueChange = { oldPassInput = it },
-                                    label = { Text(if (lang == "ar") "كلمة السر القديمة" else "Old Password") },
+                                    label = { Text(if (lang == "ar") "كلمة السر الحالية" else "Current Password") },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryCyan)
                                 )
@@ -9043,6 +9047,9 @@ fun ProfileSettings(
                                     value = newPassInput,
                                     onValueChange = { newPassInput = it },
                                     label = { Text(if (lang == "ar") "كلمة السر الجديدة" else "New Password") },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryCyan),
                                     supportingText = {
@@ -9058,6 +9065,9 @@ fun ProfileSettings(
                                     value = confirmPassInput,
                                     onValueChange = { confirmPassInput = it },
                                     label = { Text(if (lang == "ar") "تأكيد كلمة السر الجديدة" else "Confirm New Password") },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryCyan)
                                 )
@@ -9073,19 +9083,18 @@ fun ProfileSettings(
                                     onClick = {
                                         passwordSuccessMsg = ""
                                         passwordErrorMsg = ""
-                                        if (oldPassInput != passwordState) {
-                                            passwordErrorMsg = if (lang == "ar") "كلمة السر القديمة غير صحيحة!" else "Old password is incorrect!"
-                                        } else if (newPassInput != confirmPassInput) {
+                                        if (newPassInput != confirmPassInput) {
                                             passwordErrorMsg = if (lang == "ar") "كلمة السر غير متطابقة!" else "New password confirmation does not match!"
                                         } else {
-                                            val ok = viewModel.changePassword(newPassInput)
-                                            if (ok) {
-                                                passwordSuccessMsg = if (lang == "ar") "تم تغيير كلمة المرور بنجاح! 🔒" else "Password updated successfully! 🔒"
-                                                oldPassInput = ""
-                                                newPassInput = ""
-                                                confirmPassInput = ""
-                                            } else {
-                                                passwordErrorMsg = if (lang == "ar") "لم تستوف شروط الأمان! يجب أن تكون كلمة السر 6 خانات مع رقم وحرف على الأقل." else "Security rules not met! Must be at least 6 characters with a letter and a digit."
+                                            viewModel.changePassword(oldPassInput, newPassInput) { error ->
+                                                if (error == null) {
+                                                    passwordSuccessMsg = if (lang == "ar") "تم تغيير كلمة المرور بنجاح! 🔒" else "Password updated successfully! 🔒"
+                                                    oldPassInput = ""
+                                                    newPassInput = ""
+                                                    confirmPassInput = ""
+                                                } else {
+                                                    passwordErrorMsg = viewModel.authErrorMessage(error)
+                                                }
                                             }
                                         }
                                     },

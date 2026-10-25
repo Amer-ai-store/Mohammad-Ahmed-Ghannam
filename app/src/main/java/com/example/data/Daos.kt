@@ -17,6 +17,12 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     suspend fun getUserByEmail(email: String): UserEntity?
 
+    @Query("SELECT * FROM users WHERE email != '' AND LOWER(email) = LOWER(:email) ORDER BY id LIMIT 1")
+    suspend fun getUserByEmailIgnoreCase(email: String): UserEntity?
+
+    @Query("SELECT * FROM users WHERE phoneNumber != '' AND phoneNumber = :phone ORDER BY id LIMIT 1")
+    suspend fun getUserByPhone(phone: String): UserEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: UserEntity): Long
 
@@ -185,6 +191,25 @@ interface StoredOrganicItemDao {
     suspend fun clearStoredItems(userId: Int)
 }
 
+@Dao
+interface CredentialDao {
+    @Query("SELECT * FROM local_credentials WHERE email = :email LIMIT 1")
+    suspend fun getCredential(email: String): CredentialEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCredential(credential: CredentialEntity)
+}
+
+/** v10 adds local_credentials. A real migration, so existing users, orders and carts survive the update. */
+val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `local_credentials` (`email` TEXT NOT NULL, `passwordHash` TEXT NOT NULL, " +
+                "`salt` TEXT NOT NULL, `algorithm` TEXT NOT NULL, `iterations` INTEGER NOT NULL, PRIMARY KEY(`email`))"
+        )
+    }
+}
+
 @Database(
     entities = [
         UserEntity::class,
@@ -196,9 +221,10 @@ interface StoredOrganicItemDao {
         BankCardEntity::class,
         SearchQueryEntity::class,
         FamilyShoppingListEntity::class,
-        StoredOrganicItemEntity::class
+        StoredOrganicItemEntity::class,
+        CredentialEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -212,6 +238,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun searchQueryDao(): SearchQueryDao
     abstract fun familyShoppingListDao(): FamilyShoppingListDao
     abstract fun storedOrganicItemDao(): StoredOrganicItemDao
+    abstract fun credentialDao(): CredentialDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
@@ -219,6 +246,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getInstance(context: android.content.Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "aicommerce.db")
+                    .addMigrations(MIGRATION_9_10)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { instance = it }
