@@ -34,38 +34,48 @@ jobs:
         run: |
           import os, re
 
-          TOKEN_START = re.compile(r"sk-ant-oat\d+-[A-Za-z0-9_-]+")
+          TOKEN_CHARS = re.compile(r"[A-Za-z0-9_-]+")
           # Box-drawing borders and quotes that terminals and copy tools put around the token.
           BORDER = " \t'\"`│┃║|╭╮╰╯─━═"
+
+
+          def describe(line):
+              """Length and kind of a line, never its content."""
+              piece = line.strip(BORDER)
+              if not piece:
+                  return f"{len(line)}:blank"
+              kind = "token-chars" if TOKEN_CHARS.fullmatch(piece) else "text"
+              mark = "+prefix" if "sk-ant-oat" in line else ""
+              return f"{len(line)}:{kind}{mark}"
+
 
           raw = os.environ.get("RAW_TOKEN", "")
           if raw:
               lines = raw.replace("\r", "").split("\n")
-              token, before, after = None, "", ""
+              token = None
               for i, line in enumerate(lines):
-                  match = TOKEN_START.search(line)
-                  if not match:
+                  start = line.find("sk-ant-oat")
+                  if start < 0:
                       continue
-                  before, after = line[: match.start()], line[match.end():]
-                  # A terminal may wrap the long token over several lines; join the pieces that follow it.
-                  parts = [match.group(0)]
-                  if not after.strip(BORDER):
+                  head = TOKEN_CHARS.match(line, start).group(0)
+                  parts = [head]
+                  # A terminal may wrap the long token anywhere, even right after the prefix; join the pieces that follow.
+                  if not line[start + len(head):].strip(BORDER):
                       for nxt in lines[i + 1:]:
                           piece = nxt.strip(BORDER)
-                          if not re.fullmatch(r"[A-Za-z0-9_-]+", piece):
+                          if not TOKEN_CHARS.fullmatch(piece):
                               break
                           parts.append(piece)
                   token = "".join(parts)
                   break
               if not token or not re.fullmatch(r"sk-ant-oat\d+-[A-Za-z0-9_-]{20,}", token):
                   found = "contains" if "sk-ant-oat" in raw else "does not contain"
-                  # Describe only the shape around the token: letters and digits are hidden, since they may be part of it.
-                  hide = lambda text: re.sub(r"[A-Za-z0-9_-]", "*", text)
-                  context = f" Around it: {hide(before[-12:])!r} ... {hide(after[:12])!r}." if token else ""
+                  shape = ", ".join(describe(line) for line in lines)
                   print(
                       "::error title=CLAUDE_CODE_OAUTH_TOKEN is malformed::No usable token in the secret: it is "
-                      f"{len(raw)} characters on {len(lines)} lines and {found} 'sk-ant-oat'.{context} Paste only the "
-                      "token printed by 'claude setup-token' under Settings > Secrets and variables > Actions."
+                      f"{len(raw)} characters on {len(lines)} lines and {found} 'sk-ant-oat'. Line shapes "
+                      f"(length:kind): {shape}. Paste only the token printed by 'claude setup-token' under "
+                      "Settings > Secrets and variables > Actions."
                   )
                   raise SystemExit(1)
               print(f"::add-mask::{token}")
