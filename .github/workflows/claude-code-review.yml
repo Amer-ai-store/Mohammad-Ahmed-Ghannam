@@ -39,7 +39,6 @@ jobs:
           # workflow files, and this keeps reviews working on those PRs too. Comments come from github-actions.
           github_token: ${{ secrets.GITHUB_TOKEN }}
           track_progress: true
-          show_full_output: true # TEMPORARY: diagnosing why the first review run was rejected; remove after.
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
