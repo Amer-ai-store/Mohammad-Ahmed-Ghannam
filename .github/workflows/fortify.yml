@@ -35,10 +35,19 @@ jobs:
       contents: read
       security-events: write
       # pull-requests: write     # Required if DO_PR_COMMENT is set to true
+    # The scan can only log in once Fortify on Demand credentials are saved as secrets. Until then it is
+    # skipped with a notice instead of failing every push and PR; it starts running as soon as they exist.
+    env:
+      FORTIFY_CONFIGURED: ${{ secrets.FOD_USER != '' || secrets.FOD_CLIENT_ID != '' }}
 
     steps:
+      - name: Skip when Fortify is not set up
+        if: env.FORTIFY_CONFIGURED != 'true'
+        run: echo "::notice title=Fortify scan skipped::Add the FOD_TENANT, FOD_USER and FOD_PAT repository secrets to run the Fortify scan."
+
       # Check out source code
       - name: Check Out Source Code
+        if: env.FORTIFY_CONFIGURED == 'true'
         uses: actions/checkout@v4
 
       # Perform SAST and/or SCA scan via Fortify on Demand/Fortify Hosted/ScanCentral SAST/Debricked. Based on
@@ -50,6 +59,7 @@ jobs:
       # documentation at https://github.com/fortify/github-action#readme for more information on the various
       # configuration options and available sub-actions.
       - name: Run Fortify Scan
+        if: env.FORTIFY_CONFIGURED == 'true'
         # Specify Fortify GitHub Action version to run. As per GitHub starter workflow requirements, this example
         # uses the commit id corresponding to version 1.6.2. It is recommended to check whether any later releases
         # are available at https://github.com/fortify/github-action/releases. Depending on the amount of stability
