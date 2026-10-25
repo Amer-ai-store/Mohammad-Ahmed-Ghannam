@@ -34,26 +34,38 @@ jobs:
         run: |
           import os, re
 
+          TOKEN_START = re.compile(r"sk-ant-oat\d+-[A-Za-z0-9_-]+")
+          # Box-drawing borders and quotes that terminals and copy tools put around the token.
+          BORDER = " \t'\"`│┃║|╭╮╰╯─━═"
+
           raw = os.environ.get("RAW_TOKEN", "")
           if raw:
-              lines = [line.strip() for line in raw.replace("\r", "").split("\n")]
-              token = None
+              lines = raw.replace("\r", "").split("\n")
+              token, before, after = None, "", ""
               for i, line in enumerate(lines):
-                  if line.startswith("sk-ant-oat"):
-                      # A terminal may wrap the long token over several lines; join the pieces that follow it.
-                      parts = [line]
+                  match = TOKEN_START.search(line)
+                  if not match:
+                      continue
+                  before, after = line[: match.start()], line[match.end():]
+                  # A terminal may wrap the long token over several lines; join the pieces that follow it.
+                  parts = [match.group(0)]
+                  if not after.strip(BORDER):
                       for nxt in lines[i + 1:]:
-                          if not re.fullmatch(r"[A-Za-z0-9_-]+", nxt):
+                          piece = nxt.strip(BORDER)
+                          if not re.fullmatch(r"[A-Za-z0-9_-]+", piece):
                               break
-                          parts.append(nxt)
-                      token = "".join(parts)
-                      break
+                          parts.append(piece)
+                  token = "".join(parts)
+                  break
               if not token or not re.fullmatch(r"sk-ant-oat\d+-[A-Za-z0-9_-]{20,}", token):
                   found = "contains" if "sk-ant-oat" in raw else "does not contain"
+                  # Describe only the shape around the token: letters and digits are hidden, since they may be part of it.
+                  hide = lambda text: re.sub(r"[A-Za-z0-9_-]", "*", text)
+                  context = f" Around it: {hide(before[-12:])!r} ... {hide(after[:12])!r}." if token else ""
                   print(
                       "::error title=CLAUDE_CODE_OAUTH_TOKEN is malformed::No usable token in the secret: it is "
-                      f"{len(raw)} characters on {len(lines)} lines and {found} 'sk-ant-oat'. Paste only the token "
-                      "printed by 'claude setup-token' under Settings > Secrets and variables > Actions."
+                      f"{len(raw)} characters on {len(lines)} lines and {found} 'sk-ant-oat'.{context} Paste only the "
+                      "token printed by 'claude setup-token' under Settings > Secrets and variables > Actions."
                   )
                   raise SystemExit(1)
               print(f"::add-mask::{token}")
