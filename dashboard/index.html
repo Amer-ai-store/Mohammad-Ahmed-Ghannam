@@ -572,6 +572,11 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     for (const c of COLLS) db.collection(c).onSnapshot(s => { state[c] = s.docs.map(d => ({ id: d.id, ...d.data() })); scheduleRender(); }, onErr);
     db.collection("activity").orderBy("at", "desc").limit(60).onSnapshot(s => { state.activity = s.docs.map(d => ({ id: d.id, ...d.data() })); scheduleRender(); }, onErr);
     db.doc("settings/project").onSnapshot(d => { state.settings = d.exists ? { ...d.data() } : {}; scheduleRender(); }, onErr);
+    db.doc(SNAPSHOT_PATH).onSnapshot(d => {
+      try { dbStoreSnapshot = d.exists ? { ...normalize(d.data()), snapshot: true } : null; } catch { dbStoreSnapshot = null; }
+      // Replace sample data, or an older shared snapshot; never a live feed or a file imported here.
+      if (storeData.sample || storeData.snapshot) { storeData = dbStoreSnapshot || SAMPLE; scheduleRender(); }
+    }, onErr);
     const user = await window.claude.use("user").catch(() => null);
     const can = user ? await user.can("data.write").catch(() => null) : null;
     if (can === false) { readOnly = true; applyWriteState(); }
@@ -970,6 +975,17 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     };
   }
   let storeData = SAMPLE;
+  // Shared copy of the latest app export (customers' phones and emails removed), so every device and
+  // every agent sees the real store. Precedence: live Firestore > file imported in this browser > this > sample.
+  let dbStoreSnapshot = null;
+  const SNAPSHOT_PATH = "store/snapshot";
+  function sanitizeForSnapshot(d) {
+    return {
+      format: FORMAT, version: 1, exportedAt: d.exportedAt || Date.now(), savedAt: Date.now(),
+      users: d.users.map(u => ({ id: u.id, name: u.name, role: u.role, permissionGranted: u.permissionGranted, loyaltyPoints: u.loyaltyPoints, createdAt: u.createdAt })),
+      products: d.products, orders: d.orders, chatReports: d.chatReports
+    };
+  }
   try { const saved = localStorage.getItem(STORE_KEY); if (saved) storeData = normalize(JSON.parse(saved)); } catch { storeData = SAMPLE; }
 
   function fillSelect(id, values, labels) {
@@ -980,8 +996,8 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   function renderStore() {
     const d = storeData;
     $("store-notice").hidden = !d.sample; $("clear-store").hidden = !!d.sample || !!d.live;
-    $("store-source").className = "pill " + (d.sample ? "warn" : "ok"); $("store-source").textContent = d.live ? "مباشر من Firebase" : d.sample ? "بيانات تجريبية" : "بيانات التطبيق";
-    $("store-exported").textContent = d.live ? "يتحدث مباشرة من Firestore مع كل تغيير في التطبيق." : d.sample ? "بيانات تطبيق Android: الطلبات والمخزون والنزاعات والمستخدمون." : "آخر تصدير من التطبيق: " + fmtDate(d.exportedAt);
+    $("store-source").className = "pill " + (d.sample ? "warn" : "ok"); $("store-source").textContent = d.live ? "مباشر من Firebase" : d.sample ? "بيانات تجريبية" : d.snapshot ? "لقطة محفوظة من التطبيق" : "بيانات التطبيق";
+    $("store-exported").textContent = d.live ? "يتحدث مباشرة من Firestore مع كل تغيير في التطبيق." : d.sample ? "بيانات تطبيق Android: الطلبات والمخزون والنزاعات والمستخدمون." : "آخر تصدير من التطبيق: " + fmtDate(d.exportedAt) + (d.snapshot ? " — محفوظة لكل أجهزتك، دون هواتف العملاء وبريدهم." : "");
     const active = d.orders.filter(o => o.status !== "Delivered").length;
     const low = d.products.filter(p => p.stockQuantity < LOW_STOCK).length;
     const open = d.chatReports.filter(r => !r.resolvedTip.trim()).length;
@@ -1019,11 +1035,13 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     try {
       if (file.size > 20 * 1024 * 1024) throw new Error("size");
       storeData = normalize(JSON.parse(await file.text()));
+      // Share the import with every device and agent, without customers' phones and emails.
+      if (mode === "db" && !readOnly) db.doc(SNAPSHOT_PATH).set(sanitizeForSnapshot(storeData)).catch(dbFail);
       try { localStorage.setItem(STORE_KEY, JSON.stringify(storeData)); } catch {}
       toast("استُوردت بيانات التطبيق."); renderAll();
     } catch (err) { toast(err && err.message === "size" ? "الملف أكبر من 20 ميغابايت." : "الملف ليس تصديراً من التطبيق. استخدم زر «تصدير البيانات للوحة الويب» في شاشة الأدمن."); }
   });
-  $("clear-store").addEventListener("click", () => { try { localStorage.removeItem(STORE_KEY); } catch {} storeData = SAMPLE; renderAll(); });
+  $("clear-store").addEventListener("click", () => { try { localStorage.removeItem(STORE_KEY); } catch {} storeData = dbStoreSnapshot || SAMPLE; renderAll(); });
 
   // ---------- live store (Firestore, mirrored by the app's FirestoreSync) ----------
   // Runs only where the page can reach Firebase: the GitHub Pages copy, not the Claude artifact.
@@ -1032,7 +1050,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   const LIVE_COLLECTIONS = { users: "users", products: "products", orders: "orders", chat_reports: "chatReports" };
   let liveUnsubs = [];
   const liveRows = {};
-  function savedStore() { try { const s = localStorage.getItem(STORE_KEY); if (s) return normalize(JSON.parse(s)); } catch {} return SAMPLE; }
+  function savedStore() { try { const s = localStorage.getItem(STORE_KEY); if (s) return normalize(JSON.parse(s)); } catch {} return dbStoreSnapshot || SAMPLE; }
   function liveBox(...kids) { $("live-box").replaceChildren(el("h3", null, "المتجر الحي (Firebase)"), ...kids); }
   function stopLive() {
     for (const u of liveUnsubs) u(); liveUnsubs = [];
