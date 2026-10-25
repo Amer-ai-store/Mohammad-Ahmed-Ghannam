@@ -49,33 +49,41 @@ jobs:
               return f"{len(line)}:{kind}{mark}"
 
 
+          VALID = re.compile(r"sk-ant-oat\d+-[A-Za-z0-9_-]{20,}")
+
+
+          def candidates(lines):
+              """Every token that starts at an 'sk-ant-oat' in the secret, joined over wrapped lines."""
+              for i, line in enumerate(lines):
+                  start = line.find("sk-ant-oat")
+                  while start >= 0:
+                      head = TOKEN_CHARS.match(line, start).group(0)
+                      parts = [head]
+                      # A terminal may wrap the long token anywhere, even right after the prefix; join the pieces that follow.
+                      if not line[start + len(head):].strip(BORDER):
+                          for nxt in lines[i + 1:]:
+                              piece = nxt.strip(BORDER)
+                              if not TOKEN_CHARS.fullmatch(piece):
+                                  break
+                              parts.append(piece)
+                      yield "".join(parts)
+                      start = line.find("sk-ant-oat", start + 1)
+
+
           raw = os.environ.get("RAW_TOKEN", "")
           if raw:
               lines = raw.replace("\r", "").split("\n")
-              token = None
-              for i, line in enumerate(lines):
-                  start = line.find("sk-ant-oat")
-                  if start < 0:
-                      continue
-                  head = TOKEN_CHARS.match(line, start).group(0)
-                  parts = [head]
-                  # A terminal may wrap the long token anywhere, even right after the prefix; join the pieces that follow.
-                  if not line[start + len(head):].strip(BORDER):
-                      for nxt in lines[i + 1:]:
-                          piece = nxt.strip(BORDER)
-                          if not TOKEN_CHARS.fullmatch(piece):
-                              break
-                          parts.append(piece)
-                  token = "".join(parts)
-                  break
-              if not token or not re.fullmatch(r"sk-ant-oat\d+-[A-Za-z0-9_-]{20,}", token):
-                  found = "contains" if "sk-ant-oat" in raw else "does not contain"
+              found = list(candidates(lines))
+              token = next((c for c in found if VALID.fullmatch(c)), None)
+              if not token:
+                  has = "contains" if "sk-ant-oat" in raw else "does not contain"
                   shape = ", ".join(describe(line) for line in lines)
+                  runs = ", ".join(str(len(c)) for c in found) or "none"
                   print(
                       "::error title=CLAUDE_CODE_OAUTH_TOKEN is malformed::No usable token in the secret: it is "
-                      f"{len(raw)} characters on {len(lines)} lines and {found} 'sk-ant-oat'. Line shapes "
-                      f"(length:kind): {shape}. Paste only the token printed by 'claude setup-token' under "
-                      "Settings > Secrets and variables > Actions."
+                      f"{len(raw)} characters on {len(lines)} lines and {has} 'sk-ant-oat'. Line shapes "
+                      f"(length:kind): {shape}. Lengths of the 'sk-ant-oat...' runs: {runs}. Paste only the token "
+                      "printed by 'claude setup-token' under Settings > Secrets and variables > Actions."
                   )
                   raise SystemExit(1)
               print(f"::add-mask::{token}")
