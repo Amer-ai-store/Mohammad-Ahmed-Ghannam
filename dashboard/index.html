@@ -405,6 +405,19 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
         <div class="view-head"><div><span class="eyebrow">البنية</span><h1 id="h-srv">الخوادم والربط</h1><p>سجل الخوادم والخدمات التي يتصل بها المشروع. الصفحة لا تتصل بالشبكة، فحالة كل خادم «غير متحقق» حتى تؤكدها يدوياً.</p></div>
           <div class="toolbar"><button class="primary" type="button" data-action="new-server">إضافة خادم</button></div></div>
         <div class="grid2" id="server-list"></div>
+        <div class="card" style="margin-top:16px;padding:18px">
+          <h2>مراقبة JAWAFFASVR — اتصال آمن</h2>
+          <p class="small muted">الحالة غير متحققة حتى تتصل ببوابة خاصة. لا تُدخل كلمات مرور أو رموزًا هنا. جميع الأوامر المسموحة محددة في البوابة.</p>
+          <label>عنوان بوابة التحكم HTTPS <input id="jawaffa-gateway" type="url" placeholder="https://your-private-gateway.example"></label>
+          <div class="toolbar" style="flex-wrap:wrap;margin-top:12px">
+            <button type="button" data-jawaffa-check="/health">فحص الخادم</button>
+            <button type="button" data-jawaffa-check="/database/health">فحص قاعدة البيانات</button>
+            <button type="button" data-jawaffa-check="/backups/status">فحص النسخ الاحتياطية</button>
+            <button type="button" data-jawaffa-check="/exports/status">فحص التصدير</button>
+            <button type="button" id="jawaffa-recover">طلب استعادة الاتصال</button>
+          </div>
+          <pre id="jawaffa-result" role="status" style="white-space:pre-wrap;overflow-wrap:anywhere">غير متحقق — لم يُجرَ فحص.</pre>
+        </div>
       </section>
 
       <!-- GITHUB -->
@@ -1720,5 +1733,20 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
     imagesOk = !!(caps && caps.images);
     featuresKey = null; renderFeaturesIfChanged();
   }, aiOff);
+})();
+</script>
+
+<script>
+(function(){
+const out=document.getElementById('jawaffa-result');
+async function request(path,method){
+ const raw=document.getElementById('jawaffa-gateway').value.trim();
+ let base;try{base=new URL(raw);if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)throw Error('invalid')}catch{out.textContent='أدخل عنوان HTTPS صحيحًا للبوابة الخاصة.';return}
+ out.textContent='جارٍ الفحص...';
+ try{const response=await fetch(base.origin+base.pathname.replace(/\/$/,'')+path,{method,credentials:'include',cache:'no-store',headers:{Accept:'application/json'}});const data=await response.json();out.textContent=JSON.stringify({httpStatus:response.status,data},null,2)}
+ catch(err){out.textContent='تعذر الوصول إلى بوابة التحكم: '+err.message}
+}
+document.querySelectorAll('[data-jawaffa-check]').forEach(button=>button.addEventListener('click',()=>request(button.dataset.jawaffaCheck,'GET')));
+document.getElementById('jawaffa-recover').addEventListener('click',()=>{if(confirm('هل تريد طلب إعادة تشغيل خدمة الاتصال فقط؟ لا تُعدّل بيانات SQL.'))request('/connection/recover','POST')});
 })();
 </script>
