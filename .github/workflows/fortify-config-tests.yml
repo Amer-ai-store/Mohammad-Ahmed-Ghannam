@@ -1,0 +1,40 @@
+name: Fortify configuration regression tests
+'on':
+  push:
+    branches:
+    - main
+    paths:
+    - .github/workflows/fortify*.yml
+  pull_request:
+    paths:
+    - .github/workflows/fortify*.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  configuration-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Install YAML parser
+      run: python -m pip install PyYAML==6.0.2
+    - name: Test actual workflow configuration without service credentials
+      shell: python
+      run: "import os,subprocess,tempfile\nfrom pathlib import Path\nimport yaml\n\
+        workflow=yaml.safe_load(Path('.github/workflows/fortify.yml').read_text())\n\
+        Path('/tmp/fortify-preflight.sh').write_text(workflow['jobs']['Fortify-AST-Scan']['steps'][0]['run'])\n\
+        keys='FORTIFY_BACKEND FOD_CLIENT_ID FOD_CLIENT_SECRET FOD_TENANT FOD_USER\
+        \ FOD_PASSWORD FOD_URL SSC_URL SSC_TOKEN SC_SAST_TOKEN SC_SAST_SENSOR_VERSION\
+        \ DEBRICKED_TOKEN'.split()\nclient=dict(FOD_CLIENT_ID='example-id',FOD_CLIENT_SECRET='example-secret',FOD_URL='https://ams.fortify.com')\n\
+        user=dict(FOD_TENANT='example',FOD_USER='example',FOD_PASSWORD='example-secret',FOD_URL='https://ams.fortify.com')\n\
+        ssc=dict(SSC_URL='https://ssc.example.com',SSC_TOKEN='example-secret',SC_SAST_TOKEN='example-secret',SC_SAST_SENSOR_VERSION='24.4.0',DEBRICKED_TOKEN='example-secret')\n\
+        cases=[('missing',{},False),('partial',{'FOD_CLIENT_ID':'example'},False),('client',client,True),('user',user,True),('both-auth',{**client,**user},True),('ssc',ssc,True),('ambiguous',{**client,**ssc},False),('explicit-fod',{**client,**ssc,'FORTIFY_BACKEND':'fod'},True),('explicit-ssc',{**client,**ssc,'FORTIFY_BACKEND':'ssc'},True),('missing-region',{**client,'FOD_URL':''},False),('invalid-backend',{**client,'FORTIFY_BACKEND':'invalid'},False),('missing-sca',{**ssc,'DEBRICKED_TOKEN':''},False),('missing-sensor',{**ssc,'SC_SAST_SENSOR_VERSION':''},False)]\n\
+        for name,values,ok in cases:\n with tempfile.TemporaryDirectory() as d:\n\
+        \  env={**os.environ,**dict.fromkeys(keys,''),**values,'GITHUB_OUTPUT':d+'/out','GITHUB_STEP_SUMMARY':d+'/summary'}\n\
+        \  result=subprocess.run(['bash','/tmp/fortify-preflight.sh'],env=env,capture_output=True,text=True)\n\
+        \  assert (result.returncode==0)==ok,(name,result.stdout,result.stderr)\n\
+        \  assert 'example-secret' not in result.stdout+result.stderr\n  print('PASS',name)\n\
+        print(f'{len(cases)}/{len(cases)} passed')\n"
