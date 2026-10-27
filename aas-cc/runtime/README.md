@@ -40,3 +40,23 @@ Caveat: These prove limited inference and transport ONLY. They **do not** prove 
 5. Live validation of GitHub write scopes before adding any mutation buttons in the dashboard.
 
 Do not report the overall program `DONE_VERIFIED` before all mandatory gates are satisfied.
+
+
+## Source-controlled worker & latest verification
+
+- [Worker code](./worker/aas-worker-once.js) — RSA-signed outgoing transport; load the PRIVATE key from the server's protected filesystem; **no key stored in GitHub**.
+- [Windows task launcher](./worker/worker-launch.ps1) — periodically invoked under `NT AUTHORITY\\LOCAL SERVICE` with `IgnoreNew` and startup recovery.
+- [Security negative tests](./worker/worker-security-test.js) — protected key remains local; never run the test without the authorized machine key.
+
+Verified security checks on 2026-10-27:
+
+1. Unsigned POST rejected with HTTP 401.
+2. Properly signed heartbeat accepted with HTTP 200.
+3. Identical signed replay rejected with HTTP 409.
+4. Tampered signed request rejected with HTTP 401.
+
+Automated Task Scheduler execution recorded `LastTaskResult=0` and a successful unattended smoke-test receipt. Windows task has periodic and startup triggers, `StartWhenAvailable=true`, and nonoverlapping execution. Last tested worker state was **not** a verified production dispatcher replacement.
+
+Independent nontrivial read-only analysis canary: job `c4f692fa-64b0-40c6-939f-4411fc2c7024`, result `SUBMITTED_FOR_REVIEW`, 6347 ms, NOT `DONE_VERIFIED`. The output itself is not independently approved.
+
+GitHub main CI: `AAS Free Runtime & Security CI` passed following merge of PR #55; repo's CodeQL default setup remains authoritative. Fortify paid FoD authorization remains a separate visible failure.
