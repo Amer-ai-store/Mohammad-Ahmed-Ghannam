@@ -1,68 +1,122 @@
 name: Fortify AST Scan
-
-on:
+'on':
   push:
-    branches: [main]
+    branches:
+    - main
   pull_request:
-    branches: [main]
+    branches:
+    - main
   schedule:
-    - cron: '37 15 * * 5'
-  workflow_dispatch:
-
+  - cron: 37 15 * * 5
+  workflow_dispatch: {}
 permissions:
   contents: read
-
+concurrency:
+  group: fortify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   Fortify-AST-Scan:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
     permissions:
       actions: read
       contents: read
       security-events: write
-    env:
-      # FoD only: do not mix the SSC/ScanCentral starter configuration here.
-      # Set FOD_URL to the region of your actual Fortify on Demand account.
-      FOD_URL: ${{ vars.FOD_URL || 'https://ams.fortify.com' }}
-      # Configure exactly ONE authentication method in Actions secrets:
-      # (1) FOD_CLIENT_ID + FOD_CLIENT_SECRET, or
-      # (2) FOD_TENANT + FOD_USER + FOD_PAT.
-      FOD_CLIENT_ID: ${{ secrets.FOD_CLIENT_ID }}
-      FOD_CLIENT_SECRET: ${{ secrets.FOD_CLIENT_SECRET }}
-      FOD_TENANT: ${{ secrets.FOD_TENANT }}
-      FOD_USER: ${{ secrets.FOD_USER }}
-      FOD_PASSWORD: ${{ secrets.FOD_PAT }}
-
     steps:
-      - name: Validate Fortify configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          fail() {
-            echo "::error title=Fortify configuration incomplete::$1"
-            printf '### Fortify scan: BLOCKED\n\n%s\n\nNo security scan was performed. Configure Actions secrets in Settings > Secrets and variables > Actions, then re-run this workflow. Never put credential values in code or logs.\n' "$1" >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          }
-          if [[ -n "$FOD_CLIENT_ID" || -n "$FOD_CLIENT_SECRET" ]]; then
-            [[ -n "$FOD_CLIENT_ID" && -n "$FOD_CLIENT_SECRET" ]] || fail 'Set both FOD_CLIENT_ID and FOD_CLIENT_SECRET.'
-            [[ -z "$FOD_USER" && -z "$FOD_PASSWORD" && -z "$FOD_TENANT" ]] || fail 'Configure only one FoD authentication method: client credentials OR tenant/user/PAT.'
-          else
-            [[ -n "$FOD_USER" && -n "$FOD_PASSWORD" && -n "$FOD_TENANT" ]] || fail 'Set FOD_CLIENT_ID + FOD_CLIENT_SECRET, or FOD_TENANT + FOD_USER + FOD_PAT. These secrets must be available to this run.'
-          fi
-          echo 'Fortify credential configuration is present; authentication and scan results are still unverified.'
-
-      - name: Check Out Source Code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Run Fortify Scan
-        # Pinned v1.7.0. Do not suppress failures or report missing secrets as success.
-        uses: fortify/github-action@ef5539bf4bd9c45c0bd971978f635a69eae55297
-        with:
-          sast-scan: true
-          debricked-sca-scan: true
-        env:
-          # A successfully submitted scan is not a completed scan.
-          DO_WAIT: true
-          DO_JOB_SUMMARY: true
+    - name: Validate Fortify configuration
+      id: config
+      shell: bash
+      env:
+        FOD_CLIENT_ID: ${{ secrets.FOD_CLIENT_ID }}
+        FOD_CLIENT_SECRET: ${{ secrets.FOD_CLIENT_SECRET }}
+        FOD_TENANT: ${{ secrets.FOD_TENANT }}
+        FOD_USER: ${{ secrets.FOD_USER }}
+        SSC_TOKEN: ${{ secrets.SSC_TOKEN }}
+        DEBRICKED_TOKEN: ${{ secrets.DEBRICKED_TOKEN }}
+        FOD_PASSWORD: ${{ secrets.FOD_PAT || secrets.FOD_PASSWORD }}
+        SC_SAST_TOKEN: ${{ secrets.SC_SAST_TOKEN || secrets.SC_CLIENT_AUTH_TOKEN ||
+          secrets.SC_SAST_CLIENT_AUTH_TOKEN }}
+        FOD_URL: ${{ vars.FOD_URL }}
+        SSC_URL: ${{ vars.SSC_URL }}
+        SC_SAST_SENSOR_VERSION: ${{ vars.SC_SAST_SENSOR_VERSION }}
+        FORTIFY_BACKEND: ${{ vars.FORTIFY_BACKEND }}
+      run: "set -euo pipefail\nfail() {\n  echo \"::error title=Fortify configuration\
+        \ blocked::$1\"\n  printf '### Fortify: BLOCKED — scan not performed\\n\\\
+        n%s\\n' \"$1\" >> \"$GITHUB_STEP_SUMMARY\"\n  exit 1\n}\nmode=\"${FORTIFY_BACKEND:-auto}\"\
+        \nfod=false; ssc=false\nif [[ -n \"$FOD_CLIENT_ID\" && -n \"$FOD_CLIENT_SECRET\"\
+        \ ]] || [[ -n \"$FOD_TENANT\" && -n \"$FOD_USER\" && -n \"$FOD_PASSWORD\"\
+        \ ]]; then fod=true; fi\nif [[ -n \"$SSC_URL\" && -n \"$SSC_TOKEN\" && -n\
+        \ \"$SC_SAST_TOKEN\" ]]; then ssc=true; fi\nif [[ \"$mode\" == auto ]]; then\n\
+        \  if [[ \"$fod\" == true && \"$ssc\" == true ]]; then fail 'Both backends\
+        \ are configured. Set FORTIFY_BACKEND variable to fod or ssc.'; fi\n  if [[\
+        \ \"$fod\" == true ]]; then mode=fod; elif [[ \"$ssc\" == true ]]; then mode=ssc;\
+        \ else fail 'No complete credentials: FoD needs FOD_CLIENT_ID + FOD_CLIENT_SECRET,\
+        \ or FOD_TENANT + FOD_USER + FOD_PAT/FOD_PASSWORD. SSC needs SSC_URL + SSC_TOKEN\
+        \ + SC_SAST_TOKEN/SC_CLIENT_AUTH_TOKEN.'; fi\nfi\ncase \"$mode\" in\n  fod)\n\
+        \    [[ \"$fod\" == true ]] || fail 'FoD credentials incomplete.'\n    [[\
+        \ \"$FOD_URL\" == https://* ]] || fail 'Set FOD_URL variable to the HTTPS\
+        \ URL of your actual FoD region.'\n    auth=user\n    if [[ -n \"$FOD_CLIENT_ID\"\
+        \ && -n \"$FOD_CLIENT_SECRET\" ]]; then auth=client; fi\n    echo \"auth=$auth\"\
+        \ >> \"$GITHUB_OUTPUT\"\n    ;;\n  ssc)\n    [[ \"$ssc\" == true ]] || fail\
+        \ 'SSC credentials incomplete.'\n    [[ \"$SSC_URL\" == https://* ]] || fail\
+        \ 'SSC_URL must use HTTPS.'\n    [[ -n \"$SC_SAST_SENSOR_VERSION\" ]] || fail\
+        \ 'Set SC_SAST_SENSOR_VERSION to your installed sensor version.'\n    [[ -n\
+        \ \"$DEBRICKED_TOKEN\" ]] || fail 'DEBRICKED_TOKEN is required for the requested\
+        \ SSC SCA scan.'\n    ;;\n  *) fail 'FORTIFY_BACKEND must be auto, fod or\
+        \ ssc.' ;;\nesac\necho \"backend=$mode\" >> \"$GITHUB_OUTPUT\"\necho 'Configuration\
+        \ present. Authentication and completed scan are not yet verified.'\n"
+    - name: Check out source
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Run Fortify FOD SAST and SCA
+      id: fod
+      if: steps.config.outputs.backend == 'fod'
+      uses: fortify/github-action@ef5539bf4bd9c45c0bd971978f635a69eae55297
+      with:
+        sast-scan: true
+        debricked-sca-scan: true
+      env:
+        DO_WAIT: 'true'
+        DO_JOB_SUMMARY: 'true'
+        DO_POLICY_CHECK: 'true'
+        FOD_URL: ${{ vars.FOD_URL }}
+        FOD_RELEASE: ${{ vars.FOD_RELEASE }}
+        FOD_CLIENT_ID: ${{ steps.config.outputs.auth == 'client' && (secrets.FOD_CLIENT_ID)
+          || '' }}
+        FOD_CLIENT_SECRET: ${{ steps.config.outputs.auth == 'client' && (secrets.FOD_CLIENT_SECRET)
+          || '' }}
+        FOD_TENANT: ${{ steps.config.outputs.auth == 'user' && (secrets.FOD_TENANT)
+          || '' }}
+        FOD_USER: ${{ steps.config.outputs.auth == 'user' && (secrets.FOD_USER) ||
+          '' }}
+        FOD_PASSWORD: ${{ steps.config.outputs.auth == 'user' && (secrets.FOD_PAT
+          || secrets.FOD_PASSWORD) || '' }}
+    - name: Run Fortify SSC SAST and SCA
+      id: ssc
+      if: steps.config.outputs.backend == 'ssc'
+      uses: fortify/github-action@ef5539bf4bd9c45c0bd971978f635a69eae55297
+      with:
+        sast-scan: true
+        debricked-sca-scan: true
+      env:
+        DO_WAIT: 'true'
+        DO_JOB_SUMMARY: 'true'
+        DO_POLICY_CHECK: 'true'
+        SSC_URL: ${{ vars.SSC_URL }}
+        SSC_TOKEN: ${{ secrets.SSC_TOKEN }}
+        SC_SAST_TOKEN: ${{ secrets.SC_SAST_TOKEN || secrets.SC_CLIENT_AUTH_TOKEN ||
+          secrets.SC_SAST_CLIENT_AUTH_TOKEN }}
+        SC_SAST_SENSOR_VERSION: ${{ vars.SC_SAST_SENSOR_VERSION }}
+        DEBRICKED_TOKEN: ${{ secrets.DEBRICKED_TOKEN }}
+        SSC_APPVERSION: ${{ vars.SSC_APPVERSION }}
+    - name: Verify completed Fortify scan
+      if: always()
+      shell: bash
+      env:
+        FOD_OUTCOME: ${{ steps.fod.outcome }}
+        SSC_OUTCOME: ${{ steps.ssc.outcome }}
+      run: "if [[ \"$FOD_OUTCOME\" != success && \"$SSC_OUTCOME\" != success ]]; then\n\
+        \  echo '::error::Fortify did not complete successfully. This run is not a\
+        \ passed security scan.'\n  exit 1\nfi\necho '### Fortify scan and policy\
+        \ check completed successfully' >> \"$GITHUB_STEP_SUMMARY\"\n"
