@@ -10,7 +10,7 @@
 - Windows Server `JAWAFFASVR` worker under **NT AUTHORITY\\LOCAL SERVICE**, scheduled every 2 minutes. The task uses only outbound HTTPS, and executes the Qwen3-0.6B GGUF model via llama.cpp in an isolated folder.
 - Worker signs with a **private RSA key kept on the server**; the Edge function stores only the public key. No Supabase service-role key or GitHub credential on the Windows worker.
 - Supabase owner operations status via restricted `aas_cc_operation_truth()`, and existing owner-verified `aas-cc-floot-bridge` endpoints.
-- GitHub Actions workflow in this branch provides credential-free bridge health, unsigned request denial, Cloudflare candidate regression, and CodeQL analysis.
+- GitHub Actions workflow in this branch provides credential-free bridge health, unsigned request denial, Cloudflare candidate regression, and public repository health. GitHub default CodeQL setup remains authoritative (no duplicate advanced CodeQL workflow).
 
 ## QA evidence
 
@@ -37,6 +37,6 @@ Caveat: These prove limited inference and transport ONLY. They **do not** prove 
 2. Security review for the isolated worker and service account ACLs.
 3. Independent QA on nontrivial read-only tasks, adverse prompt and timeout cases.
 4. Governed integration with canonical dispatcher, owner/lock, policy, QA, GM review, then verifiable receipt.
-5. Live validation of Github write scopes before adding any mutation buttons in the dashboard.
+5. Live validation of GitHub write scopes before adding any mutation buttons in the dashboard.
 
 Do not report the overall program `DONE_VERIFIED` before all mandatory gates are satisfied.
