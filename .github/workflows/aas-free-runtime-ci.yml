@@ -46,6 +46,10 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+      - name: Syntax-check local worker and security diagnostics (no secret execution)
+        run: |
+          node --check aas-cc/runtime/worker/aas-worker-once.js
+          node --check aas-cc/runtime/worker/worker-security-test.js
       - name: Run candidate unit tests without secrets
         run: node --test aas-cc/cloudflare-recovery/tests/*.spec.mjs
 
