@@ -241,6 +241,21 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
         </div>
       </section>
 
+
+      <!-- JAWAFA UNIFIED SECURITY & TRUSTSOFT MONITOR -->
+      <section class="view" data-view="jawafa-monitor" aria-labelledby="h-jawafa-monitor" hidden>
+        <div class="view-head"><div><span class="eyebrow">JAWAFA · FORENSIC · READ ONLY</span><h1 id="h-jawafa-monitor">المراقبة الموحدة — جوافة</h1><p>شاشة واحدة لحركات إتراست، جلسات الخادم، قاعدة البيانات، وتنبيهات حساب ChatGPT. لا تُعرض حالة «متصل» دون استجابة فعلية من مصدر معتمد.</p></div><span class="pill info">البيانات الأصلية: قراءة فقط</span></div>
+        <div class="panel">
+          <div class="panel-head"><h3>مصدر المراقبة الخاص</h3><span id="jm-health" class="pill warn">لم يُختبر الاتصال</span></div>
+          <p class="small muted">استخدم بوابة HTTPS خاصة ومصادقة آمنة لإتاحة البيانات خارج الخادم. لا تضع كلمة مرور أو مفتاحًا في الرابط. التحديث لا يعمل دون بوابة موثقة.</p>
+          <div class="toolbar"><input id="jm-url" type="url" placeholder="https://private-monitor.example/api" aria-label="عنوان بوابة المراقبة HTTPS" style="flex:1;min-width:220px"><select id="jm-interval" aria-label="تحديث كل" style="width:auto"><option value="15000">كل 15 ثانية</option><option value="10000">كل 10 ثوانٍ</option></select><button id="jm-connect" type="button" class="primary">فحص وبدء التحديث</button><button id="jm-stop" type="button">إيقاف</button></div>
+          <div id="jm-message" class="small muted" role="status" aria-live="polite">بانتظار توصيل مصدر بيانات موثق.</div>
+        </div>
+        <div class="kpis" id="jm-kpis"><div class="kpi"><span class="label">آخر تحديث ناجح</span><span class="value small" id="jm-last">—</span></div><div class="kpi"><span class="label">حركات إتراست في الاستجابة</span><span class="value num" id="jm-count">—</span></div><div class="kpi"><span class="label">تنبيهات أمنية</span><span class="value num" id="jm-alert-count">—</span></div><div class="kpi"><span class="label">حالة الخادم</span><span class="value small" id="jm-server">غير متحقق</span></div></div>
+        <div class="panel"><div class="panel-head"><h3>حركات المستخدمين — الجهاز أولًا</h3><span class="pill">آخر 100 حركة كحد أقصى</span></div><div class="table-wrap"><table><thead><tr><th>الجهاز</th><th>مستخدم Windows</th><th>مستخدم إتراست</th><th>وقت العملية</th><th>نوع العملية</th><th>السند / القيد</th><th>مرجع الإثبات</th></tr></thead><tbody id="jm-events"><tr><td colspan="7">لم تُحمّل بيانات موثقة بعد.</td></tr></tbody></table></div></div>
+        <div class="grid2"><div class="panel"><h3>جلسات Windows / SQL</h3><div class="table-wrap"><table><thead><tr><th>الجهاز</th><th>الحساب</th><th>الوقت</th><th>الحدث / المصدر</th></tr></thead><tbody id="jm-sessions"><tr><td colspan="4">لا توجد جلسات متحققة من المصدر.</td></tr></tbody></table></div></div><div class="panel"><h3>تنبيهات ChatGPT والأمن</h3><div id="jm-alerts" class="list"><div class="empty">لا توجد تنبيهات موثقة من البوابة.</div></div><p class="small muted">تنبيهات البريد ليست سجلًا كاملًا لجلسات ChatGPT.</p></div></div>
+      </section>
+
       <!-- TASKS -->
       <section class="view" data-view="tasks" aria-labelledby="h-tasks" hidden>
         <div class="view-head"><div><span class="eyebrow">إدارة العمل</span><h1 id="h-tasks">المهام</h1><p>يختار الذكاء الاصطناعي لكل مهمة مساحة عملها ومسار تنفيذها فور إضافتها، ويعتمد بوابتها في المسار حين تُنجز. غيّر الحالة من القائمة المنسدلة على البطاقة.</p></div>
@@ -483,6 +498,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   const NAV = [
     ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"], ["marketing", "وكيل التسويق", "campaigns"], ["features", "مزايا التطبيق"]]],
     ["المتجر", [["store", "لوحة المتجر"]]],
+    ["المراقبة", [["jawafa-monitor", "مراقبة جوافة الموحدة"]]],
     ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
   ];
   const VIEWS = NAV.flatMap(([, items]) => items.map(i => i[0]));
@@ -1707,6 +1723,56 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
     btn.disabled = !sample;
     if (n) { logActivity("🤖 طُلب توزيع " + n + " مهمة بالذكاء الاصطناعي"); toast("يوزّع الذكاء الاصطناعي " + n + " مهمة واحدة تلو الأخرى."); runPlacer(); }
   });
+
+  // Unified Jawafa monitor: strictly opt-in HTTPS private API; no embedded credentials.
+  (function initJawafaMonitor() {
+    const get = id => document.getElementById(id);
+    const urlInput = get("jm-url"), health = get("jm-health"), message = get("jm-message");
+    let timer = null, busy = false, controller = null;
+    function cell(v) { const td = document.createElement("td"); td.textContent = v == null ? "—" : String(v); return td; }
+    function table(id, rows, keys, empty) {
+      const tbody = get(id); tbody.replaceChildren();
+      if (!Array.isArray(rows) || !rows.length) { const tr=document.createElement("tr"), td=cell(empty); td.colSpan=keys.length;tr.append(td);tbody.append(tr);return; }
+      rows.slice(0,100).forEach(r=>{const tr=document.createElement("tr");keys.forEach(k=>tr.append(cell(r[k])));tbody.append(tr);});
+    }
+    function status(text, ok) {health.textContent=text;health.className="pill "+(ok?"ok":"warn");}
+    function stop() {if(timer)clearInterval(timer);timer=null;if(controller)controller.abort();controller=null;status("متوقف",false);}
+    async function poll() {
+      if(busy || document.hidden) return;
+      const base=urlInput.value.trim().replace(/\/+$/,"");
+      if(!base) {status("لم تُضبط البوابة",false);return;}
+      busy=true;controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),7000);
+      try {
+        const response=await fetch(base+"/snapshot",{method:"GET",credentials:"omit",cache:"no-store",signal:controller.signal,headers:{"Accept":"application/json"}});
+        if(!response.ok)throw new Error("HTTP "+response.status);
+        const data=await response.json();
+        if(!data || data.mode!=="FORENSIC-READ-ONLY" || !Array.isArray(data.trustsoftEvents))throw new Error("استجابة لا تطابق عقد القراءة فقط");
+        table("jm-events",data.trustsoftEvents,["device","windowsUser","trustsoftUser","time","operation","voucher","evidenceId"],"لا توجد حركات جديدة ضمن نطاق الاستجابة");
+        table("jm-sessions",data.sessions,["device","account","time","event"],"لم تصل سجلات جلسات");
+        const alerts=get("jm-alerts");alerts.replaceChildren();
+        (Array.isArray(data.alerts)?data.alerts:[]).slice(0,30).forEach(a=>{const item=document.createElement("div");item.className="item";item.textContent=[a.time,a.source,a.message].filter(Boolean).join(" · ");alerts.append(item);});
+        if(!alerts.children.length){const item=document.createElement("div");item.className="empty";item.textContent="لم تُرسل البوابة تنبيهات موثقة.";alerts.append(item);}
+        get("jm-count").textContent=String(data.trustsoftEvents.length);
+        get("jm-alert-count").textContent=String(Array.isArray(data.alerts)?data.alerts.length:0);
+        get("jm-last").textContent=new Date().toLocaleTimeString("ar-JO");
+        get("jm-server").textContent=data.serverStatus==="online"?"متصل (وفق البوابة)":"غير متحقق";
+        status("آخر فحص ناجح",true);message.textContent="تم استلام استجابة قراءة فقط. توقيت الاستجابة: "+(data.generatedAt||"غير محدد")+".";
+      } catch(e) {status("تعذر الاتصال",false);message.textContent="فشل الفحص: "+(e?.message||"خطأ غير معروف")+". لا تُعرض بيانات افتراضية.";get("jm-server").textContent="غير متحقق";}
+      finally {clearTimeout(timeout);busy=false;controller=null;}
+    }
+    get("jm-connect").addEventListener("click",()=>{
+      stop();
+      let u;try{u=new URL(urlInput.value.trim());}catch{message.textContent="عنوان البوابة غير صالح";return;}
+      if(u.protocol!=="https:" || u.username || u.password || u.search || u.hash){message.textContent="مطلوب HTTPS بلا أسرار أو معاملات في الرابط.";return;}
+      const ms=Number(get("jm-interval").value);
+      message.textContent="جارٍ اختبار بوابة المراقبة الخاصة...";
+      poll();timer=setInterval(poll,ms);
+    });
+    get("jm-stop").addEventListener("click",stop);
+    document.addEventListener("visibilitychange",()=>{if(document.hidden&&controller)controller.abort();});
+  })();
+
   buildNav();
   show(location.hash.slice(1));
   renderAll(); renderChat();
