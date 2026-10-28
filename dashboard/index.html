@@ -226,11 +226,55 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     <main id="main">
       <div id="mode-banner" class="banner" hidden></div>
 
-      <!-- JAWAFA FORENSIC COMMAND CENTER -->
-      <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
-        <div class="view-head"><div><span class="eyebrow">JAWAFA · FORENSIC READ ONLY</span><h1 id="h-jawafa">مركز قيادة جوافة المالي والجنائي</h1><p>متابعة الجداول الـ15، نتائج التدقيق، والفروق غير المحسومة. هذه الواجهة لا تنفذ كتابة على قاعدة البيانات.</p></div><div class="toolbar"><a class="btn" href="./jawafa-gate15.html" target="_blank" rel="noopener">فتح جوافة بملء الشاشة</a></div></div>
-        <iframe src="./jawafa-gate15.html" title="لوحة جوافة للتحقيق المالي" loading="lazy" style="width:100%;min-height:1150px;border:1px solid var(--line);border-radius:12px;background:#07111d" sandbox="allow-scripts allow-downloads allow-modals"></iframe>
-      </section>
+      <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
+<section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa">القيادة المركزية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-tasks" aria-labelledby="h-jawafa-tasks" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-tasks">الخطة اليومية والمهام</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-tasks">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-tasks">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-tasks">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-tasks"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-gate15" aria-labelledby="h-jawafa-gate15" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-gate15">GATE-15</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-gate15">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-gate15">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-gate15">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-gate15"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-backups" aria-labelledby="h-jawafa-backups" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-backups">النسخ والـ RESTORE</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-backups">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-backups">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-backups">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-backups"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-monitor" aria-labelledby="h-jawafa-monitor" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-monitor">مراقبة الخادم</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-monitor">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-monitor">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-monitor">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-monitor"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-accounting" aria-labelledby="h-jawafa-accounting" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-accounting">المحاسبة والقيود</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-accounting">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-accounting">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-accounting">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-accounting"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-checks" aria-labelledby="h-jawafa-checks" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-checks">الشيكات والبنوك</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-checks">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-checks">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-checks">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-checks"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-purchases" aria-labelledby="h-jawafa-purchases" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-purchases">المشتريات والموردون</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-purchases">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-purchases">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-purchases">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-purchases"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-receiving" aria-labelledby="h-jawafa-receiving" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-receiving">الاستلام والمخزون</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-receiving">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-receiving">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-receiving">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-receiving"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-people" aria-labelledby="h-jawafa-people" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-people">الموظفون والأجهزة</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-people">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-people">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-people">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-people"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-investigations" aria-labelledby="h-jawafa-investigations" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-investigations">التحقيقات القضائية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-investigations">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-investigations">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-investigations">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-investigations"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-agents" aria-labelledby="h-jawafa-agents" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-agents">مجلس CFO / CPO / GM</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-agents">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-agents">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-agents">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-agents"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-commands" aria-labelledby="h-jawafa-commands" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-commands">الأوامر التنفيذية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-commands">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-commands">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-commands">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-commands"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-evidence" aria-labelledby="h-jawafa-evidence" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-evidence">سجل الأدلة</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-evidence">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-evidence">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-evidence">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-evidence"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-reports" aria-labelledby="h-jawafa-reports" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-reports">التقارير المالية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-reports">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-reports">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-reports">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-reports"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-errors" aria-labelledby="h-jawafa-errors" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-errors">الأخطاء والإنجاز</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-errors">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-errors">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-errors">NOT_CONNECTED</span></div>
+<div class="panel" data-jawafa-pane="jawafa-errors"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
 
       <!-- HOME -->
       <section class="view" data-view="home" aria-labelledby="h-home">
@@ -489,7 +533,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   const NAV = [
     ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"], ["marketing", "وكيل التسويق", "campaigns"], ["features", "مزايا التطبيق"]]],
     ["المتجر", [["store", "لوحة المتجر"]]],
-    ["تحقيق جوافة", [["jawafa", "مركز جوافة · GATE-15"]]],
+    ["تحقيق جوافة", [["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة اليومية والمهام"],["jawafa-gate15","GATE-15"],["jawafa-backups","النسخ والـ RESTORE"],["jawafa-monitor","مراقبة الخادم"],["jawafa-accounting","المحاسبة والقيود"],["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","المشتريات والموردون"],["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],["jawafa-reports","التقارير المالية"],["jawafa-errors","الأخطاء والإنجاز"]]],
     ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
   ];
   const VIEWS = NAV.flatMap(([, items]) => items.map(i => i[0]));
@@ -1729,3 +1773,4 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
   }, aiOff);
 })();
 </script>
+<script src="jawafa-integration.js" defer></script>
