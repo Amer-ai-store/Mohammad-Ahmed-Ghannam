@@ -226,6 +226,12 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     <main id="main">
       <div id="mode-banner" class="banner" hidden></div>
 
+      <!-- JAWAFA FORENSIC COMMAND CENTER -->
+      <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
+        <div class="view-head"><div><span class="eyebrow">JAWAFA · FORENSIC READ ONLY</span><h1 id="h-jawafa">مركز قيادة جوافة المالي والجنائي</h1><p>متابعة الجداول الـ15، نتائج التدقيق، والفروق غير المحسومة. هذه الواجهة لا تنفذ كتابة على قاعدة البيانات.</p></div><div class="toolbar"><a class="btn" href="./jawafa-gate15.html" target="_blank" rel="noopener">فتح جوافة بملء الشاشة</a></div></div>
+        <iframe src="./jawafa-gate15.html" title="لوحة جوافة للتحقيق المالي" loading="lazy" style="width:100%;min-height:1150px;border:1px solid var(--line);border-radius:12px;background:#07111d" sandbox="allow-scripts allow-downloads allow-modals"></iframe>
+      </section>
+
       <!-- HOME -->
       <section class="view" data-view="home" aria-labelledby="h-home">
         <div class="hero">
@@ -483,6 +489,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   const NAV = [
     ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"], ["marketing", "وكيل التسويق", "campaigns"], ["features", "مزايا التطبيق"]]],
     ["المتجر", [["store", "لوحة المتجر"]]],
+    ["تحقيق جوافة", [["jawafa", "مركز جوافة · GATE-15"]]],
     ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
   ];
   const VIEWS = NAV.flatMap(([, items]) => items.map(i => i[0]));
