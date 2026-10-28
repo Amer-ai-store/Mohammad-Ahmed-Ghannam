@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>جوافة | وكيل استمرارية العمل</title>
+<style>
+:root{color-scheme:dark;font:15px Tahoma,Arial,sans-serif}*{box-sizing:border-box}body{margin:0;background:#08121e;color:#f1f7ff;padding:clamp(12px,3vw,36px)}main{max-width:1030px;margin:auto}h1{font-size:1.7rem}a{color:#61d9d0}.panel{background:#132339;border:1px solid #2a3f57;border-radius:13px;padding:20px;margin:14px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.lbl{color:#a8bad0;font-size:.82rem}.val{font-size:1.3rem;font-weight:bold;margin:10px 0}.ok{color:#73dfb1}.bad{color:#ff8793}.warn{color:#f6c978}input,button{font:inherit;color:inherit;padding:10px;border:1px solid #39536e;background:#183049;border-radius:9px}input[type=url]{min-width:min(100%,480px);max-width:100%;width:60%}button{cursor:pointer}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #2a3f57;padding:10px;text-align:start}th{color:#a8bad0}#statusMsg{font-weight:600}.muted{color:#a8bad0;line-height:1.8}pre{white-space:pre-wrap;word-break:break-word}small{display:block}</style></head><body>
+<main><p><a href="./jawafa-operations.html">مركز قيادة جوافة</a> ← استمرارية العمل</p>
+<h1>وكيل استمرارية العمل</h1>
+<p class="muted">شاشة متابعة لوكيل JawafaContinuityWatchdog الموجود على JAWAFFASVR. الفحص المحلي على الخادم يتكرر كل دقيقة. هذه النسخة الإلكترونية لا تتصل بالخادم تلقائيًا حتى يُضبط مصدر HTTPS خاص ومصرح به؛ ولا تعرض حالة قديمة على أنها حالة حية.</p>
+<div class="panel"><strong id="statusMsg" class="warn">بانتظار مصدر حالة مُوثّق</strong><small id="stamp" class="muted">لم تصل بيانات من الخادم إلى هذا المتصفح</small></div>
+<div class="grid"><div class="panel"><div class="lbl">حالة الوكيل</div><div class="val" id="overall">—</div></div>
+<div class="panel"><div class="lbl">فحص API المحلي</div><div class="val" id="api">—</div></div>
+<div class="panel"><div class="lbl">المهام المراقَبة</div><div class="val" id="num">—</div></div>
+<div class="panel"><div class="lbl">آخر إجراء استعادة</div><div class="val" id="last">—</div></div></div>
+<div class="panel"><h2>استقبال الحالة</h2>
+<p class="muted">على الخادم، افتح <code>C:\JawafaGPT\continuity\dashboard.html</code> للشاشة المتجددة تلقائيًا. للعرض هنا، اختر ملف <code>status.json</code> من مجلد الاستمرارية، أو أدخل رابط HTTPS خاصًّا يعيد بيانات الحالة فقط. لا تدخل مفاتيح API أو كلمات مرور.</p>
+<label>استيراد لقطة حالة JSON <input id="file" type="file" accept=".json,application/json"></label>
+<p><label>عنوان واجهة حالة مأمونة (اختياري): <input id="url" type="url" placeholder="https://private-example/continuity/status.json"></label>
+<button type="button" id="connect">قراءة الحالة</button> <small class="muted">عند إدخال رابط، يُعاد الفحص كل دقيقة ما دامت الصفحة مفتوحة. يتطلب الربط HTTPS وCORS وتفويضًا مناسبًا.</small></p>
+</div>
+<div class="panel"><h2>تفاصيل المهام</h2><div style="overflow:auto"><table><thead><tr><th>المهمة</th><th>التقييم</th><th>الحالة</th><th>آخر تشغيل</th><th>النتيجة</th></tr></thead><tbody id="tasks"><tr><td colspan="5">لا تتوفر بيانات حيّة بعد</td></tr></tbody></table></div></div>
+<div class="panel"><p class="muted">حدود التشغيل: يستطيع وكيل Windows اكتشاف الأعطال واستدعاء مهمة الاستعادة الموجودة وفق شروط محددة، لكنه لا يوقظ جلسة ChatGPT نشطة ولا يكتب إليها رسائل. لا يغيّر القيود المحاسبية الأصلية.</p></div>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+let currentUrl='',interval=null;
+const text=(id,value,klass='')=>{const el=$(id);el.textContent=value;el.className=klass;};
+const fmt=t=>{try{return new Date(t).toLocaleString('ar-JO',{timeZone:'Asia/Amman'})}catch{return String(t)}};
+function render(s){
+ if(!s||s.schema!=='jawafa-continuity-v1'||!Array.isArray(s.tasks)){throw new Error('تنسيق الحالة غير معتمد')}
+ const ts=new Date(s.monitored_at_utc).getTime();
+ if(!Number.isFinite(ts))throw new Error('الوقت غير صالح');
+ const mins=Math.max(0,(Date.now()-ts)/60000),fresh=mins<=3;
+ text('statusMsg',fresh?'بيانات حديثة من الوكيل':'تحذير: البيانات قديمة',fresh?'ok':'bad');
+ text('stamp','آخر فحص: '+fmt(s.monitored_at_utc)+' — عمر النتيجة '+Math.round(mins)+' دقيقة');
+ text('overall',s.overall||'—',s.overall==='healthy'&&fresh?'ok':'warn');
+ text('api',s.api_health||'—',s.api_health==='up'&&fresh?'ok':'bad');
+ text('num',String(s.tasks.length));
+ text('last',s.last_recovery_action||'none');
+ $('tasks').replaceChildren();
+ for(const t of s.tasks){
+  const tr=document.createElement('tr');
+  for(const key of ['name','health','state','last_run','result_code']){
+   const td=document.createElement('td');td.textContent=t[key]==null?'—':String(t[key]);
+   if(key==='health')td.className=t[key]==='ok'?'ok':'warn';tr.append(td);
+  } $('tasks').append(tr);
+ }
+}
+$('file').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{if(f.size>1000000)throw new Error('الملف كبير بشكل غير متوقع');render(JSON.parse(await f.text()))}catch(ex){text('statusMsg','خطأ: '+ex.message,'bad')}});
+async function refresh(){try{const u=new URL(currentUrl);if(u.protocol!=='https:')throw new Error('يُسمح بروابط HTTPS فقط');const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),9000);let r;try{r=await fetch(u.href,{cache:'no-store',signal:ctl.signal,credentials:'omit'})}finally{clearTimeout(to)}if(!r.ok)throw new Error('تعذر الاتصال: '+r.status);render(await r.json())}catch(e){text('statusMsg','الاتصال بالبيانات غير متاح: '+e.message,'bad')}}
+$('connect').addEventListener('click',()=>{const u=$('url').value.trim();if(!u)return;text('statusMsg','جاري فحص المصدر...','warn');currentUrl=u;if(interval)clearInterval(interval);refresh();interval=setInterval(refresh,60000)});
+</script></body></html>
