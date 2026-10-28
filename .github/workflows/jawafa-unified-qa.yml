@@ -40,4 +40,8 @@ jobs:
           grep -Fq 'data-view="jawafa-checks"' /tmp/jawafa-native-dom.html
           grep -Fq 'data-view="jawafa-monitor"' /tmp/jawafa-native-dom.html
           if grep -Fq 'iframe src="./jawafa-gate15.html"' /tmp/jawafa-native-dom.html; then exit 1; fi
-          echo "Native Jawafa module smoke test passed"
+          timeout 40s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --force-device-scale-factor=2 --dump-dom "file://$GITHUB_WORKSPACE/dashboard/index.html#jawafa-people" > /tmp/jawafa-mobile-dom.html
+          grep -Fq 'data-view="jawafa-people"' /tmp/jawafa-mobile-dom.html
+          grep -Fq 'id="chip-nav"' /tmp/jawafa-mobile-dom.html
+          grep -Fq 'id="side-nav"' /tmp/jawafa-mobile-dom.html
+          echo "Desktop and phone viewport native DOM smoke tests passed"
