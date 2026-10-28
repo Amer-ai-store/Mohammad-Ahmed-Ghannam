@@ -13,7 +13,28 @@ function init(file){if(!file||file===':memory:')throw Error('Persistent isolated
 'CREATE TABLE IF NOT EXISTS evidence(evidence_ref TEXT PRIMARY KEY,sha256 TEXT NOT NULL,source_system TEXT NOT NULL,verification_status TEXT NOT NULL,submitted_at TEXT NOT NULL);',
 'CREATE TABLE IF NOT EXISTS nonces(nonce TEXT PRIMARY KEY,created_at INTEGER NOT NULL);',
 'CREATE TABLE IF NOT EXISTS agents(agent_id TEXT PRIMARY KEY,last_poll_at INTEGER NOT NULL);'].join('\n'));
-for(let i=1;i<=14;i++)db.prepare('INSERT OR IGNORE INTO tasks(task_id,status,source,source_version,blocked_by) VALUES(?,?,?,?,?)').run('F'+String(i).padStart(2,'0'),'BLOCKED_BY_G15','REFERENCE_CONTRACT_2026-10-28','Jawafa_Audit15_20261028_0320','GATE-15');return db}
+const seeder=db.prepare('INSERT OR IGNORE INTO tasks(task_id,status,source,source_version,blocked_by) VALUES(?,?,?,?,?)');
+const ref='APPDEPLOY_HISTORICAL_REFERENCE_2026-10-28';const add=(ids,status,blocked)=>ids.forEach(id=>seeder.run(id,status,ref,ref,blocked||null));
+const range=(prefix,start,end,width=2)=>Array.from({length:end-start+1},(_,i)=>prefix+String(start+i).padStart(width,'0'));
+add(['E01','E02','E03','E04','E05','E07','E08','E09','E11'],'COMPLETED');
+add(['E06','E10','E12','E13','E15'],'IN PROGRESS');
+add(['E14'],'BLOCKED');
+add(['G15-01','G15-02','G15-03','G15-06','G15-07'],'COMPLETED');
+add(['G15-04','G15-05','G15-08'],'IN PROGRESS');
+add(['G15-09'],'BLOCKED','GATE-15');
+add(['BKP-01'],'COMPLETED');
+add(['BKP-02','BKP-03'],'IN PROGRESS');
+add(['DASH-01'],'COMPLETED');
+add(['DASH-02','DASH-03','DASH-04'],'BLOCKED');
+add(range('SYS',1,3),'COMPLETED');
+add(range('SYS',4,10),'IN PROGRESS');
+add(range('F',1,14),'BLOCKED_BY_G15','GATE-15');
+add(range('A',1,11),'BLOCKED','GATE-15');
+add(range('INV-',1,5),'BLOCKED','GATE-15');
+add(range('FS',1,10),'BLOCKED','GATE-15');
+add(range('LEGAL-',1,6),'IN PROGRESS');
+add(range('DEL-',1,10),'BLOCKED','GATE-15');
+return db}
 async function firebaseIdentity(auth,options={}){const ownerUid=options.ownerUid||process.env.JAWAFA_OWNER_UID, projectId=options.projectId||'ameraistore-1c81d';if(!ownerUid)throw error('OWNER_UID_NOT_CONFIGURED',503);if(!auth?.startsWith('Bearer '))throw error('AUTH_REQUIRED',401);try{const tok=auth.slice(7).split('.');if(tok.length!==3)throw Error();const head=JSON.parse(Buffer.from(tok[0],'base64url')),p=JSON.parse(Buffer.from(tok[1],'base64url'));const now=Date.now()/1000;if(head.alg!=='RS256'||!head.kid||p.aud!==projectId||p.iss!=='https://securetoken.google.com/'+projectId||p.exp<=now||p.iat>now+60||p.auth_time>now+60||!p.email_verified||!p.sub)throw Error();const r=await (options.fetchImpl||fetch)('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com',{signal:AbortSignal.timeout(4500)});if(!r.ok)throw Error();const jwk=(await r.json()).keys?.find(x=>x.kid===head.kid&&x.kty==='RSA');if(!jwk||!crypto.verify('RSA-SHA256',Buffer.from(tok[0]+'.'+tok[1]),crypto.createPublicKey({key:jwk,format:'jwk'}),Buffer.from(tok[2],'base64url')))throw Error();if(p.sub!==ownerUid)throw error('NOT_OWNER',403);return {uid:p.sub,role:'owner'} }catch(e){if(e.status)throw e;throw error('TOKEN_INVALID',401)}}
 function agentAuth(req,bytes,db,secret,allowed){if(!secret||secret.length<32)throw error('AGENT_SECRET_NOT_CONFIGURED',503);const a=req.headers['x-jawafa-agent'],ts=req.headers['x-jawafa-timestamp'],nonce=req.headers['x-jawafa-nonce'],sig=req.headers['x-jawafa-signature'];if(!Array.isArray(allowed)||allowed.length===0)throw error('AGENT_ALLOWLIST_NOT_CONFIGURED',503);if(!allowed.includes(a))throw error('AGENT_NOT_AUTHORIZED',403);if(!ID.test(a||'')||!ID.test(nonce||'')||!/^[0-9a-f]{64}$/i.test(sig||''))throw error('AGENT_AUTH_REQUIRED',401);if(!Number.isInteger(+ts)||Math.abs(Date.now()- +ts)>90000)throw error('AGENT_TIMESTAMP_INVALID',401);const expected=crypto.createHmac('sha256',secret).update([req.method,new URL(req.url,'http://local').pathname,codeHash(bytes),ts,nonce].join('\n')).digest('hex');if(!crypto.timingSafeEqual(Buffer.from(expected,'hex'),Buffer.from(sig,'hex')))throw error('AGENT_SIGNATURE_INVALID',401);db.prepare('DELETE FROM nonces WHERE created_at<?').run(Date.now()-180000);try{db.prepare('INSERT INTO nonces VALUES(?,?)').run(nonce,Date.now())}catch{throw error('REPLAY_REJECTED',409)}return a}
 const audit=(db,id,st,agent,action,test,ref,hash)=>db.prepare('INSERT INTO events(request_id,status,agent_id,event_time,action,test_result,evidence_ref,evidence_sha256) VALUES(?,?,?,?,?,?,?,?)').run(id,st,agent||null,new Date().toISOString(),action,test||null,ref||null,hash||null);
