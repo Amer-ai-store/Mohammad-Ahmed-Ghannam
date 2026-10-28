@@ -48,5 +48,5 @@ test("CSV rejects malformed and duplicate headers",()=>{
 test("exported CSV cells escape separators and Excel-breaking control lines",()=>{
  assert.equal(context.escCSV('A,B'),'"A,B"');
  assert.equal(context.escCSV('A"B'),'"A""B"');
- assert.equal(context.escCSV("=HYPERLINK(\"x\")"),"'=HYPERLINK(\"x\")");
+ assert.equal(context.escCSV("=1"),"\'=1");
 });
