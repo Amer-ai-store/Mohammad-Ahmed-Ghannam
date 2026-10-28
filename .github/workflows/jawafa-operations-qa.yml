@@ -1,0 +1,27 @@
+name: Jawafa Operations Console QA
+on:
+  pull_request:
+    paths:
+      - "dashboard/jawafa-operations.html"
+      - "dashboard/jawafa-gate15.html"
+      - "dashboard/tests/jawafa-operations.test.cjs"
+      - ".github/workflows/jawafa-operations-qa.yml"
+  push:
+    branches: [main]
+    paths:
+      - "dashboard/jawafa-operations.html"
+      - "dashboard/jawafa-gate15.html"
+      - "dashboard/tests/jawafa-operations.test.cjs"
+      - ".github/workflows/jawafa-operations-qa.yml"
+permissions:
+  contents: read
+jobs:
+  static-and-parser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test dashboard/tests/jawafa-operations.test.cjs
