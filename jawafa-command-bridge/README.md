@@ -6,7 +6,7 @@
 - Original `Jawafa_DB` is never connected to or mutated by this code. Isolated `node:sqlite` operational database only.
 - `GATE-15` is **NOT ACCEPTED**, despite 15/15 extraction and technical checks. F01–F14 are **BLOCKED_BY_G15**.
 - 7/7 historical RESTORE validations do not validate the newest daily backup.
-- AppDeploy's 97 tasks remain secondary reference, **not yet imported or reconciled** with the authoritative plan.
+- AppDeploy's 97 **task IDs and historical statuses** are seeded into the isolated operational ledger as explicitly marked secondary reference records. This is not live task evidence, does not prove current completion, and still requires reconciliation to the authoritative daily plan. Individual case descriptions are not published to public GitHub.
 - The source snapshot in the GET response is explicitly `CONTRACT_REFERENCE_NOT_LIVE_SQL`. It contains no live financial evidence.
 
 ## Required configuration for a private deployment (not executed)
