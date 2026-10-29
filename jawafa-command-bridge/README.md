@@ -13,6 +13,7 @@
 - Node.js 24.
 - `JAWAFA_LEDGER_DB`: absolute path on separate restricted filesystem, *never inside Jawafa_DB or its backup folder*.
 - `JAWAFA_OWNER_UID`: verified Firebase Auth UID (not email) of authorized owner, stored server-side.
+- `JAWAFA_OWNER_EMAIL`: optional verified Firebase account email for **GET-only** bootstrap. The server cryptographically validates Firebase JWT audience, issuer, signature, expiration, `email_verified`, and exact normalized allowlist email. Such a session returns `owner_readonly` and cannot POST commands. Only exact `JAWAFA_OWNER_UID` grants the `owner` command role; do not use email fallback to approve financial actions.
 - `JAWAFA_AGENT_SHARED_SECRET`: high-entropy secret at least 32 bytes, stored server-side.
 - `JAWAFA_QA_SHARED_SECRET`: separate high-entropy QA attestation secret, NOT shared with executing agents.
 - `JAWAFA_ALLOWED_AGENT_IDS`: comma-separated allowlisted agent identities. Empty means fail-closed.
@@ -76,3 +77,6 @@ Set `JAWAFA_QA_ARTIFACT_DIR` and `JAWAFA_QA_PUBLIC_KEY_FILE` together. The latte
 Each `<evidence_ref>.json` contains `payload` (the exact signed JSON string) and `signature` (base64 Ed25519 signature over UTF-8 payload). The receipt SHA256 covers the entire file. Payload fields: `schema_version: jawafa.qa-artifact.v1`, `request_id`, `agent_id`, `operation`, `source_version` (explicit null allowed), `evidence_ref`, `reviewer_id` (different from agent), `checked_at`, `test_result: PASS`, and `findings` object. QA must inspect the actual source before signing; this adapter proves artifact integrity and context, not the truth of arbitrary signed findings or acceptance of GATE-15.
 
 Missing files, oversized artifacts, symlinks, mismatched hashes/context and invalid signatures fail closed. The original QA receipt signature remains mandatory. No production QA key, approved artifact or live owner session is manufactured by tests.
+
+## Read-only server bootstrap candidate (not production accepted)
+On a separate loopback port and a new standalone operational SQLite path, configure `JAWAFA_OWNER_EMAIL` securely in process environment. Maintain `JAWAFA_OWNER_UID` unset until its real Firebase UID is independently confirmed. Never store credentials in GitHub or print environment values. Verify unauthorized unauthenticated=401, other email=403, owner verified email GET=200, and same owner POST=403. Keep the 8445 gateway and production 8787 untouched until actual acceptance. GATE-15 stays NOT ACCEPTED.
