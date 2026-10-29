@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: "24"
       - name: Run durable operational API security and ACK/VERIFY tests
-        run: node --test jawafa-command-bridge/test.cjs
+        run: node --test jawafa-command-bridge/*.test.cjs jawafa-command-bridge/test.cjs
       - name: Run native integration and code safety tests
         run: node --test dashboard/tests/jawafa-native-integration.test.cjs
       - name: Browser navigation, real DOM, no iframe

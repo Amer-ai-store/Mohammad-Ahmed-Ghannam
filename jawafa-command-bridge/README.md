@@ -57,3 +57,16 @@
 ## QA
 Run locally: `node --test jawafa-command-bridge/test.cjs dashboard/tests/jawafa-native-integration.test.cjs`.
 The GitHub Actions workflow also checks real headless Chromium navigation, core CI, and source security.
+
+## Artifact verification hardening — 2026-10-29
+
+A QA signature alone no longer produces VERIFIED. `createBridge` requires a server-side
+`verifyEvidence(proof)` implementation returning exactly true after independently
+checking the artifact, SHA256, request ID, source version and execution context.
+Missing verifier returns 503; rejected/failed verification returns 422. The CLI
+intentionally cannot finalize receipts until this integration is supplied. Tests
+use explicit fixtures, not production evidence. Artifact verification does not
+accept GATE-15 or unblock financial commands.
+
+Firebase time claims must be finite numbers; missing, null and string claims are
+rejected. RSA signature tests use generated local keys, not a live owner session.
