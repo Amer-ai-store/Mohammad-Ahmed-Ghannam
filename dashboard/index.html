@@ -213,7 +213,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><div><b id="brand-name">Amer AI Store</b><small>AAS-CC · مركز القيادة</small></div></div>
     <nav class="side" id="side-nav"></nav>
     <div class="side-status" aria-live="polite">
-      <div><span class="dot" id="db-dot"></span><span id="db-status">جارٍ الاتصال بقاعدة البيانات...</span></div>
+      <div><span class="dot" id="db-dot"></span><span id="db-status">جارٍ فحص مصدر البيانات...</span></div>
       <div><span class="dot" id="ai-dot"></span><span id="ai-status">المستشار: جارٍ الفحص...</span></div>
     </div>
   </aside>
@@ -228,23 +228,16 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 
       <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
-<section class="panel" id="jawafa-continuity-entry" aria-label="Jawafa continuity and export tracking">
-  <div class="panel-head"><div><span class="eyebrow">JAWAFA · CONTINUITY</span><h2>لوحة استمرارية جوافة ومتابعة التصدير</h2></div><span class="pill warn">مصدر خارجي — الاتصال غير مُتحقق</span></div>
-  <p class="small muted">مدخل موحد إلى لوحة الاستمرارية والتصدير الحالية. لا يعني فتح الرابط دمج بياناتها أو اعتماد حالة المزامنة. لم تُنقل أي بيانات مالية إلى الصفحة العامة.</p>
-  <div class="toolbar"><button type="button" id="jawafa-continuity-toggle" aria-expanded="false" aria-controls="jawafa-continuity-frame">عرض لوحة الاستمرارية داخل القيادة المركزية</button><a href="./jawafa-continuity.html#exports" target="_blank" rel="noopener noreferrer">فتح لوحة الاستمرارية — قسم التصدير</a></div>
-  <div id="jawafa-continuity-container" hidden style="margin-top:12px">
-    <iframe id="jawafa-continuity-frame" title="لوحة استمرارية جوافة ومتابعة التصدير" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:780px;border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe>
-    <p class="small muted">عرض مدمج للوحة المنشورة في المستودع نفسه؛ لا يضيف صلاحيات قراءة أو كتابة للبيانات.</p>
+<section class="panel" id="jawafa-continuity-entry" aria-label="المتابعة التشغيلية داخل القيادة المركزية">
+  <div class="panel-head"><div><span class="eyebrow">JAWAFA · NATIVE COMMAND</span><h2>استمرارية جوافة ومتابعة التصدير</h2></div><span class="pill warn">واجهة موحّدة — وضع القراءة</span></div>
+  <p class="small muted">أقسام الاستمرارية والمراقبة والتصدير والمهام معروضة داخل هذه الصفحة، دون إطارات أو لوحة منفصلة. تعرض اللقطة التاريخية بتاريخها عند تعذر المصدر الحي، ولا تُعد اتصالًا مباشرًا بقاعدة Jawafa_DB.</p>
+  <div class="toolbar">
+    <a href="#jawafa-monitor" class="btn">مراقبة الخادم</a>
+    <a href="#jawafa-export" class="btn">التصدير</a>
+    <a href="#jawafa-backups" class="btn">النسخ والاستعادة</a>
+    <a href="#jawafa-tasks" class="btn">المهام</a>
+    <a href="#jawafa-errors" class="btn">سجل الأعطال</a>
   </div>
-  <script>
-  document.getElementById('jawafa-continuity-toggle').addEventListener('click', function(){
-    const box=document.getElementById('jawafa-continuity-container');
-    const frame=document.getElementById('jawafa-continuity-frame');
-    const show=box.hidden; box.hidden=!show; this.setAttribute('aria-expanded',String(show));
-    this.textContent=show?'إخفاء لوحة الاستمرارية':'عرض لوحة الاستمرارية داخل القيادة المركزية';
-    if(show && !frame.getAttribute('src')) frame.setAttribute('src','./jawafa-continuity.html#exports');
-  });
-  </script>
 </section>
 
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa">القيادة المركزية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa">NOT_CONNECTED</span></div>
@@ -726,7 +719,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     const dot = $("db-dot"), txt = $("db-status"), mPill = $("db-pill-m"), banner = $("mode-banner");
     if (mode === "db" && !err) { dot.className = "dot ok"; txt.textContent = "قاعدة البيانات المشتركة متصلة"; mPill.className = "pill ok"; mPill.textContent = "متصل"; banner.hidden = true; }
     else if (mode === "db" && err) { dot.className = "dot bad"; txt.textContent = "انقطع الاتصال بقاعدة البيانات"; mPill.className = "pill bad"; mPill.textContent = "منقطع"; banner.hidden = false; banner.className = "banner error"; banner.replaceChildren(el("strong", null, "انقطع الاتصال بقاعدة البيانات: "), "أعد تحميل الصفحة. ما يظهر الآن آخر نسخة وصلت."); }
-    else { dot.className = "dot warn"; txt.textContent = "حفظ محلي في هذا المتصفح"; mPill.className = "pill warn"; mPill.textContent = "محلي"; banner.hidden = false; banner.className = "banner info"; banner.replaceChildren(el("strong", null, "حفظ محلي: "), "مركز القيادة مفتوح خارج Claude، فتُحفظ المهام في هذا المتصفح فقط. افتحه داخل Claude لتحفظ في القاعدة المشتركة وتراها من أي جهاز."); }
+    else { dot.className = "dot warn"; txt.textContent = "المهام المحلية غير متزامنة"; mPill.className = "pill warn"; mPill.textContent = "محلي"; banner.hidden = false; banner.className = "banner info"; banner.replaceChildren(el("strong", null, "حفظ محلي: "), "بيانات مهام عامر المحلية لا تتزامن بين الأجهزة. حالة جوافة تظهر من الجسر المعتمد أو لقطة تاريخية موثقة، مع إيضاح نوع المصدر."); }
   }
   function applyWriteState() {
     for (const b of document.querySelectorAll("[data-action],[data-write]")) b.disabled = readOnly;
@@ -1356,7 +1349,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   // ---------- live store (Firestore, mirrored by the app's FirestoreSync) ----------
   // Runs only where the page can reach Firebase: the GitHub Pages copy, not the Claude artifact.
   const FIREBASE_VERSION = "10.14.1";
-  const PAGES_URL = "https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/#store";
+  const PAGES_URL = "https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/#store";
   const LIVE_COLLECTIONS = { users: "users", products: "products", orders: "orders", chat_reports: "chatReports" };
   let liveUnsubs = [];
   const liveRows = {};
