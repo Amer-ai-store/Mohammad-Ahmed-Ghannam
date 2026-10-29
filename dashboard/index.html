@@ -329,6 +329,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
       <section class="view" data-view="agents" aria-labelledby="h-agents" hidden>
         <div class="view-head"><div><span class="eyebrow">الفريق</span><h1 id="h-agents">فريق الوكلاء</h1><p>الوكلاء والأشخاص الذين تُسند إليهم المهام، وما يعمل عليه كل منهم الآن.</p></div>
           <div class="toolbar"><button class="primary" type="button" data-action="new-agent">إضافة وكيل</button></div></div>
+        <div class="panel"><strong>ربط API Key للوكيل — خطوات الإعداد</strong><p class="small muted">١. أضف الوكيل وحدد مزود API. ٢. أدخل اسم السر فقط في حقل «اسم سر الوكيل». ٣. اضغط «فتح إعدادات الأسرار» لحفظ قيمة المفتاح في GitHub Actions Secrets، أو استخدم مخزن أسرار الخادم الخاص بالوكيل. ٤. اربط خدمة التنفيذ الخلفية باسم السر، ثم اختبر المصادقة والصلاحيات. لا تكتب المفتاح في هذه الصفحة أو في مستودع عام.</p><a class="btn" href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/settings/secrets/actions" target="_blank" rel="noopener noreferrer">فتح إعدادات الأسرار لإضافة API Key</a><p class="small muted">إضافة السر إلى GitHub Actions لا تربطه تلقائياً بالوكيل؛ يلزم تكامل آمن مع خدمة التشغيل واختبار فعلي قبل اعتماد حالة «متصل».</p></div>
         <div class="grid3" id="agent-list"></div>
       </section>
 
@@ -901,7 +902,9 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
         { name: "role", label: "الدور", value: S(a.role, 120), max: 120, placeholder: "مثل: مطوّر، مراجع أمني، QA" },
         { name: "kind", label: "النوع", type: "select", options: AGENT_KIND, value: a.kind || "ai" },
         { name: "status", label: "الحالة", type: "select", options: AGENT_STATUS, value: a.status || "active" },
-        { name: "focus", label: "يعمل الآن على", type: "textarea", value: S(a.focus) }
+        { name: "focus", label: "يعمل الآن على", type: "textarea", value: S(a.focus) },
+        { name: "apiProvider", label: "مزود API", value: S(a.apiProvider, 80), max: 80, placeholder: "OpenAI / Gemini / مزود آخر" },
+        { name: "apiKeyRef", label: "اسم سر الوكيل فقط (لا تضع المفتاح)", value: S(a.apiKeyRef, 100), max: 100, placeholder: "AGENT_NAME_API_KEY", hint: "خزّن قيمة API Key في مخزن الأسرار الخاص بالخادم؛ لا تُدخلها في هذه اللوحة العامة." }
       ],
       onSubmit: async (v) => { const id = await put("agents", a.id, { ...v, createdAt: N(a.createdAt) || Date.now() }); if (!id) return false; logActivity((agent ? "تعديل وكيل: " : "وكيل جديد: ") + v.name); }
     });
