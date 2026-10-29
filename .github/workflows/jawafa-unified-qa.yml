@@ -4,6 +4,8 @@ on:
     paths:
       - "dashboard/index.html"
       - "dashboard/jawafa-integration.js"
+      - "dashboard/jawafa-export-monitor.html"
+      - "dashboard/tests/jawafa-export-monitor.test.cjs"
       - "dashboard/tests/jawafa-native-integration.test.cjs"
       - "dashboard/tests/jawafa-auth-guard.test.cjs"
       - "jawafa-command-bridge/**"
@@ -13,6 +15,8 @@ on:
     paths:
       - "dashboard/index.html"
       - "dashboard/jawafa-integration.js"
+      - "dashboard/jawafa-export-monitor.html"
+      - "dashboard/tests/jawafa-export-monitor.test.cjs"
       - "dashboard/tests/jawafa-native-integration.test.cjs"
       - "jawafa-command-bridge/**"
       - ".github/workflows/jawafa-unified-qa.yml"
@@ -30,7 +34,7 @@ jobs:
       - name: Run durable operational API security and ACK/VERIFY tests
         run: node --test jawafa-command-bridge/test.cjs
       - name: Run native integration and code safety tests
-        run: node --test dashboard/tests/jawafa-native-integration.test.cjs dashboard/tests/jawafa-auth-guard.test.cjs
+        run: node --test dashboard/tests/jawafa-native-integration.test.cjs dashboard/tests/jawafa-auth-guard.test.cjs dashboard/tests/jawafa-export-monitor.test.cjs
       - name: Browser navigation, real DOM, no iframe
         shell: bash
         run: |
@@ -40,6 +44,7 @@ jobs:
           timeout 40s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --dump-dom "file://$GITHUB_WORKSPACE/dashboard/index.html#jawafa-checks" > /tmp/jawafa-native-dom.html
           grep -Fq 'data-view="jawafa-checks"' /tmp/jawafa-native-dom.html
           grep -Fq 'data-view="jawafa-monitor"' /tmp/jawafa-native-dom.html
+          grep -Fq 'data-view="jawafa-export"' /tmp/jawafa-native-dom.html
           if grep -Fq 'iframe src="./jawafa-gate15.html"' /tmp/jawafa-native-dom.html; then exit 1; fi
           timeout 40s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --force-device-scale-factor=2 --dump-dom "file://$GITHUB_WORKSPACE/dashboard/index.html#jawafa-people" > /tmp/jawafa-mobile-dom.html
           grep -Fq 'data-view="jawafa-people"' /tmp/jawafa-mobile-dom.html
