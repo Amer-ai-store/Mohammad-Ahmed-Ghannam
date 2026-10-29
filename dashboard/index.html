@@ -467,6 +467,12 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
             <button type="button" id="jawafa-drive-import" disabled>استيراد وتنظيم الجداول — بعد التحقق</button>
           </div>
           <p id="jawafa-drive-status" class="small muted" role="status">NOT_CONNECTED — لم يتم اعتماد قناة OAuth محمية أو استيراد أي جدول.</p>
+          <div class="grid3" aria-label="نتيجة جرد Google Drive">
+            <div class="kpi"><span class="label">جداول الفهرس — فحص موصل Drive بتاريخ 29/10/2026</span><strong>1024</strong></div>
+            <div class="kpi"><span class="label">ملفات Manifest</span><strong>1024</strong></div>
+            <div class="kpi"><span class="label">تطابق أسماء الفهرس وManifest</span><strong>1024 / 1024</strong></div>
+          </div>
+          <p class="small muted">هذه نتائج جرد مرجعية لملفين تمت قراءتهما عبر موصل Drive، وليست إثباتًا لسلامة محتويات جميع CSV أو عدد السجلات الفعلي. لم تُنشر بيانات محاسبية أو مفاتيح وصول.</p>
           <p class="small muted">آلية العمل: فهرسة الملفات، والتحقق من أعداد الجداول والتجزئة SHA-256، ثم تصنيفها إلى المحاسبة والشيكات والمشتريات والاستلام والتحقيقات والتقارير. تعرض الأقسام ملخصات غير حساسة فقط؛ تبقى السجلات الأصلية في مخزن خاص.</p>
         </div>
         <div class="grid2" id="server-list"></div>
