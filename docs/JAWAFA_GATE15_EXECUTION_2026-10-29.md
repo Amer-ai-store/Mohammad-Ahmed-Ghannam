@@ -22,3 +22,7 @@ PR #70 adds fail-closed artifact verification before VERIFIED and strict numeric
 Private same-origin HTTPS, owner session, independent artifact-verifier integration, server-agent E2E, historical difference causality, newest daily off-host restore, and signed gate acceptance remain unproven. The available October 28 restore receipt is historical and on-host; newer October 29 backup files exist, but their restoration was not verified here. Server timestamps must remain labeled as server-clock observations because a prior clock-offset warning exists.
 
 The candidate SQL account does not grant production operational powers. Operational commands must remain separately authorized and cannot mutate original financial or quantity data. A future production cutover must validate consumer dependencies and rollback before switching the existing connection.
+
+## Completed file-integrity recheck
+
+Recomputed SHA256 for all 15 exported CSV files on the server: 15/15 match the existing ALL_RESULTS.csv manifest. Snapshot/export/parsed counts in that historical manifest agree for 15/15. This run did not re-export SQL or reparse all CSV records, so manifest count agreement is not an independent row-count rerun. All 15 manifest records retain UNRESOLVED_CAUSAL_HISTORY. Gate acceptance remains NOT ACCEPTED. Server-clock completion: 2026-10-29T19:44:48.8156834+03:00 (not certified wall time). Evidence retained privately as audit15-hash-reverification-20261029.json. Temporary candidate bridge was stopped and original bridge health rechecked successfully.
