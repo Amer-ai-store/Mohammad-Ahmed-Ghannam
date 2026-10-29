@@ -253,7 +253,15 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 <div class="panel" data-jawafa-pane="jawafa-backups"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
 <section class="view" data-view="jawafa-monitor" aria-labelledby="h-jawafa-monitor" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-monitor">مراقبة الخادم</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-monitor">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-monitor">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-monitor">NOT_CONNECTED</span></div>
-<div class="panel" data-jawafa-pane="jawafa-monitor"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<div class="panel" data-jawafa-pane="jawafa-monitor"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div>
+<section class="panel" id="aman-access-entry" aria-labelledby="aman-access-title" style="margin-top:16px">
+  <div class="view-head"><div><span class="eyebrow">AMAN · ACCESS MONITOR</span><h2 id="aman-access-title">أمان — مراقبة الدخول والجلسات</h2></div><span class="pill warn">بانتظار ربط مصدر خاص</span></div>
+  <p class="muted small">واجهة المراقبة أصبحت داخل مركز القيادة على GitHub Pages، دون الاعتماد على اشتراك الاستضافة السابق. لا تُنشر سجلات الدخول أو رموزها هنا؛ تظهر البيانات الفعلية فقط بعد اتصال مصادق عليه بخدمة السجلات الخاصة. لا يعني فتح الواجهة أن الخادم متصل.</p>
+  <div class="toolbar"><button type="button" id="aman-access-toggle" aria-expanded="false" aria-controls="aman-access-container">عرض لوحة أمان داخل مركز القيادة</button><a href="./aman-monitor/" target="_blank" rel="noopener noreferrer">فتح لوحة أمان في نافذة مستقلة</a></div>
+  <div id="aman-access-container" hidden style="margin-top:12px"><iframe id="aman-access-frame" title="لوحة أمان لمراقبة الدخول والجلسات" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" style="width:100%;height:960px;border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe></div>
+  <p class="muted small">جامع SSH المرفق مخصص لـ Linux؛ لا يعني نقله تفعيل سجل دخول Windows أو حساب ChatGPT. عند إغلاق العرض الداخلي أو مغادرة هذا القسم، تُغلق جلسة القراءة وتُمسح بياناتها من الإطار.</p>
+</section>
+</section>
 <section class="view" data-view="jawafa-export" aria-labelledby="h-jawafa-export" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · EXPORT V5 · READ ONLY</span><h1 id="h-jawafa-export">مراقبة التصدير المباشر</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-export">Jawafa Export Monitor</span> · آخر تحديث: <span data-jawafa-updated="jawafa-export">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-export">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-export"><p class="muted">قراءة حالة Export v5 فقط. لا توجد أوامر كتابة على Jawafa_DB.</p></div></section>
@@ -566,6 +574,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="firebase-config.js"></script>
+<script src="./aman-monitor/host-integration.js" defer></script>
 <script>
 (() => {
   "use strict";
