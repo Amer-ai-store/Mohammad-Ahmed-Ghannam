@@ -8,3 +8,12 @@ test("one existing dashboard, 16 native views in original navigation",()=>{for(c
 test("existing host application and login are preserved",()=>{for(const term of ["function buildNav()","function show(view)","function initLive()","onAuthStateChanged","firebase-config.js","renderAll()"]){assert.ok(html.includes(term),term)}});
 test("native scripts compile with no extraneous app redirect",()=>{assert.doesNotThrow(()=>new vm.Script(js));const match=html.match(/<script>\s*([\s\S]*?)<\/script>/);assert.ok(match);assert.doesNotThrow(()=>new vm.Script(match[1]));assert.ok(!js.includes('jawafa-operations.html'));assert.ok(!js.includes('guava-forensic-command-center-dhv9z9'))});
 test("no false live SQL or command success and no browser secrets",()=>{assert.ok(js.includes("NOT_CONNECTED"));assert.ok(js.includes("BLOCKED_BY_G15"));assert.ok(js.includes("credentials:\"same-origin\""));assert.ok(js.includes("getIdToken()"));assert.ok(js.includes("result.request_id"));assert.ok(js.includes("result.status"));assert.ok(!/localStorage|sessionStorage|service_role|sql_password|sk-proj-/i.test(js))});
+test("dated repair report remains in the native errors view and is public-safe",()=>{
+ const start=html.indexOf('<section class="view" data-view="jawafa-errors"');
+ assert.ok(start>=0,"jawafa-errors view missing");
+ const end=html.indexOf('<!-- HOME -->',start);
+ assert.ok(end>start,"end of jawafa-errors view missing");
+ const view=html.slice(start,end);
+ for(const s of ['id="jawafa-repair-snapshot"','JRF-001','JRF-002','JRF-008','NOT ACCEPTED','مرجع مؤرخ وليس حالة حية','صلاحية خاصة'])assert.ok(view.includes(s),s);
+ for(const secret of ['SQLPassword_Decrypted','192.168.','0.0.0.0','server-hardened-candidate','CheqId','VoucherNo'])assert.ok(!view.includes(secret),"disallowed operational detail: "+secret);
+});
