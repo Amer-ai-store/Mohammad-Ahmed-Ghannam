@@ -63,10 +63,16 @@ The GitHub Actions workflow also checks real headless Chromium navigation, core 
 A QA signature alone no longer produces VERIFIED. `createBridge` requires a server-side
 `verifyEvidence(proof)` implementation returning exactly true after independently
 checking the artifact, SHA256, request ID, source version and execution context.
-Missing verifier returns 503; rejected/failed verification returns 422. The CLI
-intentionally cannot finalize receipts until this integration is supplied. Tests
+Missing verifier returns 503; rejected/failed verification returns 422. The CLI can load the independent signed-artifact verifier described below; without configuration it cannot finalize receipts. Tests
 use explicit fixtures, not production evidence. Artifact verification does not
 accept GATE-15 or unblock financial commands.
 
 Firebase time claims must be finite numbers; missing, null and string claims are
 rejected. RSA signature tests use generated local keys, not a live owner session.
+
+## Independent signed artifact adapter
+Set `JAWAFA_QA_ARTIFACT_DIR` and `JAWAFA_QA_PUBLIC_KEY_FILE` together. The latter is a pinned Ed25519 public key. Keep its private key with the independent reviewer, never the worker or bridge. Restrict the artifact directory to reviewer writes and bridge reads. The bridge follows no supplied URLs or paths.
+
+Each `<evidence_ref>.json` contains `payload` (the exact signed JSON string) and `signature` (base64 Ed25519 signature over UTF-8 payload). The receipt SHA256 covers the entire file. Payload fields: `schema_version: jawafa.qa-artifact.v1`, `request_id`, `agent_id`, `operation`, `source_version` (explicit null allowed), `evidence_ref`, `reviewer_id` (different from agent), `checked_at`, `test_result: PASS`, and `findings` object. QA must inspect the actual source before signing; this adapter proves artifact integrity and context, not the truth of arbitrary signed findings or acceptance of GATE-15.
+
+Missing files, oversized artifacts, symlinks, mismatched hashes/context and invalid signatures fail closed. The original QA receipt signature remains mandatory. No production QA key, approved artifact or live owner session is manufactured by tests.
