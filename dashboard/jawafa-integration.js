@@ -8,6 +8,7 @@ const PAGES={
 "jawafa-gate15":{group:"التحقق",source:"gates/15",buttons:[["REVERIFY_G15","إعادة الفحص الفني للجداول"],["REVIEW_DIFFERENCES","عرض الفروق غير المحسومة"]]},
 "jawafa-backups":{group:"النسخ",source:"backups",buttons:[["CHECK_LATEST_BACKUP","التحقق من النسخة المكتملة"],["CHECK_EXPORTS","فحص التصدير"],["REVIEW_RESTORE_TESTS","عرض نتائج RESTORE"]]},
 "jawafa-monitor":{group:"المراقبة",source:"dashboard",buttons:[["CHECK_SERVER","فحص JAWAFFASVR"],["CHECK_DATABASE","فحص Jawafa_DB قراءة فقط"],["CHECK_SESSIONS","طلب أحداث الأجهزة والمستخدمين"]]},
+"jawafa-export":{group:"المراقبة",source:"export-status",buttons:[["CHECK_EXPORTS","فحص التصدير"]]},
 "jawafa-accounting":{group:"الحسابات",source:"dashboard",buttons:[["REVIEW_JOURNALS","طلب فحص القيود"]]},
 "jawafa-checks":{group:"الشيكات",source:"dashboard",buttons:[["REVIEW_CHEQUEBOOK","طلب جرد 50 ورقة"],["RECONCILE_BANK","بدء مطابقة مشروطة"]]},
 "jawafa-purchases":{group:"المشتريات",source:"dashboard",buttons:[["REVIEW_PURCHASES","تحليل المشتريات"]]},
@@ -23,7 +24,7 @@ const PAGES={
 const TITLES={
 "jawafa":"القيادة المركزية — جوافة","jawafa-tasks":"الخطة التنفيذية الموحدة",
 "jawafa-gate15":"بوابة قبول الجداول الخمسة عشر","jawafa-backups":"حماية النسخ والاستعادة",
-"jawafa-monitor":"مراقبة الخادم والسجلات","jawafa-accounting":"المحاسبة والقيود والسندات",
+"jawafa-monitor":"مراقبة الخادم والسجلات","jawafa-export":"مراقبة التصدير المباشر","jawafa-accounting":"المحاسبة والقيود والسندات",
 "jawafa-checks":"الشيكات والدفاتر والبنوك","jawafa-purchases":"المشتريات والموردون",
 "jawafa-receiving":"الاستلام والمخزون","jawafa-people":"الموظفون والأجهزة",
 "jawafa-investigations":"التحقيقات المالية والقضائية","jawafa-agents":"مجلس الوكلاء الثلاثة",
@@ -82,8 +83,21 @@ try{const result=await call("commands",{method:"POST",body:{request_id,task_id,o
 message(parent,"رقم الطلب: "+result.request_id+" — الحالة: "+result.status+"؛ لا يعني ذلك استلام الوكيل أو التنفيذ.","info");
 await loadCommand(result.request_id,parent)}catch(e){message(parent,"تعذر تنفيذ الطلب: "+e.message,"error")}finally{b.disabled=!canDispatch(op)}});
 parent.append(b)}
+function exportSize(n){const u=["B","KB","MB","GB","TB"];let i=0,v=Number(n||0);while(v>=1024&&i<u.length-1){v/=1024;i++}return v.toFixed(i?2:0)+" "+u[i]}
+async function renderExportMonitor(p){
+  p.replaceChildren();
+  const head=el("div","panel-head");add(head,el("h3",null,TITLES["jawafa-export"]));const refresh=el("button","tiny","تحديث الآن");refresh.addEventListener("click",()=>renderExportMonitor(p));head.append(refresh);p.append(head);
+  if(!connected){message(p,"NOT_CONNECTED — يلزم الجسر الخاص المصادق عليه للوصول إلى حالة التصدير الحية.");return;}
+  const loading=el("div","empty","جارٍ قراءة حالة Export v5...");p.append(loading);
+  try{const s=await call("export-status");if(s?.schema!=="jawafa.export.monitor.v1"||s?.readOnly!==true)throw Error("EXPORT_STATUS_SCHEMA_MISMATCH");p.replaceChildren(head);
+    const pct=Number(s.progressPercent||0);details(p,[["الحالة",s.mode||"UNKNOWN"],["التقدم",pct+"%"],["الجداول",String(s.processedTables??0)+" / "+String(s.totalTables??0)],["المتبقي",String(s.remainingTables??0)],["Workers",String(s.workerCount??0)],["الأخطاء",String(s.failedTables??0)]]);
+    const box=el("div","panel");const bar=el("div","progress"),fill=el("span");fill.style.width=Math.max(0,Math.min(100,pct))+"%";bar.append(fill);add(box,el("div","row",null),bar);const meta=el("div","small muted","Baseline "+(s.baselineComplete??0)+" + v5 "+(s.currentRunCompleted??0)+" · الحجم "+exportSize(s.bytesCurrentRun));box.append(meta);p.append(box);
+    details(p,[["الملف الحالي",s.currentFile||"—"],["آخر كتابة",s.lastWriteAt?new Date(s.lastWriteAt).toLocaleString("ar-JO"):"—"],["الدورة",s.runName||"—"],["Forensic Watch",s.forensicWatch?.enabled?"كل "+s.forensicWatch.intervalMinutes+" دقيقة":"غير مثبت"]]);
+    message(p,"READ ONLY — هذه الشاشة تقرأ حالة التصدير ولا تنفذ أي كتابة على Jawafa_DB.","info");status("jawafa-export",s.mode==="RUNNING"||s.mode==="COMPLETED"?"CONNECTED":"NOT_CONNECTED","Jawafa Export Monitor",s.generatedAt);
+  }catch(e){p.replaceChildren(head);message(p,"تعذر قراءة حالة التصدير: "+e.message,"error");status("jawafa-export","NOT_CONNECTED","Jawafa Export Monitor");}
+}
 async function loadCommand(request_id,parent){const b=el("button","tiny","تحديث حالة "+request_id.slice(0,8));parent.append(b);b.addEventListener("click",async()=>{try{const r=await call("commands/"+encodeURIComponent(request_id));message(parent,"الحالة: "+r.status+" · الوكيل: "+(r.agent_id||"لم يستلم")+" · الدليل: "+(r.evidence_ref||"لم يصل"),"info")}catch(e){message(parent,e.message,"error")}})}
-function render(){for(const [key,config] of Object.entries(PAGES)){const p=document.querySelector('[data-jawafa-pane="'+key+'"]');if(!p)continue;p.replaceChildren();p.append(el("h3",null,TITLES[key]));if(!connected)message(p,"NOT_CONNECTED — "+lastError+"؛ هذه واجهة موقع ثابت، ولا يمكنها تشغيل API على GitHub Pages دون بوابة HTTPS مستقلة موثقة.");
+function render(){for(const [key,config] of Object.entries(PAGES)){const p=document.querySelector('[data-jawafa-pane="'+key+'"]');if(!p)continue;if(key==="jawafa-export"){renderExportMonitor(p);continue;}p.replaceChildren();p.append(el("h3",null,TITLES[key]));if(!connected)message(p,"NOT_CONNECTED — "+lastError+"؛ هذه واجهة موقع ثابت، ولا يمكنها تشغيل API على GitHub Pages دون بوابة HTTPS مستقلة موثقة.");
 else if(!snapshot?.agent_channel?.connected)message(p,"الجسر مصادق عليه، لكن الوكيل التنفيذي غير متصل؛ أوامر التنفيذ معطلة.");
 else if(snapshot?.dashboard?.private_https_verified!==true || snapshot?.dashboard?.e2e_verified!==true)message(p,"GATE_NOT_VERIFIED — لم يُثبت اعتماد HTTPS الخاص واختبار الطرف إلى الطرف. الأزرار التنفيذية معطّلة.");const tools=el("div","toolbar");const refresh=el("button","tiny","تحديث المصدر الموثوق");refresh.disabled=false;refresh.addEventListener("click",()=>connect());tools.append(refresh);for(const [op,label] of config.buttons)pendingButton(tools,op,label);p.append(tools);
 if(key==="jawafa"||key==="jawafa-gate15"){details(p,[["GATE-15",snapshot?.gate?.status||B.gate],["الاستخراج المعاد",String(snapshot?.gate?.technical_export_tables??15)+"/15"],["الاختبارات الفنية",String(snapshot?.gate?.technical_verified_tables??15)+"/15"],["سبب الفروق التاريخية","غير مكتمل"]]);message(p,"الاجتياز الفني لا يساوي قبول GATE-15؛ F01–F14 محجوبة. لا تعتمد النتائج المالية قبل التحقيق في الفروق.","error")}
@@ -100,5 +114,5 @@ if(key==="jawafa-reports")message(p,"التقارير المعتمدة تحفظ 
 if(key==="jawafa-investigations")message(p,"تمييز الوقائع المثبتة عن القرائن والإفادات والادعاءات. عدم نسبة الفعل إلى مستخدم مشترك دون الجهاز وWindows وTrustSoft والوقت.");
 }}
 let authListenerAttached=false;let checks=0;const authWatch=setInterval(()=>{checks++;try{if(!authListenerAttached&&window.firebase?.apps?.length&&typeof window.firebase.auth==="function"){authListenerAttached=true;clearInterval(authWatch);window.firebase.auth().onAuthStateChanged(()=>connect())}}catch{}if(checks>40)clearInterval(authWatch)},500);window.addEventListener("focus",()=>{if(!connected)connect()});
-render();connect();window.JawafaUI={refresh:connect,connected:()=>connected,canDispatch:(operation)=>canDispatch(operation)}; 
+render();connect();setInterval(()=>{const s=document.querySelector('[data-view="jawafa-export"]');const p=document.querySelector('[data-jawafa-pane="jawafa-export"]');if(s&&p&&!s.hidden)renderExportMonitor(p)},5000);window.JawafaUI={refresh:connect,connected:()=>connected,canDispatch:(operation)=>canDispatch(operation)}; 
 })();
