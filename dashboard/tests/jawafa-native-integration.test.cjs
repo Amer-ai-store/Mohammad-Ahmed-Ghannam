@@ -17,3 +17,10 @@ test("dated repair report remains in the native errors view and is public-safe",
  for(const s of ['id="jawafa-repair-snapshot"','JRF-001','JRF-002','JRF-008','NOT ACCEPTED','مرجع مؤرخ وليس حالة حية','صلاحية خاصة'])assert.ok(view.includes(s),s);
  for(const secret of ['SQLPassword_Decrypted','192.168.','0.0.0.0','server-hardened-candidate','CheqId','VoucherNo'])assert.ok(!view.includes(secret),"disallowed operational detail: "+secret);
 });
+test("snapshot tracks verified v5 manifest without claiming full export acceptance",()=>{
+ const begin=html.indexOf('id="jawafa-repair-snapshot"');assert.ok(begin>=0);
+ const end=html.indexOf('<!-- HOME -->',begin);assert.ok(end>begin);
+ const view=html.slice(begin,end);
+ for(const s of ['515/515','503 FULL','12 DELTA','FILES_VERIFIED / ACCEPTANCE_OPEN','NO_SYNC','GATE-15','فرق صفين'])assert.ok(view.includes(s),s);
+ assert.ok(view.includes('لا يثبت اكتمال البيانات'));
+});

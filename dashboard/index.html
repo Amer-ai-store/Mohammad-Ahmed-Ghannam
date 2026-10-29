@@ -285,11 +285,11 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     <div><span class="eyebrow">JAWAFA · CENTRAL ERROR REPAIR AGENT</span><h2 id="jawafa-repair-snapshot-title">التقرير المركزي للإصلاح والأولويات</h2></div>
     <span class="pill warn">لم يُعتمد الإغلاق النهائي</span>
   </div>
-  <p class="small muted">لقطة موثقة بتاريخ 29 أكتوبر 2026، حتى 23:18 بحسب ساعة الخادم غير المتزامنة · هدف الإغلاق 31 أكتوبر · تسليم مجلس الإدارة 1 نوفمبر 2026.</p>
+  <p class="small muted">لقطة تحقق محدثة بتاريخ 29 أكتوبر 2026 · ساعة الخادم غير متزامنة فلا تعتمد لطوابع الأدلة · هدف الإغلاق 31 أكتوبر · التسليم 1 نوفمبر 2026.</p>
   <div class="banner info" role="note"><strong>مرجع مؤرخ وليس حالة حية.</strong> تعرض هذه الصفحة ملخص حالات العمل فقط، وليست اتصالًا مباشرًا بقاعدة البيانات أو شهادة قبول. المستندات الكاملة على Google Drive بصلاحيات خاصة بالمالك.</div>
   <div class="kpis">
     <div class="kpi"><span class="label">الجداول في خطة التصدير</span><span class="value num">1,024</span><span class="small muted">تغطية أسماء وليست شهادة اكتمال بيانات</span></div>
-    <div class="kpi"><span class="label">نتائج v5 المبلغ عنها</span><span class="value num">432</span><span class="small muted">فحص جزئي؛ التصدير قيد التنفيذ</span></div>
+    <div class="kpi"><span class="label">نتائج v5 المفحوصة</span><span class="value num">515</span><span class="small muted">503 FULL · 12 DELTA · SHA256: 515/515</span></div>
     <div class="kpi"><span class="label">بوابة GATE-15</span><span class="pill bad">NOT ACCEPTED</span><span class="small muted">التحقق التاريخي لم يُغلق</span></div>
     <div class="kpi"><span class="label">تصحيح عرض المهام</span><span class="value num">11</span><span class="small muted">خانات أعيد فتحها لغياب الدليل</span></div>
   </div>
@@ -298,11 +298,11 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     <table aria-label="سجل أولويات الإصلاح المؤرخ">
       <thead><tr><th scope="col">المعرّف</th><th scope="col">المهمة</th><th scope="col">الأولوية</th><th scope="col">الحالة عند الفحص</th></tr></thead>
       <tbody>
-        <tr><td class="num">JRF-002</td><td>اكتمال تصدير الجداول والتحقق من البصمات</td><td>P0</td><td>IN_PROGRESS</td></tr>
+        <tr><td class="num">JRF-002</td><td>سلامة ملفات v5 مثبتة؛ اكتمال التصدير التاريخي غير مقبول</td><td>P0</td><td>FILES_VERIFIED / ACCEPTANCE_OPEN</td></tr>
         <tr><td class="num">JRF-001</td><td>توثيق أسباب الفروق التاريخية في GATE-15</td><td>P0</td><td>BLOCKED_EVIDENCE</td></tr>
         <tr><td class="num">JRF-003</td><td>اعتماد بوابة الاتصال الخاصة واختبارات التكامل</td><td>P0</td><td>BLOCKED_EVIDENCE</td></tr>
         <tr><td class="num">JRF-004</td><td>المطابقات المالية وتسليم تقرير مجلس الإدارة</td><td>P0</td><td>NOT_ACCEPTED</td></tr>
-        <tr><td class="num">JRF-006</td><td>التحقق من تزامن وقت الخادم</td><td>P0</td><td>BLOCKED_EVIDENCE</td></tr>
+        <tr><td class="num">JRF-006</td><td>تصحيح انحراف ساعة الخادم بعد حفظ الأثر</td><td>P0</td><td>NO_SYNC · +3819s</td></tr>
         <tr><td class="num">JRF-008</td><td>إتمام مراجعة ضوابط الوصول إلى الجسر</td><td>P0</td><td>PATCH_STAGED</td></tr>
         <tr><td class="num">JRF-007</td><td>إثبات استعادة النسخ الاحتياطية خارج الموقع</td><td>P1</td><td>PARTIAL_VERIFIED</td></tr>
         <tr><td class="num">JRF-005</td><td>إيصالات التسليم والاستئناف بين الوكلاء</td><td>P1</td><td>BLOCKED_CHANNEL</td></tr>
@@ -310,7 +310,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     </table>
   </div>
   <h3>الإصلاحات التي تم التحقق منها</h3>
-  <p class="small">تصحيح 11 علامة إنجاز غير مثبتة في Issue #57، وإعادة قراءة القضية للتحقق. كما نجحت فحوص مستقلة لعينات CSV، لكن ذلك لا يثبت اكتمال دورة التصدير أو قبول GATE-15. بقيت مراجعات السلامة الأمنية والتوقيت والتسليم مفتوحة.</p>
+  <p class="small">تصحيح 11 علامة إنجاز غير مثبتة في Issue #57. ثم تحقق مستقل من 515 ملف v5: تطابقت جميع بصمات SHA-256 والأحجام، وانتهى العمال الثلاثة. بقي ملف v4 دون manifest نهائي، وظهر فرق صفين بين فهرس التصدير وCSV في جدول واحد؛ السبب غير مثبت. اتحاد أسماء v4/v5 يغطي 1,024 اسمًا فقط، ولا يثبت اكتمال البيانات أو قبول GATE-15. الساعة غير متزامنة، ومراجعات الوصول الأمني والتسليم مفتوحة.</p>
   <div class="toolbar">
     <a class="btn" href="https://docs.google.com/document/d/1iXcukurqJRDPflVlf1ifdCKqvvDf_wupxLbY_OUOLzk/edit" target="_blank" rel="noopener noreferrer">التقرير الكامل: الأعطال والأولويات (صلاحية خاصة)</a>
     <a class="btn" href="https://docs.google.com/document/d/1NGg_i1ZzQ0rj6XSLr4yEbx3bJXC06wtR4B62gB8bRTY/edit" target="_blank" rel="noopener noreferrer">التقرير الكامل: الإصلاحات والأدلة (صلاحية خاصة)</a>
