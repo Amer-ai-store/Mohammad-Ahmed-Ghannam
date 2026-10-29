@@ -1,0 +1,108 @@
+{
+  "schema": "jawafa-crossproject-casework-v1",
+  "classification": "PUBLIC_OPERATIONAL_METADATA_NO_FINANCIAL_ROWS",
+  "period_investigation": {
+    "from": "2025-01-01",
+    "through": "2026-10-30",
+    "complete_to_date": false
+  },
+  "historical_cashflow_coverage": {
+    "from": "2025-10-01",
+    "through": "2026-08-23",
+    "status": "historical_only"
+  },
+  "source_as_of": "2026-10-30",
+  "source_types": [
+    "historical CASHFLOW recovery report from another project",
+    "legacy bank reconciliation reports",
+    "first Jawafa_DB 1024-file CSV export",
+    "Audit15 verified transfer evidence",
+    "transaction-history analytical reports"
+  ],
+  "chat_coverage": "retrieved relevant available cross-project context and recovered reports; not exhaustive access to all conversation transcripts",
+  "counts": {
+    "first_export_tables": 1024,
+    "audit15_transfer_verified": 15,
+    "audit15_causal_unresolved": 15,
+    "financial_workstreams": 11
+  },
+  "external_links": {
+    "private_evidence_folder": "https://drive.google.com/drive/folders/1dTUcvdI8FI-FjNI5tNqunfuqNFr0zXqb",
+    "first_export_folder": "https://drive.google.com/drive/folders/1BAXkWBKuYvzGdC4pNoT9ZfYBBzTg6sd9",
+    "audit15_folder": "https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL"
+  },
+  "cases": [
+    {
+      "id": "CF-01",
+      "title": "التدفق النقدي والسيولة",
+      "status": "historical_reconstruction",
+      "progress": "تم استرجاع المرجع السابق؛ المطابقة الشاملة حتى اليوم لم تنته"
+    },
+    {
+      "id": "CF-02",
+      "title": "العهدة والسحوبات",
+      "status": "definitions_conflict",
+      "progress": "قواعد فصل العهدة والسحب واضحة؛ إجماليات النسخ السابقة تحتاج مطابقة مفاتيح"
+    },
+    {
+      "id": "BANK-03",
+      "title": "حركة البنك والتسوية",
+      "status": "internal_continuity_verified",
+      "progress": "تسلسل أرصدة الفترات القديمة متطابق داخليًا؛ مطابقة قيود النظام لم تُقبل"
+    },
+    {
+      "id": "INTERCO-04",
+      "title": "الأسواق والمطعم والمخبز",
+      "status": "reconciliation_open",
+      "progress": "تقارير المقابلة بين الكيانات متاحة؛ شيكات غير مطابقة تحتاج مستندات"
+    },
+    {
+      "id": "CHEQ-05",
+      "title": "الشيكات الواردة والصادرة",
+      "status": "exceptions_open",
+      "progress": "رُبطت مستندات وحركات النظام؛ اعتماد الصرف مشروط بكشف البنك"
+    },
+    {
+      "id": "GL-06",
+      "title": "السندات المحذوفة وفك الترحيل",
+      "status": "forensic_investigation",
+      "progress": "نتائج أحداث حركات أولية؛ استعادة النسخ قبل الحذف وتفسير الأثر مفتوحان"
+    },
+    {
+      "id": "CASH-07",
+      "title": "الكاش والعجز والإقفالات",
+      "status": "exceptions_open",
+      "progress": "حالات تغير إقفال الكاش موثقة؛ التفسير المالي والوردية مفتوح"
+    },
+    {
+      "id": "PROC-08",
+      "title": "تدقيق المشتريات والمردودات",
+      "status": "audit_coverage_open",
+      "progress": "وجد اختلاف بين مؤشرات الاعتماد والسجل الجزئي؛ لا حكم دون سجل السلطة"
+    },
+    {
+      "id": "POS-09",
+      "title": "المبيعات والكاشات الثلاثة",
+      "status": "needs_transaction_linkage",
+      "progress": "ربط الإضافة والحذف والمردودات مع نقاط البيع وتوقيت النقل مفتوح"
+    },
+    {
+      "id": "STOCK-10",
+      "title": "المخزون والطلب",
+      "status": "needs_current_stock",
+      "progress": "النمذجة على حركة المبيعات والرصيد الحالي لم تعتمد بعد"
+    },
+    {
+      "id": "QUALITY-11",
+      "title": "جودة بيانات الكاش فلو المشتقة",
+      "status": "data_quality_hold",
+      "progress": "بعض مبالغ الجداول المشتقة ظهرت في صورة تواريخ؛ يتطلب إعادة استخلاص قبل الحساب"
+    }
+  ],
+  "safeguards": [
+    "No private amounts, personal identities, cheque numbers or bank statements are included in this public snapshot.",
+    "The public static dashboard is not an authenticated live SQL source.",
+    "All source accounting data are read-only; historical conflicts remain open until independent evidence."
+  ],
+  "status": "INVESTIGATION_IN_PROGRESS__GATE15_NOT_ACCEPTED"
+}
