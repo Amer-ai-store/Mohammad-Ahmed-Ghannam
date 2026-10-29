@@ -231,7 +231,20 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 <section class="panel" id="jawafa-continuity-entry" aria-label="Jawafa continuity and export tracking">
   <div class="panel-head"><div><span class="eyebrow">JAWAFA · CONTINUITY</span><h2>لوحة استمرارية جوافة ومتابعة التصدير</h2></div><span class="pill warn">مصدر خارجي — الاتصال غير مُتحقق</span></div>
   <p class="small muted">مدخل موحد إلى لوحة الاستمرارية والتصدير الحالية. لا يعني فتح الرابط دمج بياناتها أو اعتماد حالة المزامنة. لم تُنقل أي بيانات مالية إلى الصفحة العامة.</p>
-  <a href="../jawafa-continuity.html#exports" target="_blank" rel="noopener noreferrer">فتح لوحة الاستمرارية — قسم التصدير</a>
+  <div class="toolbar"><button type="button" id="jawafa-continuity-toggle" aria-expanded="false" aria-controls="jawafa-continuity-frame">عرض لوحة الاستمرارية داخل القيادة المركزية</button><a href="./jawafa-continuity.html#exports" target="_blank" rel="noopener noreferrer">فتح لوحة الاستمرارية — قسم التصدير</a></div>
+  <div id="jawafa-continuity-container" hidden style="margin-top:12px">
+    <iframe id="jawafa-continuity-frame" title="لوحة استمرارية جوافة ومتابعة التصدير" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:780px;border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe>
+    <p class="small muted">عرض مدمج للوحة المنشورة في المستودع نفسه؛ لا يضيف صلاحيات قراءة أو كتابة للبيانات.</p>
+  </div>
+  <script>
+  document.getElementById('jawafa-continuity-toggle').addEventListener('click', function(){
+    const box=document.getElementById('jawafa-continuity-container');
+    const frame=document.getElementById('jawafa-continuity-frame');
+    const show=box.hidden; box.hidden=!show; this.setAttribute('aria-expanded',String(show));
+    this.textContent=show?'إخفاء لوحة الاستمرارية':'عرض لوحة الاستمرارية داخل القيادة المركزية';
+    if(show && !frame.getAttribute('src')) frame.setAttribute('src','./jawafa-continuity.html#exports');
+  });
+  </script>
 </section>
 
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa">القيادة المركزية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa">NOT_CONNECTED</span></div>
