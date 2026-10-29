@@ -5,6 +5,7 @@ on:
       - "dashboard/index.html"
       - "dashboard/jawafa-integration.js"
       - "dashboard/tests/jawafa-native-integration.test.cjs"
+      - "dashboard/tests/jawafa-auth-guard.test.cjs"
       - "jawafa-command-bridge/**"
       - ".github/workflows/jawafa-unified-qa.yml"
   push:
@@ -29,7 +30,7 @@ jobs:
       - name: Run durable operational API security and ACK/VERIFY tests
         run: node --test jawafa-command-bridge/test.cjs
       - name: Run native integration and code safety tests
-        run: node --test dashboard/tests/jawafa-native-integration.test.cjs
+        run: node --test dashboard/tests/jawafa-native-integration.test.cjs dashboard/tests/jawafa-auth-guard.test.cjs
       - name: Browser navigation, real DOM, no iframe
         shell: bash
         run: |
