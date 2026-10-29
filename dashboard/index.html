@@ -228,6 +228,23 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 
       <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
+<section class="panel" id="jfc-crossproject" aria-label="نتائج التحقيق المالي عبر المشاريع" style="border:1px solid #365d51;background:linear-gradient(160deg,#162b23,#0e1d1a);margin:0 0 16px;padding:18px">
+ <div class="panel-head"><div><span class="eyebrow">JAWAFA · CROSS-PROJECT FINANCIAL FORENSICS</span><h2>التحقيق الموحد: السيولة، العهدة، الشيكات، المطعم والمخبز</h2></div><span class="pill warn" id="jfc-state" role="status">تحميل النتائج...</span></div>
+ <p class="muted small">أرقام الدفعة الأولى وحالة كل تحقيق مستمدة من مصادر متعددة. لا تنشر هذه اللوحة العامة مبالغ العهدة أو معلومات البنوك الحساسة. النتائج التفصيلية في Drive الخاص.</p>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin:12px 0">
+  <div class="panel" style="padding:12px"><span class="small muted">المسارات</span><strong id="jfc-n" style="font-size:23px;display:block">—</strong></div>
+  <div class="panel" style="padding:12px"><span class="small muted">جداول المصدر</span><strong id="jfc-s" style="font-size:23px;display:block">—</strong></div>
+  <div class="panel" style="padding:12px"><span class="small muted">الجداول المنقولة المتحققة</span><strong id="jfc-v" style="font-size:23px;display:block">—</strong></div>
+  <div class="panel" style="padding:12px"><span class="small muted">أسباب فروق لم تحسم</span><strong id="jfc-u" style="font-size:23px;display:block">—</strong></div>
+ </div>
+ <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:580px"><thead><tr><th style="padding:10px;text-align:right">المسار</th><th style="padding:10px;text-align:right">الحالة</th><th style="padding:10px;text-align:right">النتيجة المثبتة والمتبقي</th></tr></thead><tbody id="jfc-rows"><tr><td colspan="3" style="padding:12px">بانتظار مصدر البيانات الموثق</td></tr></tbody></table></div>
+ <div class="toolbar" style="margin-top:12px">
+  <a class="btn" href="https://drive.google.com/drive/folders/1dTUcvdI8FI-FjNI5tNqunfuqNFr0zXqb" target="_blank" rel="noopener noreferrer">التقرير التفصيلي والأدلة في Drive الخاص</a>
+  <a class="btn" href="https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL" target="_blank" rel="noopener noreferrer">إثبات نقل الجداول الـ15</a>
+  <a class="btn" href="#jawafa-tasks">متابعة المهام</a>
+ </div>
+ <p id="jfc-note" class="muted small" style="margin-top:10px">بيانات تاريخية وليست اتصالاً حيًا بكشف البنك أو SQL.</p>
+</section>
 <section class="panel" id="trustsoft-handoff-entry" aria-label="TrustSoft handoff and read-only connector">
  <div class="panel-head"><div><span class="eyebrow">TRUSTSOFT · HANDOFF · READ ONLY</span><h2>استلام لوحة TrustSoft وربطها بمركز جوافة</h2></div><span class="pill warn">تسليم جزئي — قبول التشغيل غير مثبت</span></div>
  <p class="small muted">مرجع التسليم 29 أكتوبر 2026: موصل موقّع وقراءات تجريبية موثقة تاريخيًا. لا يُعد ذلك إثباتًا لاتصال الهاتف أو اكتمال اختبارات OCR أو دمج كود AppDeploy في هذا المستودع. لا تُعرض هنا بيانات مالية أو مفاتيح أو مستندات التحقيق الخاصة.</p>
@@ -1901,3 +1918,49 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
 })();
 </script>
 <script src="jawafa-integration.js" defer></script>
+
+<script>
+(() => {
+"use strict";
+const get=id=>document.getElementById(id);
+if(!get("jfc-crossproject"))return;
+const labels={
+historical_reconstruction:"مرجع تاريخي مستعاد",
+definitions_conflict:"تعارض تعريفات مفتوح",
+internal_continuity_verified:"اتساق بنكي داخلي فقط",
+reconciliation_open:"مطابقة مفتوحة",
+exceptions_open:"استثناءات مفتوحة",
+forensic_investigation:"تحقيق جارٍ",
+audit_coverage_open:"تحقق تدقيق غير مكتمل",
+needs_transaction_linkage:"ربط أحداث مطلوب",
+needs_current_stock:"نواقص رصيد المخزون",
+data_quality_hold:"إيقاف حسابات غير موثوقة"
+};
+function value(id,s){const el=get(id);if(el)el.textContent=String(s==null?"—":s)}
+async function reload(){
+ try{
+  const response=await fetch("./data/jawafa-financial-casework.json?nocache="+Date.now(),{cache:"no-store",credentials:"omit"});
+  if(!response.ok)throw Error("HTTP "+response.status);
+  const info=await response.json();
+  if(info.schema!=="jawafa-crossproject-casework-v1"||info.classification!=="PUBLIC_OPERATIONAL_METADATA_NO_FINANCIAL_ROWS"||!Array.isArray(info.cases))throw Error("UNTRUSTED_SOURCE");
+  value("jfc-n",info.cases.length);value("jfc-s",info.counts.first_export_tables);value("jfc-v",info.counts.audit15_transfer_verified+"/15");value("jfc-u",info.counts.audit15_causal_unresolved);
+  const body=get("jfc-rows");body.replaceChildren();
+  for(const a of info.cases){
+   const row=document.createElement("tr");
+   for(const [v,mark] of [[a.title,0],[labels[a.status]||"قيد التحقق",1],[a.progress,0]]){
+    const cell=document.createElement("td");
+    cell.textContent=String(v||"—").slice(0,260);
+    cell.style.cssText="padding:10px;text-align:right;border-bottom:1px solid #2b4335;line-height:1.7;font-size:12px;vertical-align:top";
+    if(mark)cell.style.color="var(--amber)";
+    row.append(cell)
+   }
+   body.append(row)
+  }
+  value("jfc-state","حالة مستندة إلى لقطة — ليست بثًا حيًا");
+  value("jfc-note","تاريخ المرجع: "+info.source_as_of+"؛ بنك CASHFLOW التاريخي حتى "+info.historical_cashflow_coverage.through+"؛ GATE-15 غير مقبول. لا تتوفر قراءة كاملة لكل المحادثات.");
+ }catch(e){value("jfc-state","تعذر استيراد البيانات: "+String(e.message).slice(0,50));value("jfc-note","لم تُستخدم بيانات تقديرية عند فشل الربط.")}
+}
+reload();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()});
+})();
+</script>
