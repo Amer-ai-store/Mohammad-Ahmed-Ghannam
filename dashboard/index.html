@@ -458,6 +458,17 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
       <section class="view" data-view="servers" aria-labelledby="h-srv" hidden>
         <div class="view-head"><div><span class="eyebrow">البنية</span><h1 id="h-srv">الخوادم والربط</h1><p>سجل الخوادم والخدمات التي يتصل بها المشروع. الصفحة لا تتصل بالشبكة، فحالة كل خادم «غير متحقق» حتى تؤكدها يدوياً.</p></div>
           <div class="toolbar"><button class="primary" type="button" data-action="new-server">إضافة خادم</button></div></div>
+        <div class="panel" id="jawafa-drive-source" aria-label="Google Drive data source">
+          <h3>الاتصال بجوجل درايف — مصدر بيانات بديل للخادم</h3>
+          <p class="small muted">استخدم Google OAuth بحساب مخوّل وبصلاحية قراءة فقط. مفتاح API وحده لا يتيح الوصول إلى ملفات Drive الخاصة؛ يُحفظ رمز OAuth في خدمة خلفية محمية، وليس في هذه الصفحة.</p>
+          <div class="toolbar">
+            <a class="btn" href="https://drive.google.com/drive/folders/1X9MuorGVaaAwolc25_MG4kgKQGPiWard" target="_blank" rel="noopener noreferrer">فتح مجلد Jawafa_DB_Exports</a>
+            <button type="button" id="jawafa-drive-check">فحص اتصال وكيل Drive</button>
+            <button type="button" id="jawafa-drive-import" disabled>استيراد وتنظيم الجداول — بعد التحقق</button>
+          </div>
+          <p id="jawafa-drive-status" class="small muted" role="status">NOT_CONNECTED — لم يتم اعتماد قناة OAuth محمية أو استيراد أي جدول.</p>
+          <p class="small muted">آلية العمل: فهرسة الملفات، والتحقق من أعداد الجداول والتجزئة SHA-256، ثم تصنيفها إلى المحاسبة والشيكات والمشتريات والاستلام والتحقيقات والتقارير. تعرض الأقسام ملخصات غير حساسة فقط؛ تبقى السجلات الأصلية في مخزن خاص.</p>
+        </div>
         <div class="grid2" id="server-list"></div>
       </section>
 
@@ -1072,6 +1083,26 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
         el("div", { class: "toolbar" }, editButton(() => agentForm(a)), deleteButton("الوكيل", async () => { if (await remove("agents", a.id)) logActivity("حذف وكيل: " + S(a.name, 80)); })));
     }) : [emptyState("لا يوجد وكلاء بعد.", "new-agent", "إضافة وكيل")]));
   }
+  // Google Drive connection is server-side only: never send OAuth tokens or API keys to GitHub Pages.
+  async function jawafaDriveCheck() {
+    const out = document.getElementById("jawafa-drive-status");
+    const button = document.getElementById("jawafa-drive-import");
+    if (!out || !button) return;
+    button.disabled = true;
+    out.textContent = "جارٍ فحص خدمة Drive المحمية...";
+    try {
+      const response = await fetch("/api/jawafa/v1/drive/status", {credentials:"same-origin",cache:"no-store",headers:{"Accept":"application/json"},signal:AbortSignal.timeout(7000)});
+      if (!response.ok) throw Error("HTTP_"+response.status);
+      const result = await response.json();
+      if (result.authenticated !== true || result.readOnly !== true || result.importVerified !== true) throw Error("NOT_VERIFIED");
+      out.textContent = "VERIFIED — "+String(result.source || "Drive")+". جاهزية الاستيراد تتطلب خدمة خلفية مصادقًا عليها.";
+      // Import remains disabled until a dedicated authenticated backend workflow is approved.
+    } catch (error) {
+      out.textContent = "NOT_CONNECTED — لم يتم التحقق من خدمة Drive الخاصة ("+String(error.message).slice(0,70)+").";
+    }
+  }
+  document.getElementById("jawafa-drive-check")?.addEventListener("click", jawafaDriveCheck);
+  document.getElementById("jawafa-drive-import")?.addEventListener("click", () => {});
   function renderServers() {
     $("server-list").replaceChildren(...(state.servers.length ? state.servers.map(s => {
       const url = S(s.url, 300);
