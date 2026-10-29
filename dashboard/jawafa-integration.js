@@ -33,6 +33,14 @@ const B={gate:"NOT ACCEPTED",export_verified:15,export_total:15,technical_verifi
   historical_causality:"INCOMPLETE",restore_historical_passed:7,restore_historical_total:7,
   daily_latest_accepted:false,live_sql:false,source:"عقد التكامل 28/10/2026 — مرجع تاريخي فقط"};
 let snapshot=null,connected=false,identity=null,searchTimer=null;
+let connectionRevision=0,lastError="NOT_CONNECTED";
+function canDispatch(operation){
+  return connected===true &&
+    snapshot?.agent_channel?.connected===true &&
+    snapshot?.dashboard?.private_https_verified===true &&
+    snapshot?.dashboard?.e2e_verified===true &&
+    (operation!=="RECONCILE_BANK" || snapshot?.gate?.status==="ACCEPTED");
+}
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n};
 const id=x=>document.getElementById(x);
 const add=(parent,...nodes)=>{for(const n of nodes)parent.append(n);return parent};
@@ -46,17 +54,38 @@ const c=new AbortController(),timer=setTimeout(()=>c.abort(),8000);
 try{const r=await fetch(BASE+"/"+route,{method,headers:{"Accept":"application/json","Authorization":"Bearer "+jwt,...(body?{"Content-Type":"application/json"}:{})},cache:"no-store",credentials:"same-origin",signal:c.signal,...(body?{body:JSON.stringify(body)}:{})});let o={};try{o=await r.json()}catch{}
 if(!r.ok)throw Error((o.error||"HTTP_"+r.status)+" ("+r.status+")");return o}
 finally{clearTimeout(timer)}}
-async function connect(){try{const data=await call("dashboard");if(data?.schema_version!=="jawafa.command.v1" || !data.source_system)throw Error("SCHEMA_MISMATCH");snapshot=data;connected=true;identity={verified:true};for(const key of Object.keys(PAGES))status(key,"BRIDGE_CONNECTED",data.source_system,data.verified_at||"غير مثبت");status("jawafa-monitor",data.monitor?.server_status==="ONLINE_VERIFIED"?"CONNECTED":"NOT_CONNECTED",data.source_system,data.verified_at);
-const gate=data.gate?.status;if(gate!=="ACCEPTED"){status("jawafa-gate15","NOT_ACCEPTED",data.source_system,data.report_generated_at);status("jawafa-checks","BLOCKED",data.source_system,data.report_generated_at)}
-render();return true}catch(e){snapshot=null;connected=false;identity=null;for(const key of Object.keys(PAGES))status(key,"NOT_CONNECTED",B.source);render();return false}}
-function pendingButton(parent,op,label){const b=el("button","tiny",label);b.type="button";b.disabled=!(connected&&snapshot?.agent_channel?.connected);b.title=connected&&snapshot?.agent_channel?.connected?"إرسال أمر إلى طابور الوكيل المتصل؛ لا يعني التنفيذ":"NOT_CONNECTED — الجسر أو الوكيل التنفيذي غير متحقق";
-b.addEventListener("click",async()=>{b.disabled=true;const request_id=crypto.randomUUID(),task_id="JAWAFA-"+op;
+async function connect(){
+  const revision=++connectionRevision;
+  try{
+    const data=await call("dashboard");
+    if(revision!==connectionRevision)return false;
+    if(data?.schema_version!=="jawafa.command.v1" || !data.source_system)throw Error("SCHEMA_MISMATCH");
+    snapshot=data;connected=true;identity={verified:true};lastError="";
+    for(const key of Object.keys(PAGES))status(key,"BRIDGE_CONNECTED",data.source_system,data.verified_at||"غير مثبت");
+    status("jawafa-monitor",data.monitor?.server_status==="ONLINE_VERIFIED"?"CONNECTED":"NOT_CONNECTED",data.source_system,data.verified_at);
+    if(data.gate?.status!=="ACCEPTED"){
+      status("jawafa-gate15","NOT_ACCEPTED",data.source_system,data.report_generated_at);
+      status("jawafa-checks","BLOCKED",data.source_system,data.report_generated_at);
+    }
+    render();return true;
+  }catch(e){
+    if(revision!==connectionRevision)return false;
+    snapshot=null;connected=false;identity=null;
+    lastError=String(e?.message||"NOT_CONNECTED").slice(0,120);
+    for(const key of Object.keys(PAGES))status(key,"NOT_CONNECTED",B.source);
+    render();return false;
+  }
+}
+function pendingButton(parent,op,label){const b=el("button","tiny",label);b.type="button";b.disabled=!canDispatch(op);b.title=canDispatch(op)?"قناة تشغيل معتمدة؛ الإرسال لا يثبت التنفيذ":op==="RECONCILE_BANK"?"BLOCKED_BY_G15 — مطابقة البنك غير مصرح بها":"NOT_CONNECTED / GATE_NOT_VERIFIED — لا توجد قناة تشغيل معتمدة";
+b.addEventListener("click",async()=>{if(!canDispatch(op)){message(parent,"BLOCKED — الأوامر معطلة حتى اعتماد قناة HTTPS، واختبار E2E، والوكيل الموقّع، وبوابة GATE-15 للمطابقات.");return;}b.disabled=true;const request_id=crypto.randomUUID(),task_id="JAWAFA-"+op;
 try{const result=await call("commands",{method:"POST",body:{request_id,task_id,operation:op,params:{},source_version:snapshot?.snapshot_id||null}});
 message(parent,"رقم الطلب: "+result.request_id+" — الحالة: "+result.status+"؛ لا يعني ذلك استلام الوكيل أو التنفيذ.","info");
-await loadCommand(result.request_id,parent)}catch(e){message(parent,"تعذر تنفيذ الطلب: "+e.message,"error")}finally{b.disabled=!(connected&&snapshot?.agent_channel?.connected)}});
+await loadCommand(result.request_id,parent)}catch(e){message(parent,"تعذر تنفيذ الطلب: "+e.message,"error")}finally{b.disabled=!canDispatch(op)}});
 parent.append(b)}
 async function loadCommand(request_id,parent){const b=el("button","tiny","تحديث حالة "+request_id.slice(0,8));parent.append(b);b.addEventListener("click",async()=>{try{const r=await call("commands/"+encodeURIComponent(request_id));message(parent,"الحالة: "+r.status+" · الوكيل: "+(r.agent_id||"لم يستلم")+" · الدليل: "+(r.evidence_ref||"لم يصل"),"info")}catch(e){message(parent,e.message,"error")}})}
-function render(){for(const [key,config] of Object.entries(PAGES)){const p=document.querySelector('[data-jawafa-pane="'+key+'"]');if(!p)continue;p.replaceChildren();p.append(el("h3",null,TITLES[key]));if(!connected)message(p,"NOT_CONNECTED — سجل الحالة المرجعي للقراءة فقط. أزرار الأوامر معطّلة حتى تحقق HTTPS والمصادقة ومسار التنفيذ.");else if(!snapshot?.agent_channel?.connected)message(p,"الجسر مصادق عليه لكن قناة الوكيل لم تثبت نشاطًا موقعًا خلال آخر 90 ثانية؛ الأوامر التنفيذية معطّلة.");const tools=el("div","toolbar");const refresh=el("button","tiny","تحديث المصدر الموثوق");refresh.disabled=false;refresh.addEventListener("click",()=>connect());tools.append(refresh);for(const [op,label] of config.buttons)pendingButton(tools,op,label);p.append(tools);
+function render(){for(const [key,config] of Object.entries(PAGES)){const p=document.querySelector('[data-jawafa-pane="'+key+'"]');if(!p)continue;p.replaceChildren();p.append(el("h3",null,TITLES[key]));if(!connected)message(p,"NOT_CONNECTED — "+lastError+"؛ هذه واجهة موقع ثابت، ولا يمكنها تشغيل API على GitHub Pages دون بوابة HTTPS مستقلة موثقة.");
+else if(!snapshot?.agent_channel?.connected)message(p,"الجسر مصادق عليه، لكن الوكيل التنفيذي غير متصل؛ أوامر التنفيذ معطلة.");
+else if(snapshot?.dashboard?.private_https_verified!==true || snapshot?.dashboard?.e2e_verified!==true)message(p,"GATE_NOT_VERIFIED — لم يُثبت اعتماد HTTPS الخاص واختبار الطرف إلى الطرف. الأزرار التنفيذية معطّلة.");const tools=el("div","toolbar");const refresh=el("button","tiny","تحديث المصدر الموثوق");refresh.disabled=false;refresh.addEventListener("click",()=>connect());tools.append(refresh);for(const [op,label] of config.buttons)pendingButton(tools,op,label);p.append(tools);
 if(key==="jawafa"||key==="jawafa-gate15"){details(p,[["GATE-15",snapshot?.gate?.status||B.gate],["الاستخراج المعاد",String(snapshot?.gate?.technical_export_tables??15)+"/15"],["الاختبارات الفنية",String(snapshot?.gate?.technical_verified_tables??15)+"/15"],["سبب الفروق التاريخية","غير مكتمل"]]);message(p,"الاجتياز الفني لا يساوي قبول GATE-15؛ F01–F14 محجوبة. لا تعتمد النتائج المالية قبل التحقيق في الفروق.","error")}
 if(key==="jawafa-backups"){details(p,[["اختبارات RESTORE التاريخية","7/7"],["اعتماد أحدث نسخة يومية","غير مثبت"],["النسخة المعتمدة للقراءة","آخر نسخة مكتملة ومتحققة فقط"]]);message(p,"لا تقرأ من نسخة جارية الإنشاء أو ملف جزئي. لا يوجد اختبار حديث مثبت لهذه الجلسة.")}
 if(key==="jawafa-tasks"){details(p,[["مرجع AppDeploy التاريخي",connected?(String(snapshot?.tasks?.length||0)+" سجل مرجعي داخل الجسر — دون اعتماد"):("97 مهمة تاريخية — لم تصل من جسر مصادق عليه")],["المطابقات المالية F01–F14","14 مهمة BLOCKED_BY_G15"],["مصدر المهام الرسمي","الجسر التشغيلي عند الاتصال"]]);const tasks=snapshot?.tasks||Array.from({length:14},(_,i)=>({task_id:"F"+String(i+1).padStart(2,"0"),status:"BLOCKED_BY_G15",source:"مرجع عقد التكامل"}));table(p,[["رمز المهمة","task_id"],["الحالة","status"],["مرجع الدليل","evidence_ref"],["آخر اختبار","checked_at"]],tasks)}
