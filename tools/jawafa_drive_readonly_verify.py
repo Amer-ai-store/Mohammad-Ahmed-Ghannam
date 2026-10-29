@@ -6,15 +6,14 @@ Share the Drive folder with that service account before running.
 Never publish CSV contents, tokens or financial records to GitHub Pages.
 """
 import csv, hashlib, io, json, os, sys
-from google.oauth2 import service_account
+import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
 FOLDER = os.environ.get("JAWAFA_DRIVE_FOLDER", "1X9MuorGVaaAwolc25_MG4kgKQGPiWard")
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 def client():
-    creds = service_account.Credentials.from_service_account_file(
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"], scopes=SCOPES)
+    creds, _ = google.auth.default(scopes=SCOPES)
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 def children(api, folder):
     token = None
