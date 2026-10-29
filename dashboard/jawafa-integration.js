@@ -100,5 +100,5 @@ if(key==="jawafa-reports")message(p,"التقارير المعتمدة تحفظ 
 if(key==="jawafa-investigations")message(p,"تمييز الوقائع المثبتة عن القرائن والإفادات والادعاءات. عدم نسبة الفعل إلى مستخدم مشترك دون الجهاز وWindows وTrustSoft والوقت.");
 }}
 let authListenerAttached=false;let checks=0;const authWatch=setInterval(()=>{checks++;try{if(!authListenerAttached&&window.firebase?.apps?.length&&typeof window.firebase.auth==="function"){authListenerAttached=true;clearInterval(authWatch);window.firebase.auth().onAuthStateChanged(()=>connect())}}catch{}if(checks>40)clearInterval(authWatch)},500);window.addEventListener("focus",()=>{if(!connected)connect()});
-render();connect();window.JawafaUI={refresh:connect,connected:()=>connected}; 
+render();connect();window.JawafaUI={refresh:connect,connected:()=>connected,canDispatch:(operation)=>canDispatch(operation)}; 
 })();
