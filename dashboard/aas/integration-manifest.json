@@ -1,6 +1,6 @@
 {
   "format": "aas-cc-integrated-client-v1",
-  "sourceRevision": "3bf77753651c98bf339a3ed21056753cd13eea52",
+  "sourceRevision": "f0623ea7a7128c6ffd1e6cbce949d7d334e063cb",
   "privateBackend": "https://amer-ai-command-center.eagerlark64.chatgpt.site",
   "apiTransport": "owner-session-popup",
   "sharedStorage": "existing-private-D1",
@@ -74,12 +74,12 @@
     {
       "path": "downloads/aas-database-bridge.zip",
       "bytes": 20423,
-      "sha256": "079613554d70c2b70916ab8a969dfaf37c0d3964a106e957c3597763fca49ea4"
+      "sha256": "37b9da0094a84cc3e688eb1072e7daec64e327b7ef06c8aa1c8d288e9da8d7d9"
     },
     {
       "path": "downloads/aas-execution-kit.zip",
       "bytes": 14995,
-      "sha256": "d9da894ffba7a0928482ed530845fc6e378efd5c6c18c51d114a035d2e039683"
+      "sha256": "e99cf7292fee7e66495fb9e4ab9c58c8ceadc46e513c804f186003a44504021b"
     },
     {
       "path": "host-connection.js",

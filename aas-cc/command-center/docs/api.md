@@ -26,6 +26,8 @@
 
 مسارات `assistant` و`database` تتطلب جلسة المالك، ولا يكفي مفتاح تطبيق Android. `GET /assistant/capabilities` يعيد تهيئة المزوّد دون المفتاح، و`POST /assistant/provider` يتحقق من نموذج Gemini بطلب قراءة ثم يحفظ المفتاح مشفرًا على الخادم. `POST /assistant/chat` يعيد استشارة ومقترحات محددة؛ عند غياب المزوّد يعيد `503` مع توصيات محلية موسومة بوضوح. `GET /assistant/history` يعيد سجلًا محدودًا منقّى. اعتماد مقترح عبر `POST /assistant/apply` يحتاج `proposalId` و`expectedRevision`؛ تحفظ عملية D1 واحدة التعديل وإيصاله، وتمنع الإعادة عند الضغط المتكرر أو التعارض.
 
+`GET /assistant/provider/health` يقرأ نتيجة آخر فحص توليد، دون استدعاء المزوّد. `POST /assistant/provider/test` بجسم `{}` يرسل طلب JSON قصيرًا واحدًا باستخدام الإعداد المحفوظ؛ يُرفض تمرير مفتاح أو رسالة في هذا المسار. يعاد `{providerHealth:{configured,model,status,checkedAt,latencyMs,error}}` مع حالة HTTP الفعلية. الفحص محصور بالمالك، ولا يعيد نص المزوّد أو يكتب مهامًا أو محادثة. الطلب المتكرر خلال 30 ثانية يُرفض قبل التوليد. تغيير الاعتماد أو النموذج يبطل نجاح الإعداد السابق، والنجاح الذي مضى عليه يوم يُعرض قديمًا.
+
 يطلب المساعد JSON من المزوّد عبر `generationConfig.responseMimeType`؛ لا يضيف هذا خيارًا عامًا إلى مدخلات `/ai/generate`. الرد الاستشاري بلا `proposals` يعامل كقائمة فارغة؛ المقترحات الموجودة تبقى خاضعة للتحقق الكامل. تظل نتيجة الفشل موسومة `local-advisor` دون مقترحات تنفيذية، وتصل رسالتها المنقّاة إلى الواجهة والسجل: `429 provider_quota_exceeded` للحصة أو المعدل، و`502 provider_access_denied` لرفض الصلاحية، و`502 provider_model_unavailable` لعدم توفر النموذج، و`502 provider_request_invalid` لرفض إعدادات الطلب، و`502 assistant_invalid_response` لصيغة محادثة غير صالحة. لا يعاد نص خطأ المزوّد الخام. تبقى المهلة `504 provider_timeout`، والمقترحات غير المقبولة `502 assistant_invalid_proposal`.
 
 `POST /assistant/provider/models` يستقبل `{apiKey}` أو `{useSavedKey:true}` من المالك فقط، ويقرأ قائمة Google الفعلية بحد خمس صفحات ومهلة إجمالية عشر ثوانٍ. يعيد `{discoveryId, expiresAt, models:[{id,label}], truncated, activeConfigurationChanged:false}`؛ لا يعيد المفتاح أو بياناته المشفرة. تُحفظ مسودة مشفرة واحدة لمدة صلاحية عشر دقائق مستقلة عن الإعداد النشط. قد تكون القائمة جزئية عند `truncated:true`. للحفظ أرسل إلى `POST /assistant/provider` الحقول `{discoveryId,model}`؛ يُرفض اختيار لم يظهر في القائمة أو جلسة منتهية/مستبدلة، ويُعاد فحص النموذج قبل اعتماد الإعداد. يبقى `{apiKey,model}` مدعومًا للتوافق. لا يستدعي هذا الربط توليدًا ولا يثبت حصة استخدام متاحة.
@@ -105,7 +107,7 @@
 
 ## متابعة مستودع GitHub
 
-المستودع المعتمد ثابت في الخادم: `Mohammadzxzx1991/Mohammad-Ahmed-Ghannam`. لا يقبل المسار عنوان GitHub عشوائيًا من المتصفح، ولا يكتب إلى المستودع أو يشغل Actions.
+المستودع المعتمد ثابت في الخادم: `Amer-ai-store/Mohammad-Ahmed-Ghannam`. لا يقبل المسار عنوان GitHub عشوائيًا من المتصفح، ولا يكتب إلى المستودع أو يشغل Actions.
 
 `GET /github` يقرأ لقطة من `aas_repository_cache` في D1 إذا كانت صالحة لخمس دقائق، ويجلبها من GitHub عند انتهائها. `POST /github/refresh` مع جسم JSON فارغ `{}` يطلب تحديثًا يدويًا. كلاهما يتطلب مصادقة API المعتادة. لا يحتاج التحديث `expectedRevision` ولا يغير مراجعة سجلات العمل.
 
@@ -114,8 +116,8 @@
 ```json
 {
   "repository": {
-    "fullName": "Mohammadzxzx1991/Mohammad-Ahmed-Ghannam",
-    "htmlUrl": "https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam",
+    "fullName": "Amer-ai-store/Mohammad-Ahmed-Ghannam",
+    "htmlUrl": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam",
     "defaultBranch": "main",
     "head": { "sha": "…", "htmlUrl": "…", "message": "…", "authorName": "…", "committedAt": "…" },
     "commits": [],
