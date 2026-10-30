@@ -207,6 +207,32 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 .toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:max(16px,env(safe-area-inset-left,0px));z-index:20;background:var(--fg);color:var(--bg);padding:.55rem .9rem;border-radius:10px;font-size:.86rem;max-width:min(420px,calc(100vw - 32px))}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 @media (max-width:520px){.bar-row{grid-template-columns:6rem 1fr 2rem}.msg{max-width:96%}}
+
+/* Hierarchical command navigation: primary groups and scoped detailed screens. */
+nav.side .nav-section{display:block;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+nav.side .nav-section[open]{background:var(--surface-2);border-color:var(--accent)}
+nav.side .nav-group-title{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:.45rem;padding:.75rem .65rem;font-size:.84rem;font-weight:700;color:var(--fg)}
+nav.side .nav-group-title::-webkit-details-marker{display:none}
+nav.side .nav-group-title:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+nav.side .nav-group-title::after{content:"⌄";order:2;color:var(--muted);transition:transform .16s ease}
+nav.side details[open]>.nav-group-title::after{transform:rotate(180deg)}
+nav.side .nav-group-count{margin-inline-start:auto;font-size:.72rem;border:1px solid var(--line);border-radius:99px;padding:0 .44rem;color:var(--muted);font-family:var(--font-mono)}
+nav.side .nav-children{border-top:1px solid var(--line);padding:.4rem .25rem .5rem;display:flex;flex-direction:column;gap:.12rem;max-height:min(64vh,520px);overflow-y:auto}
+nav.side .nav-children a{padding:.48rem .65rem .48rem .4rem;font-size:.82rem;border-radius:8px}
+nav.side .nav-children a[aria-current="page"]{box-shadow:inset -3px 0 var(--accent)}
+nav.side{gap:.5rem}
+.nav-breadcrumb{max-width:1100px;margin:0 auto 1rem;padding:.48rem .8rem;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted);display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;font-size:.8rem}
+.nav-breadcrumb strong{color:var(--fg)}
+.crumb-separator{color:var(--accent);font-weight:700}
+.nav-landing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:.65rem;margin-top:.8rem}
+.nav-landing-card{display:flex;flex-direction:column;align-items:flex-start;text-decoration:none;gap:.1rem;border:1px solid var(--line);border-radius:12px;padding:.85rem;background:var(--surface-2);color:var(--fg);transition:border-color .16s ease,transform .16s ease}
+.nav-landing-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.nav-landing-card .nav-landing-number{font-family:var(--font-mono);font-size:.75rem;color:var(--accent)}
+.nav-landing-card strong{font-size:.93rem}
+.nav-landing-action{font-size:.75rem;color:var(--accent);margin-top:.45rem}
+.mobile-group-select{display:none}
+@media(max-width:860px){.mobile-group-select{display:block;min-height:42px;width:100%;font-weight:700;border-color:var(--accent);background:var(--surface-2)}.chips nav{max-width:100%}.chips{gap:.35rem}.nav-breadcrumb{margin-top:0}}
+
 </style>
 
 <div class="shell">
@@ -222,9 +248,12 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   <div class="main-col">
     <div class="chips">
       <div class="row"><span class="brand-mark" aria-hidden="true">A</span><b id="brand-name-m">Amer AI Store</b><span class="pill" id="db-pill-m">...</span></div>
-      <nav id="chip-nav" aria-label="أقسام مركز القيادة"></nav>
+      <label class="sr" for="nav-group-select">المجموعة الرئيسية</label>
+      <select id="nav-group-select" class="mobile-group-select" aria-label="المجموعات الرئيسية"></select>
+      <nav id="chip-nav" aria-label="الشاشات الفرعية ضمن المجموعة"></nav>
     </div>
     <main id="main">
+      <div id="nav-breadcrumb" class="nav-breadcrumb" role="status" aria-live="polite"></div>
       <div id="mode-banner" class="banner" hidden></div>
 
       <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
@@ -432,6 +461,10 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
           <div><span class="small muted">AMER AI STORE · AAS-CC</span><h2 id="h-home">مركز القيادة والتحكم</h2><p class="muted small">حالة المشروع والمتجر في شاشة واحدة: المهام، بوابات التنفيذ، الوكلاء، وتنبيهات المتجر.</p></div>
           <div class="toolbar"><button class="primary" type="button" data-action="new-task">مهمة جديدة</button><a class="btn" href="#advisor">اسأل المستشار</a></div>
         </div>
+        <section class="panel" aria-label="مجموعات لوحة القيادة"><div class="panel-head"><div><span class="eyebrow">CENTRAL COMMAND CENTER</span><h2>المجموعات الرئيسية</h2></div><span class="pill">اختَر مجال العمل</span></div>
+          <p class="small muted">جميع الشاشات موزّعة حسب مجالات العمل؛ عند فتح مجموعة تظهر وظائفها التفصيلية دون حذف أي شاشة.</p>
+          <div id="nav-group-cards" class="nav-landing-grid"></div>
+        </section>
         <div class="kpis" id="home-kpis"></div>
         <div class="grid2">
           <div class="panel"><div class="panel-head"><h3>مهام ذات أولوية</h3><a class="small" href="#tasks">كل المهام</a></div><div class="list" id="home-priority"></div></div>
@@ -715,36 +748,135 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 
   // ---------- navigation ----------
   const NAV = [
-    ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"], ["marketing", "وكيل التسويق", "campaigns"], ["features", "مزايا التطبيق"]]],
-    ["AAS-CC · القيادة الحية", [["aas-overview", "مركز القيادة الحي"], ["aas-orchestration", "الهيكل والمسارات الحية"], ["aas-workspaces", "مساحات AAS-AW"], ["aas-tasks", "مهام AAS المشتركة"], ["aas-execution", "بوابات التحليل والتنفيذ"], ["aas-agents", "الوكلاء في النظام الحي"], ["agent-directory", "دليل الوكلاء والمستشارين"], ["aas-approvals", "الموافقات المشتركة"], ["aas-advisor", "المستشار وربط Gemini"], ["aas-database", "جسر قاعدة البيانات"], ["aas-commerce", "لقطات التطبيق المستلمة"], ["aas-repository", "المصدر والبناء الحي"], ["aas-integrations", "الخوادم وواجهات API"], ["aas-activity", "سجل AAS المشترك"], ["aas-settings", "إعدادات AAS والتصدير"]]],
-    ["المتجر", [["store", "لوحة المتجر"], ["luqta", "إدارة لُقطة"]]],
-    ["تحقيق جوافة", [["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة اليومية والمهام"],["jawafa-gate15","GATE-15"],["jawafa-backups","النسخ والـ RESTORE"],["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","لوحة TrustSoft"],["jawafa-export","مراقبة التصدير"],["jawafa-accounting","المحاسبة والقيود"],["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","المشتريات والموردون"],["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],["jawafa-periodic","التقرير الدوري للاتصال"],["jawafa-reports","التقارير المالية"],["jawafa-errors","الأخطاء والإنجاز"]]],
-    ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
+    ["القيادة والمشاريع", [
+      ["home","نظرة عامة"],["tasks","المهام","tasks"],["stages","مراحل التنفيذ","stages"],
+      ["workspaces","مساحات العمل","workspaces"],["map","الهيكل وخريطة العمل"]
+    ]],
+    ["الذكاء الاصطناعي والوكلاء", [
+      ["agents","فريق الوكلاء","agents"],["agent-directory","دليل الوكلاء"],
+      ["advisor","المستشار والمحادثة"],["designer","وكيل التصميم","designs"],
+      ["marketing","وكيل التسويق","campaigns"],["features","مزايا التطبيق"]
+    ]],
+    ["AAS | النظام والتشغيل", [
+      ["aas-overview","القيادة الحية"],["aas-orchestration","المسارات"],
+      ["aas-workspaces","مساحات AAS-AW"],["aas-tasks","المهام المشتركة"],
+      ["aas-execution","بوابات التنفيذ"],["aas-agents","وكلاء AAS"],
+      ["aas-approvals","الموافقات"],["aas-advisor","المستشار وGemini"],
+      ["aas-database","جسر البيانات"],["aas-repository","الكود والبناء"],
+      ["aas-integrations","الخوادم وواجهات API"],["aas-activity","سجل النشاط"],
+      ["aas-settings","إعدادات AAS"]
+    ]],
+    ["المتجر | لُقطة والمبيعات", [
+      ["store","نظرة عامة على المتجر"],["luqta","لُقطة · الملخص"],
+      ["luqta/products","الأصناف والعائلات"],["luqta/inventory","المخزون الفعلي والربط"],
+      ["luqta/offers","العروض والأسعار"],["luqta/appearance","التصميم والشاشات"],
+      ["luqta/orders","الطلبات والتوصيل"],["luqta/users","العملاء والمحفظة"],
+      ["luqta/coupons","الخصومات والكوبونات"],["luqta/returns","المرتجعات"],
+      ["luqta/tickets","دعم العملاء"],["luqta/agents","وكلاء المتجر"],
+      ["luqta/settings","إعدادات المتجر"],["luqta/audit","سجل التغييرات"],
+      ["aas-commerce","لقطات تطبيق AAS"]
+    ]],
+    ["جوافة | المالية والتحقيق", [
+      ["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة والمهام"],
+      ["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
+      ["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","TrustSoft"],
+      ["jawafa-export","التصدير"],["jawafa-accounting","القيود"],
+      ["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","الموردون والمشتريات"],
+      ["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],
+      ["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],
+      ["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],
+      ["jawafa-periodic","تقرير الاتصال"],["jawafa-reports","التقارير المالية"],
+      ["jawafa-errors","الأخطاء والإنجاز"]
+    ]],
+    ["البنية | البيانات والإعدادات", [
+      ["database","قواعد البيانات"],["servers","الخوادم والاتصالات","servers"],
+      ["github","المستودع والتطوير"],["activity","سجل النشاط"],["settings","الإعدادات"]
+    ]]
   ];
   const VIEWS = NAV.flatMap(([, items]) => items.map(i => i[0]));
   let current = "home";
+  // Each screen belongs to exactly one primary group. Details render only on selection.
+  let activeGroupIndex = 0;
   function buildNav() {
-    const side = $("side-nav"), chips = $("chip-nav");
-    side.replaceChildren(); chips.replaceChildren();
-    for (const [group, items] of NAV) {
-      side.append(el("div", { class: "group" }, group));
-      for (const [id, label, coll] of items) {
-        side.append(el("a", { href: "#" + id, "data-nav": id }, el("span", null, label), coll ? el("span", { class: "count", "data-count": coll }) : null));
-        chips.append(el("a", { href: "#" + id, "data-nav": id }, label));
-      }
+    const side = $("side-nav"), chips = $("chip-nav"), groupSelect = $("nav-group-select");
+    side.replaceChildren(); chips.replaceChildren(); groupSelect.replaceChildren();
+    NAV.forEach(([name, items], index) => {
+      const details = el("details", { class:"nav-section", "data-nav-group": String(index) });
+      if (index === activeGroupIndex) details.open = true;
+      const summary = el("summary", { class:"nav-group-title" },
+        el("span", { class:"nav-title" }, name),
+        el("span", { class:"nav-group-count", "aria-label": items.length+" شاشات" }, String(items.length)));
+      details.append(summary);
+      const links = el("div", { class:"nav-children" });
+      items.forEach(([id, label, coll]) => links.append(
+        el("a", { href:"#"+id, "data-nav":id }, el("span", null, label),
+          coll ? el("span", { class:"count", "data-count":coll }) : null)));
+      details.append(links);
+      side.append(details);
+      groupSelect.append(el("option", { value:String(index) }, name+" · "+items.length));
+      details.addEventListener("toggle", () => {
+        if (details.open) {
+          activeGroupIndex = index;
+          for (const other of side.querySelectorAll(".nav-section")) if (other !== details) other.open = false;
+        }
+      });
+    });
+    groupSelect.addEventListener("change", () => {
+      const selected = Number(groupSelect.value);
+      const group = NAV[selected];
+      if (!group) return;
+      activeGroupIndex = selected;
+      location.hash = "#"+group[1][0][0];
+      if (location.hash.slice(1) === group[1][0][0]) show(group[1][0][0]);
+    });
+    const shortcut = $("nav-group-cards");
+    if (shortcut) {
+      shortcut.replaceChildren();
+      NAV.forEach(([group, items], index) => {
+        const card = el("a", { href:"#"+items[0][0], class:"nav-landing-card" },
+          el("span", { class:"nav-landing-number", "aria-hidden":"true" }, String(index+1).padStart(2,"0")),
+          el("strong", null, group), el("span", { class:"small muted" }, items.length+" شاشة وتفصيل"),
+          el("span", { class:"nav-landing-action" }, "فتح المجموعة ←"));
+        shortcut.append(card);
+      });
     }
   }
   function show(view) {
-    const base = view.split("/")[0];
-    if (base.startsWith("aas-") && VIEWS.includes(base)) view = base;
-    if (!VIEWS.includes(view)) view = "home";
+    view = (view || "home").replace(/^#/, "");
+    const base = view.split("/")[0], detail = view.split("/")[1] || "overview";
+    if (!VIEWS.includes(view)) view = base === "luqta" ? "luqta" : "home";
     current = view;
-    if (view.startsWith("aas-")) window.dispatchEvent(new CustomEvent("aas:navigate"));
-    for (const s of document.querySelectorAll("section.view")) s.hidden = s.dataset.view !== (view.startsWith("aas-") ? "aas-live" : view);
-    for (const a of document.querySelectorAll("[data-nav]")) { if (a.dataset.nav === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
-    const chip = document.querySelector('#chip-nav [aria-current="page"]');
-    if (chip) chip.scrollIntoView({ block: "nearest", inline: "center" });
-    window.scrollTo(0, 0);
+    const navigationRoot = view.startsWith("luqta/") ? "luqta" : view.startsWith("aas-") ? "aas-live" : view;
+    if (navigationRoot === "aas-live") window.dispatchEvent(new CustomEvent("aas:navigate"));
+    for (const section of document.querySelectorAll("section.view")) section.hidden = section.dataset.view !== navigationRoot;
+    for (const a of document.querySelectorAll("[data-nav]")) {
+      if (a.dataset.nav === view) a.setAttribute("aria-current","page");
+      else a.removeAttribute("aria-current");
+    }
+    const index = NAV.findIndex(([, items]) => items.some(item => item[0] === view));
+    if (index >= 0) {
+      activeGroupIndex = index;
+      document.querySelectorAll("#side-nav .nav-section").forEach((group, i) => { group.open = i === index; });
+      $("nav-group-select").value = String(index);
+      const chipNav = $("chip-nav");
+      chipNav.replaceChildren();
+      for (const [id, label] of NAV[index][1]) {
+        const link = el("a", { href:"#"+id, "data-nav":id }, label);
+        if (id === view) link.setAttribute("aria-current","page");
+        chipNav.append(link);
+      }
+      const crumb = $("nav-breadcrumb");
+      if (crumb) {
+        crumb.replaceChildren(el("span", null, NAV[index][0]),
+          el("span", { "aria-hidden":"true", class:"crumb-separator" }, "›"),
+          el("strong", null, NAV[index][1].find(item => item[0] === view)?.[1] || ""));
+      }
+    }
+    if (navigationRoot === "luqta") window.dispatchEvent(new CustomEvent("luqta:navigate",
+      { detail:{ tab: view === "luqta" ? "overview" : detail } }));
+    const activeChip = document.querySelector('#chip-nav [aria-current="page"]');
+    if (activeChip) activeChip.scrollIntoView({ block:"nearest", inline:"center" });
+    window.scrollTo(0,0);
   }
   window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 
