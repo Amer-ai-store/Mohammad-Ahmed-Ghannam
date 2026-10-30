@@ -37,7 +37,10 @@
     "private_archive_evidence_report": "https://drive.google.com/file/d/1xdNNXn8laZn8o8qy0nQRZAQBb1OIOb-N/view",
     "private_historical_casebook": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit",
     "private_date_audit_report": "https://drive.google.com/file/d/1_ebs70MR2zXs8Gx0l7FRLYKIqUdvNBEa/view",
-    "private_long_backdate_finance_report": "https://drive.google.com/file/d/18s2hO9I6tOI7kqR4zck-cBTgdq8qnxLm/view"
+    "private_long_backdate_finance_report": "https://drive.google.com/file/d/18s2hO9I6tOI7kqR4zck-cBTgdq8qnxLm/view",
+    "private_restored_ledger_report": "https://drive.google.com/file/d/1PaxR4NskDvbOCjalO_M2giqkmLmKzu1U/view",
+    "private_restored_raw_evidence_zip": "https://drive.google.com/file/d/1GUyeYtBp1yILOYj5T5CwJIgmPVpV_e0V/view",
+    "private_all28_matrix": "https://drive.google.com/file/d/1QPK2n8MGQbs59eeg-qZ95W4Qq5R4OUmI/view"
   },
   "cases": [
     {
@@ -68,13 +71,13 @@
       "id": "CHEQ-05",
       "title": "الشيكات الواردة والصادرة",
       "status": "exceptions_open",
-      "progress": "أظهرت v5 خمس حالات دفع ERP متغيرة وحركات نظام مقابلة؛ لم تتحقق خصومات البنك بعد"
+      "progress": "28 سند شيكات تاريخية مستعادة بقيمها وأطراف قيدها؛ مطابقة بيانات ورقة الشيك وكشف البنك لم تعتمد. خمس حالات ERP حديثة متغيرة قيد التحقيق."
     },
     {
       "id": "GL-06",
       "title": "السندات المحذوفة وفك الترحيل",
       "status": "forensic_investigation",
-      "progress": "54 رقم سند غائب و9 فجوات ARP؛ 13 نافذة نسخ مرشحة. فُحص 170 حدث إرجاع تاريخ 30+ يومًا؛ اختلاف تاريخ قديم فُسر بحركة تطبيق لاحقة، وسند آخر غائب له حدث حذف. استعادة المبالغ لم تنجز."
+      "progress": "استُعيدت رؤوس وأطراف 28 من 54 سند قيد شيك من قواعد SQL تاريخية للقراءة فقط، وجميعها متوازنة؛ واستُعيدت 6 من 9 سندات ARP. بقي 26 و3، ولا يوجد إثبات سحب بنكي أو خسارة."
     },
     {
       "id": "CASH-07",
@@ -113,7 +116,7 @@
     "All source accounting data are read-only; historical conflicts remain open until independent evidence.",
     "Latest V5 export zipped and uploaded to private Drive, verified by CRC and matching MD5; not a full transactional snapshot."
   ],
-  "status": "FORENSIC_CASEWORK_ADDED__RESTORED_VOUCHERS_NOT_READABLE__GATE15_OPEN",
+  "status": "HISTORICAL_RESTORED_ROWS_VERIFIED__BANK_AND_AUTHORIZATION_OPEN__GATE15_NOT_ACCEPTED",
   "latest_export": {
     "run": "20261030-0100",
     "host": "JAWAFFASVR",
@@ -160,8 +163,8 @@
     "historical_voucher_gaps_recheck": {
       "main_with_deletion_events_still_absent": 54,
       "arp_nine_gaps_still_absent": 9,
-      "recovered_original_values_from_backup": 0,
-      "claim_status": "ABSENCE_CONFIRMED_IN_TWO_EXPORTS__PROVEN_CAUSALITY_OPEN",
+      "recovered_original_values_from_backup": 34,
+      "claim_status": "HISTORICAL_ORIGINALS_RECOVERED_PARTIALLY__NO_BANK_LOSS_PROVEN",
       "recovery_prioritization": {
         "source": "2026-10-30_F10_F31",
         "total_deletion_events": 54,
@@ -195,10 +198,22 @@
             "count": 4
           }
         ],
-        "sql_restore_contents_recovered": false,
-        "blocker": "READ_ONLY_QUERY_ACCESS_TO_RESTORED_DBS",
+        "sql_restore_contents_recovered": true,
+        "blocker": "Historical header recovery succeeded; awaiting bank statements, authorization evidence, and earlier backups for remaining cases",
         "casebook_document": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit"
-      }
+      },
+      "restored_main_gl_headers": 28,
+      "restored_arp_journals": 6,
+      "main_not_found_in_seven_restores": 26,
+      "arp_not_found_in_seven_restores": 3,
+      "main_side_lines_balanced": 28,
+      "main_header_matches_side": 28,
+      "arp_sides_balanced_exact": 3,
+      "arp_sides_small_decimal_differences": 3,
+      "restore_database_readonly_verified": true,
+      "restore_select_queries_completed": 14,
+      "bank_disbursements_independently_verified": false,
+      "restored_ledger_sources": "Seven historical restored SQL database snapshots, all READ_ONLY"
     }
   },
   "date_and_purchase_audit": {
