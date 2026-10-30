@@ -436,7 +436,15 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
       <!-- ADVISOR -->
       <section class="view" data-view="advisor" aria-labelledby="h-advisor" hidden>
         <div class="view-head"><div><span class="eyebrow">الذكاء الاصطناعي</span><h1 id="h-advisor">المستشار والمحادثة</h1><p>يقرأ المستشار ملخص المهام والمسارات والمتجر في كل سؤال، ويجيب بخطوات عملية. لا يغيّر شيئاً إلا حين تضغط «إضافة».</p></div></div>
-        <div id="advisor-off" class="banner info" hidden><strong>المستشار غير متاح هنا:</strong> يعمل عند فتح مركز القيادة داخل Claude وبعد السماح له باستخدام Claude.</div>
+        <div id="advisor-off" class="banner info" hidden><strong>المحادثة التلقائية غير متاحة على GitHub Pages:</strong> تعتمد النسخة الأصلية على تكامل Claude داخل بيئته، ولا يتوفر هنا خادم محادثة مصادق عليه.</div>
+        <div id="advisor-external" class="banner info" hidden>
+          <strong>بديل يدوي دون مفاتيح:</strong> اكتب السؤال أدناه، ثم انسخه وافتح ChatGPT والصقه هناك.
+          <div class="toolbar" style="margin-top:.6rem">
+            <button type="button" id="chat-copy">نسخ السؤال</button>
+            <a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">فتح ChatGPT</a>
+          </div>
+          <p class="small muted">تُنسخ رسالتك المكتوبة فقط عند الضغط على النسخ؛ لا تُرسل بيانات المشروع أو سجلات التحقيق أو مفاتيح الاتصال تلقائيًا. هذا بديل يدوي، وليس اتصال API أو محادثة متزامنة.</p>
+        </div>
         <div class="advisor">
           <div class="panel chat">
             <div class="log" id="chat-log" aria-live="polite"></div>
@@ -1467,11 +1475,15 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     for (const id of ["commission-btn", "arb-btn", "chat-send", "propose-btn", "design-btn", "mkt-btn", "place-all-btn"]) $(id).disabled = true;
     $("designer-off").hidden = false; $("marketing-off").hidden = false; $("features-off").hidden = false;
     for (const b of document.querySelectorAll("#feat-cards [data-run]")) b.disabled = true;
-    for (const b of document.querySelectorAll("#suggest button")) b.disabled = true;
-    $("advisor-off").hidden = false;
+    for (const b of document.querySelectorAll("#suggest button")) b.disabled = false;
+    $("advisor-off").hidden = false; $("advisor-external").hidden = false;
     $("ai-dot").className = "dot"; $("ai-status").textContent = "المستشار: غير متاح هنا";
   }
-  function aiOn() { $("ai-dot").className = "dot ok"; $("ai-status").textContent = "المستشار: جاهز"; }
+  function aiOn() {
+    $("advisor-off").hidden = true; $("advisor-external").hidden = true;
+    $("chat-send").disabled = false;
+    $("ai-dot").className = "dot ok"; $("ai-status").textContent = "المستشار: جاهز";
+  }
   function aiErrorText(e) { return AI_ERRORS[e && e.code] || "انقطع الاتصال. حاول مجدداً."; }
 
   function contextSummary() {
@@ -1517,6 +1529,18 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
       chatCtl = null; $("chat-send").disabled = !sample; $("chat-stop").hidden = true; renderChat();
     }
   }
+  $("chat-copy").addEventListener("click", async () => {
+    const input = $("chat-input"), question = S(input.value, 4000).trim();
+    if (!question) { input.focus(); toast("اكتب سؤالك أولًا."); return; }
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") throw Error("CLIPBOARD_UNAVAILABLE");
+      await navigator.clipboard.writeText(question);
+      toast("تم نسخ السؤال فقط. افتح ChatGPT والصقه.");
+    } catch {
+      input.focus(); input.select();
+      toast("تعذّر النسخ الآلي؛ انسخ النص المحدد يدويًا.");
+    }
+  });
   $("chat-form").addEventListener("submit", (e) => { e.preventDefault(); sendChat($("chat-input").value); });
   $("chat-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat($("chat-input").value); } });
   $("chat-stop").addEventListener("click", () => chatCtl && chatCtl.abort());
@@ -1528,7 +1552,10 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     ["حالة المتجر", "حلّل حالة المتجر: المخزون المنخفض والطلبات النشطة والنزاعات، وما الذي أفعله اليوم."],
     ["جاهزية النشر", "هل خدمة Cloudflare جاهزة للنشر على الإنتاج؟ ما البوابات المتبقية بالضبط؟"]
   ];
-  $("suggest").replaceChildren(...SUGGESTIONS.map(([label, prompt]) => el("button", { type: "button", onclick: () => sendChat(prompt) }, label)));
+  $("suggest").replaceChildren(...SUGGESTIONS.map(([label, prompt]) => el("button", { type: "button", onclick: () => {
+    if (!sample) { $("chat-input").value = prompt; $("chat-input").focus(); return; }
+    sendChat(prompt);
+  } }, label)));
 
   $("propose-btn").addEventListener("click", async () => {
     if (!sample) return;
