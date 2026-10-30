@@ -64,6 +64,7 @@ export default function Home() {
   const { colors: t, isDark } = useTheme();
   const s = useThemedStyles(makeStyles);
   const { products, settings } = useStore();
+  const storefront = settings.storefront || {};
   const displayProducts = products.filter((p) => !p.variantOf);
   const activeCategories = [...new Set(displayProducts.map((p) => p.category))];
   const visibleGroups = activeCategories.map((id) => groups.find((group) => group.id === id) || { id, title: id, detail: "اكتشف منتجات هذا القسم", icon: ShoppingBag, bg: t.secondary, color: t.orange });
@@ -121,13 +122,7 @@ export default function Home() {
               marginTop: 17,
             }}
           >
-            لُقطات تستحق{"\n"}أن تكون{" "}
-            <Txt
-              weight="extra"
-              style={{ color: t.orange, fontSize: desktop ? 43 : 30 }}
-            >
-              لك.
-            </Txt>
+            {storefront.heroTitle || "لُقطات تستحق أن تكون لك"}
           </Txt>
           <Txt
             style={{
@@ -138,7 +133,7 @@ export default function Home() {
               maxWidth: 320,
             }}
           >
-            من تفاصيل منزلك إلى إيقاع يومك،{"\n"}اكتشف منتجات تُشبه ذوقك.
+            {storefront.heroSubtitle || "من تفاصيل منزلك إلى إيقاع يومك، اكتشف منتجات تُشبه ذوقك."}
           </Txt>
           <Pressable
             accessibilityRole="button"
@@ -162,7 +157,7 @@ export default function Home() {
           </View>
         ) : null}
       </View>
-      <Pressable
+      {storefront.showAssistant !== false ? <Pressable
         accessibilityRole="button"
         onPress={() => router.navigate("/assistant")}
         style={[s.aiBanner, !desktop ? { padding: 17 } : null]}
@@ -201,7 +196,7 @@ export default function Home() {
         ) : (
           <ChevronLeft size={20} color={t.orange} />
         )}
-      </Pressable>
+      </Pressable> : null}
       <SectionTitle
         title="على ذوقك، في كل قسم"
         action="كل الأقسام"
