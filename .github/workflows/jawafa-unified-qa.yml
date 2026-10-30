@@ -9,6 +9,7 @@ on:
       - "dashboard/tests/jawafa-native-integration.test.cjs"
       - "dashboard/tests/jawafa-auth-guard.test.cjs"
       - "dashboard/tests/advisor-fallback.test.cjs"
+      - "dashboard/tests/advisor-browser-smoke.cjs"
       - "jawafa-command-bridge/**"
       - ".github/workflows/jawafa-unified-qa.yml"
   push:
@@ -20,6 +21,7 @@ on:
       - "dashboard/tests/jawafa-export-monitor.test.cjs"
       - "dashboard/tests/jawafa-native-integration.test.cjs"
       - "dashboard/tests/advisor-fallback.test.cjs"
+      - "dashboard/tests/advisor-browser-smoke.cjs"
       - "jawafa-command-bridge/**"
       - ".github/workflows/jawafa-unified-qa.yml"
 permissions:
@@ -53,3 +55,6 @@ jobs:
           grep -Fq 'id="chip-nav"' /tmp/jawafa-mobile-dom.html
           grep -Fq 'id="side-nav"' /tmp/jawafa-mobile-dom.html
           echo "Desktop and phone viewport native DOM smoke tests passed"
+      - name: Free Chromium advisor interaction test (no paid browser API)
+        shell: bash
+        run: node dashboard/tests/advisor-browser-smoke.cjs
