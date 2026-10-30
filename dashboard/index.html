@@ -5,6 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./command-home.css">
+<link rel="stylesheet" href="./live-execution.css">
 <style>
 /* Layout: an operations console — fixed right sidebar of sections (chips on phones), one section visible at a time, summary first then detail. Dark-first like the ChatGPT original. */
 :root{
@@ -522,6 +523,38 @@ nav.side{gap:.5rem}
               <a href="#luqta/inventory" class="btn">اختبار جسر جوافة</a>
             </div>
           </div>
+        </section>
+        <section id="execution-evidence" class="execution-evidence" aria-labelledby="execution-evidence-title">
+          <div class="execution-evidence__heading">
+            <div>
+              <div class="command-kicker">VERIFIED EXECUTION · دليل التشغيل</div>
+              <h2 id="execution-evidence-title">متابعة التنفيذ الحي — بلا نشاط وهمي</h2>
+              <p>تُعرض حالات المهام التي ينفذها GitHub Actions من المصدر مباشرة، مع وقت الفحص ورابط كل سجل.
+              الشاشة لا تستطيع مراقبة تفكير ChatGPT أو تنفيذ وكلاء غير متصلين بهذه الخدمة.</p>
+            </div>
+            <div class="execution-evidence__tools">
+              <button type="button" id="execution-evidence-refresh">تحديث الحالة الآن</button>
+              <span id="execution-evidence-checked" class="execution-evidence__checked">لم يكتمل أي فحص بعد.</span>
+            </div>
+          </div>
+          <div id="execution-evidence-state" class="execution-evidence__status" data-state="loading" role="status" aria-live="polite">
+            لم تُتحقق حالة التشغيل بعد
+          </div>
+          <div class="execution-evidence__summary" aria-label="إحصاءات آخر التشغيلات في GitHub">
+            <div class="execution-evidence__stat"><b id="execution-evidence-active">—</b><span>تعمل الآن وفق آخر دليل</span></div>
+            <div class="execution-evidence__stat"><b id="execution-evidence-pending">—</b><span>بانتظار التنفيذ</span></div>
+            <div class="execution-evidence__stat"><b id="execution-evidence-failed">—</b><span>فشلت ضمن آخر نتائج</span></div>
+            <div class="execution-evidence__stat"><b id="execution-evidence-checked-runs">—</b><span>سجلات تشغيل جرى فحصها</span></div>
+          </div>
+          <div id="execution-evidence-rows" class="execution-evidence__rows" aria-label="روابط أدلة التشغيل الأخيرة">
+            <p class="small muted">جارٍ طلب بيانات التشغيل من GitHub.</p>
+          </div>
+          <p class="execution-evidence__notice">
+            <strong>قواعد الإثبات:</strong> اللون الأخضر يعني وجود تشغيل فعلي حديث لدى GitHub، وليس استمرار محادثة ChatGPT أو نجاح اتصال قاعدة Jawafa_DB.
+            عند اختفاء النشاط أو انقطاع المصدر تُعرض الحالة كما هي، ولا يُصطنع مؤشر تقدم. يتوقف التحديث الآلي أثناء إخفاء علامة المتصفح،
+            ويُعاد التحقق عند العودة إليها. تتم المراجعة كل خمس دقائق أثناء فتح الصفحة.
+            <a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/91" rel="noopener noreferrer" target="_blank">سجل التحقيق</a>
+          </p>
         </section>
         <section class="panel" aria-label="خيارات ترتيب لوحة القيادة">
           <div class="panel-head"><div><span class="eyebrow">WORKSPACE LAYOUT</span><h2>تخصيص الشاشة الرئيسية</h2></div><span class="small muted">التفضيلات على هذا المتصفح فقط</span></div>
@@ -2260,5 +2293,6 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 })();
 </script>
 <script src="command-home.js" defer></script>
+<script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>
 <script src="luqta-integration.js" defer></script>
