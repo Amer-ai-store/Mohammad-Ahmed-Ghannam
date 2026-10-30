@@ -9,6 +9,7 @@ export function prepareJawafaSnapshot(payload, currentTime = Date.now()) {
     if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value > 10_000_000) throw new Error(`قيمة ${label} ليست عددًا صحيحًا غير سالب`);
     return value;
   };
+  const details = [];
   const items = payload.items.map((item) => {
     if (!item || typeof item !== 'object') throw new Error('سجل صنف فارغ');
     const id = item.id || item.sku;
@@ -20,9 +21,10 @@ export function prepareJawafaSnapshot(payload, currentTime = Date.now()) {
     const effective = ready - unposted;
     if (item.actualQuantity !== undefined && whole(item.actualQuantity, 'الكمية الفعلية') !== effective) throw new Error(`تعارض بين الكمية الفعلية والجاهزة/غير المرحلة للصنف ${id}`);
     const normalized = { id, sku: typeof item.sku === 'string' ? item.sku : id, stock: effective };
-    for (const key of ['name','category','description','brand','image']) if (typeof item[key] === 'string') normalized[key] = item[key];
+    details.push({ id, name: typeof item.name === 'string' ? item.name : id, family: typeof item.familyName === 'string' ? item.familyName : item.category || '', readyQuantity: ready, unpostedSalesQuantity: unposted, actualQuantity: effective });
+    for (const key of ['name','category','familyName','familyCode','description','brand','image']) if (typeof item[key] === 'string') normalized[key] = item[key];
     if (typeof item.price === 'number') normalized.price = item.price;
     return normalized;
   });
-  return { items, snapshotAt: new Date(at).toISOString(), source: 'jawafa-inventory-v1', count: items.length, onlyCommerceWrites: true };
+  return { items, details, snapshotAt: new Date(at).toISOString(), source: 'jawafa-inventory-v1', count: items.length, onlyCommerceWrites: true };
 }
