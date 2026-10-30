@@ -340,6 +340,32 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 <section class="view" data-view="jawafa-evidence" aria-labelledby="h-jawafa-evidence" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-evidence">سجل الأدلة</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-evidence">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-evidence">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-evidence">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-evidence"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-periodic" aria-labelledby="h-jawafa-periodic" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · PERIODIC HEALTH REPORT · READ ONLY</span>
+<h1 id="h-jawafa-periodic">التقرير الدوري للخادم وجسر TRUSTSOFT</h1>
+<p class="muted small">آخر قراءة من لقطة تشغيلية مؤرخة؛ لا تتصل هذه الصفحة بعنوان الخادم المحلي ولا تدّعي بثًا حيًا.</p></div>
+<span class="pill warn" id="jpr-state" role="status">جارٍ فحص المصدر...</span></div>
+<section class="panel" id="jawafa-periodic-report" aria-label="التقرير الدوري لحالة اتصال جوافة">
+<div class="panel-head"><div><h2>JAWAFFASVR · Jawafa_DB</h2><p class="small muted">مراجعة حالة الخادم، اختبارات الجسر السابقة، مهام الاستمرارية والتعافي، وحالة القبول.</p></div><button type="button" id="jpr-refresh" class="btn">تحديث المعروض</button></div>
+<div class="grid2">
+<div class="kpi"><span class="label">آخر لقطة منشورة</span><strong class="value small" id="jpr-last">—</strong></div>
+<div class="kpi"><span class="label">عمر بيانات التقرير</span><strong class="value small" id="jpr-age">—</strong></div>
+<div class="kpi"><span class="label">وصول جهاز الخادم وقت الفحص</span><strong class="value small" id="jpr-remote">—</strong></div>
+<div class="kpi"><span class="label">فحوص TRUSTSOFT / SQL السابقة</span><strong class="value small" id="jpr-bridge">—</strong></div>
+<div class="kpi"><span class="label">قناة النقل السحابي</span><strong class="value small" id="jpr-cloud">—</strong></div>
+<div class="kpi"><span class="label">قبول الأدلة المالية</span><strong class="value small" id="jpr-gate">—</strong></div>
+</div>
+<div class="banner info" style="margin-top:12px">
+هذه الصفحة تحدّث القراءة كل دقيقة أثناء فتحها. الفحص الدوري الأصلي في ChatGPT يعمل بجدولة مستقلة؛ لم تُثبت مزامنة نتائجه مع هذا المصدر. حالة Ready لا تثبت تنفيذ المهمة، وفحص API لا يثبت أن حساب SQL مقيّد بالقراءة فقط.
+</div>
+<p class="muted small" id="jpr-msg" role="status" style="margin:12px 0">بانتظار لقطة التشغيل المسجلة...</p>
+<h3 style="margin:14px 0 8px">مهام المراقبة والتعافي الواردة في آخر لقطة</h3>
+<div class="table-wrap"><table><thead><tr><th>المهمة</th><th>حالة الجدولة</th><th>آخر تشغيل مسجل</th><th>المعنى</th></tr></thead><tbody id="jpr-tasks"><tr><td colspan="4">جارٍ قراءة المصدر...</td></tr></tbody></table></div>
+<div class="toolbar" style="margin-top:14px">
+<a class="btn" href="#jawafa-monitor">الانتقال إلى مراقبة الخادم</a>
+<a class="btn" href="./data/jawafa-status.json" target="_blank" rel="noopener noreferrer">عرض مرجع التشغيل العام</a></div>
+<p class="muted small" style="margin-top:10px">تعرض الصفحة بيانات تشغيلية عامة منزوعة الأسرار فقط؛ لا تعرض بيانات التحقيق المالية أو كلمات المرور أو عناوين الاتصال الداخلية.</p>
+</section></section>
 <section class="view" data-view="jawafa-reports" aria-labelledby="h-jawafa-reports" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-reports">التقارير المالية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-reports">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-reports">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-reports">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-reports"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -692,7 +718,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"], ["marketing", "وكيل التسويق", "campaigns"], ["features", "مزايا التطبيق"]]],
     ["AAS-CC · القيادة الحية", [["aas-overview", "مركز القيادة الحي"], ["aas-orchestration", "الهيكل والمسارات الحية"], ["aas-workspaces", "مساحات AAS-AW"], ["aas-tasks", "مهام AAS المشتركة"], ["aas-execution", "بوابات التحليل والتنفيذ"], ["aas-agents", "الوكلاء في النظام الحي"], ["agent-directory", "دليل الوكلاء والمستشارين"], ["aas-approvals", "الموافقات المشتركة"], ["aas-advisor", "المستشار وربط Gemini"], ["aas-database", "جسر قاعدة البيانات"], ["aas-commerce", "لقطات التطبيق المستلمة"], ["aas-repository", "المصدر والبناء الحي"], ["aas-integrations", "الخوادم وواجهات API"], ["aas-activity", "سجل AAS المشترك"], ["aas-settings", "إعدادات AAS والتصدير"]]],
     ["المتجر", [["store", "لوحة المتجر"], ["luqta", "إدارة لُقطة"]]],
-    ["تحقيق جوافة", [["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة اليومية والمهام"],["jawafa-gate15","GATE-15"],["jawafa-backups","النسخ والـ RESTORE"],["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","لوحة TrustSoft"],["jawafa-export","مراقبة التصدير"],["jawafa-accounting","المحاسبة والقيود"],["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","المشتريات والموردون"],["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],["jawafa-reports","التقارير المالية"],["jawafa-errors","الأخطاء والإنجاز"]]],
+    ["تحقيق جوافة", [["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة اليومية والمهام"],["jawafa-gate15","GATE-15"],["jawafa-backups","النسخ والـ RESTORE"],["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","لوحة TrustSoft"],["jawafa-export","مراقبة التصدير"],["jawafa-accounting","المحاسبة والقيود"],["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","المشتريات والموردون"],["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],["jawafa-periodic","التقرير الدوري للاتصال"],["jawafa-reports","التقارير المالية"],["jawafa-errors","الأخطاء والإنجاز"]]],
     ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
   ];
   const VIEWS = NAV.flatMap(([, items]) => items.map(i => i[0]));
@@ -1977,6 +2003,7 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
 })();
 </script>
 <script src="jawafa-integration.js" defer></script>
+<script src="jawafa-periodic-report.js" defer></script>
 
 <script src="aas-integration.js" defer></script>
 <script>
