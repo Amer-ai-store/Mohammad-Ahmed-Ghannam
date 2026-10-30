@@ -35,7 +35,9 @@
     "private_case_json": "https://drive.google.com/file/d/1fqwVkxZ4zYQw6_Nl7OmG01VGDAT-6svS/view",
     "private_prior_forensics": "https://drive.google.com/file/d/1e7qekefQUbVfXB6otHk1IHRTyT-cvD7l/view",
     "private_archive_evidence_report": "https://drive.google.com/file/d/1xdNNXn8laZn8o8qy0nQRZAQBb1OIOb-N/view",
-    "private_historical_casebook": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit"
+    "private_historical_casebook": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit",
+    "private_date_audit_report": "https://drive.google.com/file/d/1_ebs70MR2zXs8Gx0l7FRLYKIqUdvNBEa/view",
+    "private_long_backdate_finance_report": "https://drive.google.com/file/d/18s2hO9I6tOI7kqR4zck-cBTgdq8qnxLm/view"
   },
   "cases": [
     {
@@ -72,7 +74,7 @@
       "id": "GL-06",
       "title": "السندات المحذوفة وفك الترحيل",
       "status": "forensic_investigation",
-      "progress": "54 حدثًا جُمعت حسب الوقت والجهاز؛ 13 سندًا لها نوافذ نسخ استعادة مرشحة؛ استرجاع قيمها متوقف على SELECT مصرح به"
+      "progress": "54 رقم سند غائب و9 فجوات ARP؛ 13 نافذة نسخ مرشحة. فُحص 170 حدث إرجاع تاريخ 30+ يومًا؛ اختلاف تاريخ قديم فُسر بحركة تطبيق لاحقة، وسند آخر غائب له حدث حذف. استعادة المبالغ لم تنجز."
     },
     {
       "id": "CASH-07",
@@ -84,7 +86,7 @@
       "id": "PROC-08",
       "title": "تدقيق المشتريات والمردودات",
       "status": "audit_coverage_open",
-      "progress": "19 فاتورة تغيرت؛ منها 9 قيم، و13 Verified، و15 Posted؛ تتبع سجل الأحداث والتفويض مفتوح"
+      "progress": "20 رقم فاتورة مفقود بين تواريخ 2025–2026، أربعة لها سجلات حركات مستقرة بين النسختين؛ 19 فاتورة أخرى تغيرت حقولها بين لقطتين. أسباب الاعتماد لم تُحسم."
     },
     {
       "id": "POS-09",
@@ -111,7 +113,7 @@
     "All source accounting data are read-only; historical conflicts remain open until independent evidence.",
     "Latest V5 export zipped and uploaded to private Drive, verified by CRC and matching MD5; not a full transactional snapshot."
   ],
-  "status": "V5_EXPORT_VERIFIED__FINANCIAL_RECONCILIATION_OPEN__GATE15_NOT_ACCEPTED",
+  "status": "FORENSIC_CASEWORK_ADDED__RESTORED_VOUCHERS_NOT_READABLE__GATE15_OPEN",
   "latest_export": {
     "run": "20261030-0100",
     "host": "JAWAFFASVR",
@@ -198,5 +200,24 @@
         "casebook_document": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit"
       }
     }
+  },
+  "date_and_purchase_audit": {
+    "asof": "2026-10-30",
+    "source": "F38_F39_F40_F41_F43_V5",
+    "journal_date_change_events": 1785,
+    "distinct_affected_journal_numbers": 1701,
+    "unique_last_event_before_v5_matched": 1699,
+    "later_delta_resolves_known_date_exception": true,
+    "still_missing_journal_with_app_delete_event": true,
+    "backdated_30plus_events": 170,
+    "backdated_90plus_events": 27,
+    "distinct_90plus_journal_numbers": 26,
+    "posted_90plus_in_v5": 26,
+    "posting_approved_flag_false": 26,
+    "purchase_serial_gaps_within_2025_2026": 20,
+    "purchase_serial_gaps_with_application_history": 4,
+    "four_missing_purchase_history_stable_between_exports": true,
+    "risk_state": "DOCUMENTED_EVENTS_WITHOUT_PROVEN_UNAUTHORIZED_CHANGE_OR_LOSS",
+    "data_type": "PUBLIC_AGGREGATE_COUNTS_ONLY"
   }
 }
