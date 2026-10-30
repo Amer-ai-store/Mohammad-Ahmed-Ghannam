@@ -6,6 +6,7 @@
   const client = window.LuqtaAPI.createClient();
   const tabs = [
     ["overview", "الملخص"], ["products", "الأصناف"], ["inventory", "المخزون"],
+    ["offers", "العروض"], ["appearance", "التصميم والشاشات"],
     ["orders", "الطلبات والتتبع"], ["users", "العملاء والمحفظة"],
     ["coupons", "الخصومات"], ["returns", "المرتجعات"], ["tickets", "الدعم"],
     ["settings", "الإعدادات"], ["agents", "الوكلاء"], ["audit", "السجل"],
@@ -104,6 +105,8 @@
     if (current === "inventory") {
       const [undo, connector] = await Promise.all([client.request("GET", "/admin/inventory/undo"), client.request("GET", "/admin/inventory/connector")]);
       result = { ...undo, ...connector };
+    } else if (current === "appearance") {
+      result = await client.request("GET", "/admin/settings");
     } else if (current === "agents") {
       const [keys, jobs] = await Promise.all([client.request("GET", "/admin/agent-keys"), client.request("GET", "/admin/agent-jobs")]);
       result = { ...keys, ...jobs };
@@ -176,6 +179,58 @@
       const result = await client.request("POST", "/admin/inventory/sync", {});
       return `أعاد الخادم نتيجة الاستيراد: ${count(result.imported)} صنف.`;
     }), "primary"));
+    const jawafa = node("div", undefined, "panel");
+    jawafa.append(node("h3", "مطابقة مخزون جوافة — الكمية الفعلية"));
+    text(jawafa, "استيراد لقطة JSON معتمدة من جسر قراءة فقط. الكمية الفعلية = الجاهزة − مبيعات غير مرحلة. أي تعارض أو لقطة قديمة يوقف العملية. لا تُعدّل قاعدة Jawafa_DB.", "p", "small muted");
+    const source = node("textarea"); source.placeholder = '{"schema":"jawafa-inventory-v1","snapshotAt":"2026-10-30T18:00:00.000Z","items":[{"id":"SKU_1","name":"صنف","price":1,"readyQuantity":12,"unpostedSalesQuantity":4,"actualQuantity":8}]}';
+    source.rows = 5; source.style.width = "100%"; jawafa.append(source);
+    const preview = node("pre", "لم تُجرَ معاينة.", "small"); preview.style.whiteSpace = "pre-wrap";
+    jawafa.append(button("معاينة دون تعديل", () => void run(async () => {
+      const snapshot = JSON.parse(source.value);
+      const result = await client.request("POST", "/admin/inventory/jawafa-preview", snapshot);
+      preview.textContent = `عدد الأصناف: ${result.count} · وقت اللقطة: ${result.snapshotAt}\n` + JSON.stringify(result.preview, null, 2);
+      return "تمت المعاينة دون كتابة.";
+    }, false), "tiny"));
+    jawafa.append(button("اعتماد نقل الكمية الفعلية إلى المتجر", () => {
+      if (!confirm("هل تحققت من مطابقة الأصناف والكميات؟ سيتم تغيير قاعدة المتجر فقط، وليس Jawafa_DB.")) return;
+      void run(async () => {
+        const snapshot = JSON.parse(source.value);
+        const result = await client.request("POST", "/admin/inventory/jawafa-import", { ...snapshot, confirm: true });
+        return `تم استيراد ${result.imported} صنفًا إلى قاعدة المتجر.`;
+      });
+    }, "primary"));
+    jawafa.append(preview); body.append(jawafa);
+  }
+  function renderOffers(data) {
+    text(body, "العروض النشطة", "h3");
+    table(body, ["الصنف", "السعر السابق", "سعر العرض", "الكمية"], (data.offers || []).map(p => {
+      const tr = node("tr"); cell(tr, p.name); cell(tr, money(p.oldPrice)); cell(tr, money(p.price)); cell(tr, count(p.stock)); return tr;
+    }));
+    const editor = form(body, "استيراد العروض إلى قاعدة المتجر", "معاينة وتأكيد العروض", async f => {
+      const items = JSON.parse(value(f, "offers"));
+      if (!Array.isArray(items) || !items.length) throw Error("أدخل قائمة عروض JSON صحيحة.");
+      if (!confirm(`تحديث أسعار ${items.length} صنفًا في قاعدة المتجر فقط؟`)) return "أُلغي الاستيراد.";
+      const result = await client.request("POST", "/admin/offers/import", { items, confirm: true });
+      return `حُفظت ${result.imported} عروض في قاعدة المتجر.`;
+    });
+    const source = field(editor, "JSON: [{id,price,oldPrice}]. لا تنسخ أسعارًا غير معتمدة.", "offers", "textarea", true);
+    source.placeholder = '[{"id":"SKU_1","price":1.25,"oldPrice":1.75}]';
+  }
+  function renderAppearance(data) {
+    const design = data.settings?.storefront || {};
+    const editor = form(body, "تحرير تصميم واجهة المتجر", "حفظ التصميم في قاعدة المتجر", async f => {
+      const storefront = { accentColor: value(f, "accentColor"), heroTitle: value(f, "heroTitle"),
+        heroSubtitle: value(f, "heroSubtitle"), showAssistant: f.elements.namedItem("showAssistant").checked };
+      await client.request("PATCH", "/admin/settings", { storefront });
+      return "تم اعتماد تصميم واجهة المتجر. سيظهر للتطبيق المرتبط عند تحديث بياناته.";
+    });
+    const accent = field(editor, "لون الهوية (HEX)", "accentColor", "color", true, design.accentColor || "#B94721");
+    accent.style.maxWidth = "160px";
+    field(editor, "عنوان الواجهة الرئيسية", "heroTitle", "text", true, design.heroTitle || "لُقطات تستحق أن تكون لك");
+    field(editor, "الوصف أسفل العنوان", "heroSubtitle", "textarea", true, design.heroSubtitle || "اكتشف منتجات تُشبه ذوقك");
+    const label = node("label", "إظهار قسم المساعد في الرئيسية");
+    const toggle = node("input"); toggle.type = "checkbox"; toggle.name = "showAssistant"; toggle.checked = design.showAssistant !== false; label.prepend(toggle); editor.append(label);
+    text(body, "التعديلات المعتمدة هنا: الهوية البصرية والنصوص وإظهار المساعد. تغيير بنية الشاشات أو إضافة مكونات جديدة يتطلب تعديل الشفرة واختبار إصدار التطبيق؛ لا يوجد محرر شيفرة إنتاجي مفتوح من المتصفح.", "p", "small muted");
   }
   function renderOrders(data) {
     const drivers = (data.users || []).filter(u => u.role === "driver");
@@ -294,7 +349,7 @@
   function renderAudit(data) {
     table(body, ["الوقت", "الفاعل", "الإجراء", "المعرّف", "تفاصيل"], (data.events || []).map(e => { const tr = node("tr"); cell(tr, e.createdAt); cell(tr, e.actorId); cell(tr, e.action); cell(tr, e.entityId); cell(tr, JSON.stringify(e.detail || {})); return tr; }));
   }
-  const renderers = { overview: renderOverview, products: renderProducts, inventory: renderInventory, orders: renderOrders,
+  const renderers = { overview: renderOverview, products: renderProducts, inventory: renderInventory, offers: renderOffers, appearance: renderAppearance, orders: renderOrders,
     users: renderUsers, coupons: renderCoupons, returns: renderReturns, tickets: renderTickets, settings: renderSettings,
     agents: renderAgents, audit: renderAudit };
   draw();
