@@ -79,3 +79,12 @@
  .bridge-arrow{transform:rotate(-90deg)}
 }
 @media(prefers-reduced-motion:reduce){.command-zone{transition:none}.command-zone:hover{transform:none}}
+
+/* Application workbench lives inside the original authenticated Luqta view. */
+.command-workspace{border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line));background:linear-gradient(130deg,var(--accent-soft),var(--surface) 70%);padding:1.2rem;border-radius:14px;display:flex;flex-direction:column;gap:.75rem}
+.command-workspace h2{font-size:1.15rem}
+.command-source-links{display:flex;flex-wrap:wrap;gap:.45rem}
+.command-source-links a{font-size:.8rem}
+#luqta-root .command-workspace .toolbar{gap:.5rem}
+#luqta-root .command-workspace .btn{min-height:38px}
+@media(max-width:680px){.command-workspace{padding:.85rem}#luqta-root .command-workspace .toolbar a{flex:1;justify-content:center}}
