@@ -150,8 +150,8 @@
     const activeLabel = node("label", "منشور "); const active = node("input"); active.type = "checkbox"; active.name = "active"; active.checked = true; activeLabel.append(active); editor.append(activeLabel);
     editor.append(button("نموذج جديد", () => { editing = ""; editor.reset(); inputs.id.disabled = false; active.checked = true; }));
     text(body, `الأصناف: ${count(data.products?.length)}`, "h3");
-    table(body, ["الصنف", "المعرّف", "السعر", "السعر السابق", "المخزون", "الحالة", "إجراء"], (data.products || []).map(p => {
-      const tr = node("tr"); cell(tr, p.name); cell(tr, p.id); cell(tr, money(p.price)); cell(tr, p.oldPrice == null ? "—" : money(p.oldPrice)); cell(tr, count(p.stock)); cell(tr, p.active ? "منشور" : "مؤرشف");
+    table(body, ["الصنف والعائلة", "المعرّف", "السعر", "السعر السابق", "المخزون", "الحالة", "إجراء"], (data.products || []).map(p => {
+      const tr = node("tr"); cell(tr, p.name + " · " + (p.familyName || p.category || "—")); cell(tr, p.id); cell(tr, money(p.price)); cell(tr, p.oldPrice == null ? "—" : money(p.oldPrice)); cell(tr, count(p.stock)); cell(tr, p.active ? "منشور" : "مؤرشف");
       const actions = cell(tr, ""); actions.append(button("تعديل", () => { editing = p.id; for (const key of Object.keys(inputs)) inputs[key].value = p[key] ?? ""; inputs.id.value = p.id; inputs.id.disabled = true; active.checked = p.active !== false; editor.scrollIntoView({ behavior: "smooth" }); }));
       if (p.active) actions.append(button("أرشفة", () => { if (confirm(`أرشفة ${p.name}؟`)) void run(() => client.request("DELETE", "/admin/products/" + safeId(p.id))); }, "tiny danger"));
       return tr;
