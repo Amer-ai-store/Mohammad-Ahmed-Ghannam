@@ -629,7 +629,7 @@ export async function createCommerceServer(options = {}) {
         if (section === 'inventory') {
           if (method === 'POST' && p[2] === 'jawafa-preview') {
             const prepared = jawafaSnapshot(body);
-            return send(200, { snapshotAt: prepared.snapshotAt, count: prepared.count, preview: prepared.items.slice(0, 25), source: prepared.source, applied: false });
+            return send(200, { snapshotAt: prepared.snapshotAt, count: prepared.count, preview: prepared.details.slice(0, 25), source: prepared.source, applied: false });
           }
           if (method === 'POST' && p[2] === 'jawafa-import') {
             if (body.confirm !== true) fail(409, 'يلزم تأكيد نقل الكميات إلى قاعدة المتجر فقط');
