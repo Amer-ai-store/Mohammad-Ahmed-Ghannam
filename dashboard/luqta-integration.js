@@ -158,6 +158,24 @@
     }));
   }
   function renderInventory(data) {
+    const jawafaPanel = node("div", undefined, "panel");
+    jawafaPanel.append(node("h3", "اتصال جوافة الحقيقي — قراءة فقط"));
+    text(jawafaPanel, "فحص حي من خادم لُقطة إلى جسر TrustSoft المحلي؛ لا تُستورد أي كمية إلى المتجر قبل مطابقة جدول الكمية الفعلية.", "p", "small muted");
+    const statusText = node("p", "لم يتم فحص اتصال جوافة بعد.", "small");
+    jawafaPanel.append(statusText);
+    const listing = node("pre", "", "small"); listing.style.whiteSpace = "pre-wrap"; listing.style.maxHeight = "320px"; listing.style.overflow = "auto";
+    jawafaPanel.append(button("فحص اتصال Jawafa_DB", () => void run(async () => {
+      const result = await client.request("GET", "/admin/jawafa/source");
+      statusText.textContent = `الاتصال: ${result.connected ? "نشط" : "متوقف"} · ${result.database} · ${result.mode} · جداول: ${result.tableCount} · خريطة الكمية: ${result.quantityMappingVerified ? "معتمدة" : "تحتاج مطابقة"}`;
+      return "تأكد اتصال القراءة من خادم المتجر إلى قاعدة جوافة.";
+    }, false), "primary"));
+    jawafaPanel.append(button("معاينة أسماء الأصناف والعائلات من جوافة", () => void run(async () => {
+      const result = await client.request("GET", "/admin/jawafa/catalog-preview");
+      listing.textContent = (result.items || []).map(p => [p.itemSeq, p.code, p.name, p.family].join(" · ")).join("\n") || "لا توجد بيانات للمعاينة";
+      return `تمت معاينة ${result.count} سجلًا دون كتابة.`;
+    }, false)));
+    jawafaPanel.append(listing);
+    body.append(jawafaPanel);
     const connector = data.connector || {};
     text(body, data.undo ? `آخر استيراد قابل للتراجع: ${data.undo.id} · ${count(data.undo.count)} صنف` : "لا توجد عملية استيراد قابلة للتراجع.");
     if (data.undo) body.append(button("التراجع عن آخر استيراد", () => { if (confirm("هل تريد التراجع عن آخر استيراد؟ سيرفض الخادم التراجع إذا تغيرت الأصناف بعده.")) void run(() => client.request("POST", "/admin/inventory/undo", { importId: data.undo.id })); }, "danger"));
