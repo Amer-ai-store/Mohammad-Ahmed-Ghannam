@@ -340,6 +340,12 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 </section>
 
       <!-- HOME -->
+      <section class="view" data-view="aas-live" aria-labelledby="h-aas-live" hidden>
+        <div class="hero"><div><p class="eyebrow">AAS-CC / AAS-AW</p><h1 id="h-aas-live">القيادة الحية ومساحات الوكلاء</h1><p class="muted">جميع شاشات AAS ضمن اللوحة المعتمدة، مع نفس بيانات العمل في الخادم الخاص. افتح اتصال المالك مرة واحدة؛ لا تحتاج Tailscale لوظائف AAS السحابية.</p></div></div>
+        <iframe id="aas-live-frame" title="جميع وظائف مركز AAS ومساحات العمل" loading="lazy" referrerpolicy="no-referrer" allow="clipboard-write" style="width:100%;height:calc(100vh - 180px);min-height:680px;border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe>
+        <p class="small muted">سجل AAS التشغيلي مستقل عن سجلات جوافة والمتجر السابقة؛ لا تُنقل بيانات مالية أو أسرار إلى الموقع العام. <a href="./aas/index.html#overview" target="_blank" rel="noopener">فتح مساحة AAS بكامل الشاشة</a></p>
+      </section>
+
       <section class="view" data-view="home" aria-labelledby="h-home">
         <div class="hero">
           <div><span class="small muted">AMER AI STORE · AAS-CC</span><h2 id="h-home">مركز القيادة والتحكم</h2><p class="muted small">حالة المشروع والمتجر في شاشة واحدة: المهام، بوابات التنفيذ، الوكلاء، وتنبيهات المتجر.</p></div>
@@ -613,6 +619,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   // ---------- navigation ----------
   const NAV = [
     ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"], ["marketing", "وكيل التسويق", "campaigns"], ["features", "مزايا التطبيق"]]],
+    ["AAS-CC · القيادة الحية", [["aas-overview", "مركز القيادة الحي"], ["aas-orchestration", "الهيكل والمسارات الحية"], ["aas-workspaces", "مساحات AAS-AW"], ["aas-tasks", "مهام AAS المشتركة"], ["aas-execution", "بوابات التحليل والتنفيذ"], ["aas-agents", "فريق الوكلاء التسعة"], ["aas-approvals", "الموافقات المشتركة"], ["aas-advisor", "المستشار وربط Gemini"], ["aas-database", "جسر قاعدة البيانات"], ["aas-commerce", "لقطات التطبيق المستلمة"], ["aas-repository", "المصدر والبناء الحي"], ["aas-integrations", "الخوادم وواجهات API"], ["aas-activity", "سجل AAS المشترك"], ["aas-settings", "إعدادات AAS والتصدير"]]],
     ["المتجر", [["store", "لوحة المتجر"]]],
     ["تحقيق جوافة", [["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة اليومية والمهام"],["jawafa-gate15","GATE-15"],["jawafa-backups","النسخ والـ RESTORE"],["jawafa-monitor","مراقبة الخادم"],["jawafa-export","مراقبة التصدير"],["jawafa-accounting","المحاسبة والقيود"],["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","المشتريات والموردون"],["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],["jawafa-reports","التقارير المالية"],["jawafa-errors","الأخطاء والإنجاز"]]],
     ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
@@ -631,9 +638,12 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     }
   }
   function show(view) {
+    const base = view.split("/")[0];
+    if (base.startsWith("aas-") && VIEWS.includes(base)) view = base;
     if (!VIEWS.includes(view)) view = "home";
     current = view;
-    for (const s of document.querySelectorAll("section.view")) s.hidden = s.dataset.view !== view;
+    if (view.startsWith("aas-")) window.dispatchEvent(new CustomEvent("aas:navigate"));
+    for (const s of document.querySelectorAll("section.view")) s.hidden = s.dataset.view !== (view.startsWith("aas-") ? "aas-live" : view);
     for (const a of document.querySelectorAll("[data-nav]")) { if (a.dataset.nav === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
     const chip = document.querySelector('#chip-nav [aria-current="page"]');
     if (chip) chip.scrollIntoView({ block: "nearest", inline: "center" });
@@ -1877,3 +1887,5 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
 })();
 </script>
 <script src="jawafa-integration.js" defer></script>
+
+<script src="aas-integration.js" defer></script>
