@@ -213,7 +213,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><div><b id="brand-name">Amer AI Store</b><small>AAS-CC · مركز القيادة</small></div></div>
     <nav class="side" id="side-nav"></nav>
     <div class="side-status" aria-live="polite">
-      <div><span class="dot" id="db-dot"></span><span id="db-status">جارٍ الاتصال بقاعدة البيانات...</span></div>
+      <div><span class="dot" id="db-dot"></span><span id="db-status">جارٍ فحص مصدر البيانات...</span></div>
       <div><span class="dot" id="ai-dot"></span><span id="ai-status">المستشار: جارٍ الفحص...</span></div>
     </div>
   </aside>
@@ -228,23 +228,55 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 
       <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
-<section class="panel" id="jawafa-continuity-entry" aria-label="Jawafa continuity and export tracking">
-  <div class="panel-head"><div><span class="eyebrow">JAWAFA · CONTINUITY</span><h2>لوحة استمرارية جوافة ومتابعة التصدير</h2></div><span class="pill warn">مصدر خارجي — الاتصال غير مُتحقق</span></div>
-  <p class="small muted">مدخل موحد إلى لوحة الاستمرارية والتصدير الحالية. لا يعني فتح الرابط دمج بياناتها أو اعتماد حالة المزامنة. لم تُنقل أي بيانات مالية إلى الصفحة العامة.</p>
-  <div class="toolbar"><button type="button" id="jawafa-continuity-toggle" aria-expanded="false" aria-controls="jawafa-continuity-frame">عرض لوحة الاستمرارية داخل القيادة المركزية</button><a href="./jawafa-continuity.html#exports" target="_blank" rel="noopener noreferrer">فتح لوحة الاستمرارية — قسم التصدير</a></div>
-  <div id="jawafa-continuity-container" hidden style="margin-top:12px">
-    <iframe id="jawafa-continuity-frame" title="لوحة استمرارية جوافة ومتابعة التصدير" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:780px;border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe>
-    <p class="small muted">عرض مدمج للوحة المنشورة في المستودع نفسه؛ لا يضيف صلاحيات قراءة أو كتابة للبيانات.</p>
+<section class="panel" id="jfc-crossproject" aria-label="نتائج التحقيق المالي عبر المشاريع" style="border:1px solid #365d51;background:linear-gradient(160deg,#162b23,#0e1d1a);margin:0 0 16px;padding:18px">
+ <div class="panel-head"><div><span class="eyebrow">JAWAFA · CROSS-PROJECT FINANCIAL FORENSICS</span><h2>التحقيق الموحد: السيولة، العهدة، الشيكات، المطعم والمخبز</h2></div><span class="pill warn" id="jfc-state" role="status">تحميل النتائج...</span></div>
+ <p class="muted small">أرقام الدفعة الأولى وحالة كل تحقيق مستمدة من مصادر متعددة. لا تنشر هذه اللوحة العامة مبالغ العهدة أو معلومات البنوك الحساسة. النتائج التفصيلية في Drive الخاص.</p>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin:12px 0">
+  <div class="panel" style="padding:12px"><span class="small muted">المسارات</span><strong id="jfc-n" style="font-size:23px;display:block">—</strong></div>
+  <div class="panel" style="padding:12px"><span class="small muted">جداول المصدر</span><strong id="jfc-s" style="font-size:23px;display:block">—</strong></div>
+  <div class="panel" style="padding:12px"><span class="small muted">الجداول المنقولة المتحققة</span><strong id="jfc-v" style="font-size:23px;display:block">—</strong></div>
+  <div class="panel" style="padding:12px"><span class="small muted">أسباب فروق لم تحسم</span><strong id="jfc-u" style="font-size:23px;display:block">—</strong></div>
+ </div>
+ <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:580px"><thead><tr><th style="padding:10px;text-align:right">المسار</th><th style="padding:10px;text-align:right">الحالة</th><th style="padding:10px;text-align:right">النتيجة المثبتة والمتبقي</th></tr></thead><tbody id="jfc-rows"><tr><td colspan="3" style="padding:12px">بانتظار مصدر البيانات الموثق</td></tr></tbody></table></div>
+ <div class="toolbar" style="margin-top:12px">
+  <a class="btn" href="https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view" target="_blank" rel="noopener noreferrer">فتح التقرير التفصيلي المعتمد في Drive الخاص</a>
+  <a class="btn" href="https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL" target="_blank" rel="noopener noreferrer">إثبات نقل الجداول الـ15</a>
+  <a class="btn" href="#jawafa-tasks">متابعة المهام</a>
+ </div>
+ <p id="jfc-note" class="muted small" style="margin-top:10px">بيانات تاريخية وليست اتصالاً حيًا بكشف البنك أو SQL.</p>
+</section>
+<section class="panel" id="trustsoft-handoff-entry" aria-label="TrustSoft handoff and read-only connector">
+ <div class="panel-head"><div><span class="eyebrow">TRUSTSOFT · HANDOFF · READ ONLY</span><h2>استلام لوحة TrustSoft وربطها بمركز جوافة</h2></div><span class="pill warn">تسليم جزئي — قبول التشغيل غير مثبت</span></div>
+ <p class="small muted">مرجع التسليم 29 أكتوبر 2026: موصل موقّع وقراءات تجريبية موثقة تاريخيًا. لا يُعد ذلك إثباتًا لاتصال الهاتف أو اكتمال اختبارات OCR أو دمج كود AppDeploy في هذا المستودع. لا تُعرض هنا بيانات مالية أو مفاتيح أو مستندات التحقيق الخاصة.</p>
+ <div class="toolbar"><a href="https://trustcontrol-jawafa-h3gws3.v2.appdeploy.ai/?v=1793080626996" target="_blank" rel="noopener noreferrer">فتح لوحة TrustSoft المستقلة</a><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57" target="_blank" rel="noopener noreferrer">متابعة أدلة القبول</a></div>
+ <details id="trustsoft-features"><summary>عرض أقسام TrustSoft العشرة ووظائفها</summary>
+ <div class="toolbar"><a href="https://trustcontrol-jawafa-h3gws3.v2.appdeploy.ai/" target="_blank" rel="noopener noreferrer">فتح الوظائف الأصلية مع تسجيل الدخول</a></div>
+ <ul>
+ <li>نظرة عامة: مؤشرات الرقابة المالية</li>
+ <li>الشيكات: مراجعة الحركات الواردة والصادرة</li>
+ <li>البنوك والتسويات: استعراض العمليات والمطابقة</li>
+ <li>المبيعات: عرض سجلات المصدر</li>
+ <li>الذمم والحسابات: العملاء والموردون</li>
+ <li>الصندوق والنقدية: قيود وحركات النقدية</li>
+ <li>المراجعة والاستثناءات: مؤشرات التدقيق الفني</li>
+ <li>مستكشف البيانات: فهرس الجداول ومعاينة محدودة بالقراءة فقط</li>
+ <li>قراءة المستندات: صور فواتير وشيكات وسندات، مراجعة وتصدير</li>
+ <li>اتصال TRUSTSOFT: حالة الموصل الموقّع وتحديثاته</li>
+ </ul>
+ <p class="small muted">هذا فهرس مرئي للوظائف الموثقة، وليس نقلًا لواجهات AppDeploy أو اتصالًا حيًا. لا تُعرض بيانات خاصة دون مصادقة.</p>
+ </details>
+ <p class="small muted">أولوية التحقق: فتح الهاتف ← مصادقة المالك ← اتصال API الفعلي ← معاينة قراءة فقط ← اختبار OCR. مصدر AppDeploy مستقل ولم تُنسخ ملفاته إلى GitHub.</p>
+</section>
+<section class="panel" id="jawafa-continuity-entry" aria-label="المتابعة التشغيلية داخل القيادة المركزية">
+  <div class="panel-head"><div><span class="eyebrow">JAWAFA · NATIVE COMMAND</span><h2>استمرارية جوافة ومتابعة التصدير</h2></div><span class="pill warn">واجهة موحّدة — وضع القراءة</span></div>
+  <p class="small muted">أقسام الاستمرارية والمراقبة والتصدير والمهام معروضة داخل هذه الصفحة، دون إطارات أو لوحة منفصلة. تعرض اللقطة التاريخية بتاريخها عند تعذر المصدر الحي، ولا تُعد اتصالًا مباشرًا بقاعدة Jawafa_DB.</p>
+  <div class="toolbar">
+    <a href="#jawafa-monitor" class="btn">مراقبة الخادم</a>
+    <a href="#jawafa-export" class="btn">التصدير</a>
+    <a href="#jawafa-backups" class="btn">النسخ والاستعادة</a>
+    <a href="#jawafa-tasks" class="btn">المهام</a>
+    <a href="#jawafa-errors" class="btn">سجل الأعطال</a>
   </div>
-  <script>
-  document.getElementById('jawafa-continuity-toggle').addEventListener('click', function(){
-    const box=document.getElementById('jawafa-continuity-container');
-    const frame=document.getElementById('jawafa-continuity-frame');
-    const show=box.hidden; box.hidden=!show; this.setAttribute('aria-expanded',String(show));
-    this.textContent=show?'إخفاء لوحة الاستمرارية':'عرض لوحة الاستمرارية داخل القيادة المركزية';
-    if(show && !frame.getAttribute('src')) frame.setAttribute('src','./jawafa-continuity.html#exports');
-  });
-  </script>
 </section>
 
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa">القيادة المركزية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa">NOT_CONNECTED</span></div>
@@ -260,7 +292,15 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 <div class="panel" data-jawafa-pane="jawafa-backups"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
 <section class="view" data-view="jawafa-monitor" aria-labelledby="h-jawafa-monitor" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-monitor">مراقبة الخادم</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-monitor">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-monitor">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-monitor">NOT_CONNECTED</span></div>
-<div class="panel" data-jawafa-pane="jawafa-monitor"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<div class="panel" data-jawafa-pane="jawafa-monitor"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div>
+<section class="panel" id="aman-access-entry" aria-labelledby="aman-access-title" style="margin-top:16px">
+  <div class="view-head"><div><span class="eyebrow">AMAN · ACCESS MONITOR</span><h2 id="aman-access-title">أمان — مراقبة الدخول والجلسات</h2></div><span class="pill warn">بانتظار ربط مصدر خاص</span></div>
+  <p class="muted small">واجهة المراقبة أصبحت داخل مركز القيادة على GitHub Pages، دون الاعتماد على اشتراك الاستضافة السابق. لا تُنشر سجلات الدخول أو رموزها هنا؛ تظهر البيانات الفعلية فقط بعد اتصال مصادق عليه بخدمة السجلات الخاصة. لا يعني فتح الواجهة أن الخادم متصل.</p>
+  <div class="toolbar"><button type="button" id="aman-access-toggle" aria-expanded="false" aria-controls="aman-access-container">عرض لوحة أمان داخل مركز القيادة</button><a href="./aman-monitor/" target="_blank" rel="noopener noreferrer">فتح لوحة أمان في نافذة مستقلة</a></div>
+  <div id="aman-access-container" hidden style="margin-top:12px"><iframe id="aman-access-frame" title="لوحة أمان لمراقبة الدخول والجلسات" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" style="width:100%;height:960px;border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe></div>
+  <p class="muted small">جامع SSH المرفق مخصص لـ Linux؛ لا يعني نقله تفعيل سجل دخول Windows أو حساب ChatGPT. عند إغلاق العرض الداخلي أو مغادرة هذا القسم، تُغلق جلسة القراءة وتُمسح بياناتها من الإطار.</p>
+</section>
+</section>
 <section class="view" data-view="jawafa-export" aria-labelledby="h-jawafa-export" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · EXPORT V5 · READ ONLY</span><h1 id="h-jawafa-export">مراقبة التصدير المباشر</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-export">Jawafa Export Monitor</span> · آخر تحديث: <span data-jawafa-updated="jawafa-export">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-export">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-export"><p class="muted">قراءة حالة Export v5 فقط. لا توجد أوامر كتابة على Jawafa_DB.</p></div></section>
@@ -402,7 +442,15 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
       <!-- ADVISOR -->
       <section class="view" data-view="advisor" aria-labelledby="h-advisor" hidden>
         <div class="view-head"><div><span class="eyebrow">الذكاء الاصطناعي</span><h1 id="h-advisor">المستشار والمحادثة</h1><p>يقرأ المستشار ملخص المهام والمسارات والمتجر في كل سؤال، ويجيب بخطوات عملية. لا يغيّر شيئاً إلا حين تضغط «إضافة».</p></div></div>
-        <div id="advisor-off" class="banner info" hidden><strong>المستشار غير متاح هنا:</strong> يعمل عند فتح مركز القيادة داخل Claude وبعد السماح له باستخدام Claude.</div>
+        <div id="advisor-off" class="banner info" hidden><strong>المحادثة التلقائية غير متاحة على GitHub Pages:</strong> تعتمد النسخة الأصلية على تكامل Claude داخل بيئته، ولا يتوفر هنا خادم محادثة مصادق عليه.</div>
+        <div id="advisor-external" class="banner info" hidden>
+          <strong>بديل يدوي دون مفاتيح:</strong> اكتب السؤال أدناه، ثم انسخه وافتح ChatGPT والصقه هناك.
+          <div class="toolbar" style="margin-top:.6rem">
+            <button type="button" id="chat-copy">نسخ السؤال</button>
+            <a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">فتح ChatGPT</a>
+          </div>
+          <p class="small muted">تُنسخ رسالتك المكتوبة فقط عند الضغط على النسخ؛ لا تُرسل بيانات المشروع أو سجلات التحقيق أو مفاتيح الاتصال تلقائيًا. هذا بديل يدوي، وليس اتصال API أو محادثة متزامنة.</p>
+        </div>
         <div class="advisor">
           <div class="panel chat">
             <div class="log" id="chat-log" aria-live="polite"></div>
@@ -579,6 +627,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="firebase-config.js"></script>
+<script src="./aman-monitor/host-integration.js" defer></script>
 <script>
 (() => {
   "use strict";
@@ -736,7 +785,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     const dot = $("db-dot"), txt = $("db-status"), mPill = $("db-pill-m"), banner = $("mode-banner");
     if (mode === "db" && !err) { dot.className = "dot ok"; txt.textContent = "قاعدة البيانات المشتركة متصلة"; mPill.className = "pill ok"; mPill.textContent = "متصل"; banner.hidden = true; }
     else if (mode === "db" && err) { dot.className = "dot bad"; txt.textContent = "انقطع الاتصال بقاعدة البيانات"; mPill.className = "pill bad"; mPill.textContent = "منقطع"; banner.hidden = false; banner.className = "banner error"; banner.replaceChildren(el("strong", null, "انقطع الاتصال بقاعدة البيانات: "), "أعد تحميل الصفحة. ما يظهر الآن آخر نسخة وصلت."); }
-    else { dot.className = "dot warn"; txt.textContent = "حفظ محلي في هذا المتصفح"; mPill.className = "pill warn"; mPill.textContent = "محلي"; banner.hidden = false; banner.className = "banner info"; banner.replaceChildren(el("strong", null, "حفظ محلي: "), "مركز القيادة مفتوح خارج Claude، فتُحفظ المهام في هذا المتصفح فقط. افتحه داخل Claude لتحفظ في القاعدة المشتركة وتراها من أي جهاز."); }
+    else { dot.className = "dot warn"; txt.textContent = "المهام المحلية غير متزامنة"; mPill.className = "pill warn"; mPill.textContent = "محلي"; banner.hidden = false; banner.className = "banner info"; banner.replaceChildren(el("strong", null, "حفظ محلي: "), "بيانات مهام عامر المحلية لا تتزامن بين الأجهزة. حالة جوافة تظهر من الجسر المعتمد أو لقطة تاريخية موثقة، مع إيضاح نوع المصدر."); }
   }
   function applyWriteState() {
     for (const b of document.querySelectorAll("[data-action],[data-write]")) b.disabled = readOnly;
@@ -1366,7 +1415,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   // ---------- live store (Firestore, mirrored by the app's FirestoreSync) ----------
   // Runs only where the page can reach Firebase: the GitHub Pages copy, not the Claude artifact.
   const FIREBASE_VERSION = "10.14.1";
-  const PAGES_URL = "https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/#store";
+  const PAGES_URL = "https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/#store";
   const LIVE_COLLECTIONS = { users: "users", products: "products", orders: "orders", chat_reports: "chatReports" };
   let liveUnsubs = [];
   const liveRows = {};
@@ -1436,11 +1485,15 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     for (const id of ["commission-btn", "arb-btn", "chat-send", "propose-btn", "design-btn", "mkt-btn", "place-all-btn"]) $(id).disabled = true;
     $("designer-off").hidden = false; $("marketing-off").hidden = false; $("features-off").hidden = false;
     for (const b of document.querySelectorAll("#feat-cards [data-run]")) b.disabled = true;
-    for (const b of document.querySelectorAll("#suggest button")) b.disabled = true;
-    $("advisor-off").hidden = false;
+    for (const b of document.querySelectorAll("#suggest button")) b.disabled = false;
+    $("advisor-off").hidden = false; $("advisor-external").hidden = false;
     $("ai-dot").className = "dot"; $("ai-status").textContent = "المستشار: غير متاح هنا";
   }
-  function aiOn() { $("ai-dot").className = "dot ok"; $("ai-status").textContent = "المستشار: جاهز"; }
+  function aiOn() {
+    $("advisor-off").hidden = true; $("advisor-external").hidden = true;
+    $("chat-send").disabled = false;
+    $("ai-dot").className = "dot ok"; $("ai-status").textContent = "المستشار: جاهز";
+  }
   function aiErrorText(e) { return AI_ERRORS[e && e.code] || "انقطع الاتصال. حاول مجدداً."; }
 
   function contextSummary() {
@@ -1486,6 +1539,18 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
       chatCtl = null; $("chat-send").disabled = !sample; $("chat-stop").hidden = true; renderChat();
     }
   }
+  $("chat-copy").addEventListener("click", async () => {
+    const input = $("chat-input"), question = S(input.value, 4000).trim();
+    if (!question) { input.focus(); toast("اكتب سؤالك أولًا."); return; }
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") throw Error("CLIPBOARD_UNAVAILABLE");
+      await navigator.clipboard.writeText(question);
+      toast("تم نسخ السؤال فقط. افتح ChatGPT والصقه.");
+    } catch {
+      input.focus(); input.select();
+      toast("تعذّر النسخ الآلي؛ انسخ النص المحدد يدويًا.");
+    }
+  });
   $("chat-form").addEventListener("submit", (e) => { e.preventDefault(); sendChat($("chat-input").value); });
   $("chat-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat($("chat-input").value); } });
   $("chat-stop").addEventListener("click", () => chatCtl && chatCtl.abort());
@@ -1497,7 +1562,10 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
     ["حالة المتجر", "حلّل حالة المتجر: المخزون المنخفض والطلبات النشطة والنزاعات، وما الذي أفعله اليوم."],
     ["جاهزية النشر", "هل خدمة Cloudflare جاهزة للنشر على الإنتاج؟ ما البوابات المتبقية بالضبط؟"]
   ];
-  $("suggest").replaceChildren(...SUGGESTIONS.map(([label, prompt]) => el("button", { type: "button", onclick: () => sendChat(prompt) }, label)));
+  $("suggest").replaceChildren(...SUGGESTIONS.map(([label, prompt]) => el("button", { type: "button", onclick: () => {
+    if (!sample) { $("chat-input").value = prompt; $("chat-input").focus(); return; }
+    sendChat(prompt);
+  } }, label)));
 
   $("propose-btn").addEventListener("click", async () => {
     if (!sample) return;
@@ -1889,3 +1957,48 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
 <script src="jawafa-integration.js" defer></script>
 
 <script src="aas-integration.js" defer></script>
+<script>
+(() => {
+"use strict";
+const get=id=>document.getElementById(id);
+if(!get("jfc-crossproject"))return;
+const labels={
+historical_reconstruction:"مرجع تاريخي مستعاد",
+definitions_conflict:"تعارض تعريفات مفتوح",
+internal_continuity_verified:"اتساق بنكي داخلي فقط",
+reconciliation_open:"مطابقة مفتوحة",
+exceptions_open:"استثناءات مفتوحة",
+forensic_investigation:"تحقيق جارٍ",
+audit_coverage_open:"تحقق تدقيق غير مكتمل",
+needs_transaction_linkage:"ربط أحداث مطلوب",
+needs_current_stock:"نواقص رصيد المخزون",
+data_quality_hold:"إيقاف حسابات غير موثوقة"
+};
+function value(id,s){const el=get(id);if(el)el.textContent=String(s==null?"—":s)}
+async function reload(){
+ try{
+  const response=await fetch("./data/jawafa-financial-casework.json?nocache="+Date.now(),{cache:"no-store",credentials:"omit"});
+  if(!response.ok)throw Error("HTTP "+response.status);
+  const info=await response.json();
+  if(info.schema!=="jawafa-crossproject-casework-v1"||info.classification!=="PUBLIC_OPERATIONAL_METADATA_NO_FINANCIAL_ROWS"||!Array.isArray(info.cases))throw Error("UNTRUSTED_SOURCE");
+  value("jfc-n",info.cases.length);value("jfc-s",info.counts.first_export_tables);value("jfc-v",info.counts.audit15_transfer_verified+"/15");value("jfc-u",info.counts.audit15_causal_unresolved);
+  const body=get("jfc-rows");body.replaceChildren();
+  for(const a of info.cases){
+   const row=document.createElement("tr");
+   for(const [v,mark] of [[a.title,0],[labels[a.status]||"قيد التحقق",1],[a.progress,0]]){
+    const cell=document.createElement("td");
+    cell.textContent=String(v||"—").slice(0,260);
+    cell.style.cssText="padding:10px;text-align:right;border-bottom:1px solid #2b4335;line-height:1.7;font-size:12px;vertical-align:top";
+    if(mark)cell.style.color="var(--amber)";
+    row.append(cell)
+   }
+   body.append(row)
+  }
+  value("jfc-state","حالة مستندة إلى لقطة — ليست بثًا حيًا");
+  value("jfc-note","تاريخ المرجع: "+info.source_as_of+"؛ بنك CASHFLOW التاريخي حتى "+info.historical_cashflow_coverage.through+"؛ GATE-15 غير مقبول. لا تتوفر قراءة كاملة لكل المحادثات.");
+ }catch(e){value("jfc-state","تعذر استيراد البيانات: "+String(e.message).slice(0,50));value("jfc-note","لم تُستخدم بيانات تقديرية عند فشل الربط.")}
+}
+reload();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()});
+})();
+</script>

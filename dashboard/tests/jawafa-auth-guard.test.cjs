@@ -5,7 +5,7 @@ function harness(){
  const pending=[];
  const auth={currentUser:{emailVerified:true,getIdToken:async()=>"test-firebase-jwt"}};
  const window={firebase:{auth:()=>auth,apps:[{}]},addEventListener(){}};
- const context={window,document:{querySelector:()=>null},AbortController,crypto:{randomUUID:()=>"UUID-12345"},fetch:()=>new Promise(resolve=>pending.push(resolve)),setTimeout:()=>1,clearTimeout:()=>{},setInterval:()=>1,clearInterval:()=>{}};
+ const context={window,document:{querySelector:()=>null},AbortController,crypto:{randomUUID:()=>"UUID-12345"},fetch:(url)=>url==="./data/jawafa-status.json"?Promise.resolve({ok:false,status:404,json:async()=>({})}):new Promise(resolve=>pending.push(resolve)),setTimeout:()=>1,clearTimeout:()=>{},setInterval:()=>1,clearInterval:()=>{}};
  vm.runInNewContext(source,context,{timeout:3000});
  const flush=async()=>{for(let i=0;i<5;i++)await Promise.resolve()};
  const result=(data)=>({ok:true,status:200,json:async()=>data});
