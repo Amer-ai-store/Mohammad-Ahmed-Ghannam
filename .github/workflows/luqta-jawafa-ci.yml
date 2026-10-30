@@ -1,0 +1,37 @@
+name: Luqta storefront and Jawafa inventory validation
+on:
+  pull_request:
+    paths:
+      - 'luqta-mobile/**'
+      - 'dashboard/luqta-*.js'
+      - '.github/workflows/luqta-jawafa-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'luqta-mobile/**'
+      - 'dashboard/luqta-*.js'
+      - '.github/workflows/luqta-jawafa-ci.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: luqta-mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: luqta-mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: node --check ../dashboard/luqta-integration.js
+      - run: node --check ../dashboard/luqta-api.js
