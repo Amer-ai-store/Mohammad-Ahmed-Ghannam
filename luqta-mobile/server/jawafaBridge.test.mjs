@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createJawafaBridge } from './jawafaBridge.mjs';
 
-function mockFetch(path, status = 200) {
+function mockFetch(path) {
   const response = path.endsWith('/api/health') ? { ok: true, mode: 'FORENSIC-READ-ONLY', database: 'Jawafa_DB', passwordSource: 'SECRET' }
     : path.endsWith('/api/tables') ? { ok: true, tables: [{ TABLE_NAME:'Items'}, { TABLE_NAME:'AA_ActQty' }, {TABLE_NAME:'MPOSPriceOffer'}] }
     : { ok:true, data:[{ItemCode:123,ItemcodeSeq:123,Description:'بند مختبر',FamCode:'FOOD',Cost:9999,Password:'private'}] };
-  return Promise.resolve({ok:status===200,headers:{get:()=>null},text:()=>Promise.resolve(JSON.stringify(response))});
+  return Promise.resolve({ok:true,headers:{get:()=>null},text:()=>Promise.resolve(JSON.stringify(response))});
 }
 test('only loopback forensic source is allowed',()=> {
   assert.throws(()=>createJawafaBridge({url:'https://public.example.net'}),/127.0.0.1/);
