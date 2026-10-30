@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { prepareJawafaSnapshot } from './jawafaInventory.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -129,9 +130,9 @@ export async function createCommerceServer(options = {}) {
   const transaction = (fn) => { db.exec('BEGIN IMMEDIATE'); try { const result = fn(); db.exec('COMMIT'); return result; } catch (error) { db.exec('ROLLBACK'); throw error; } };
   const setting = (key, fallback = null) => parse(get('SELECT value FROM settings WHERE key=?', key)?.value, fallback);
   const setSetting = (key, value) => run('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, json(value));
-  const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, ...options.config };
+  const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, storefront: { accentColor: '#B94721', heroTitle: 'لُقطات تستحق أن تكون لك', heroSubtitle: 'اكتشف منتجات تُشبه ذوقك', showAssistant: true }, ...options.config };
   for (const [key, value] of Object.entries(defaults)) if (!get('SELECT key FROM settings WHERE key=?', key)) setSetting(key, value);
-  const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays'].map((key) => [key, setting(key)]));
+  const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays', 'storefront'].map((key) => [key, setting(key)]));
   let encryptionKey;
   const secretPath = options.secretPath || (dbPath === ':memory:' ? null : resolve(dirname(dbPath), 'encryption.key'));
   if (secretPath) {
@@ -587,7 +588,7 @@ export async function createCommerceServer(options = {}) {
       }
       if (path.startsWith('/api/admin/')) {
         const section = p[1];
-        const scope = section === 'products' ? 'catalog:write' : section === 'inventory' ? 'inventory:write' : section === 'orders' ? 'orders:write' : section === 'settings' ? 'settings:write' : section === 'agent-jobs' ? 'jobs:write' : null;
+        const scope = section === 'products' || section === 'offers' ? 'catalog:write' : section === 'inventory' ? 'inventory:write' : section === 'orders' ? 'orders:write' : section === 'settings' ? 'settings:write' : section === 'agent-jobs' ? 'jobs:write' : null;
         const actor = admin(req, scope);
         if (method === 'GET' && section === 'overview') {
           return send(200, { stats: { products: get('SELECT COUNT(*) AS n FROM products WHERE active=1').n, lowStock: get('SELECT COUNT(*) AS n FROM products WHERE active=1 AND stock<=5').n, orders: get('SELECT COUNT(*) AS n FROM orders').n, customers: get("SELECT COUNT(*) AS n FROM users WHERE role='customer'").n, revenue: money(get("SELECT COALESCE(SUM(total),0) AS n FROM orders WHERE status='delivered' AND payment_status IN ('paid','collected')").n), pendingOrders: get("SELECT COUNT(*) AS n FROM orders WHERE status='pending'").n }, recentOrders: all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 10').map(order), lowStockProducts: all('SELECT * FROM products WHERE active=1 AND stock<=5 ORDER BY stock LIMIT 20').map(product) });
@@ -599,7 +600,41 @@ export async function createCommerceServer(options = {}) {
           if (method === 'PATCH') { const data = validateProduct({ ...body, id: old.id }, parse(old.data)); run('UPDATE products SET data=?,stock=?,active=?,updated_at=? WHERE id=?', json(data), body.stock !== undefined ? integer(body.stock, 'المخزون', 0, 1e7) : old.stock, body.active !== undefined ? body.active ? 1 : 0 : old.active, now(), old.id); audit(actor, 'product.update', old.id); return send(200, { product: product(get('SELECT * FROM products WHERE id=?', old.id)) }); }
           if (method === 'DELETE') { transaction(() => { run("UPDATE products SET active=0,updated_at=? WHERE json_extract(data,'$.variantOf')=?", now(), old.id); run('UPDATE products SET active=0,updated_at=? WHERE id=?', now(), old.id); audit(actor, 'product.archive', old.id); }); return send(200, { ok: true }); }
         }
+        if (section === 'offers') {
+          if (method === 'GET') return send(200, { offers: all('SELECT * FROM products WHERE active=1 ORDER BY updated_at DESC').map(product).filter((row) => row.oldPrice != null && row.oldPrice > row.price) });
+          if (method === 'POST' && p[2] === 'import') {
+            if (body.confirm !== true) fail(409, 'مطلوب تأكيد استيراد العروض إلى قاعدة المتجر فقط');
+            if (!Array.isArray(body.items) || !body.items.length || body.items.length > 1000) fail(400, 'قائمة العروض غير صالحة');
+            const seen = new Set();
+            const checked = body.items.map((item) => {
+              const productId = text(item.id, 'رمز الصنف', 1, 100);
+              if (seen.has(productId)) fail(400, 'صنف مكرر في العروض'); seen.add(productId);
+              const original = get('SELECT * FROM products WHERE id=? AND active=1', productId);
+              if (!original) fail(404, 'العرض يشير إلى صنف غير موجود أو غير منشور');
+              const price = money(number(item.price, 'سعر العرض', 0.001, 1e7));
+              const oldPrice = money(number(item.oldPrice, 'السعر السابق', price, 1e7));
+              return { id: productId, original, price, oldPrice };
+            });
+            transaction(() => {
+              for (const item of checked) {
+                const data = parse(item.original.data, {});
+                run('UPDATE products SET data=?,updated_at=? WHERE id=?', json({ ...data, price: item.price, oldPrice: item.oldPrice }), now(), item.id);
+              }
+              audit(actor, 'offers.import', '', { count: checked.length });
+            });
+            return send(200, { imported: checked.length, commerceOnly: true });
+          }
+        }
         if (section === 'inventory') {
+          if (method === 'POST' && p[2] === 'jawafa-preview') {
+            const prepared = prepareJawafaSnapshot(body);
+            return send(200, { snapshotAt: prepared.snapshotAt, count: prepared.count, preview: prepared.items.slice(0, 25), source: prepared.source, applied: false });
+          }
+          if (method === 'POST' && p[2] === 'jawafa-import') {
+            if (body.confirm !== true) fail(409, 'يلزم تأكيد نقل الكميات إلى قاعدة المتجر فقط');
+            const prepared = prepareJawafaSnapshot(body);
+            return send(200, { ...importInventory({ items: prepared.items, mode: 'replace' }, actor), source: prepared.source, snapshotAt: prepared.snapshotAt });
+          }
           if (method === 'POST' && p[2] === 'import') return send(200, importInventory(body, actor));
           if (p[2] === 'undo') {
             if (method === 'GET') return send(200, { undo: inventoryUndoSummary() });
@@ -615,7 +650,8 @@ export async function createCommerceServer(options = {}) {
             try { const response = await (options.fetchImpl || fetch)(url, { headers: connector.token ? { Authorization: `Bearer ${decrypt(connector.token)}` } : {}, redirect: 'error', signal: controller.signal }); if (!response.ok) fail(502, 'رفض خادم المخزون طلب المزامنة', 'upstream_error');
               let size = 0; const chunks = []; for await (const chunk of response.body) { size += chunk.length; if (size > 2_000_000) { controller.abort(); fail(502, 'بيانات المخزون أكبر من الحد المسموح'); } chunks.push(chunk); }
               let payload; try { payload = JSON.parse(Buffer.concat(chunks).toString()); } catch { fail(502, 'استجابة تطبيق المخزون ليست JSON صالحًا'); }
-              const result = importInventory({ items: Array.isArray(payload) ? payload : payload.items || payload.products, mode: 'replace' }, actor);
+              const snapshot = payload?.schema === 'jawafa-inventory-v1' ? prepareJawafaSnapshot(payload) : null;
+               const result = importInventory({ items: snapshot ? snapshot.items : Array.isArray(payload) ? payload : payload.items || payload.products, mode: 'replace' }, actor);
               setSetting('inventoryConnector', { ...connector, lastSyncAt: now(), lastResult: { imported: result.imported, created: result.created, updated: result.updated } }); return send(200, { ...result, connector: connectorPublic() });
             } catch (error) { if (error.status) throw error; fail(502, 'تعذر الاتصال بخادم المخزون أو انتهت المهلة', 'upstream_error'); } finally { clearTimeout(timeout); }
           }
@@ -682,7 +718,23 @@ export async function createCommerceServer(options = {}) {
         }
         if (section === 'settings') {
           if (method === 'GET') return send(200, { settings: publicSettings() });
-          if (method === 'PATCH') { const updates = {}; if (body.storeName !== undefined) updates.storeName = text(body.storeName, 'اسم المتجر', 2, 100); if (body.currency !== undefined) { if (!/^[A-Z]{3}$/.test(body.currency)) fail(400, 'رمز العملة غير صالح'); if (body.currency !== setting('currency') && (get('SELECT id FROM orders LIMIT 1') || get('SELECT id FROM wallet LIMIT 1'))) fail(409, 'لا يمكن تغيير العملة بعد تسجيل معاملات مالية'); updates.currency = body.currency; } if (body.country !== undefined) { if (!/^[A-Z]{2}$/.test(body.country)) fail(400, 'رمز الدولة غير صالح'); updates.country = body.country; } for (const key of ['shippingFee', 'freeShippingThreshold']) if (body[key] !== undefined) updates[key] = money(number(body[key], key, 0, 1e7)); if (body.returnsDays !== undefined) updates.returnsDays = integer(body.returnsDays, 'مهلة الإرجاع', 1, 365); transaction(() => { for (const [key, value] of Object.entries(updates)) setSetting(key, value); audit(actor, 'settings.update', '', updates); }); return send(200, { settings: publicSettings() }); }
+          if (method === 'PATCH') { const updates = {}; if (body.storeName !== undefined) updates.storeName = text(body.storeName, 'اسم المتجر', 2, 100); if (body.currency !== undefined) { if (!/^[A-Z]{3}$/.test(body.currency)) fail(400, 'رمز العملة غير صالح'); if (body.currency !== setting('currency') && (get('SELECT id FROM orders LIMIT 1') || get('SELECT id FROM wallet LIMIT 1'))) fail(409, 'لا يمكن تغيير العملة بعد تسجيل معاملات مالية'); updates.currency = body.currency; } if (body.country !== undefined) { if (!/^[A-Z]{2}$/.test(body.country)) fail(400, 'رمز الدولة غير صالح'); updates.country = body.country; } for (const key of ['shippingFee', 'freeShippingThreshold']) if (body[key] !== undefined) updates[key] = money(number(body[key], key, 0, 1e7)); if (body.returnsDays !== undefined) updates.returnsDays = integer(body.returnsDays, 'مهلة الإرجاع', 1, 365);
+             if (body.storefront !== undefined) {
+               if (!body.storefront || typeof body.storefront !== 'object' || Array.isArray(body.storefront)) fail(400, 'إعداد تصميم المتجر غير صالح');
+               const prior = setting('storefront', {});
+               const design = { ...prior };
+               if (body.storefront.accentColor !== undefined) {
+                 if (typeof body.storefront.accentColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(body.storefront.accentColor)) fail(400, 'اللون يجب أن يكون بصيغة HEX');
+                 design.accentColor = body.storefront.accentColor;
+               }
+               for (const key of ['heroTitle', 'heroSubtitle']) if (body.storefront[key] !== undefined) design[key] = text(body.storefront[key], key, 1, key === 'heroTitle' ? 120 : 300);
+               if (body.storefront.showAssistant !== undefined) {
+                 if (typeof body.storefront.showAssistant !== 'boolean') fail(400, 'حالة المساعد غير صالحة');
+                 design.showAssistant = body.storefront.showAssistant;
+               }
+               updates.storefront = design;
+             }
+             transaction(() => { for (const [key, value] of Object.entries(updates)) setSetting(key, value); audit(actor, 'settings.update', '', updates); }); return send(200, { settings: publicSettings() }); }
         }
         if (method === 'GET' && section === 'audit') return send(200, { events: all('SELECT id,actor_id AS actorId,action,entity_id AS entityId,detail,created_at AS createdAt FROM audit ORDER BY created_at DESC,id DESC LIMIT 500').map((r) => ({ ...r, detail: parse(r.detail, {}) })) });
         if (section === 'agent-keys') {
