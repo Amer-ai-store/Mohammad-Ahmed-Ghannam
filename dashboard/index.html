@@ -844,6 +844,7 @@ nav.side{gap:.5rem}
   function show(view) {
     view = (view || "home").replace(/^#/, "");
     const base = view.split("/")[0], detail = view.split("/")[1] || "overview";
+    if (base.startsWith("aas-") && VIEWS.includes(base)) view = base;
     if (!VIEWS.includes(view)) view = base === "luqta" ? "luqta" : "home";
     current = view;
     const navigationRoot = view.startsWith("luqta/") ? "luqta" : view.startsWith("aas-") ? "aas-live" : view;
