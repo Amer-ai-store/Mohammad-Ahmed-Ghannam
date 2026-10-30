@@ -11,7 +11,24 @@
     ["coupons", "الخصومات"], ["returns", "المرتجعات"], ["tickets", "الدعم"],
     ["settings", "الإعدادات"], ["agents", "الوكلاء"], ["audit", "السجل"],
   ];
-  let tab = "overview";
+  const deepLinkTab = () => {
+    const parts = location.hash.replace(/^#/, "").split("/");
+    const candidate = parts[0] === "luqta" ? parts[1] || "overview" : "overview";
+    return tabs.some(([id]) => id === candidate) ? candidate : "overview";
+  };
+  let tab = deepLinkTab();
+  const TAB_GROUPS = [
+    ["نظرة عامة", ["overview"]],
+    ["الكتالوج والتصميم", ["products","inventory","offers","appearance"]],
+    ["الطلبات والعملاء", ["orders","users","coupons","returns","tickets"]],
+    ["الإدارة والرقابة", ["settings","agents","audit"]]
+  ];
+  window.addEventListener("luqta:navigate", event => {
+    const requested = event.detail?.tab;
+    if (!tabs.some(([id]) => id === requested) || tab === requested) return;
+    tab = requested;
+    draw();
+  });
   let status;
   let body;
   let lastAgentToken = "";
@@ -92,8 +109,29 @@
     header.append(button("تحديث", () => void run(() => load(), false)));
     header.append(button("تسجيل الخروج", () => void run(async () => { await client.logout(); lastAgentToken = ""; draw(); return "انتهت الجلسة."; }, false)));
     root.append(header);
-    const nav = node("div", undefined, "toolbar"); nav.style.marginTop = ".7rem";
-    tabs.forEach(([id, label]) => nav.append(button(label, () => { tab = id; void run(() => load(), false); }, id === tab ? "tiny primary" : "tiny")));
+    const nav = node("div", undefined, "luqta-nav-categories");
+    nav.style.display = "grid"; nav.style.gridTemplateColumns = "repeat(auto-fit,minmax(min(100%,210px),1fr))";
+    nav.style.gap = ".55rem"; nav.style.marginTop = ".9rem";
+    TAB_GROUPS.forEach(([title, names]) => {
+      const subgroup = node("details", undefined, "luqta-subgroup");
+      subgroup.open = names.includes(tab);
+      subgroup.style.border = "1px solid var(--line)"; subgroup.style.borderRadius = "10px";
+      subgroup.style.background = "var(--surface-2)"; subgroup.style.padding = ".55rem";
+      const heading = node("summary", title + " · " + names.length);
+      heading.style.fontWeight = "700"; heading.style.cursor = "pointer"; heading.style.fontSize = ".82rem";
+      heading.style.marginBottom = ".4rem"; subgroup.append(heading);
+      const links = node("div", undefined, "toolbar"); links.style.gap = ".35rem";
+      for (const id of names) {
+        const label = tabs.find(([tabId]) => tabId === id)?.[1] || id;
+        links.append(button(label, () => {
+          tab = id;
+          const target = "#luqta/" + id;
+          if (location.hash !== target) location.hash = target;
+          else draw();
+        }, id === tab ? "tiny primary" : "tiny"));
+      }
+      subgroup.append(links); nav.append(subgroup);
+    });
     root.append(nav);
     status = node("p", "", "small"); root.append(status);
     body = node("div"); body.style.display = "grid"; body.style.gap = ".65rem"; root.append(body);
