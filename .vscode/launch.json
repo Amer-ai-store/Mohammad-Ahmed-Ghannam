@@ -26,15 +26,8 @@
             "type": "chrome",
             "webRoot": "${workspaceFolder}"
         },
-        {
-            "name": "Attach to Chrome",
-            "port": 9222,
-            "request": "attach",
-            "type": "chrome",
-            "webRoot": "${workspaceFolder}"
-        },
-       .
-       . 
+
+
         {
             "request": "launch",
             "name": "Launch Program",
