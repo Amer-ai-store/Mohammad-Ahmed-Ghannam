@@ -1,6 +1,7 @@
 export type StoreSettings = {
   storeName: string; currency: string; country: string;
   shippingFee: number; freeShippingThreshold: number; returnsDays: number;
+  storefront?: { accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: boolean };
 };
 export type Address = {
   id?: string; name: string; phone: string; city: string; street: string;
