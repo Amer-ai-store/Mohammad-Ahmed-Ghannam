@@ -241,6 +241,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
  <div class="toolbar" style="margin-top:12px">
   <a class="btn" href="https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view" target="_blank" rel="noopener noreferrer">فتح التقرير التفصيلي المعتمد في Drive الخاص</a>
   <a class="btn" href="https://drive.google.com/file/d/1sSjwVwdXzXbg_FkCdOHtj_NbNOqAdN3d/view" target="_blank" rel="noopener noreferrer">تقرير آخر تصدير والتحقيق التفصيلي</a>
+  <a class="btn" href="https://drive.google.com/file/d/1z7EkbUAXMEAi-dJIJOpS8WWV3IugEZ4F/view" target="_blank" rel="noopener noreferrer">نسخة التصدير v5 على Drive الخاص</a>
   <a class="btn" href="https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL" target="_blank" rel="noopener noreferrer">إثبات نقل الجداول الـ15</a>
   <a class="btn" href="#jawafa-tasks">متابعة المهام</a>
  </div>
@@ -1985,7 +1986,7 @@ async function reload(){
    body.append(row)
   }
   value("jfc-state","حالة مستندة إلى لقطة — ليست بثًا حيًا");
-  value("jfc-note","آخر تصدير: "+(info.latest_export?.run||"غير متاح")+" — FULL: "+(info.latest_export?.full_success??"—")+"، DELTA: "+(info.latest_export?.two_day_delta_success??"—")+"، مرجع سابق: "+(info.latest_export?.baseline_reference_not_reexported??"—")+"؛ بيانات محفوظة على الخادم لا اتصال SQL حي؛ كشف البنك حتى "+info.historical_cashflow_coverage.through+"؛ GATE-15 غير مقبول.");
+  value("jfc-note","آخر تصدير: "+(info.latest_export?.run||"غير متاح")+" — FULL: "+(info.latest_export?.full_success??"—")+"، DELTA: "+(info.latest_export?.two_day_delta_success??"—")+"، مرجع سابق: "+(info.latest_export?.baseline_reference_not_reexported??"—")+"؛ النسخة السحابية: "+(info.latest_export?.archive?.drive_upload_verified?"مرفوعة ومتحقق من مطابقتها":"غير مثبتة")+"؛ سندات ما زالت غائبة: "+(info.latest_export?.historical_voucher_gaps_recheck?.main_with_deletion_events_still_absent??"—")+" GL و"+(info.latest_export?.historical_voucher_gaps_recheck?.arp_nine_gaps_still_absent??"—")+" ARP؛ كشوف البنك حتى "+info.historical_cashflow_coverage.through+"؛ GATE-15 غير مقبول.");
  }catch(e){value("jfc-state","تعذر استيراد البيانات: "+String(e.message).slice(0,50));value("jfc-note","لم تُستخدم بيانات تقديرية عند فشل الربط.")}
 }
 reload();
