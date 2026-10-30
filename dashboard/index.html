@@ -382,6 +382,12 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
 </section>
 </section>
 
+      <!-- UNIFIED AGENTS AND ADVISOR DIRECTORY; NOT A LIVE RUNTIME CLAIM -->
+      <section class="view" data-view="agent-directory" aria-labelledby="h-agent-directory" hidden>
+        <div class="hero"><div><p class="eyebrow">AAS-CC / AAS-UP · SOURCE ROSTER</p><h1 id="h-agent-directory">دليل الوكلاء والمستشارين</h1><p class="muted">تعريفات رسمية موثقة من النظامين القديم والجديد؛ لا تعني حالة التشغيل أو ترحيل بيانات الخادم الخاص.</p></div></div>
+        <iframe src="./aas-roster.html" loading="lazy" title="دليل الوكلاء والمستشارين" referrerpolicy="no-referrer" style="width:100%;height:calc(100vh - 155px);min-height:780px;border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe>
+      </section>
+
       <!-- HOME -->
       <section class="view" data-view="aas-live" aria-labelledby="h-aas-live" hidden>
         <div class="hero"><div><p class="eyebrow">AAS-CC / AAS-AW</p><h1 id="h-aas-live">القيادة الحية ومساحات الوكلاء</h1><p class="muted">جميع شاشات AAS ضمن اللوحة المعتمدة، مع نفس بيانات العمل في الخادم الخاص. افتح اتصال المالك مرة واحدة؛ لا تحتاج Tailscale لوظائف AAS السحابية.</p></div></div>
@@ -677,7 +683,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   // ---------- navigation ----------
   const NAV = [
     ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"], ["marketing", "وكيل التسويق", "campaigns"], ["features", "مزايا التطبيق"]]],
-    ["AAS-CC · القيادة الحية", [["aas-overview", "مركز القيادة الحي"], ["aas-orchestration", "الهيكل والمسارات الحية"], ["aas-workspaces", "مساحات AAS-AW"], ["aas-tasks", "مهام AAS المشتركة"], ["aas-execution", "بوابات التحليل والتنفيذ"], ["aas-agents", "فريق الوكلاء التسعة"], ["aas-approvals", "الموافقات المشتركة"], ["aas-advisor", "المستشار وربط Gemini"], ["aas-database", "جسر قاعدة البيانات"], ["aas-commerce", "لقطات التطبيق المستلمة"], ["aas-repository", "المصدر والبناء الحي"], ["aas-integrations", "الخوادم وواجهات API"], ["aas-activity", "سجل AAS المشترك"], ["aas-settings", "إعدادات AAS والتصدير"]]],
+    ["AAS-CC · القيادة الحية", [["aas-overview", "مركز القيادة الحي"], ["aas-orchestration", "الهيكل والمسارات الحية"], ["aas-workspaces", "مساحات AAS-AW"], ["aas-tasks", "مهام AAS المشتركة"], ["aas-execution", "بوابات التحليل والتنفيذ"], ["aas-agents", "الوكلاء في النظام الحي"], ["agent-directory", "دليل الوكلاء والمستشارين"], ["aas-approvals", "الموافقات المشتركة"], ["aas-advisor", "المستشار وربط Gemini"], ["aas-database", "جسر قاعدة البيانات"], ["aas-commerce", "لقطات التطبيق المستلمة"], ["aas-repository", "المصدر والبناء الحي"], ["aas-integrations", "الخوادم وواجهات API"], ["aas-activity", "سجل AAS المشترك"], ["aas-settings", "إعدادات AAS والتصدير"]]],
     ["المتجر", [["store", "لوحة المتجر"], ["luqta", "إدارة لُقطة"]]],
     ["تحقيق جوافة", [["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة اليومية والمهام"],["jawafa-gate15","GATE-15"],["jawafa-backups","النسخ والـ RESTORE"],["jawafa-monitor","مراقبة الخادم"],["jawafa-export","مراقبة التصدير"],["jawafa-accounting","المحاسبة والقيود"],["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","المشتريات والموردون"],["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],["jawafa-reports","التقارير المالية"],["jawafa-errors","الأخطاء والإنجاز"]]],
     ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
