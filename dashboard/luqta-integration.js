@@ -11,7 +11,24 @@
     ["coupons", "الخصومات"], ["returns", "المرتجعات"], ["tickets", "الدعم"],
     ["settings", "الإعدادات"], ["agents", "الوكلاء"], ["audit", "السجل"],
   ];
-  let tab = "overview";
+  const deepLinkTab = () => {
+    const parts = location.hash.replace(/^#/, "").split("/");
+    const candidate = parts[0] === "luqta" ? parts[1] || "overview" : "overview";
+    return tabs.some(([id]) => id === candidate) ? candidate : "overview";
+  };
+  let tab = deepLinkTab();
+  const TAB_GROUPS = [
+    ["نظرة عامة", ["overview"]],
+    ["الكتالوج والتصميم", ["products","inventory","offers","appearance"]],
+    ["الطلبات والعملاء", ["orders","users","coupons","returns","tickets"]],
+    ["الإدارة والرقابة", ["settings","agents","audit"]]
+  ];
+  window.addEventListener("luqta:navigate", event => {
+    const requested = event.detail?.tab;
+    if (!tabs.some(([id]) => id === requested) || tab === requested) return;
+    tab = requested;
+    draw();
+  });
   let status;
   let body;
   let lastAgentToken = "";
@@ -81,19 +98,56 @@
         const result = await client.login(value(f, "url"), value(f, "email"), value(f, "password"));
         f.reset(); draw(); return `متصل بالخادم ${result.origin} بحساب ${result.user.name || result.user.email}.`;
       });
-      field(login, "عنوان خادم لُقطة", "url", "url", true, "https://");
+      const hostInput = field(login, "عنوان خادم لُقطة", "url", "url", true, "https://");
       field(login, "بريد المدير", "email", "email", true);
       field(login, "كلمة المرور", "password", "password", true);
-      text(root, "الرابط الحالي هو لوحة عرض عامة على GitHub Pages؛ يجب نشر خادم لُقطة مستقل بعنوان HTTPS وإضافة هذا المنشأ إلى CORS. لن تُعرض بيانات تجريبية على أنها حية.", "p", "small muted");
-      status = node("p", "بانتظار الاتصال.", "small"); root.append(status); return;
+      text(root, "الاتصال التجريبي لا يصبح خدمة إنتاجية إلا بعد الحصول على عنوان HTTPS مُسمّى ودائم ونسخ احتياطي مؤكد. لم تُنشر بيانات تسجيل الدخول.", "p", "small muted");
+      const endpointHealth = node("p", "جارٍ التحقق من إعداد الاتصال التجريبي...", "small muted");
+      root.append(endpointHealth);
+      status = node("p", "بانتظار تسجيل دخول مدير المتجر.", "small"); root.append(status);
+      // Runtime endpoint is public configuration only, not a secret or authentication token.
+      void fetch("./luqta-runtime.json", { cache:"no-store", credentials:"omit", redirect:"error" })
+        .then(async res => { if (!res.ok) throw Error("لا يوجد إعداد استضافة تجريبية."); return res.json(); })
+        .then(async config => {
+          const origin = window.LuqtaAPI.validateOrigin(config.origin);
+          if (!root.contains(hostInput)) return;
+          hostInput.value = origin;
+          endpointHealth.textContent = "فحص اتصال تجريبي ("+String(config.mode || "غير معروف")+")...";
+          const check = await fetch(origin + "/api/health", { credentials:"omit",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(8500) });
+          const info = await check.json();
+          if (!check.ok || info?.service !== "luqta-commerce" || info?.ok !== true) throw Error("لا يعمل خادم لُقطة على عنوان HTTPS التجريبي.");
+          if (root.contains(endpointHealth)) endpointHealth.textContent = "خادم لُقطة التجريبي متاح الآن عبر HTTPS. يلزم تسجيل دخول المدير؛ عنوان النفق مؤقت وقد يتغير.";
+        }).catch(() => { if (root.contains(endpointHealth)) endpointHealth.textContent = "الرابط التجريبي غير متاح أو يحتاج تحديثًا. تأكد من تشغيل الخادم والنفق أو أدخل عنوان HTTPS آخر."; });
+      return;
     }
     const header = node("div", undefined, "toolbar");
     header.append(node("span", `متصل: ${client.origin} · ${client.user.name || client.user.email}`, "pill ok"));
     header.append(button("تحديث", () => void run(() => load(), false)));
     header.append(button("تسجيل الخروج", () => void run(async () => { await client.logout(); lastAgentToken = ""; draw(); return "انتهت الجلسة."; }, false)));
     root.append(header);
-    const nav = node("div", undefined, "toolbar"); nav.style.marginTop = ".7rem";
-    tabs.forEach(([id, label]) => nav.append(button(label, () => { tab = id; void run(() => load(), false); }, id === tab ? "tiny primary" : "tiny")));
+    const nav = node("div", undefined, "luqta-nav-categories");
+    nav.style.display = "grid"; nav.style.gridTemplateColumns = "repeat(auto-fit,minmax(min(100%,210px),1fr))";
+    nav.style.gap = ".55rem"; nav.style.marginTop = ".9rem";
+    TAB_GROUPS.forEach(([title, names]) => {
+      const subgroup = node("details", undefined, "luqta-subgroup");
+      subgroup.open = names.includes(tab);
+      subgroup.style.border = "1px solid var(--line)"; subgroup.style.borderRadius = "10px";
+      subgroup.style.background = "var(--surface-2)"; subgroup.style.padding = ".55rem";
+      const heading = node("summary", title + " · " + names.length);
+      heading.style.fontWeight = "700"; heading.style.cursor = "pointer"; heading.style.fontSize = ".82rem";
+      heading.style.marginBottom = ".4rem"; subgroup.append(heading);
+      const links = node("div", undefined, "toolbar"); links.style.gap = ".35rem";
+      for (const id of names) {
+        const label = tabs.find(([tabId]) => tabId === id)?.[1] || id;
+        links.append(button(label, () => {
+          tab = id;
+          const target = "#luqta/" + id;
+          if (location.hash !== target) location.hash = target;
+          else draw();
+        }, id === tab ? "tiny primary" : "tiny"));
+      }
+      subgroup.append(links); nav.append(subgroup);
+    });
     root.append(nav);
     status = node("p", "", "small"); root.append(status);
     body = node("div"); body.style.display = "grid"; body.style.gap = ".65rem"; root.append(body);
