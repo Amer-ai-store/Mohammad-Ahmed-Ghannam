@@ -362,7 +362,7 @@ function OffersPanel() {
       {!resource.data.offers.length ? <Details>لا توجد عروض بعد.</Details> : null}
     </AdminCard>
     <AdminCard title="استيراد شاشة العروض">
-      <Details>ألصق JSON بصيغة [{"id":"SKU_1","price":1.25,"oldPrice":1.75}] ثم افحص العدد قبل الاعتماد.</Details>
+      <Details>{'ألصق JSON بصيغة [{"id":"SKU_1","price":1.25,"oldPrice":1.75}] ثم افحص العدد قبل الاعتماد.'}</Details>
       <AdminField label="بيانات العروض JSON" value={source} onChangeText={s => { setSource(s); setPreview(null); }} multiline />
       <Button title="معاينة الملف" secondary onPress={review} />
       {preview ? <><Details>تمت المعاينة محليًا: {preview.length} عرضًا. تحقق من الأرقام قبل التنفيذ.</Details>
