@@ -25,7 +25,7 @@ const statuses = [
 const categories = [{ value: "electronics", label: "إلكترونيات" }, { value: "home", label: "المنزل" }, { value: "fashion", label: "الأزياء" }, { value: "care", label: "العناية" }];
 const roles = [{ value: "customer", label: "عميل" }, { value: "driver", label: "سائق" }, { value: "admin", label: "مدير" }] as const;
 const tabs = [
-  { id: "overview", label: "نظرة عامة" }, { id: "products", label: "الأصناف" }, { id: "inventory", label: "المخزون والاستيراد" },
+  { id: "overview", label: "نظرة عامة" }, { id: "products", label: "الأصناف" }, { id: "inventory", label: "المخزون والاستيراد" }, { id: "offers", label: "استيراد العروض" }, { id: "appearance", label: "تصميم المتجر" },
   { id: "orders", label: "الطلبات والتوصيل" }, { id: "returns", label: "المرتجعات" }, { id: "coupons", label: "العروض" },
   { id: "users", label: "المستخدمون والمحفظة" }, { id: "tickets", label: "دعم العملاء" }, { id: "agents", label: "قناة الوكلاء" }, { id: "settings", label: "الإعدادات" }, { id: "audit", label: "سجل العمليات" },
 ];
@@ -76,7 +76,7 @@ function AdminDashboard() {
       </Pressable>)}
     </ScrollView>
     <View style={{ gap: 16, paddingVertical: 14 }} key={tab}>
-      {tab === "overview" ? <OverviewPanel /> : tab === "products" ? <ProductsPanel /> : tab === "inventory" ? <InventoryPanel /> : tab === "orders" ? <OrdersPanel /> : tab === "returns" ? <ReturnsPanel /> : tab === "coupons" ? <CouponsPanel /> : tab === "users" ? <UsersPanel /> : tab === "tickets" ? <TicketsPanel /> : tab === "agents" ? <AgentsPanel /> : tab === "settings" ? <SettingsPanel /> : <AuditPanel />}
+      {tab === "overview" ? <OverviewPanel /> : tab === "products" ? <ProductsPanel /> : tab === "inventory" ? <InventoryPanel /> : tab === "offers" ? <OffersPanel /> : tab === "appearance" ? <AppearancePanel /> : tab === "orders" ? <OrdersPanel /> : tab === "returns" ? <ReturnsPanel /> : tab === "coupons" ? <CouponsPanel /> : tab === "users" ? <UsersPanel /> : tab === "tickets" ? <TicketsPanel /> : tab === "agents" ? <AgentsPanel /> : tab === "settings" ? <SettingsPanel /> : <AuditPanel />}
     </View>
   </Shell>;
 }
@@ -340,6 +340,56 @@ function AgentsPanel() {
       {jobs.data.jobs.map(job => <View key={job.id} style={{ gap: 7, paddingVertical: 12 }}><Txt weight="bold">{job.title}</Txt><Details>الحالة: {job.status} · {job.type}</Details><Details>{job.description}</Details>{job.result ? <Details>النتيجة: {job.result}</Details> : null}{job.testEvidence ? <Details>دليل الاختبار: {job.testEvidence}</Details> : null}</View>)}
     </AdminCard>
   </>;
+}
+
+
+function OffersPanel() {
+  const resource = useAdminData<{ offers: { id: string; name: string; price: number; oldPrice: number; stock: number }[] }>("/admin/offers", { offers: [] });
+  const action = useAdminAction();
+  const [source, setSource] = useState("");
+  const [preview, setPreview] = useState<{ id: string; price: number; oldPrice: number }[] | null>(null);
+  const [failure, setFailure] = useState("");
+  const review = () => {
+    try {
+      const list: unknown = JSON.parse(source);
+      if (!Array.isArray(list) || !list.length || list.length > 1000 || !list.every(i => i && typeof i.id === "string" && typeof i.price === "number" && typeof i.oldPrice === "number" && i.price > 0 && i.oldPrice >= i.price)) throw Error("قائمة العروض يجب أن تتضمن id وprice وoldPrice.");
+      setPreview(list as { id: string; price: number; oldPrice: number }[]); setFailure("");
+    } catch(e) { setFailure(errorText(e)); setPreview(null); }
+  };
+  return <><AdminRefresh busy={resource.loading} onPress={() => void resource.reload()} /><AdminNotice error={resource.error || action.error || failure} message={action.message} />
+    <AdminCard title="العروض النشطة"><Details>كل عرض محفوظ في قاعدة المتجر، وليس في القيود المحاسبية الأصلية.</Details>
+      {resource.data.offers.map(p => <View key={p.id} style={{ gap: 5, paddingVertical: 9 }}><Txt weight="bold">{p.name}</Txt><Details>{p.id} · قبل: {money(p.oldPrice)} · الآن: {money(p.price)} · المتاح: {p.stock}</Details></View>)}
+      {!resource.data.offers.length ? <Details>لا توجد عروض بعد.</Details> : null}
+    </AdminCard>
+    <AdminCard title="استيراد شاشة العروض">
+      <Details>{'ألصق JSON بصيغة [{"id":"SKU_1","price":1.25,"oldPrice":1.75}] ثم افحص العدد قبل الاعتماد.'}</Details>
+      <AdminField label="بيانات العروض JSON" value={source} onChangeText={s => { setSource(s); setPreview(null); }} multiline />
+      <Button title="معاينة الملف" secondary onPress={review} />
+      {preview ? <><Details>تمت المعاينة محليًا: {preview.length} عرضًا. تحقق من الأرقام قبل التنفيذ.</Details>
+      <Button title="اعتماد أسعار العروض في المتجر" busy={action.busy} onPress={() => void action.run(async () => { await api.post("/admin/offers/import", { items: preview, confirm: true }); setPreview(null); setSource(""); }, "حُفظت العروض في قاعدة المتجر.", resource.reload)} /></> : null}
+    </AdminCard></>;
+}
+function AppearancePanel() {
+  const resource = useAdminData<{ settings: { storefront?: { accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: boolean } } | null }>("/admin/settings", { settings: null });
+  const action = useAdminAction();
+  const design = resource.data.settings?.storefront || {};
+  const [edits, setEdits] = useState<{ accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: string }>({});
+  const color = edits.accentColor ?? design.accentColor ?? "#B94721";
+  const title = edits.heroTitle ?? design.heroTitle ?? "لُقطات تستحق أن تكون لك";
+  const subtitle = edits.heroSubtitle ?? design.heroSubtitle ?? "اكتشف منتجات تُشبه ذوقك";
+  const assistant = edits.showAssistant ?? String(design.showAssistant !== false);
+  return <><AdminRefresh busy={resource.loading} onPress={() => void resource.reload()} /><AdminNotice error={resource.error || action.error} message={action.message} />
+    <AdminCard title="إدارة التصميم من نفس التطبيق">
+      <AdminField label="لون الهوية بصيغة HEX" value={color} onChangeText={accentColor => setEdits(x => ({...x,accentColor}))} placeholder="#B94721" />
+      <AdminField label="عنوان الرئيسية" value={title} onChangeText={heroTitle => setEdits(x => ({...x,heroTitle}))} />
+      <AdminField label="وصف الرئيسية" multiline value={subtitle} onChangeText={heroSubtitle => setEdits(x => ({...x,heroSubtitle}))} />
+      <AdminChoices label="إظهار قسم المساعد" value={assistant} choices={[{value:"true",label:"إظهار"},{value:"false",label:"إخفاء"}]} onChange={showAssistant => setEdits(x => ({...x,showAssistant}))} />
+      <Button title="حفظ تصميم المتجر" busy={action.busy} disabled={!resource.data.settings} onPress={() => void action.run(async () => {
+        await api.patch("/admin/settings", { storefront: { accentColor: color.trim(), heroTitle: title.trim(), heroSubtitle: subtitle.trim(), showAssistant: assistant === "true" } });
+        setEdits({});
+      }, "حُفظ تصميم المتجر؛ حدّث الكتالوج لرؤية التغييرات.", resource.reload)} />
+      <Details>تعديل ترتيب الشاشات والمكوّنات البرمجية يتطلب تحديث شفرة React Native وإصدار التطبيق بعد اختبارها؛ هذه الشاشة تعدل إعدادات العرض فقط.</Details>
+    </AdminCard></>;
 }
 
 function SettingsPanel() {

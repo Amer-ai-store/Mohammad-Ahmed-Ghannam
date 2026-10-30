@@ -46,12 +46,13 @@ function normalizeProduct(value:unknown):Product|null {
 }
 export function StoreProvider({children}:{children:React.ReactNode}) {
   const {user,configured,baseUrl}=useSession();
-  const {colors}=useTheme();
+  const {colors,setAccentColor}=useTheme();
   const [state,setState]=useState<State>(initial);
   const [hydrated,setHydrated]=useState(false);
   const [toast,notify]=useState('');
   const [products,setProducts]=useState<Product[]>(sampleProducts);
   const [settings,setSettings]=useState(defaults);
+  useEffect(()=>{setAccentColor(settings.storefront?.accentColor||null);},[settings.storefront?.accentColor,setAccentColor]);
   const [orders,setOrders]=useState<Order[]>([]);
   const [catalogStatus,setCatalogStatus]=useState<Store['catalogStatus']>('sample');
   const [catalogError,setCatalogError]=useState('');
