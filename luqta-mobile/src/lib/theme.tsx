@@ -53,6 +53,7 @@ type ThemeValue = {
   hydrated: boolean;
   storageError: boolean;
   setMode: (mode: ThemeMode) => void;
+  setAccentColor: (color: string | null) => void;
 };
 const Context = createContext<ThemeValue>({
   colors: theme,
@@ -61,12 +62,14 @@ const Context = createContext<ThemeValue>({
   hydrated: false,
   storageError: false,
   setMode: () => {},
+  setAccentColor: () => {},
 });
 const STORAGE_KEY = "luqta-appearance-v1";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemMode = useColorScheme();
   const [mode, setPreference] = useState<ThemeMode>("system");
+  const [accentColor, setAccentColor] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [storageError, setStorageError] = useState(false);
   useEffect(() => {
@@ -93,7 +96,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .catch(() => setStorageError(true));
   }, [mode, hydrated]);
   const isDark = mode === "dark" || (mode === "system" && systemMode === "dark");
-  const colors = isDark ? darkTheme : theme;
+  const colors = useMemo<Palette>(() => ({ ...(isDark ? darkTheme : theme), ...(accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? { orange: accentColor } : {}) }), [isDark, accentColor]);
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
@@ -107,6 +110,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       isDark,
       hydrated,
       storageError,
+      setAccentColor,
       setMode: (next) => {
         if (next === "light" || next === "dark" || next === "system")
           setPreference(next);
