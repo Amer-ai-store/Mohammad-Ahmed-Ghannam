@@ -4,6 +4,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="./command-home.css">
 <style>
 /* Layout: an operations console — fixed right sidebar of sections (chips on phones), one section visible at a time, summary first then detail. Dark-first like the ChatGPT original. */
 :root{
@@ -456,15 +457,89 @@ nav.side{gap:.5rem}
         <p class="small muted">سجل AAS التشغيلي مستقل عن سجلات جوافة والمتجر السابقة؛ لا تُنقل بيانات مالية أو أسرار إلى الموقع العام. <a href="./aas/index.html#overview" target="_blank" rel="noopener">فتح مساحة AAS بكامل الشاشة</a></p>
       </section>
 
-      <section class="view" data-view="home" aria-labelledby="h-home">
-        <div class="hero">
-          <div><span class="small muted">AMER AI STORE · AAS-CC</span><h2 id="h-home">مركز القيادة والتحكم</h2><p class="muted small">حالة المشروع والمتجر في شاشة واحدة: المهام، بوابات التنفيذ، الوكلاء، وتنبيهات المتجر.</p></div>
-          <div class="toolbar"><button class="primary" type="button" data-action="new-task">مهمة جديدة</button><a class="btn" href="#advisor">اسأل المستشار</a></div>
-        </div>
-        <section class="panel" aria-label="مجموعات لوحة القيادة"><div class="panel-head"><div><span class="eyebrow">CENTRAL COMMAND CENTER</span><h2>المجموعات الرئيسية</h2></div><span class="pill">اختَر مجال العمل</span></div>
-          <p class="small muted">جميع الشاشات موزّعة حسب مجالات العمل؛ عند فتح مجموعة تظهر وظائفها التفصيلية دون حذف أي شاشة.</p>
-          <div id="nav-group-cards" class="nav-landing-grid"></div>
+      <section class="view command-home" data-view="home" aria-labelledby="h-home" data-density="comfortable" data-edit-layout="false">
+        <header class="command-hero">
+          <div>
+            <div class="command-kicker"><span>JAWAFA · AMER AI STORE</span><span aria-hidden="true">/</span><span>UNIFIED COMMAND CENTER</span></div>
+            <h1 id="h-home">لوحة القيادة المركزية الموحّدة</h1>
+            <p class="command-lede">شاشة واحدة لإدارة المشروع، متجر لُقطة، جسر بيانات جوافة، بيئة تطوير التطبيق، المراقبة والتقارير. يظهر تنفيذ كل وظيفة وحالتها الفعلية داخل قسمها؛ ولا نعتمد علامة إنجاز دون اختبار.</p>
+          </div>
+          <div class="command-hero-actions">
+            <a class="btn primary" href="#luqta/workspace">فتح بيئة عمل التطبيق</a>
+            <a class="btn" href="#jawafa-monitor">مراقبة الخادم والمزامنة</a>
+            <button type="button" data-action="new-task">إنشاء مهمة تنفيذية</button>
+          </div>
+        </header>
+        <div class="command-section-heading"><h2>مناطق العمل الرئيسية</h2><p>اختر الوظيفة، أو خصص ترتيب البطاقات أدناه.</p></div>
+        <section id="command-zones" class="command-zones" aria-label="مناطق العمل المقسّمة">
+          <article class="command-zone" data-zone="workbench">
+            <div class="command-zone-head"><span class="command-zone-symbol">⌘</span><span class="command-zone-label">بيئة التطبيق</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة بيئة التطبيق">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة بيئة التطبيق">↓</button></span></div>
+            <h3>استوديو تطوير لُقطة</h3><p>تعديل المظهر والإعدادات، إدارة طلبات تطوير الشاشات، ومتابعة حالة الجسر التشغيلي من نفس الجلسة.</p>
+            <div class="command-zone-links"><a href="#luqta/workspace">فتح الاستوديو</a><a href="#luqta/appearance">تعديل التصميم</a><a href="#luqta/agents">مهام المطورين</a></div>
+          </article>
+          <article class="command-zone" data-zone="commerce">
+            <div class="command-zone-head"><span class="command-zone-symbol">▤</span><span class="command-zone-label">التجارة</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة المتجر">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة المتجر">↓</button></span></div>
+            <h3>المتجر والطلبات</h3><p>إدارة الكتالوج والطلبات والعملاء والتوصيل، من خلال API محمي يتطلب تسجيل دخول المدير.</p>
+            <div class="command-zone-links"><a href="#luqta/products">الأصناف</a><a href="#luqta/orders">الطلبات</a><a href="#luqta/users">العملاء</a></div>
+          </article>
+          <article class="command-zone" data-zone="inventory">
+            <div class="command-zone-head"><span class="command-zone-symbol">≋</span><span class="command-zone-label">البيانات</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة المخزون">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة المخزون">↓</button></span></div>
+            <h3>مخزون جوافة والعروض</h3><p>فحص مصدر جوافة بالقراءة فقط، معاينة الأصناف والعائلات، ثم اعتماد العروض والكميات بعد مطابقة المصدر.</p>
+            <div class="command-zone-links"><a href="#luqta/inventory">المخزون</a><a href="#luqta/offers">العروض</a><a href="#jawafa-receiving">الاستلام</a></div>
+          </article>
+          <article class="command-zone" data-zone="investigation">
+            <div class="command-zone-head"><span class="command-zone-symbol">◎</span><span class="command-zone-label">التحقيق المالي</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة التحقيق">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة التحقيق">↓</button></span></div>
+            <h3>جوافة والأدلة المالية</h3><p>سجلات التحقيق والشيكات والتسويات والأدلة، مع الفصل الكامل بين القراءة والمعلومات المالية الحساسة.</p>
+            <div class="command-zone-links"><a href="#jawafa">القيادة المالية</a><a href="#jawafa-checks">الشيكات</a><a href="#jawafa-trustsoft">TrustSoft</a></div>
+          </article>
+          <article class="command-zone" data-zone="operations">
+            <div class="command-zone-head"><span class="command-zone-symbol">⟳</span><span class="command-zone-label">التشغيل والأمان</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة التشغيل">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة التشغيل">↓</button></span></div>
+            <h3>الخوادم والتصدير والنسخ</h3><p>مراقبة الاتصالات ومراحل التصدير والنسخ الاحتياطية والاستعادة، دون اعتبار حالة تاريخية اتصالًا حيًا.</p>
+            <div class="command-zone-links"><a href="#jawafa-monitor">المراقبة</a><a href="#jawafa-export">التصدير</a><a href="#jawafa-backups">الاستعادة</a></div>
+          </article>
+          <article class="command-zone" data-zone="development">
+            <div class="command-zone-head"><span class="command-zone-symbol">◈</span><span class="command-zone-label">التطوير والتحكم</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة التطوير">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة التطوير">↓</button></span></div>
+            <h3>الكود والوكلاء والتقارير</h3><p>إدارة مراحل العمل وفحوص الجودة وطلبات التطوير ومراجعة تغييرات GitHub قبل نشر التطبيق.</p>
+            <div class="command-zone-links"><a href="#aas-repository">المستودع</a><a href="#agents">الوكلاء</a><a href="#tasks">المهام</a></div>
+          </article>
         </section>
+        <section class="command-bridge" aria-labelledby="command-bridge-title">
+          <div>
+            <div class="command-section-heading"><h2 id="command-bridge-title">جسر العمل بين القيادة والتطبيق</h2></div>
+            <p class="small muted">يبقى اتصال المدير متاحًا عبر أقسام اللوحة خلال الجلسة نفسها، مع فحص صحة API من دون تخزين كلمة المرور أو مفتاح الجلسة على الموقع العام.</p>
+            <div class="bridge-chain">
+              <div class="bridge-link"><div class="bridge-endpoint"><strong>لوحة القيادة</strong><small>GitHub Pages · الواجهة</small></div><span class="bridge-arrow" aria-hidden="true">←</span></div>
+              <div class="bridge-link"><div class="bridge-endpoint"><strong>بيئة لُقطة</strong><small>مدير المتجر · API خاص</small></div><span class="bridge-arrow" aria-hidden="true">←</span></div>
+              <div class="bridge-link"><div class="bridge-endpoint"><strong>جسر جوافة</strong><small>TrustSoft · قراءة فقط</small></div></div>
+            </div>
+          </div>
+          <div class="bridge-status" role="status" aria-live="polite">
+            <span id="home-luqta-bridge-state" class="bridge-badge" data-state="disconnected">بحاجة إلى اتصال المدير</span>
+            <strong>حالة الربط التشغيلي</strong>
+            <p id="home-luqta-bridge-detail" class="small muted">لم تُثبت جلسة خادم المتجر من هذا المتصفح. لا يعني ظهور اللوحة اتصال قاعدة البيانات.</p>
+            <div class="command-workspace-actions">
+              <a href="#luqta/workspace" class="btn primary">إدارة بيئة التطبيق</a>
+              <a href="#luqta/inventory" class="btn">اختبار جسر جوافة</a>
+            </div>
+          </div>
+        </section>
+        <section class="panel" aria-label="خيارات ترتيب لوحة القيادة">
+          <div class="panel-head"><div><span class="eyebrow">WORKSPACE LAYOUT</span><h2>تخصيص الشاشة الرئيسية</h2></div><span class="small muted">التفضيلات على هذا المتصفح فقط</span></div>
+          <div class="command-layout-tools">
+            <label for="home-density">كثافة العرض
+              <select id="home-density"><option value="comfortable">تفصيلي</option><option value="compact">مختصر</option></select>
+            </label>
+            <button type="button" id="home-layout-edit" aria-pressed="false">إعادة ترتيب الأقسام</button>
+            <button type="button" id="home-layout-reset">استعادة الترتيب الأساسي</button>
+            <p id="home-layout-message" role="status" class="small muted">تعديل ترتيب البطاقات لا يغير البيانات أو شيفرة التطبيق.</p>
+          </div>
+        </section>
+        <details class="panel command-secondary-summary" aria-label="جميع مجموعات صفحات النظام">
+          <summary>فهرس كامل المجموعات والشاشات</summary>
+          <p class="small muted">اختصارات جميع الأقسام محفوظة كما كانت؛ لم تُحذف أي وظيفة من القائمة الجانبية.</p>
+          <div id="nav-group-cards" class="nav-landing-grid"></div>
+        </details>
+        <div class="command-section-heading"><h2>مؤشرات وأعمال تحتاج متابعة</h2><p>هذه المؤشرات من مصدر لوحة العمل، وليست تأكيدًا مستقلًا للاتصال المالي.</p></div>
         <div class="kpis" id="home-kpis"></div>
         <div class="grid2">
           <div class="panel"><div class="panel-head"><h3>مهام ذات أولوية</h3><a class="small" href="#tasks">كل المهام</a></div><div class="list" id="home-priority"></div></div>
@@ -769,7 +844,7 @@ nav.side{gap:.5rem}
     ["المتجر | لُقطة والمبيعات", [
       ["store","نظرة عامة على المتجر"],["luqta","لُقطة · الملخص"],
       ["luqta/products","الأصناف والعائلات"],["luqta/inventory","المخزون الفعلي والربط"],
-      ["luqta/offers","العروض والأسعار"],["luqta/appearance","التصميم والشاشات"],
+      ["luqta/offers","العروض والأسعار"],["luqta/appearance","التصميم والشاشات"],["luqta/workspace","استوديو بيئة التطبيق"],
       ["luqta/orders","الطلبات والتوصيل"],["luqta/users","العملاء والمحفظة"],
       ["luqta/coupons","الخصومات والكوبونات"],["luqta/returns","المرتجعات"],
       ["luqta/tickets","دعم العملاء"],["luqta/agents","وكلاء المتجر"],
@@ -2184,5 +2259,6 @@ reload();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()});
 })();
 </script>
+<script src="command-home.js" defer></script>
 <script src="luqta-api.js" defer></script>
 <script src="luqta-integration.js" defer></script>
