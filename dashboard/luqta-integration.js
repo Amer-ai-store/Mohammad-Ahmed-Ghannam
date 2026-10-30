@@ -6,7 +6,7 @@
   const client = window.LuqtaAPI.createClient();
   const tabs = [
     ["overview", "الملخص"], ["products", "الأصناف"], ["inventory", "المخزون"],
-    ["offers", "العروض"], ["appearance", "التصميم والشاشات"],
+    ["offers", "العروض"], ["appearance", "التصميم والشاشات"], ["workspace", "استوديو بيئة التطبيق"],
     ["orders", "الطلبات والتتبع"], ["users", "العملاء والمحفظة"],
     ["coupons", "الخصومات"], ["returns", "المرتجعات"], ["tickets", "الدعم"],
     ["settings", "الإعدادات"], ["agents", "الوكلاء"], ["audit", "السجل"],
@@ -19,7 +19,7 @@
   let tab = deepLinkTab();
   const TAB_GROUPS = [
     ["نظرة عامة", ["overview"]],
-    ["الكتالوج والتصميم", ["products","inventory","offers","appearance"]],
+    ["الكتالوج والتصميم", ["products","inventory","offers","appearance","workspace"]],
     ["الطلبات والعملاء", ["orders","users","coupons","returns","tickets"]],
     ["الإدارة والرقابة", ["settings","agents","audit"]]
   ];
@@ -32,6 +32,30 @@
   let status;
   let body;
   let lastAgentToken = "";
+  let bridgeHealthVerified = false;
+  let jawafaSourceVerified = false;
+  let bridgeCheckAt = 0;
+  const reportBridge = (reason) => {
+    window.dispatchEvent(new CustomEvent("luqta:bridge-state", {detail:{
+      connected: client.connected, healthVerified: client.connected && bridgeHealthVerified,
+      jawafaVerified: client.connected && jawafaSourceVerified,
+      checkedAt: bridgeCheckAt || null, reason: reason || undefined
+    }}));
+  };
+  async function checkLiveBridge() {
+    if (!client.connected) { bridgeHealthVerified = false; jawafaSourceVerified = false; reportBridge(); return false; }
+    try {
+      const result = await client.request("GET", "/health");
+      if (result?.ok !== true || result.service !== "luqta-commerce") throw Error("لم يجتز خادم لُقطة فحص الصحة");
+      bridgeHealthVerified = true; bridgeCheckAt = Date.now();
+      reportBridge();
+      return true;
+    } catch (error) {
+      bridgeHealthVerified = false; jawafaSourceVerified = false;
+      reportBridge("خادم المتجر لم يجتز فحص الاتصال (" + String(error.message || "تعذر الطلب").slice(0,90) + ").");
+      return false;
+    }
+  }
   const node = (tag, value, className) => {
     const result = document.createElement(tag);
     if (value !== undefined && value !== null) result.textContent = String(value);
@@ -82,21 +106,23 @@
     message("جارٍ تنفيذ الطلب...");
     try {
       const result = await work();
-      if (!client.connected) { draw(); return; }
+      if (!client.connected) { bridgeHealthVerified = false; jawafaSourceVerified = false; draw(); return; }
       message(typeof result === "string" ? result : "اكتملت العملية وتأكد رد الخادم.");
       if (refresh) await load();
     } catch (error) {
-      if (!client.connected) draw();
+      if (!client.connected) { bridgeHealthVerified = false; jawafaSourceVerified = false; draw(); }
       message(error.message || "تعذر تنفيذ العملية.", true);
     }
   }
   function draw() {
     root.replaceChildren();
     if (!client.connected) {
+      reportBridge();
       text(root, "يرتبط هذا القسم بخادم لُقطة فقط بعد إدخال عنوان HTTPS وتسجيل دخول مدير المتجر. لا تحفظ الصفحة كلمة المرور أو رمز الجلسة في المتصفح.");
       const login = form(root, "اتصال المدير", "دخول وفحص الاتصال", async (f) => {
         const result = await client.login(value(f, "url"), value(f, "email"), value(f, "password"));
-        f.reset(); draw(); return `متصل بالخادم ${result.origin} بحساب ${result.user.name || result.user.email}.`;
+        bridgeHealthVerified = true; bridgeCheckAt = Date.now(); jawafaSourceVerified = false;
+        reportBridge(); f.reset(); draw(); return `متصل بالخادم ${result.origin} بحساب ${result.user.name || result.user.email}.`;
       });
       const hostInput = field(login, "عنوان خادم لُقطة", "url", "url", true, "https://");
       field(login, "بريد المدير", "email", "email", true);
@@ -122,8 +148,9 @@
     }
     const header = node("div", undefined, "toolbar");
     header.append(node("span", `متصل: ${client.origin} · ${client.user.name || client.user.email}`, "pill ok"));
-    header.append(button("تحديث", () => void run(() => load(), false)));
-    header.append(button("تسجيل الخروج", () => void run(async () => { await client.logout(); lastAgentToken = ""; draw(); return "انتهت الجلسة."; }, false)));
+    reportBridge();
+    header.append(button("تحديث", () => void run(async () => { await checkLiveBridge(); await load(); }, false)));
+    header.append(button("تسجيل الخروج", () => void run(async () => { await client.logout(); bridgeHealthVerified = false; jawafaSourceVerified = false; lastAgentToken = ""; draw(); return "انتهت الجلسة."; }, false)));
     root.append(header);
     const nav = node("div", undefined, "luqta-nav-categories");
     nav.style.display = "grid"; nav.style.gridTemplateColumns = "repeat(auto-fit,minmax(min(100%,210px),1fr))";
@@ -161,6 +188,9 @@
       result = { ...undo, ...connector };
     } else if (current === "appearance") {
       result = await client.request("GET", "/admin/settings");
+    } else if (current === "workspace") {
+      const [settings, jobs] = await Promise.all([client.request("GET", "/admin/settings"),client.request("GET", "/admin/agent-jobs")]);
+      result = { ...settings, ...jobs };
     } else if (current === "agents") {
       const [keys, jobs] = await Promise.all([client.request("GET", "/admin/agent-keys"), client.request("GET", "/admin/agent-jobs")]);
       result = { ...keys, ...jobs };
@@ -220,6 +250,8 @@
     const listing = node("pre", "", "small"); listing.style.whiteSpace = "pre-wrap"; listing.style.maxHeight = "320px"; listing.style.overflow = "auto";
     jawafaPanel.append(button("فحص اتصال Jawafa_DB", () => void run(async () => {
       const result = await client.request("GET", "/admin/jawafa/source");
+      jawafaSourceVerified = result.connected === true && result.mode === "FORENSIC-READ-ONLY";
+      reportBridge();
       statusText.textContent = `الاتصال: ${result.connected ? "نشط" : "متوقف"} · ${result.database} · ${result.mode} · جداول: ${result.tableCount} · خريطة الكمية: ${result.quantityMappingVerified ? "معتمدة" : "تحتاج مطابقة"}`;
       return "تأكد اتصال القراءة من خادم المتجر إلى قاعدة جوافة.";
     }, false), "primary"));
@@ -303,6 +335,86 @@
     const label = node("label", "إظهار قسم المساعد في الرئيسية");
     const toggle = node("input"); toggle.type = "checkbox"; toggle.name = "showAssistant"; toggle.checked = design.showAssistant !== false; label.prepend(toggle); editor.append(label);
     text(body, "التعديلات المعتمدة هنا: الهوية البصرية والنصوص وإظهار المساعد. تغيير بنية الشاشات أو إضافة مكونات جديدة يتطلب تعديل الشفرة واختبار إصدار التطبيق؛ لا يوجد محرر شيفرة إنتاجي مفتوح من المتصفح.", "p", "small muted");
+  }
+  function renderWorkspace(data) {
+    const workspace = node("div", undefined, "command-workspace");
+    text(workspace,"بيئة العمل المشتركة — لُقطة","h2");
+    text(workspace,"تستخدم هذه المساحة نفس جلسة المدير ونفس قاعدة المتجر الخاصة؛ لا تُحفظ بيانات الاعتماد في GitHub Pages. الاتصال يبقى ضمن هذه الصفحة فقط ويحتاج إعادة تسجيل دخول عند تحديثها.", "p","small muted");
+    const links = node("div",undefined,"toolbar");
+    for(const [label,href] of [
+      ["إدارة الأصناف","#luqta/products"],["معاينة المخزون","#luqta/inventory"],
+      ["استيراد العروض","#luqta/offers"],["تعديل الشاشات الظاهرية","#luqta/appearance"],
+      ["مهام الوكلاء","#luqta/agents"],["سجل التعديلات","#luqta/audit"]
+    ]){const link = node("a",label,"btn");link.href=href;links.append(link)}
+    workspace.append(links);
+    body.append(workspace);
+    const bridge = node("section",undefined,"panel");
+    bridge.append(node("h3","التحقق من الجسر المتصل ببيئة العمل"));
+    const display = node("p",bridgeHealthVerified ? "جلسة الإدارة متصلة بخادم المتجر." : "يلزم التحقق من الخادم.","small muted");
+    bridge.append(display);
+    bridge.append(button("اختبار اتصال خادم التطبيق",()=>void run(async()=>{
+      const ok = await checkLiveBridge();
+      if(!ok)throw Error("فشل اتصال خادم التطبيق.");
+      display.textContent = "تم فحص /api/health بنجاح. " + new Date(bridgeCheckAt).toLocaleString("ar-JO");
+      return "جسر لوحة التحكم ↔ خادم التطبيق يعمل في الجلسة الحالية.";
+    },false),"primary"));
+    const source = node("p","لم يُفحص مصدر جوافة في هذه الجلسة.","small muted");
+    bridge.append(button("فحص جسر TrustSoft بالقراءة فقط",()=>void run(async()=>{
+      const result = await client.request("GET","/admin/jawafa/source");
+      jawafaSourceVerified = result.connected === true && result.mode === "FORENSIC-READ-ONLY";
+      reportBridge();
+      source.textContent = "جداول المصدر: " + count(result.tableCount) + " · المصدر: "
+        + String(result.database || "—") + " · الكمية الفعلية: "
+        + (result.quantityMappingVerified === true ? "معتمدة" : "غير معتمدة بعد");
+      return "تم اختبار استجابة جسر القراءة دون تعديل بيانات جوافة.";
+    },false)));
+    bridge.append(source);body.append(bridge);
+    const screens = node("section",undefined,"panel");
+    screens.append(node("h3","الملفات والشاشات القابلة للتطوير"));
+    text(screens,"يمكنك تعديل إعدادات العرض أدناه مباشرة؛ تغيير ترتيب الشاشات أو الكود يحتاج طلب تطوير ومراجعة واختبارات وإصدارًا جديدًا.", "p","small muted");
+    const repo = "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/";
+    const screenLinks = [
+      ["الرئيسية","luqta-mobile/src/app/index.tsx"],
+      ["شاشة المدير","luqta-mobile/src/app/admin.tsx"],
+      ["عروض المتجر","luqta-mobile/src/app/offers.tsx"],
+      ["مكوّنات الواجهة","luqta-mobile/src/components"],
+      ["خادم التجارة","luqta-mobile/server/commerce.mjs"]
+    ];
+    const sourceList=node("div",undefined,"command-source-links");
+    sourceList.style.display="flex";sourceList.style.flexWrap="wrap";sourceList.style.gap=".45rem";
+    for(const [name,path] of screenLinks){
+      const link=node("a","كود "+name,"btn");link.href=repo+"tree/main/"+path;link.rel="noopener noreferrer";link.target="_blank";
+      sourceList.append(link);
+    }
+    screens.append(sourceList);body.append(screens);
+    renderAppearance({settings:data.settings || {}});
+    const tasks = form(body,"طلب تعديل شاشة أو إضافة في بيئة التطبيق","تسجيل مهمة التطوير",async formNode=>{
+      const target = value(formNode,"screen");
+      const title = value(formNode,"title");
+      const specification = value(formNode,"description");
+      const acceptance = value(formNode,"acceptance");
+      if(specification.length < 12 || acceptance.length < 10)throw Error("أضف وصف التعديل ومعيار قبول قابل للفحص.");
+      const result = await client.request("POST","/admin/agent-jobs",{
+        title:"تطوير "+target+": "+title,
+        type:"development",
+        description:"الشاشة: "+target+"\nالمطلوب: "+specification+"\nدليل القبول: "+acceptance+"\nشرط: لا تغيير Jawafa_DB ولا نشر إنتاجي دون اختبارات."
+      });
+      if(!result.job?.id)throw Error("لم يُعِد الخادم معرّفًا للمهمة.");
+      formNode.reset();
+      return "حُفظ طلب التطوير في خادم المتجر بالمعرّف: "+result.job.id+". لا يعني ذلك أن الكود تغير أو نُشر.";
+    });
+    select(tasks,"الشاشة/المجال","screen",[
+      ["الرئيسية","الرئيسية"],["الأصناف والمخزون","الأصناف والمخزون"],["العروض","العروض"],
+      ["الدفع والطلبات","الدفع والطلبات"],["لوحة المدير","لوحة المدير"],["شاشة جديدة","شاشة جديدة"]
+    ]);
+    field(tasks,"عنوان التعديل","title","text",true);
+    field(tasks,"وصف التغيير المطلوب","description","textarea",true);
+    field(tasks,"كيف نختبر نجاح التغيير؟","acceptance","textarea",true);
+    text(body,"تُحفظ هذه الطلبات في طابور وكيل التطوير على خادم المتجر. التنفيذ الآلي للكود يحتاج وكيلًا خارجيًا متصلًا بـGitHub وصلاحية مناسبة، ولا نعتبر الطلب نسخة منشورة.", "p","small muted");
+    text(body,"أحدث طلبات التطوير","h3");
+    table(body,["المهمة","الحالة","التوثيق"],(data.jobs||[]).filter(j=>j.type==="development").slice(0,12).map(j=>{
+      const row=node("tr");cell(row,j.title);cell(row,j.status);cell(row,j.testEvidence || "بانتظار دليل تنفيذ");return row;
+    }));
   }
   function renderOrders(data) {
     const drivers = (data.users || []).filter(u => u.role === "driver");
@@ -421,8 +533,11 @@
   function renderAudit(data) {
     table(body, ["الوقت", "الفاعل", "الإجراء", "المعرّف", "تفاصيل"], (data.events || []).map(e => { const tr = node("tr"); cell(tr, e.createdAt); cell(tr, e.actorId); cell(tr, e.action); cell(tr, e.entityId); cell(tr, JSON.stringify(e.detail || {})); return tr; }));
   }
-  const renderers = { overview: renderOverview, products: renderProducts, inventory: renderInventory, offers: renderOffers, appearance: renderAppearance, orders: renderOrders,
+  const renderers = { overview: renderOverview, products: renderProducts, inventory: renderInventory, offers: renderOffers, appearance: renderAppearance, workspace: renderWorkspace, orders: renderOrders,
     users: renderUsers, coupons: renderCoupons, returns: renderReturns, tickets: renderTickets, settings: renderSettings,
     agents: renderAgents, audit: renderAudit };
+  window.setInterval(() => {
+    if (client.connected && document.visibilityState === "visible") void checkLiveBridge();
+  }, 90_000);
   draw();
 })();
