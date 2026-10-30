@@ -33,7 +33,9 @@
     "private_report": "https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view",
     "private_detailed_export_report": "https://drive.google.com/file/d/1sSjwVwdXzXbg_FkCdOHtj_NbNOqAdN3d/view",
     "private_case_json": "https://drive.google.com/file/d/1fqwVkxZ4zYQw6_Nl7OmG01VGDAT-6svS/view",
-    "private_prior_forensics": "https://drive.google.com/file/d/1e7qekefQUbVfXB6otHk1IHRTyT-cvD7l/view"
+    "private_prior_forensics": "https://drive.google.com/file/d/1e7qekefQUbVfXB6otHk1IHRTyT-cvD7l/view",
+    "private_archive_evidence_report": "https://drive.google.com/file/d/1xdNNXn8laZn8o8qy0nQRZAQBb1OIOb-N/view",
+    "private_historical_casebook": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit"
   },
   "cases": [
     {
@@ -70,7 +72,7 @@
       "id": "GL-06",
       "title": "السندات المحذوفة وفك الترحيل",
       "status": "forensic_investigation",
-      "progress": "إضافة 20 سند أستاذ و32 ذمم دون فقد مفتاح قديم في اللقطتين؛ تاريخ قيد ذمم واحد تغير والتحقيق التاريخي مفتوح"
+      "progress": "54 حدثًا جُمعت حسب الوقت والجهاز؛ 13 سندًا لها نوافذ نسخ استعادة مرشحة؛ استرجاع قيمها متوقف على SELECT مصرح به"
     },
     {
       "id": "CASH-07",
@@ -106,7 +108,8 @@
   "safeguards": [
     "No private amounts, personal identities, cheque numbers or bank statements are included in this public snapshot.",
     "The public static dashboard is not an authenticated live SQL source.",
-    "All source accounting data are read-only; historical conflicts remain open until independent evidence."
+    "All source accounting data are read-only; historical conflicts remain open until independent evidence.",
+    "Latest V5 export zipped and uploaded to private Drive, verified by CRC and matching MD5; not a full transactional snapshot."
   ],
   "status": "V5_EXPORT_VERIFIED__FINANCIAL_RECONCILIATION_OPEN__GATE15_NOT_ACCEPTED",
   "latest_export": {
@@ -140,6 +143,60 @@
       "ItemSalesSummary not re-exported",
       "No verified bank debit beyond 2026-08-23",
       "No proof of a fraud, shortage or person from differences"
-    ]
+    ],
+    "archive": {
+      "type": "ZIP_DEFLATED_READ_ONLY_COPY",
+      "archive_member_count": 1026,
+      "original_csv_count": 1023,
+      "compressed_bytes": 104004989,
+      "local_crc_test": "PASS",
+      "drive_content_md5_comparison": "2_OF_2_MATCH_0_DIFFERENCES",
+      "drive_upload_verified": true,
+      "protected_drive_file": "https://drive.google.com/file/d/1z7EkbUAXMEAi-dJIJOpS8WWV3IugEZ4F/view",
+      "full_transactional_snapshot": false
+    },
+    "historical_voucher_gaps_recheck": {
+      "main_with_deletion_events_still_absent": 54,
+      "arp_nine_gaps_still_absent": 9,
+      "recovered_original_values_from_backup": 0,
+      "claim_status": "ABSENCE_CONFIRMED_IN_TWO_EXPORTS__PROVEN_CAUSALITY_OPEN",
+      "recovery_prioritization": {
+        "source": "2026-10-30_F10_F31",
+        "total_deletion_events": 54,
+        "events_by_device": {
+          "PC05": 50,
+          "PC02": 4
+        },
+        "dated_recovery_windows_for_main_gl": 13,
+        "backup_3_candidate_vouchers": 12,
+        "backup_4_candidate_vouchers": 5,
+        "backup_5_candidate_vouchers": 2,
+        "batch_examples": [
+          {
+            "date": "2025-08-16",
+            "count": 12
+          },
+          {
+            "date": "2025-08-17",
+            "count": 11
+          },
+          {
+            "date": "2026-01-25",
+            "count": 6
+          },
+          {
+            "date": "2026-05-03",
+            "count": 6
+          },
+          {
+            "date": "2025-05-06",
+            "count": 4
+          }
+        ],
+        "sql_restore_contents_recovered": false,
+        "blocker": "READ_ONLY_QUERY_ACCESS_TO_RESTORED_DBS",
+        "casebook_document": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit"
+      }
+    }
   }
 }
