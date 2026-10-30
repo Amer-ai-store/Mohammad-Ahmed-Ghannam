@@ -32,7 +32,9 @@ test('Jawafa actual stock, offers, appearance and permissions work only in Luqta
   assert.equal((await request('POST','/admin/inventory/jawafa-preview',snapshot,customer.body.token)).status,403);
   const preview = await request('POST','/admin/inventory/jawafa-preview',snapshot,token);
   assert.equal(preview.status,200,JSON.stringify(preview.body));
-  assert.equal(preview.body.preview[0].stock,27);
+  assert.equal(preview.body.preview[0].actualQuantity,27);
+  assert.equal(preview.body.preview[0].readyQuantity,40);
+  assert.equal(preview.body.preview[0].unpostedSalesQuantity,13);
   assert.equal(preview.body.applied,false);
   assert.equal((await request('GET','/products/jawafa_101')).status,404);
   const bad = JSON.parse(JSON.stringify(snapshot)); bad.items[0].actualQuantity = 40;
