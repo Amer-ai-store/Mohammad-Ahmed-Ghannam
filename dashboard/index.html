@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>مركز قيادة عامر</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -561,6 +562,12 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
         <div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الدور</th><th>الهاتف</th><th>البريد</th><th>الموافقة السلوكية</th><th>النقاط</th></tr></thead><tbody id="s-users"></tbody></table></div>
       </section>
 
+      <!-- LUQTA: authenticated commerce API console, separate from the legacy Firebase mirror. -->
+      <section class="view" data-view="luqta" aria-labelledby="h-luqta" hidden>
+        <div class="view-head"><div><span class="eyebrow">لُقطة · متجر الأردن</span><h1 id="h-luqta">إدارة متجر لُقطة</h1><p>إدارة مباشرة للكتالوج والطلبات والمخزون والمحفظة والمرتجعات والوكلاء عبر خادم لُقطة الموثق.</p></div></div>
+        <div id="luqta-root" class="panel" aria-live="polite"></div>
+      </section>
+
       <!-- DATABASE -->
       <section class="view" data-view="database" aria-labelledby="h-db" hidden>
         <div class="view-head"><div><span class="eyebrow">البيانات</span><h1 id="h-db">قاعدة البيانات</h1><p>مجموعات مركز القيادة المحفوظة، ومجموعات المتجر المستوردة، وجسور قواعد البيانات الخارجية.</p></div>
@@ -671,7 +678,7 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   const NAV = [
     ["القيادة", [["home", "مركز القيادة"], ["tasks", "المهام", "tasks"], ["stages", "مراحل التنفيذ", "stages"], ["workspaces", "مساحات العمل", "workspaces"], ["map", "الهيكل وخريطة العمل"], ["agents", "فريق الوكلاء", "agents"], ["advisor", "المستشار والمحادثة"], ["designer", "وكيل التصميم", "designs"], ["marketing", "وكيل التسويق", "campaigns"], ["features", "مزايا التطبيق"]]],
     ["AAS-CC · القيادة الحية", [["aas-overview", "مركز القيادة الحي"], ["aas-orchestration", "الهيكل والمسارات الحية"], ["aas-workspaces", "مساحات AAS-AW"], ["aas-tasks", "مهام AAS المشتركة"], ["aas-execution", "بوابات التحليل والتنفيذ"], ["aas-agents", "فريق الوكلاء التسعة"], ["aas-approvals", "الموافقات المشتركة"], ["aas-advisor", "المستشار وربط Gemini"], ["aas-database", "جسر قاعدة البيانات"], ["aas-commerce", "لقطات التطبيق المستلمة"], ["aas-repository", "المصدر والبناء الحي"], ["aas-integrations", "الخوادم وواجهات API"], ["aas-activity", "سجل AAS المشترك"], ["aas-settings", "إعدادات AAS والتصدير"]]],
-    ["المتجر", [["store", "لوحة المتجر"]]],
+    ["المتجر", [["store", "لوحة المتجر"], ["luqta", "إدارة لُقطة"]]],
     ["تحقيق جوافة", [["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة اليومية والمهام"],["jawafa-gate15","GATE-15"],["jawafa-backups","النسخ والـ RESTORE"],["jawafa-monitor","مراقبة الخادم"],["jawafa-export","مراقبة التصدير"],["jawafa-accounting","المحاسبة والقيود"],["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","المشتريات والموردون"],["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],["jawafa-reports","التقارير المالية"],["jawafa-errors","الأخطاء والإنجاز"]]],
     ["البنية", [["database", "قاعدة البيانات"], ["servers", "الخوادم والربط", "servers"], ["github", "مستودع GitHub"], ["activity", "سجل النشاط"], ["settings", "الإعدادات"]]]
   ];
@@ -2004,3 +2011,5 @@ reload();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()});
 })();
 </script>
+<script src="luqta-api.js" defer></script>
+<script src="luqta-integration.js" defer></script>
