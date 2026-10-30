@@ -21,6 +21,7 @@ import math
 import os
 from pathlib import Path
 import re
+import secrets
 import socket
 import sqlite3
 import stat
@@ -107,6 +108,7 @@ class Config:
     read_digest: bytes
     collector_digest: bytes
     allowed_origin: str
+    admin_digest: bytes | None = None
 
     @classmethod
     def from_env(cls, environ: dict | None = None) -> 'Config':
@@ -122,7 +124,10 @@ class Config:
         origin = env.get('AMAN_ALLOWED_ORIGIN', DEFAULT_ORIGIN)
         if not isinstance(origin, str) or not _valid_origin(origin):
             raise ValueError('AMAN_ALLOWED_ORIGIN must be one exact HTTPS origin without a path')
-        return cls(hashlib.sha256(read_token.encode('ascii')).digest(), hashlib.sha256(collector_token.encode('ascii')).digest(), origin)
+        admin_token = env.get('AMAN_ADMIN_TOKEN', '')
+        if not isinstance(admin_token, str) or (admin_token and (not TOKEN_PATTERN.fullmatch(admin_token) or admin_token in (read_token, collector_token))):
+            raise ValueError('Admin token must be valid and distinct from read/collector tokens')
+        return cls(hashlib.sha256(read_token.encode('ascii')).digest(), hashlib.sha256(collector_token.encode('ascii')).digest(), origin, hashlib.sha256(admin_token.encode('ascii')).digest() if admin_token else None)
 
     def accepts(self, authorization: str | None, capability: str) -> bool:
         if not isinstance(authorization, str) or len(authorization) > 520:
@@ -131,8 +136,8 @@ class Config:
         if not match:
             return False
         supplied = hashlib.sha256(match[1].encode('ascii')).digest()
-        expected = self.read_digest if capability == 'read' else self.collector_digest
-        return hmac.compare_digest(supplied, expected)
+        expected = {'read': self.read_digest, 'collector': self.collector_digest, 'admin': self.admin_digest}.get(capability)
+        return expected is not None and hmac.compare_digest(supplied, expected)
 
 
 def _text(value: object, label: str, maximum: int, optional: bool = False) -> str | None:
@@ -190,16 +195,33 @@ def validate_payload(payload: object, now: dt.datetime | None = None) -> tuple[s
         metadata = item.get('metadata')
         if metadata is None:
             metadata = {}
-        if not isinstance(metadata, dict) or set(metadata) - {'service'}:
+        if not isinstance(metadata, dict) or set(metadata) - {'service', 'source_occurred_at', 'clock_offset_seconds', 'source_record_id', 'received_at'}:
             raise ServiceError(400, 'Invalid metadata')
         service = _text(metadata.get('service'), 'service', 40, optional=True)
+        normalized_metadata = {'service': service} if service else {}
+        if 'source_record_id' in metadata:
+            normalized_metadata['source_record_id'] = _text(metadata['source_record_id'], 'source_record_id', 32)
+        if 'source_occurred_at' in metadata:
+            original = metadata['source_occurred_at']
+            try:
+                if not isinstance(original, str) or len(original) > 40 or not TIMESTAMP_PATTERN.fullmatch(original):
+                    raise ValueError()
+                normalized_metadata['source_occurred_at'] = iso(dt.datetime.fromisoformat(original.replace('Z', '+00:00')))
+            except (ValueError, OverflowError) as cause:
+                raise ServiceError(400, 'Invalid original timestamp') from cause
+        if 'clock_offset_seconds' in metadata:
+            offset = metadata['clock_offset_seconds']
+            if isinstance(offset, bool) or not isinstance(offset, (int, float)) or not math.isfinite(offset) or abs(offset) > 86400:
+                raise ServiceError(400, 'Invalid clock correction')
+            normalized_metadata['clock_offset_seconds'] = offset
+        normalized_metadata['received_at'] = iso(now)
         event = {
             'id': event_id, 'source_id': source_id,
             'session_id': _text(item.get('session_id'), 'session_id', 160, optional=True),
             'occurred_at': iso(timestamp), 'type': event_type,
             'actor': _text(item.get('actor'), 'actor', 128, optional=True),
             'ip': address, 'action': _text(item.get('action'), 'action', 500, optional=True),
-            'metadata': {'service': service} if service else {},
+            'metadata': normalized_metadata,
         }
         if timestamp < cutoff:
             expired += 1
@@ -242,7 +264,7 @@ class Store:
         self.lock = threading.RLock()
         with self._connect() as connection:
             version = connection.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1):
+            if version not in (0, 1, 2):
                 raise ValueError('Unsupported database schema version')
             if version == 0:
                 connection.execute('BEGIN IMMEDIATE')
@@ -255,6 +277,34 @@ class Store:
                 connection.execute('PRAGMA user_version = 1')
             connection.execute('SELECT source_id, event_id, occurred_at, event_json FROM events LIMIT 0')
             connection.execute('SELECT source_id, last_seen FROM sources LIMIT 0')
+            if version < 2:
+                connection.execute('CREATE TABLE IF NOT EXISTS collector_key (id INTEGER PRIMARY KEY CHECK(id = 1), digest TEXT, source_id TEXT, created_at TEXT)')
+                connection.execute('PRAGMA user_version = 2')
+
+    def collector_key(self, action: str = 'status', source_id: str | None = None) -> dict:
+        with self.lock, self._connect() as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            if action == 'rotate':
+                if not isinstance(source_id, str) or not SOURCE_PATTERN.fullmatch(source_id):
+                    raise ServiceError(400, 'Valid source_id required')
+                token = 'aman_' + secrets.token_urlsafe(32)
+                connection.execute('INSERT INTO collector_key(id,digest,source_id,created_at) VALUES(1,?,?,?) ON CONFLICT(id) DO UPDATE SET digest=excluded.digest, source_id=excluded.source_id, created_at=excluded.created_at', (hashlib.sha256(token.encode('ascii')).hexdigest(), source_id, iso(utc_now())))
+                return {'active': True, 'token': token, 'source_id': source_id}
+            if action == 'revoke':
+                connection.execute('INSERT INTO collector_key(id) VALUES(1) ON CONFLICT(id) DO UPDATE SET digest=NULL')
+            row = connection.execute('SELECT digest,source_id,created_at FROM collector_key WHERE id=1').fetchone()
+            return {'active': bool(row and row['digest']), 'source_id': row['source_id'] if row else None, 'created_at': row['created_at'] if row else None, 'legacy_bootstrap': row is None}
+
+    @staticmethod
+    def _authorize_collector(connection, config: Config, authorization: str, source_id: str) -> None:
+        row = connection.execute('SELECT digest,source_id FROM collector_key WHERE id=1').fetchone()
+        if row is None:
+            accepted = config.accepts(authorization, 'collector')
+        else:
+            match = re.fullmatch(r'(?i:Bearer) (aman_[A-Za-z0-9_-]{43})', authorization or '')
+            accepted = bool(match and row['digest'] and row['source_id'] == source_id and hmac.compare_digest(hashlib.sha256(match[1].encode('ascii')).hexdigest(), row['digest']))
+        if not accepted:
+            raise ServiceError(401, 'Unauthorized')
 
     @contextmanager
     def _connect(self):
@@ -291,10 +341,12 @@ class Store:
         if len(encode_json(snapshot)) > MAX_RESPONSE_BYTES:
             raise ServiceError(413, 'Stored dashboard state exceeds its byte limit')
 
-    def ingest(self, source_id: str, events: list[dict], expired: int, now: dt.datetime | None = None) -> dict:
+    def ingest(self, source_id: str, events: list[dict], expired: int, now: dt.datetime | None = None, *, authorization: str | None = None, config: Config | None = None) -> dict:
         now = now or utc_now()
         with self.lock, self._connect() as connection:
             connection.execute('BEGIN IMMEDIATE')
+            if config is not None:
+                self._authorize_collector(connection, config, authorization, source_id)
             connection.execute('INSERT INTO sources (source_id, last_seen) VALUES (?, ?) ON CONFLICT(source_id) DO UPDATE SET last_seen = excluded.last_seen', (source_id, iso(now)))
             inserted = 0
             for event in events:
@@ -468,7 +520,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self.path.startswith('/') or self.path.startswith('//'):
             raise ServiceError(400, 'Invalid request target')
         parts = urllib.parse.urlsplit(self.path)
-        if parts.path not in ('/api/events', '/api/ingest', '/api/geo'):
+        if parts.path not in ('/api/events', '/api/ingest', '/api/geo', '/api/collector-key', '/api/collector-key/status', '/api/collector-key/revoke'):
             raise ServiceError(404, 'Not found')
         try:
             query = urllib.parse.parse_qs(parts.query, keep_blank_values=True, strict_parsing=True, max_num_fields=4)
@@ -499,7 +551,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             self._origin()
             path, query = self._route()
-            expected = 'POST' if path == '/api/ingest' else 'GET'
+            expected = 'POST' if path in ('/api/ingest', '/api/collector-key', '/api/collector-key/revoke') else 'GET'
             if self.command == 'OPTIONS':
                 if self.headers.get('Origin') != self.server.config.allowed_origin:
                     raise ServiceError(403, 'An allowed Origin is required')
@@ -513,12 +565,30 @@ class Handler(BaseHTTPRequestHandler):
             if self.command != expected:
                 self._respond(405, {'error': 'Method not allowed'}, {'Allow': f'{expected}, OPTIONS'})
                 return
-            if path == '/api/ingest':
-                self._authenticate('collector')
+            if path.startswith('/api/collector-key'):
+                self._authenticate('admin')
+                if query:
+                    raise ServiceError(400, 'Query parameters are not supported here')
+                if path.endswith('/status'):
+                    result = self.server.store.collector_key()
+                else:
+                    body = self._json_body()
+                    if path.endswith('/revoke'):
+                        if body != {}:
+                            raise ServiceError(400, 'Empty object required')
+                        result = self.server.store.collector_key('revoke')
+                    else:
+                        if not isinstance(body, dict) or set(body) != {'source_id'}:
+                            raise ServiceError(400, 'source_id required')
+                        result = self.server.store.collector_key('rotate', body['source_id'])
+            elif path == '/api/ingest':
+                authorizations = self.headers.get_all('Authorization', [])
+                if len(authorizations) != 1:
+                    raise ServiceError(401, 'Unauthorized')
                 if query:
                     raise ServiceError(400, 'Query parameters are not supported here')
                 source_id, events, expired = validate_payload(self._json_body())
-                result = self.server.store.ingest(source_id, events, expired)
+                result = self.server.store.ingest(source_id, events, expired, authorization=authorizations[0], config=self.server.config)
             elif path == '/api/events':
                 self._authenticate('read')
                 if set(query) - {'limit'} or len(query.get('limit', ['150'])) != 1:

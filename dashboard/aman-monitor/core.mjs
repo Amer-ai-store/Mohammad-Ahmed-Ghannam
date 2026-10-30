@@ -15,7 +15,7 @@ export function validateBaseUrl(value) {
 }
 
 export function endpointUrl(base, route, ip) {
-  if (!['events', 'geo'].includes(route)) throw new Error('Unknown API route');
+  if (!['events', 'geo', 'collector-key', 'collector-key/status', 'collector-key/revoke'].includes(route)) throw new Error('Unknown API route');
   const validated = validateBaseUrl(base);
   const url = new URL(validated.base);
   url.pathname = url.pathname.replace(/\/+$/u, '') + '/api/' + route;
@@ -73,12 +73,21 @@ export function normalizeSnapshot(value, {imported = false, now = Date.now()} = 
     const action = text(event.action, 'action', 500, true);
     if (event.metadata !== undefined && (event.metadata === null || typeof event.metadata !== 'object' || Array.isArray(event.metadata))) throw new Error('metadata يجب أن يكون كائنًا.');
     const service = text(event.metadata?.service, 'metadata.service', 40, true);
+    const metadata = service ? {service} : {};
+    if (event.metadata?.source_occurred_at !== undefined) metadata.source_occurred_at = timestamp(event.metadata.source_occurred_at, 'metadata.source_occurred_at', Infinity);
+    if (event.metadata?.received_at !== undefined) metadata.received_at = timestamp(event.metadata.received_at, 'metadata.received_at', now);
+    if (event.metadata?.source_record_id !== undefined) metadata.source_record_id = text(event.metadata.source_record_id, 'metadata.source_record_id', 32);
+    if (event.metadata?.clock_offset_seconds !== undefined) {
+      const offset = event.metadata.clock_offset_seconds;
+      if (typeof offset !== 'number' || !Number.isFinite(offset) || Math.abs(offset) > 86400) throw new Error('تصحيح ساعة المصدر خارج المجال المسموح.');
+      metadata.clock_offset_seconds = offset;
+    }
     const ip = ipAddress(event.ip);
     if (Date.parse(occurred_at) < cutoff) { expired++; return null; }
     const key = source_id + '\u0000' + id;
     if (ids.has(key)) return null;
     ids.add(key);
-    return {id, source_id, occurred_at, type: event.type, actor, session_id, action, ip, metadata: service ? {service} : {}};
+    return {id, source_id, occurred_at, type: event.type, actor, session_id, action, ip, metadata};
   }).filter(Boolean).sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
   let sources;
   if (value.sources !== undefined) {
