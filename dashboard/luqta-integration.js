@@ -98,11 +98,27 @@
         const result = await client.login(value(f, "url"), value(f, "email"), value(f, "password"));
         f.reset(); draw(); return `متصل بالخادم ${result.origin} بحساب ${result.user.name || result.user.email}.`;
       });
-      field(login, "عنوان خادم لُقطة", "url", "url", true, "https://");
+      const hostInput = field(login, "عنوان خادم لُقطة", "url", "url", true, "https://");
       field(login, "بريد المدير", "email", "email", true);
       field(login, "كلمة المرور", "password", "password", true);
-      text(root, "الرابط الحالي هو لوحة عرض عامة على GitHub Pages؛ يجب نشر خادم لُقطة مستقل بعنوان HTTPS وإضافة هذا المنشأ إلى CORS. لن تُعرض بيانات تجريبية على أنها حية.", "p", "small muted");
-      status = node("p", "بانتظار الاتصال.", "small"); root.append(status); return;
+      text(root, "الاتصال التجريبي لا يصبح خدمة إنتاجية إلا بعد الحصول على عنوان HTTPS مُسمّى ودائم ونسخ احتياطي مؤكد. لم تُنشر بيانات تسجيل الدخول.", "p", "small muted");
+      const endpointHealth = node("p", "جارٍ التحقق من إعداد الاتصال التجريبي...", "small muted");
+      root.append(endpointHealth);
+      status = node("p", "بانتظار تسجيل دخول مدير المتجر.", "small"); root.append(status);
+      // Runtime endpoint is public configuration only, not a secret or authentication token.
+      void fetch("./luqta-runtime.json", { cache:"no-store", credentials:"omit", redirect:"error" })
+        .then(async res => { if (!res.ok) throw Error("لا يوجد إعداد استضافة تجريبية."); return res.json(); })
+        .then(async config => {
+          const origin = window.LuqtaAPI.validateOrigin(config.origin);
+          if (!root.contains(hostInput)) return;
+          hostInput.value = origin;
+          endpointHealth.textContent = "فحص اتصال تجريبي ("+String(config.mode || "غير معروف")+")...";
+          const check = await fetch(origin + "/api/health", { credentials:"omit",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(8500) });
+          const info = await check.json();
+          if (!check.ok || info?.service !== "luqta-commerce" || info?.ok !== true) throw Error("لا يعمل خادم لُقطة على عنوان HTTPS التجريبي.");
+          if (root.contains(endpointHealth)) endpointHealth.textContent = "خادم لُقطة التجريبي متاح الآن عبر HTTPS. يلزم تسجيل دخول المدير؛ عنوان النفق مؤقت وقد يتغير.";
+        }).catch(() => { if (root.contains(endpointHealth)) endpointHealth.textContent = "الرابط التجريبي غير متاح أو يحتاج تحديثًا. تأكد من تشغيل الخادم والنفق أو أدخل عنوان HTTPS آخر."; });
+      return;
     }
     const header = node("div", undefined, "toolbar");
     header.append(node("span", `متصل: ${client.origin} · ${client.user.name || client.user.email}`, "pill ok"));
