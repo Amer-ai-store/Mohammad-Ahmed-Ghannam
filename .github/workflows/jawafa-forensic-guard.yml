@@ -24,8 +24,8 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $source = 'tools/jawafa-forensic-guard/Program.cs'
-          $output = 'tools/jawafa-forensic-guard/JawafaForensicGuard.exe'
+          $source = (Resolve-Path 'tools/jawafa-forensic-guard/Program.cs').Path
+          $output = Join-Path (Resolve-Path 'tools/jawafa-forensic-guard').Path 'JawafaForensicGuard.exe'
           & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe "/out:$output" /reference:System.Web.Extensions.dll $source
           if ($LASTEXITCODE -ne 0) { throw "Compilation failed" }
       - name: Verify read-only policy, CSV parser and binary SHA256
