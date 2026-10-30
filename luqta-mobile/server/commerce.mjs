@@ -348,6 +348,7 @@ export async function createCommerceServer(options = {}) {
     audit(actor, 'inventory.undo', entry.id, { count: snapshot.length });
     return { importId: entry.id, undoneAt, restored: snapshot.filter((item) => !!item.before).length, removed: snapshot.filter((item) => !item.before).length };
   });
+  const jawafaSnapshot = (payload) => { try { return prepareJawafaSnapshot(payload); } catch (error) { fail(422, error.message || 'لقطة المخزون غير صالحة', 'invalid_jawafa_snapshot'); } };
   const connectorPublic = () => { const c = setting('inventoryConnector', {}); return { url: c.url || '', tokenConfigured: !!c.token, lastSyncAt: c.lastSyncAt || null, lastResult: c.lastResult || null }; };
   const oauthConfig = { appId: process.env.FACEBOOK_APP_ID, appSecret: process.env.FACEBOOK_APP_SECRET, callback: process.env.FACEBOOK_CALLBACK_URL, version: process.env.FACEBOOK_GRAPH_VERSION || 'v24.0', ...options.facebook };
   const facebookConfigured = !!(oauthConfig.appId && oauthConfig.appSecret && oauthConfig.callback);
@@ -627,12 +628,12 @@ export async function createCommerceServer(options = {}) {
         }
         if (section === 'inventory') {
           if (method === 'POST' && p[2] === 'jawafa-preview') {
-            const prepared = prepareJawafaSnapshot(body);
+            const prepared = jawafaSnapshot(body);
             return send(200, { snapshotAt: prepared.snapshotAt, count: prepared.count, preview: prepared.items.slice(0, 25), source: prepared.source, applied: false });
           }
           if (method === 'POST' && p[2] === 'jawafa-import') {
             if (body.confirm !== true) fail(409, 'يلزم تأكيد نقل الكميات إلى قاعدة المتجر فقط');
-            const prepared = prepareJawafaSnapshot(body);
+            const prepared = jawafaSnapshot(body);
             return send(200, { ...importInventory({ items: prepared.items, mode: 'replace' }, actor), source: prepared.source, snapshotAt: prepared.snapshotAt });
           }
           if (method === 'POST' && p[2] === 'import') return send(200, importInventory(body, actor));
@@ -650,7 +651,7 @@ export async function createCommerceServer(options = {}) {
             try { const response = await (options.fetchImpl || fetch)(url, { headers: connector.token ? { Authorization: `Bearer ${decrypt(connector.token)}` } : {}, redirect: 'error', signal: controller.signal }); if (!response.ok) fail(502, 'رفض خادم المخزون طلب المزامنة', 'upstream_error');
               let size = 0; const chunks = []; for await (const chunk of response.body) { size += chunk.length; if (size > 2_000_000) { controller.abort(); fail(502, 'بيانات المخزون أكبر من الحد المسموح'); } chunks.push(chunk); }
               let payload; try { payload = JSON.parse(Buffer.concat(chunks).toString()); } catch { fail(502, 'استجابة تطبيق المخزون ليست JSON صالحًا'); }
-              const snapshot = payload?.schema === 'jawafa-inventory-v1' ? prepareJawafaSnapshot(payload) : null;
+              const snapshot = payload?.schema === 'jawafa-inventory-v1' ? jawafaSnapshot(payload) : null;
                const result = importInventory({ items: snapshot ? snapshot.items : Array.isArray(payload) ? payload : payload.items || payload.products, mode: 'replace' }, actor);
               setSetting('inventoryConnector', { ...connector, lastSyncAt: now(), lastResult: { imported: result.imported, created: result.created, updated: result.updated } }); return send(200, { ...result, connector: connectorPublic() });
             } catch (error) { if (error.status) throw error; fail(502, 'تعذر الاتصال بخادم المخزون أو انتهت المهلة', 'upstream_error'); } finally { clearTimeout(timeout); }
