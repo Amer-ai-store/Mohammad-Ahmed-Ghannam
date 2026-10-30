@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { createJawafaBridge } from './jawafaBridge.mjs';
 import { prepareJawafaSnapshot } from './jawafaInventory.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
@@ -142,7 +143,7 @@ export async function createCommerceServer(options = {}) {
   } else encryptionKey = randomBytes(32);
   const encrypt = (value) => { const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', encryptionKey, iv); return [iv.toString('hex'), Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]).toString('hex'), cipher.getAuthTag().toString('hex')].join(':'); };
   const decrypt = (value) => { const [iv, data, tag] = value.split(':'); const cipher = createDecipheriv('aes-256-gcm', encryptionKey, Buffer.from(iv, 'hex')); cipher.setAuthTag(Buffer.from(tag, 'hex')); return Buffer.concat([cipher.update(Buffer.from(data, 'hex')), cipher.final()]).toString(); };
-  if (!get('SELECT id FROM products LIMIT 1')) {
+  if (options.seedDemoProducts !== false && process.env.NODE_ENV !== 'production' && !get('SELECT id FROM products LIMIT 1')) {
     const catalog = JSON.parse(readFileSync(resolve(HERE, 'catalog.json'), 'utf8'));
     transaction(() => { for (const p of catalog) run('INSERT INTO products(id,data,stock,active,updated_at) VALUES(?,?,?,1,?)', p.id, json({ ...p, sku: p.id, subtitle: '', brand: 'لُقطة', features: [], colors: [] }), 25, now()); });
   }
@@ -593,6 +594,16 @@ export async function createCommerceServer(options = {}) {
         const actor = admin(req, scope);
         if (method === 'GET' && section === 'overview') {
           return send(200, { stats: { products: get('SELECT COUNT(*) AS n FROM products WHERE active=1').n, lowStock: get('SELECT COUNT(*) AS n FROM products WHERE active=1 AND stock<=5').n, orders: get('SELECT COUNT(*) AS n FROM orders').n, customers: get("SELECT COUNT(*) AS n FROM users WHERE role='customer'").n, revenue: money(get("SELECT COALESCE(SUM(total),0) AS n FROM orders WHERE status='delivered' AND payment_status IN ('paid','collected')").n), pendingOrders: get("SELECT COUNT(*) AS n FROM orders WHERE status='pending'").n }, recentOrders: all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 10').map(order), lowStockProducts: all('SELECT * FROM products WHERE active=1 AND stock<=5 ORDER BY stock LIMIT 20').map(product) });
+        }
+        if (section === 'jawafa') {
+          if (method !== 'GET') fail(405, 'مصدر جوافة هنا للقراءة فقط');
+          const bridge = createJawafaBridge({ url: options.jawafaBridgeUrl || process.env.JAWAFA_BRIDGE_URL || 'http://127.0.0.1:3456', fetchImpl: options.jawafaFetchImpl || fetch });
+          try {
+            if (p[2] === 'source') return send(200, await bridge.status());
+            if (p[2] === 'catalog-preview') return send(200, await bridge.catalogPreview());
+          } catch {
+            fail(503, 'جسر جوافة غير متصل أو لم يجتز تحقق القراءة', 'jawafa_bridge_unavailable');
+          }
         }
         if (section === 'products') {
           if (method === 'GET') return send(200, { products: all('SELECT * FROM products ORDER BY updated_at DESC').map(product) });

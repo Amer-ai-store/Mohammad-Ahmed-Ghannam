@@ -76,7 +76,7 @@ function AdminDashboard() {
       </Pressable>)}
     </ScrollView>
     <View style={{ gap: 16, paddingVertical: 14 }} key={tab}>
-      {tab === "overview" ? <OverviewPanel /> : tab === "products" ? <ProductsPanel /> : tab === "inventory" ? <InventoryPanel /> : tab === "offers" ? <OffersPanel /> : tab === "appearance" ? <AppearancePanel /> : tab === "orders" ? <OrdersPanel /> : tab === "returns" ? <ReturnsPanel /> : tab === "coupons" ? <CouponsPanel /> : tab === "users" ? <UsersPanel /> : tab === "tickets" ? <TicketsPanel /> : tab === "agents" ? <AgentsPanel /> : tab === "settings" ? <SettingsPanel /> : <AuditPanel />}
+      {tab === "overview" ? <OverviewPanel /> : tab === "products" ? <ProductsPanel /> : tab === "inventory" ? <><InventoryPanel /><JawafaBridgePanel /></> : tab === "offers" ? <OffersPanel /> : tab === "appearance" ? <AppearancePanel /> : tab === "orders" ? <OrdersPanel /> : tab === "returns" ? <ReturnsPanel /> : tab === "coupons" ? <CouponsPanel /> : tab === "users" ? <UsersPanel /> : tab === "tickets" ? <TicketsPanel /> : tab === "agents" ? <AgentsPanel /> : tab === "settings" ? <SettingsPanel /> : <AuditPanel />}
     </View>
   </Shell>;
 }
@@ -390,6 +390,27 @@ function AppearancePanel() {
       }, "حُفظ تصميم المتجر؛ حدّث الكتالوج لرؤية التغييرات.", resource.reload)} />
       <Details>تعديل ترتيب الشاشات والمكوّنات البرمجية يتطلب تحديث شفرة React Native وإصدار التطبيق بعد اختبارها؛ هذه الشاشة تعدل إعدادات العرض فقط.</Details>
     </AdminCard></>;
+}
+
+
+function JawafaBridgePanel() {
+  const action = useAdminAction();
+  const [status, setStatus] = useState<{ connected: boolean; database: string; tableCount: number; mode: string; quantityMappingVerified: boolean } | null>(null);
+  const [items, setItems] = useState<{ code: string; itemSeq: string; name: string; family: string }[]>([]);
+  return <AdminCard title="ربط قاعدة جوافة بالمتجر — قراءة فقط">
+    <Details>فحص مباشر من خادم التجارة إلى جسر TrustSoft المحلي. لا يتم نقل كميات للبيع قبل اعتماد المصدر الفعلي.</Details>
+    <AdminNotice error={action.error} message={action.message} />
+    <Button title="فحص اتصال Jawafa_DB" busy={action.busy} onPress={() => void action.run(async () => {
+      const result = await api.get<{ connected: boolean; database: string; tableCount: number; mode: string; quantityMappingVerified: boolean }>("/admin/jawafa/source");
+      setStatus(result);
+    }, "تحقق اتصال القراءة بقاعدة جوافة.")} />
+    {status ? <Details>{status.database} · {status.mode} · عدد الجداول: {status.tableCount} · الكميات: {status.quantityMappingVerified ? "معتمدة" : "بانتظار المطابقة"}</Details> : null}
+    <Button title="معاينة الأصناف والعائلات من جوافة" secondary busy={action.busy} onPress={() => void action.run(async () => {
+      const result = await api.get<{ items: { code: string; itemSeq: string; name: string; family: string }[] }>("/admin/jawafa/catalog-preview");
+      setItems(result.items);
+    }, "تم تحميل أسماء الأصناف للمعاينة فقط.")} />
+    {items.map((item, index) => <View key={item.itemSeq + "-" + index} style={{ gap: 4, paddingVertical: 6 }}><Txt weight="bold">{item.name}</Txt><Details>{item.code} · العائلة: {item.family}</Details></View>)}
+  </AdminCard>;
 }
 
 function SettingsPanel() {
