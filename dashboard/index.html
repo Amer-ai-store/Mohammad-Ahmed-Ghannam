@@ -238,10 +238,13 @@ dialog .dlg-actions{display:flex;gap:.5rem;justify-content:flex-start}
   <div class="panel" style="padding:12px"><span class="small muted">الجداول المنقولة المتحققة</span><strong id="jfc-v" style="font-size:23px;display:block">—</strong></div>
   <div class="panel" style="padding:12px"><span class="small muted">أسباب فروق لم تحسم</span><strong id="jfc-u" style="font-size:23px;display:block">—</strong></div>
  </div>
+ <p class="muted small" id="jfc-restored" style="padding:10px;border:1px solid #365d51;border-radius:8px">نتائج الاستعادة التاريخية قيد التحقق من المصدر</p>
  <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:580px"><thead><tr><th style="padding:10px;text-align:right">المسار</th><th style="padding:10px;text-align:right">الحالة</th><th style="padding:10px;text-align:right">النتيجة المثبتة والمتبقي</th></tr></thead><tbody id="jfc-rows"><tr><td colspan="3" style="padding:12px">بانتظار مصدر البيانات الموثق</td></tr></tbody></table></div>
  <div class="toolbar" style="margin-top:12px">
   <a class="btn" href="https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view" target="_blank" rel="noopener noreferrer">فتح التقرير التفصيلي المعتمد في Drive الخاص</a>
   <a class="btn" href="https://drive.google.com/file/d/1sSjwVwdXzXbg_FkCdOHtj_NbNOqAdN3d/view" target="_blank" rel="noopener noreferrer">تقرير آخر تصدير والتحقيق التفصيلي</a>
+  <a class="btn" href="https://drive.google.com/file/d/1PaxR4NskDvbOCjalO_M2giqkmLmKzu1U/view" target="_blank" rel="noopener noreferrer">تقرير استرداد السندات والأصول التاريخية</a>
+  <a class="btn" href="https://drive.google.com/file/d/1GUyeYtBp1yILOYj5T5CwJIgmPVpV_e0V/view" target="_blank" rel="noopener noreferrer">حزمة الأدلة الخام الخاصة (ZIP)</a>
   <a class="btn" href="https://drive.google.com/file/d/1z7EkbUAXMEAi-dJIJOpS8WWV3IugEZ4F/view" target="_blank" rel="noopener noreferrer">نسخة التصدير v5 على Drive الخاص</a>
   <a class="btn" href="https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL" target="_blank" rel="noopener noreferrer">إثبات نقل الجداول الـ15</a>
   <a class="btn" href="#jawafa-tasks">متابعة المهام</a>
@@ -1996,7 +1999,7 @@ async function reload(){
   if(!response.ok)throw Error("HTTP "+response.status);
   const info=await response.json();
   if(info.schema!=="jawafa-crossproject-casework-v1"||info.classification!=="PUBLIC_OPERATIONAL_METADATA_NO_FINANCIAL_ROWS"||!Array.isArray(info.cases))throw Error("UNTRUSTED_SOURCE");
-  value("jfc-n",info.cases.length);value("jfc-s",info.counts.first_export_tables);value("jfc-v",info.counts.audit15_transfer_verified+"/15");value("jfc-u",info.counts.audit15_causal_unresolved);
+  const recovered=info.latest_export?.historical_voucher_gaps_recheck;if(recovered?.restore_database_readonly_verified && recovered?.restored_main_gl_headers != null){value("jfc-restored","استرداد موثق من قواعد تاريخية للقراءة فقط: سندات شيكات "+recovered.restored_main_gl_headers+" من 54 (توازن الأطراف "+recovered.main_side_lines_balanced+"/28)، وسندات ذمم "+recovered.restored_arp_journals+" من 9. المتبقي "+recovered.main_not_found_in_seven_restores+" و"+recovered.arp_not_found_in_seven_restores+". لا توجد خسارة أو خصومات بنكية مثبتة.");}else{value("jfc-restored","استرداد النسخ التاريخية لم يُتحقق منه بعد.");}value("jfc-n",info.cases.length);value("jfc-s",info.counts.first_export_tables);value("jfc-v",info.counts.audit15_transfer_verified+"/15");value("jfc-u",info.counts.audit15_causal_unresolved);
   const body=get("jfc-rows");body.replaceChildren();
   for(const a of info.cases){
    const row=document.createElement("tr");
