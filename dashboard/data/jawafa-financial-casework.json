@@ -30,7 +30,10 @@
     "private_evidence_folder": "https://drive.google.com/drive/folders/1dTUcvdI8FI-FjNI5tNqunfuqNFr0zXqb",
     "first_export_folder": "https://drive.google.com/drive/folders/1BAXkWBKuYvzGdC4pNoT9ZfYBBzTg6sd9",
     "audit15_folder": "https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL",
-    "private_report": "https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view"
+    "private_report": "https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view",
+    "private_detailed_export_report": "https://drive.google.com/file/d/1sSjwVwdXzXbg_FkCdOHtj_NbNOqAdN3d/view",
+    "private_case_json": "https://drive.google.com/file/d/1fqwVkxZ4zYQw6_Nl7OmG01VGDAT-6svS/view",
+    "private_prior_forensics": "https://drive.google.com/file/d/1e7qekefQUbVfXB6otHk1IHRTyT-cvD7l/view"
   },
   "cases": [
     {
@@ -61,25 +64,25 @@
       "id": "CHEQ-05",
       "title": "الشيكات الواردة والصادرة",
       "status": "exceptions_open",
-      "progress": "رُبطت مستندات وحركات النظام؛ اعتماد الصرف مشروط بكشف البنك"
+      "progress": "أظهرت v5 خمس حالات دفع ERP متغيرة وحركات نظام مقابلة؛ لم تتحقق خصومات البنك بعد"
     },
     {
       "id": "GL-06",
       "title": "السندات المحذوفة وفك الترحيل",
       "status": "forensic_investigation",
-      "progress": "نتائج أحداث حركات أولية؛ استعادة النسخ قبل الحذف وتفسير الأثر مفتوحان"
+      "progress": "إضافة 20 سند أستاذ و32 ذمم دون فقد مفتاح قديم في اللقطتين؛ تاريخ قيد ذمم واحد تغير والتحقيق التاريخي مفتوح"
     },
     {
       "id": "CASH-07",
       "title": "الكاش والعجز والإقفالات",
       "status": "exceptions_open",
-      "progress": "حالات تغير إقفال الكاش موثقة؛ التفسير المالي والوردية مفتوح"
+      "progress": "جلستا إقفال تغيرتا في v5؛ يلزم تفسير نقد الصندوق والوردية وتوقيت المزامنة"
     },
     {
       "id": "PROC-08",
       "title": "تدقيق المشتريات والمردودات",
       "status": "audit_coverage_open",
-      "progress": "وجد اختلاف بين مؤشرات الاعتماد والسجل الجزئي؛ لا حكم دون سجل السلطة"
+      "progress": "19 فاتورة تغيرت؛ منها 9 قيم، و13 Verified، و15 Posted؛ تتبع سجل الأحداث والتفويض مفتوح"
     },
     {
       "id": "POS-09",
@@ -105,5 +108,38 @@
     "The public static dashboard is not an authenticated live SQL source.",
     "All source accounting data are read-only; historical conflicts remain open until independent evidence."
   ],
-  "status": "INVESTIGATION_IN_PROGRESS__GATE15_NOT_ACCEPTED"
+  "status": "V5_EXPORT_VERIFIED__FINANCIAL_RECONCILIATION_OPEN__GATE15_NOT_ACCEPTED",
+  "latest_export": {
+    "run": "20261030-0100",
+    "host": "JAWAFFASVR",
+    "location": "C:/Export/hourly-v5/20261030-0100",
+    "classification": "HYBRID_V5_NOT_TRANSACTIONAL_SNAPSHOT",
+    "total_catalog_tables": 1024,
+    "full_success": 1009,
+    "two_day_delta_success": 14,
+    "baseline_reference_not_reexported": 1,
+    "csv_files": 1023,
+    "manifest_sha256_entries": 1023,
+    "manifest_hashes_recomputed_for_selected_financial_files": 10,
+    "selected_hash_matches": 10,
+    "status": "SUCCESS_WITH_HYBRID_SCOPE_LIMIT",
+    "current_export_source_not_live_in_browser": true,
+    "old_csv_keys_missing_in_eight_full_financial_tables": 0,
+    "new_keys_in_eight_full_financial_tables": 143,
+    "issue_level_counts": {
+      "new_cheque_status_changes": 5,
+      "purchase_changed": 19,
+      "purchase_amounts_changed": 9,
+      "cash_closures_changed": 2,
+      "arp_journal_date_changed": 1
+    },
+    "monitor": "JawafaExportAgent20Min VERIFIED_REPAIRED",
+    "monitor_run_result": "V5_COMPLETE_HYBRID_FULL_DELTA_REFERENCE",
+    "source_caveats": [
+      "14 tables cover the last two days only",
+      "ItemSalesSummary not re-exported",
+      "No verified bank debit beyond 2026-08-23",
+      "No proof of a fraud, shortage or person from differences"
+    ]
+  }
 }
