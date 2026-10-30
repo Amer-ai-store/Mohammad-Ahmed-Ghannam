@@ -34,7 +34,8 @@
     "private_detailed_export_report": "https://drive.google.com/file/d/1sSjwVwdXzXbg_FkCdOHtj_NbNOqAdN3d/view",
     "private_case_json": "https://drive.google.com/file/d/1fqwVkxZ4zYQw6_Nl7OmG01VGDAT-6svS/view",
     "private_prior_forensics": "https://drive.google.com/file/d/1e7qekefQUbVfXB6otHk1IHRTyT-cvD7l/view",
-    "private_archive_evidence_report": "https://drive.google.com/file/d/1xdNNXn8laZn8o8qy0nQRZAQBb1OIOb-N/view"
+    "private_archive_evidence_report": "https://drive.google.com/file/d/1xdNNXn8laZn8o8qy0nQRZAQBb1OIOb-N/view",
+    "private_historical_casebook": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit"
   },
   "cases": [
     {
@@ -71,7 +72,7 @@
       "id": "GL-06",
       "title": "السندات المحذوفة وفك الترحيل",
       "status": "forensic_investigation",
-      "progress": "فحص v5 أكد استمرار غياب 54 رقم قيد و9 فجوات ARP؛ استرداد القيم التاريخية لا يزال غير مثبت"
+      "progress": "54 حدثًا جُمعت حسب الوقت والجهاز؛ 13 سندًا لها نوافذ نسخ استعادة مرشحة؛ استرجاع قيمها متوقف على SELECT مصرح به"
     },
     {
       "id": "CASH-07",
@@ -158,7 +159,44 @@
       "main_with_deletion_events_still_absent": 54,
       "arp_nine_gaps_still_absent": 9,
       "recovered_original_values_from_backup": 0,
-      "claim_status": "ABSENCE_CONFIRMED_IN_TWO_EXPORTS__PROVEN_CAUSALITY_OPEN"
+      "claim_status": "ABSENCE_CONFIRMED_IN_TWO_EXPORTS__PROVEN_CAUSALITY_OPEN",
+      "recovery_prioritization": {
+        "source": "2026-10-30_F10_F31",
+        "total_deletion_events": 54,
+        "events_by_device": {
+          "PC05": 50,
+          "PC02": 4
+        },
+        "dated_recovery_windows_for_main_gl": 13,
+        "backup_3_candidate_vouchers": 12,
+        "backup_4_candidate_vouchers": 5,
+        "backup_5_candidate_vouchers": 2,
+        "batch_examples": [
+          {
+            "date": "2025-08-16",
+            "count": 12
+          },
+          {
+            "date": "2025-08-17",
+            "count": 11
+          },
+          {
+            "date": "2026-01-25",
+            "count": 6
+          },
+          {
+            "date": "2026-05-03",
+            "count": 6
+          },
+          {
+            "date": "2025-05-06",
+            "count": 4
+          }
+        ],
+        "sql_restore_contents_recovered": false,
+        "blocker": "READ_ONLY_QUERY_ACCESS_TO_RESTORED_DBS",
+        "casebook_document": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit"
+      }
     }
   }
 }
