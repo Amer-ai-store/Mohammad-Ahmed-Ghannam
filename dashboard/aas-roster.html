@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light"><title>دليل الوكلاء والمستشارين · Amer AI Store</title>
+<html lang="ar" dir="rtl" data-aas-host="approved"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light"><title>دليل الوكلاء والمستشارين · Amer AI Store</title>
 <style>
 :root{font-family:Tahoma,Arial,system-ui,sans-serif;color-scheme:dark;--bg:#0d1712;--card:#15231b;--fg:#edf4e9;--muted:#afc0b4;--line:#365142;--accent:#bce78f}
 @media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#f6f9f5;--card:#fff;--fg:#193323;--muted:#47614e;--line:#c6d8c9;--accent:#226736}}
@@ -16,6 +16,7 @@ a.button{padding:8px 12px;border:1px solid var(--line);text-decoration:none;bord
 <p class="sub">استعادة تعريفات فرق Amer AI Store القديمة وملفات AAS-CC التنظيمية داخل لوحة القيادة الجديدة، مع توضيح حالة التشغيل الفعلية.</p>
 <div class="metrics"><div class="metric"><strong>19</strong>وكلاء التطبيق الرسميون</div><div class="metric"><strong>9</strong>ملفات AAS-CC التنظيمية</div><div class="metric"><strong>1</strong>واجهة مستشار Gemini</div><div class="metric"><strong>0</strong>تشغيل مؤكد من هذا الدليل</div></div></header>
 <div class="callout" role="status"><strong>الفرق بين التعريف والتشغيل:</strong> كل الأسماء أدناه مستخرجة من شيفرة المصدر الموثّقة. لا يثبت عرضها تشغيل نماذج أو خوادم أو مزامنة الحساب الخاص. لا تُنقل بيانات D1 أو المهام تلقائيًا، ولا يستبدل الدليل سجلات التشغيل الحية.</div>
+<div class="callout" id="registration-box" aria-live="polite"><strong>تسجيل التعريفات على حساب المالك</strong><p>يفحص النظام حالة AAS الخاصة ويضيف الوكلاء الـ19 المفقودين إلى مساحات العمل دون حذف أو استبدال بيانات قائمة. يتوقف إذا كان الاستيراد قد يغيّر فحوص الخوادم المحفوظة. لا يُفعِّل هذا الربط نماذج الذكاء الاصطناعي أو منفذ المهام.</p><button id="roster-sync" type="button" class="button">اتصال المالك وتسجيل الوكلاء الناقصين</button><p id="roster-result" role="status">لم تُنفّذ مزامنة تشغيلية بعد. عند اتصال المالك، يبدأ فحص التسجيل تلقائيًا.</p></div>
 <div class="toolbar"><label for="q">بحث عن وكيل أو اختصاص</label><input id="q" type="search" autocomplete="off" placeholder="اكتب الاسم أو الاختصاص..."><a class="button" href="./#aas-agents" target="_top">الوكلاء في النظام الحي</a><a class="button" href="./#aas-advisor" target="_top">المستشار والاتصال</a></div>
 <div id="count" class="muted" role="status" aria-live="polite">عرض جميع التعريفات (29)</div>
 <section class="group" id="official"><div class="group-head"><h2>الوكلاء الرسميون · تطبيق Amer AI Store</h2><span>19 تعريفًا من التطبيق القديم</span></div><div class="grid">
@@ -56,4 +57,4 @@ a.button{padding:8px 12px;border:1px solid var(--line);text-decoration:none;bord
 'use strict';
 const input=document.getElementById('q'),count=document.getElementById('count'),cards=[...document.querySelectorAll('.card')];
 input.addEventListener('input',()=>{const q=input.value.trim().toLocaleLowerCase();let visible=0;for(const card of cards){card.hidden=!card.dataset.search.includes(q);if(!card.hidden)visible++;}for(const section of document.querySelectorAll('.group'))section.hidden=![...section.querySelectorAll('.card')].some(card=>!card.hidden);count.textContent='النتائج: '+visible+' من '+cards.length+' تعريفًا';});
-</script></body></html>
+</script><script type="module" src="./aas-roster-sync.js"></script></body></html>
