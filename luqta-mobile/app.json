@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "لُقطة",
+    "slug": "luqta",
+    "version": "1.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/luqta-icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.luqta.store",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#EB6A3E",
+        "foregroundImage": "./assets/luqta-icon.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.luqta.store",
+      "versionCode": 3
+    },
+    "web": {
+      "favicon": "./assets/luqta-favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "./plugins/withLocalNetwork",
+      "expo-router",
+      "expo-font",
+      "expo-image",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "اسمح للُقطة باستخدام موقعك أثناء مشاركة موقع التوصيل أو تحديد عنوان الطلب."
+        }
+      ]
+    ],
+    "scheme": "luqta",
+    "description": "متجر عربي مع مساعد تسوق ذكي"
+  }
+}

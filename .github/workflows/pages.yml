@@ -1,6 +1,6 @@
 name: Deploy dashboard to GitHub Pages
 # Publishes dashboard/ (command center + live store) at
-# https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/
+# https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/
 # Requires Settings > Pages > Source: "GitHub Actions" (one-time, see docs/firebase-setup.md).
 on:
   push:
