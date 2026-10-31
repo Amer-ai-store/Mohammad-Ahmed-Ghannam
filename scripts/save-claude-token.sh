@@ -2,13 +2,26 @@
 # Creates a Claude Code token from your Claude subscription, checks that it works, and saves it as this
 # repository's CLAUDE_CODE_OAUTH_TOKEN Actions secret, so the long token never has to be copied by hand.
 # Meant for a GitHub Codespace opened from a phone's browser; see docs/code-review-setup.md.
-# The token is never printed.
+# The token is never printed by this script's own status messages; Claude setup-token may echo it in the private terminal.
+# Never share terminal screenshots or logs. The transcript is deleted on exit.
 set -euo pipefail
 
-REPO="Mohammadzxzx1991/Mohammad-Ahmed-Ghannam"
+REPO="Amer-ai-store/Mohammad-Ahmed-Ghannam"
 SECRET="CLAUDE_CODE_OAUTH_TOKEN"
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
+
+# Refuse to store a credential from a checkout of the old/wrong repository.
+# Never trust a pasted or inherited GitHub repo name as a secret destination.
+origin="$(git remote get-url origin 2>/dev/null || true)"
+if [[ "$origin" != *"Amer-ai-store/Mohammad-Ahmed-Ghannam"* ]]; then
+  echo "Wrong Codespace/repository: open the Amer-ai-store/Mohammad-Ahmed-Ghannam project first."
+  exit 1
+fi
+if ! command -v gh >/dev/null 2>&1; then
+  echo "GitHub CLI (gh) is required for safe secret upload."
+  exit 1
+fi
 
 if ! command -v claude >/dev/null 2>&1; then
   say "Installing Claude Code..."

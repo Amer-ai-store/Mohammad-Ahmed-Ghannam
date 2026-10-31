@@ -1,7 +1,7 @@
 name: Claude code review
 # Reviews every pull request with Claude: inline comments on specific lines plus one summary comment.
 # Needs one repository secret, CLAUDE_CODE_OAUTH_TOKEN (Claude subscription) or ANTHROPIC_API_KEY (API key).
-# Until one exists the job passes with a notice instead of failing every PR. See docs/code-review-setup.md.
+# No valid credential => review fails closed. A green review must mean Claude ran successfully.
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
@@ -21,11 +21,12 @@ jobs:
     env:
       CLAUDE_CONFIGURED: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' || secrets.ANTHROPIC_API_KEY != '' }}
     steps:
-      - name: Skip when Claude is not set up
+      # A missing or malformed credential must never produce a green 'review' check.
+      - name: Require Claude authentication
         if: env.CLAUDE_CONFIGURED != 'true'
-        run: echo "::notice title=Claude review skipped::Add the repository secret CLAUDE_CODE_OAUTH_TOKEN (run 'claude setup-token') or ANTHROPIC_API_KEY. See docs/code-review-setup.md."
-      # A pasted secret often carries the rest of the `claude setup-token` output, or the token wrapped over several
-      # lines, and the API then rejects it. Take the sk-ant-oat token out of it; never print the value.
+        run: |
+          echo "::error title=Claude review blocked::No authentication secret is configured. Set exactly one of CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY in this repository's Actions secrets. See docs/code-review-setup.md."
+          exit 1
       - name: Prepare the Claude token
         if: env.CLAUDE_CONFIGURED == 'true'
         shell: python
@@ -33,74 +34,29 @@ jobs:
           RAW_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           HAS_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         run: |
-          import os, re
-
-          TOKEN_CHARS = re.compile(r"[A-Za-z0-9_-]+")
-          # Box-drawing borders and quotes that terminals and copy tools put around the token.
-          BORDER = " \t'\"`│┃║|╭╮╰╯─━═"
-
-
-          def describe(line):
-              """Length and kind of a line, never its content."""
-              piece = line.strip(BORDER)
-              if not piece:
-                  return f"{len(line)}:blank"
-              kind = "token-chars" if TOKEN_CHARS.fullmatch(piece) else "text"
-              mark = "+prefix" if "sk-ant-oat" in line else ""
-              return f"{len(line)}:{kind}{mark}"
-
-
-          VALID = re.compile(r"sk-ant-oat\d+-[A-Za-z0-9_-]{20,}")
-
-
-          def candidates(lines):
-              """Every token that starts at an 'sk-ant-oat' in the secret, joined over wrapped lines."""
-              for i, line in enumerate(lines):
-                  start = line.find("sk-ant-oat")
-                  while start >= 0:
-                      head = TOKEN_CHARS.match(line, start).group(0)
-                      parts = [head]
-                      # A terminal may wrap the long token anywhere, even right after the prefix; join the pieces that follow.
-                      if not line[start + len(head):].strip(BORDER):
-                          for nxt in lines[i + 1:]:
-                              piece = nxt.strip(BORDER)
-                              if not TOKEN_CHARS.fullmatch(piece):
-                                  break
-                              parts.append(piece)
-                      yield "".join(parts)
-                      start = line.find("sk-ant-oat", start + 1)
-
+          import os
+          import re
 
           raw = os.environ.get("RAW_TOKEN", "")
-          if raw:
-              lines = raw.replace("\r", "").split("\n")
-              found = list(candidates(lines))
-              token = next((c for c in found if VALID.fullmatch(c)), None)
-              if not token and os.environ.get("HAS_API_KEY") == "true":
-                  print(
-                      "::warning title=CLAUDE_CODE_OAUTH_TOKEN ignored::It holds no usable token, so the review uses "
-                      "ANTHROPIC_API_KEY. Delete or fix CLAUDE_CODE_OAUTH_TOKEN to remove this warning."
-                  )
-                  raise SystemExit(0)
-              if not token:
-                  has = "contains" if "sk-ant-oat" in raw else "does not contain"
-                  shape = ", ".join(describe(line) for line in lines)
-                  runs = ", ".join(str(len(c)) for c in found) or "none"
-                  print(
-                      "::error title=CLAUDE_CODE_OAUTH_TOKEN is malformed::No usable token in the secret: it is "
-                      f"{len(raw)} characters on {len(lines)} lines and {has} 'sk-ant-oat'. Line shapes "
-                      f"(length:kind): {shape}. Lengths of the 'sk-ant-oat...' runs: {runs}. Paste only the token "
-                      "printed by 'claude setup-token' under Settings > Secrets and variables > Actions."
-                  )
-                  raise SystemExit(1)
-              print(f"::add-mask::{token}")
-              if token != raw:
-                  print(
-                      "::warning title=CLAUDE_CODE_OAUTH_TOKEN has extra text::Used the sk-ant-oat token found inside "
-                      "the secret. Replace the secret with the token alone to remove this warning."
-                  )
-              with open(os.environ["GITHUB_ENV"], "a") as env_file:
-                  env_file.write(f"CLAUDE_TOKEN={token}\n")
+          has_api_key = os.environ.get("HAS_API_KEY") == "true"
+
+          # Prefer the API key when both credentials exist; never pass both to the action.
+          # Do not attempt to reconstruct an OAuth token from arbitrary copied terminal text.
+          # Only an exact one-line value is allowed, avoiding truncated/wrapped/forged tokens.
+          if has_api_key:
+              print("::notice title=Claude API authentication::ANTHROPIC_API_KEY is selected; any OAuth secret is ignored.")
+          elif re.fullmatch(r"sk-ant-oat[0-9]+-[A-Za-z0-9_-]{60,}", raw):
+              print(f"::add-mask::{raw}")
+              with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+                  env_file.write(f"CLAUDE_TOKEN={raw}\n")
+          else:
+              print(
+                  "::error title=Claude OAuth credential invalid::CLAUDE_CODE_OAUTH_TOKEN must be "
+                  "the entire single-line token created by 'claude setup-token' (no labels, "
+                  "line wraps, quotes or truncated fragments). Replace the repository Actions "
+                  "secret using the verified setup guide in docs/code-review-setup.md."
+              )
+              raise SystemExit(1)
       - if: env.CLAUDE_CONFIGURED == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
