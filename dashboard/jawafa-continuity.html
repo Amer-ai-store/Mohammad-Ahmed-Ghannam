@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>جوافة | وكيل استمرارية العمل</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Orbitron:wght@400;600;700;800&display=swap');
+:root{color-scheme:dark;--bg:#050914;--surface:rgba(11,24,44,.78);--border:rgba(100,181,255,.21);--cyan:#3ee7ef;--blue:#79a9ff;--violet:#ab92ff;--green:#4cf9bd;--yellow:#ffd37d;--red:#ff7489;--muted:#91a7c4;color:#eef8ff;font:15px 'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 79% 4%,rgba(73,74,166,.29),transparent 34%),radial-gradient(circle at 4% 58%,rgba(18,123,159,.14),transparent 36%),var(--bg);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.31;background-image:radial-gradient(#d9e9ff .65px,transparent 1px),radial-gradient(#7ac0f3 .8px,transparent 1.5px);background-size:96px 96px,149px 149px;background-position:7px 16px,71px 23px}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:repeating-linear-gradient(180deg,transparent 0 6px,rgba(124,198,255,.015) 7px 8px)}
+main{width:min(1350px,calc(100% - 34px));margin:0 auto;padding:28px 0 72px}
+a{color:var(--cyan)}
+.command-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}
+.crumb{font-size:.78rem;color:var(--muted);letter-spacing:.02em}.crumb a{text-decoration:none}
+.topmark{font:700 .74rem Orbitron,monospace;letter-spacing:.16em;color:var(--blue);text-align:left}
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(250px,.9fr);align-items:center;min-height:260px;gap:16px;position:relative;isolation:isolate;border:1px solid rgba(99,179,255,.24);border-radius:22px;padding:32px clamp(22px,4vw,54px);background:linear-gradient(120deg,rgba(11,29,53,.91),rgba(11,21,46,.55) 80%);box-shadow:0 16px 80px rgba(0,0,0,.24),inset 0 0 70px rgba(47,134,219,.04);overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(88,231,254,.05),transparent);pointer-events:none;transform:translateX(110%);animation:sweep 12s linear infinite;z-index:-1}
+@keyframes sweep{to{transform:translateX(-110%)}}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;color:var(--cyan);font:600 .72rem Orbitron,monospace;letter-spacing:.16em;direction:ltr;text-transform:uppercase}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.35}}
+h1{font-size:clamp(1.55rem,3vw,2.9rem);margin:15px 0 8px;line-height:1.5;letter-spacing:-.025em}
+.hero p{max-width:620px;line-height:2;margin:9px 0 0;color:#b0c2d9;font-size:.93rem}
+.hero-meta{margin-top:20px;display:flex;gap:9px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;border:1px solid rgba(99,179,255,.23);background:rgba(13,38,67,.8);color:#c3d7ec;border-radius:30px;padding:7px 13px;font-size:.73rem}
+.orbital{height:235px;position:relative;display:grid;place-items:center;filter:drop-shadow(0 0 21px rgba(42,190,255,.21))}
+.ring{position:absolute;border:1px solid rgba(67,177,252,.32);border-radius:50%;aspect-ratio:1;transform:rotateX(67deg) rotateZ(-22deg)}
+.ring.r1{width:290px;animation:orbit 13s linear infinite}.ring.r2{width:205px;border-color:rgba(171,146,255,.4);transform:rotateX(60deg) rotateZ(55deg);animation:orbit2 17s linear infinite}.ring.r3{width:125px;border-color:rgba(62,231,239,.34);transform:rotateX(55deg) rotateZ(13deg)}
+@keyframes orbit{to{transform:rotateX(67deg) rotateZ(338deg)}}@keyframes orbit2{to{transform:rotateX(60deg) rotateZ(-305deg)}}
+.globe{width:126px;height:126px;border-radius:50%;background:radial-gradient(circle at 30% 26%,#3198b9,#102c60 36%,#070e31 78%);box-shadow:inset -18px -15px 30px rgba(0,0,0,.65),0 0 50px rgba(24,148,219,.2),0 0 0 12px rgba(59,132,234,.05);position:relative}
+.globe::after{content:"";position:absolute;inset:12px;border:1px dashed rgba(86,217,255,.33);border-radius:50%;transform:rotate(-29deg)}
+.globe-text{position:absolute;bottom:0;left:0;right:0;text-align:center;direction:ltr;font:700 .68rem Orbitron,monospace;color:var(--blue);letter-spacing:.17em}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:23px 0 12px}
+.section-head h2{font-size:.83rem;font-weight:700;letter-spacing:.04em;color:#c6dffc;margin:0}
+.section-head span{font:500 .65rem Orbitron,monospace;color:#6c86aa}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:21px;margin:0;box-shadow:inset 0 1px rgba(191,236,255,.025),0 16px 36px rgba(0,0,0,.13);backdrop-filter:blur(15px)}
+.panel h2{font-size:1rem;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.stat-card{position:relative;overflow:hidden;min-height:137px;background:linear-gradient(135deg,rgba(18,38,69,.9),rgba(6,17,34,.8))}
+.stat-card::before{content:"";position:absolute;right:0;top:0;width:66px;height:1px;background:linear-gradient(90deg,transparent,var(--cyan))}
+.stat-card::after{content:"";position:absolute;left:14px;bottom:14px;width:44px;height:44px;border:1px solid rgba(118,190,248,.08);border-radius:50%;box-shadow:0 0 0 14px rgba(118,190,248,.022)}
+.lbl{font-size:.78rem;color:var(--muted);font-weight:600}
+.val{font-size:clamp(1.2rem,2vw,1.65rem);font-weight:700;margin:14px 0 3px;direction:initial;word-break:break-word}
+.ok{color:var(--green)!important}.bad{color:var(--red)!important}.warn{color:var(--yellow)!important}
+.status-line{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:17px 22px;border:1px solid rgba(86,204,236,.22);background:linear-gradient(90deg,rgba(13,37,66,.76),rgba(13,33,58,.38));border-radius:13px}
+.status-line strong{font-size:.94rem}
+.status-line small{font-size:.76rem}
+.muted{color:var(--muted);line-height:1.9}
+small{display:block}
+.area{display:grid;grid-template-columns: minmax(0,1.4fr) minmax(290px,.8fr);gap:14px}
+.grid-panel{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:630px;font-size:.83rem;direction:ltr;text-align:left}
+th,td{border-bottom:1px solid rgba(87,143,188,.16);padding:13px 10px;text-align:left}
+th{color:var(--blue);font:500 .71rem Orbitron,monospace;letter-spacing:.02em}
+td{color:#c7d6eb}
+tbody tr:hover{background:rgba(67,122,197,.08)}
+input,button{font:inherit;color:#eff8ff;padding:11px 13px;border:1px solid #395672;background:rgba(20,48,78,.9);border-radius:9px}
+input{max-width:100%}
+input[type=url]{width:100%;min-width:0;margin-top:7px}
+input[type=file]{width:100%;font-size:.8rem}
+button{cursor:pointer;background:linear-gradient(110deg,#186f99,#224789);border:1px solid rgba(59,209,245,.55);font-weight:700}
+button:hover{filter:brightness(1.25)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+label{display:block;font-size:.8rem;line-height:1.8;color:#b7cce3}
+.form-group{margin:17px 0}
+.mini-rule{border:0;border-top:1px solid rgba(113,173,235,.16);margin:17px 0}
+footer{font-size:.75rem;color:#7793b3;line-height:1.8;margin:20px 0}
+code{font-family:Consolas,monospace;color:#7ce5ef;word-break:break-all}
+@media(max-width:920px){.hero{grid-template-columns:1fr}.orbital{height:174px}.ring.r1{width:215px}.ring.r2{width:155px}.ring.r3{width:100px}.globe{width:90px;height:90px}.globe-text{font-size:.55rem}.grid{grid-template-columns:repeat(2,1fr)}.area{grid-template-columns:1fr}}
+@media(max-width:560px){main{width:calc(100% - 22px);padding-top:14px}.hero{padding:19px}.grid{gap:8px}.panel{padding:14px}.stat-card{min-height:125px}.status-line{padding:15px}.topmark{font-size:.58rem}h1{font-size:1.56rem}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}}
+</style></head><body>
+
+<main>
+ <header class="command-top">
+   <div class="crumb"><a href="./jawafa-operations.html">مركز قيادة جوافة</a> / مركز المراقبة / استمرارية العمل</div>
+   <div class="topmark">JAWAFA · MISSION CONTROL</div>
+ </header>
+ <section class="hero" aria-labelledby="title">
+  <div>
+    <span class="eyebrow"><i class="pulse" aria-hidden="true"></i> OPERATIONS / WATCHDOG</span>
+    <h1 id="title">مركز استمرارية العمليات</h1>
+    <p>نظام مراقبة مستقل لخدمات مشروع جوافة. يرصد تعطل المهام، ويراقب بوابة الاتصال، ويوثق الاستعادة والتنبيهات في سجل زمني — دون المساس بالبيانات المحاسبية الأصلية.</p>
+    <div class="hero-meta"><span class="chip">JAWAFFASVR</span><span class="chip">60 SEC CYCLE</span><span class="chip">READ-ONLY MONITORING</span></div>
+  </div>
+  <div class="orbital" aria-hidden="true"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="globe"></div><div class="globe-text">CONTINUITY CORE</div></div>
+ </section>
+ <div class="section-head"><h2>◈ إشارة الاستمرارية</h2><span>TELEMETRY STATUS</span></div>
+ <section class="status-line" aria-live="polite">
+  <span class="pulse" aria-hidden="true"></span>
+  <strong id="statusMsg" class="warn">بانتظار مصدر حالة مُوثّق</strong>
+  <small id="stamp" class="muted">لم تصل بيانات من الخادم إلى هذا المتصفح</small>
+ </section>
+ <div class="section-head"><h2>◈ مؤشرات تشغيل الوكيل</h2><span>LIVE METRICS / VERIFIED ONLY</span></div>
+ <section class="grid" aria-label="المؤشرات">
+  <div class="panel stat-card"><div class="lbl">حالة الوكيل</div><div class="val" id="overall">—</div><small class="muted">AGENT STATE</small></div>
+  <div class="panel stat-card"><div class="lbl">بوابة اتصال API</div><div class="val" id="api">—</div><small class="muted">BRIDGE HEALTH</small></div>
+  <div class="panel stat-card"><div class="lbl">المهام المراقبة</div><div class="val" id="num">—</div><small class="muted">WATCHED TASKS</small></div>
+  <div class="panel stat-card"><div class="lbl">آخر إجراء استعادة</div><div class="val" id="last">—</div><small class="muted">RECOVERY ACTION</small></div>
+ </section>
+ <div class="section-head"><h2>◈ تفاصيل المهام والربط</h2><span>MISSION TELEMETRY</span></div>
+ <section class="area">
+  <div class="panel grid-panel"><h2>سجل المهام المراقبة</h2><p class="muted">تظهر المعلومات بعد استلام ملف حالة موثق أو الاتصال بمصدر خاص مصرح به.</p><table><thead><tr><th>Task</th><th>Health</th><th>Scheduler</th><th>Last run</th><th>Result</th></tr></thead><tbody id="tasks"><tr><td colspan="5">بانتظار بيانات التشغيل</td></tr></tbody></table></div>
+  <div class="panel"><h2>وحدة استقبال الإشارة</h2><p class="muted">على الخادم افتح <code>C:\JawafaGPT\continuity\dashboard.html</code> لمراقبة متجددة كل دقيقة. هنا يمكن استيراد لقطة <code>status.json</code> أو الاتصال برابط HTTPS خاص عند تهيئته.</p>
+    <div class="form-group"><label>استيراد ملف حالة موثّق</label><input id="file" type="file" accept=".json,application/json"></div>
+    <hr class="mini-rule"><div class="form-group"><label>عنوان HTTPS الخاص بمصدر الحالة<input id="url" type="url" placeholder="https://private-example/continuity/status.json"></label></div>
+    <button type="button" id="connect">فحص الاتصال وتحديث البيانات</button>
+    <p class="muted">تُحدّث القراءة كل دقيقة ما دامت الصفحة مفتوحة، بشرط صحة التفويض والربط. لا تدخل أي مفاتيح أو كلمات مرور.</p>
+  </div>
+ </section>
+ <footer>ضوابط التشغيل: تعرض هذه الشاشة بيانات حقيقية فقط بعد التحقق من مصدرها. الوكيل على Windows لا يستطيع إجبار جلسة ChatGPT على الرد أو متابعة المحادثة. انتهاء المهمة بنتيجة 0 لا يعني وحده اكتمال التحقيق.</footer>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+let currentUrl='',interval=null;
+const text=(id,value,klass='')=>{const el=$(id);el.textContent=value;el.className=klass;};
+const fmt=t=>{try{return new Date(t).toLocaleString('ar-JO',{timeZone:'Asia/Amman'})}catch{return String(t)}};
+function render(s){
+ if(!s||s.schema!=='jawafa-continuity-v1'||!Array.isArray(s.tasks)){throw new Error('تنسيق الحالة غير معتمد')}
+ const ts=new Date(s.monitored_at_utc).getTime();
+ if(!Number.isFinite(ts))throw new Error('الوقت غير صالح');
+ const mins=Math.max(0,(Date.now()-ts)/60000),fresh=mins<=3;
+ text('statusMsg',fresh?'بيانات حديثة من الوكيل':'تحذير: البيانات قديمة',fresh?'ok':'bad');
+ text('stamp','آخر فحص: '+fmt(s.monitored_at_utc)+' — عمر النتيجة '+Math.round(mins)+' دقيقة');
+ text('overall',s.overall||'—',s.overall==='healthy'&&fresh?'ok':'warn');
+ text('api',s.api_health||'—',s.api_health==='up'&&fresh?'ok':'bad');
+ text('num',String(s.tasks.length));
+ text('last',s.last_recovery_action||'none');
+ $('tasks').replaceChildren();
+ for(const t of s.tasks){
+  const tr=document.createElement('tr');
+  for(const key of ['name','health','state','last_run','result_code']){
+   const td=document.createElement('td');td.textContent=t[key]==null?'—':String(t[key]);
+   if(key==='health')td.className=t[key]==='ok'?'ok':'warn';tr.append(td);
+  } $('tasks').append(tr);
+ }
+}
+$('file').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{if(f.size>1000000)throw new Error('الملف كبير بشكل غير متوقع');render(JSON.parse(await f.text()))}catch(ex){text('statusMsg','خطأ: '+ex.message,'bad')}});
+async function refresh(){try{const u=new URL(currentUrl);if(u.protocol!=='https:')throw new Error('يُسمح بروابط HTTPS فقط');const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),9000);let r;try{r=await fetch(u.href,{cache:'no-store',signal:ctl.signal,credentials:'omit'})}finally{clearTimeout(to)}if(!r.ok)throw new Error('تعذر الاتصال: '+r.status);render(await r.json())}catch(e){text('statusMsg','الاتصال بالبيانات غير متاح: '+e.message,'bad')}}
+$('connect').addEventListener('click',()=>{const u=$('url').value.trim();if(!u)return;text('statusMsg','جاري فحص المصدر...','warn');currentUrl=u;if(interval)clearInterval(interval);refresh();interval=setInterval(refresh,60000)});
+</script></body></html>
