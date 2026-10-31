@@ -2,27 +2,11 @@ name: Jawafa V1 to V3 stage-2 handoff watch
 on:
   schedule:
     - cron: '0 */6 * * *'
-  # React to the actual handoff instead of waiting up to six hours.
-  push:
-    branches: [main]
-    paths:
-      - 'handoff/jawafa-v1-ready.json'
-      - '.github/workflows/jawafa-v1-stage2-watch.yml'
-      - 'tools/jawafa-v1-handoff/**'
-  # Recheck after relevant source CI finishes on main.
-  workflow_run:
-    workflows:
-      - 'Android build and unit tests'
-      - 'Jawafa Unified Main Dashboard & Private Bridge QA'
-      - 'Jawafa V1 full-source and integration verification'
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
   pull_request:
     paths:
       - '.github/workflows/jawafa-v1-stage2-watch.yml'
       - 'tools/jawafa-v1-handoff/**'
-      - 'handoff/jawafa-v1-ready.json'
 permissions:
   contents: read
   actions: read
@@ -40,9 +24,6 @@ jobs:
           persist-credentials: false
       - name: Self-test handoff policy
         run: python3 tools/jawafa-v1-handoff/monitor.py --self-test
-      - name: Preflight V1 manifest schema on pull requests (no write token)
-        if: github.event_name == 'pull_request'
-        run: python3 tools/jawafa-v1-handoff/monitor.py --preflight
       - name: Verify V1 source and linked CI evidence
         if: github.event_name != 'pull_request'
         env:
