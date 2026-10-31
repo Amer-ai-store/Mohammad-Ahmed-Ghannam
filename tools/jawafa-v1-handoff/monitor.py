@@ -96,6 +96,9 @@ def main():
         return 0
     try:
         with open(MARKER,encoding="utf-8") as f: sha, paths, runs=validate(json.load(f))
+        if "--preflight" in sys.argv:
+            report("V1_PREFLIGHT_SCHEMA_PASS %s; source and CI evidence require main-branch verification."%sha)
+            return 0
         verify(sha,paths,runs)
         report("V1_TECHNICAL_HANDOFF_PASS %s — %s"%(sha,announce(sha,runs)))
         return 0
