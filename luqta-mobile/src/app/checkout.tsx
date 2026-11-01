@@ -1,71 +1,192 @@
-import React,{useEffect,useRef,useState} from 'react';
-import {Pressable,TextInput,View} from 'react-native';
-import {router} from 'expo-router';
-import * as Location from 'expo-location';
-import {Shell} from '../components/Shell';
-import {Button,EmptyState,Txt} from '../components/ui';
-import {useStore} from '../lib/store';
-import {useSession} from '../lib/session';
-import {useTheme} from '../lib/theme';
-import {api} from '../lib/api';
-import {formatPrice} from '../data/products';
-import type {Address,CommerceOrder} from '../lib/commerce-types';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Pressable, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Banknote, CheckSquare, CreditCard, Square, Wallet, ShieldCheck } from "lucide-react-native";
+import { Shell } from "../components/Shell";
+import { AddressForm, AddressDraft, addressPayload, addressProblem, draftFrom, emptyAddress } from "../components/AddressForm";
+import { Badge, Button, Card, Chip, EmptyState, Field, KeyValue, Notice, Row, Tabs, Toggle, Txt } from "../components/ui";
+import { useStore } from "../lib/store";
+import { useSession } from "../lib/session";
+import { useTheme } from "../lib/theme";
+import { useI18n } from "../lib/i18n";
+import { useMoney } from "../lib/money";
+import { useApi } from "../lib/useApi";
+import { api } from "../lib/api";
+import type { Address } from "../lib/commerce-types";
 
-export default function Checkout(){
-  const {colors:t}=useTheme();
-  const {user,configured}=useSession();
-  const {cart,products,subtotal,shipping,settings,submitOrder,catalogStatus}=useStore();
-  const [address,setAddress]=useState<Address>({name:user?.name||'',phone:'',city:'',street:''});
-  const [addresses,setAddresses]=useState<Address[]>([]);
-  const [paymentMethod,setPayment]=useState<'cod'|'wallet'>('cod');
-  const [coupon,setCoupon]=useState('');const [validated,setValidated]=useState('');
-  const [validatedFor,setValidatedFor]=useState('');
-  const [discount,setDiscount]=useState(0);const [error,setError]=useState('');
-  const [busy,setBusy]=useState(false);const [locating,setLocating]=useState(false);
-  const [order,setOrder]=useState<CommerceOrder|null>(null);
-  const idempotency=useRef('');
-  const items=Object.entries(cart).map(([productId,quantity])=>({productId,quantity}));
-  const signature=JSON.stringify({items,address,paymentMethod,validated});
-  const cartSignature=JSON.stringify(items);
-  const appliedCoupon=validatedFor===cartSignature?validated:'';
-  const appliedDiscount=appliedCoupon?discount:0;
-  useEffect(()=>{idempotency.current=`app-${Date.now()}-${Math.random().toString(36).slice(2)}`;},[signature]);
-  useEffect(()=>{if(!user)return;let active=true;api.get<{addresses:Address[]}>('/addresses').then(r=>{if(!active)return;setAddresses(r.addresses);const saved=r.addresses.find(a=>a.isDefault)||r.addresses[0];if(saved)setAddress(saved);}).catch(()=>{});return()=>{active=false;};},[user]);
-  const field=(key:'name'|'phone'|'city'|'street',label:string)=> <View style={{gap:6}}><Txt weight="bold">{label}</Txt><TextInput accessibilityLabel={label} value={address[key]} onChangeText={value=>setAddress(a=>({...a,[key]:value}))} keyboardType={key==='phone'?'phone-pad':'default'} maxLength={key==='street'?300:100} placeholderTextColor={t.muted} style={{padding:14,borderWidth:1,borderColor:t.line,borderRadius:12,color:t.ink,backgroundColor:t.paper,fontFamily:'Tajawal_400Regular',textAlign:'right',minHeight:48}}/></View>;
-  async function locate(){setLocating(true);setError('');try{const p=await Location.requestForegroundPermissionsAsync();if(p.status!=='granted')throw new Error('لم تمنح إذن الموقع. يمكنك متابعة الطلب بالعنوان المكتوب.');const point=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});setAddress(a=>({...a,latitude:point.coords.latitude,longitude:point.coords.longitude}));}catch(e){setError(e instanceof Error?e.message:'تعذّر تحديد الموقع');}finally{setLocating(false);}}
-  async function validateCoupon(){setBusy(true);setError('');try{const r=await api.post<{code:string;discount:number}>('/coupons/validate',{code:coupon,items});setValidated(r.code);setValidatedFor(cartSignature);setDiscount(r.discount);}catch(e){setValidated('');setDiscount(0);setError(e instanceof Error?e.message:'تعذّر تطبيق القسيمة');}finally{setBusy(false);}}
-  async function submit(){
-    setError('');if(address.name.trim().length<2||address.phone.trim().length<7||address.city.trim().length<2||address.street.trim().length<5){setError('أكمل الاسم ورقم الهاتف والمدينة والشارع قبل تأكيد الطلب.');return;}
-    setBusy(true);try{const created=await submitOrder({address,paymentMethod,couponCode:appliedCoupon||undefined,idempotencyKey:idempotency.current});setOrder(created);}catch(e){setError(e instanceof Error?e.message:'تعذّر إنشاء الطلب. لم نؤكد نجاحه.');}finally{setBusy(false);}
+type Slot = { date: string; window: string; label: string; from: string; to: string; remaining: number; available: boolean };
+type Quote = { subtotal: number; discount: number; couponError: string | null; shipping: number; giftWrapFee: number; total: number; zone: { name: string; etaMinutes: number } | null; tier: string | null; budget: { weeklyBudget: number | null; remaining: number | null; exceeds: boolean } | null };
+type Step = "address" | "payment" | "review";
+const newKey = () => `checkout-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+export default function Checkout() {
+  const { colors: t } = useTheme();
+  const { t: tr } = useI18n();
+  const money = useMoney();
+  const { user, configured } = useSession();
+  const store = useStore();
+  const params = useLocalSearchParams<{ coupon?: string; mode?: string }>();
+  const lines = params.mode === "buy-now" && store.buyNow ? store.buyNow : store.cart;
+  const [step, setStep] = useState<Step>("address");
+  const addresses = useApi<{ addresses: (Address & { id: string })[] }>("/addresses", { needsUser: true });
+  const slots = useApi<{ slots: Slot[] }>("/delivery/slots?days=3");
+  const wallet = useApi<{ balance: number }>("/wallet", { needsUser: true });
+  const [selected, setSelected] = useState<string | "new">("new");
+  const [draft, setDraft] = useState<AddressDraft>(emptyAddress);
+  const [saveAddress, setSaveAddress] = useState(true);
+  const [slot, setSlot] = useState<{ date: string; window: string } | null>(null);
+  const [notes, setNotes] = useState("");
+  const [gift, setGift] = useState({ wrap: false, message: "", recipient: "" });
+  const [method, setMethod] = useState<"card" | "cod" | "wallet">("cod");
+  const [card, setCard] = useState({ number: "", name: "", expiry: "", cvc: "" });
+  const [cardToken, setCardToken] = useState<{ token: string; brand: string; last4: string } | null>(null);
+  const [terms, setTerms] = useState(false);
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const idempotency = useRef(newKey());
+  // Pre-select the default saved address once the list arrives (adjusting state while rendering, not in an effect).
+  const [seenAddresses, setSeenAddresses] = useState<typeof addresses.data>(null);
+  if (addresses.data !== seenAddresses) {
+    setSeenAddresses(addresses.data);
+    const list = addresses.data?.addresses || [];
+    if (list.length && selected === "new" && !draft.name) { const preferred = list.find((a) => a.isDefault) || list[0]; setSelected(preferred.id); setDraft(draftFrom(preferred)); }
   }
-  return <Shell title={order?'تم تسجيل الطلب على الخادم':'إتمام الطلب'} subtitle="تُراجع الأسعار والكميات والخصم على الخادم عند التأكيد.">
-    {order?<View style={{gap:18,padding:24,borderRadius:18,backgroundColor:t.paper}}><Txt weight="extra" style={{fontSize:25}}>طلبك {order.id}</Txt><Txt>المجموع: {formatPrice(order.total,order.currency)}</Txt><Txt>{order.paymentMethod==='cod'?'الدفع عند الاستلام؛ لم يتم تحصيل أموال إلكترونيًا.':'خُصم المبلغ من رصيد المحفظة الداخلي على الخادم.'}</Txt><Button title="تفاصيل الطلب وتتبّعه" onPress={()=>router.replace(`/order/${order.id}`)}/><Button secondary title="متابعة التسوق" onPress={()=>router.replace('/explore')}/></View>
-    :!configured?<View style={{gap:14}}><Txt>يجب ربط التطبيق بخادم المتجر لإنشاء طلب فعلي محفوظ في قاعدة البيانات.</Txt><Button title="إعداد اتصال الخادم" onPress={()=>router.push('/connection')}/></View>
-    :!user?<View style={{gap:14}}><Txt>سجّل الدخول لحفظ طلبك ومتابعته من حسابك.</Txt><Button title="تسجيل الدخول" onPress={()=>router.push('/login')}/><Button secondary title="إنشاء حساب" onPress={()=>router.push('/register')}/></View>
-    :!items.length?<EmptyState title="السلة فارغة" detail="أضف منتجات متوفرة قبل تأكيد الطلب."/>
-    :<View style={{gap:20,maxWidth:850,width:'100%',alignSelf:'center'}}>
-      {catalogStatus!=='connected'?<Txt style={{color:t.danger}}>الكتالوج غير متصل حاليًا. لن يظهر نجاح الطلب إلا بعد تأكيد الخادم.</Txt>:null}
-      <View style={{padding:20,borderRadius:18,backgroundColor:t.paper,gap:14}}><Txt weight="extra" style={{fontSize:21}}>عنوان التوصيل</Txt>
-        {addresses.map((a,i)=><Pressable key={a.id||i} accessibilityRole="button" onPress={()=>setAddress(a)} style={{padding:13,borderRadius:10,borderWidth:1,borderColor:address.id===a.id?t.orange:t.line}}><Txt>{a.label||a.name}: {a.city}، {a.street}</Txt></Pressable>)}
-        {field('name','اسم المستلم')}{field('phone','رقم الهاتف')}{field('city','المدينة')}{field('street','الشارع والمبنى والتفاصيل')}
-        <Button secondary title={locating?'جارٍ تحديد الموقع…':'إضافة موقعي الحالي للتوصيل'} disabled={locating} onPress={()=>void locate()}/>
-        {address.latitude!==undefined?<Txt>الموقع المرفق: {address.latitude.toFixed(5)}، {address.longitude?.toFixed(5)}</Txt>:null}
-        <Button secondary title="إدارة العناوين المحفوظة" onPress={()=>router.push('/addresses')}/>
-      </View>
-      <View style={{padding:20,borderRadius:18,backgroundColor:t.paper,gap:14}}><Txt weight="extra" style={{fontSize:21}}>الدفع والقسيمة</Txt>
-        {(['cod','wallet'] as const).map(method=><Pressable key={method} accessibilityRole="radio" accessibilityState={{checked:paymentMethod===method}} onPress={()=>setPayment(method)} style={{padding:15,borderWidth:1,borderColor:paymentMethod===method?t.orange:t.line,borderRadius:12}}><Txt>{paymentMethod===method?'●':'○'} {method==='cod'?'الدفع عند الاستلام':'رصيد المحفظة الداخلي'}</Txt></Pressable>)}
-        <Txt style={{color:t.muted}}>المحفظة دفتر رصيد لدى المتجر، ولا تشحن بطاقة بنكية من هذه الشاشة.</Txt>
-        <TextInput accessibilityLabel="رمز القسيمة" value={coupon} onChangeText={value=>{setCoupon(value);setValidated('');setDiscount(0);}} autoCapitalize="characters" placeholder="رمز الخصم" placeholderTextColor={t.muted} style={{padding:14,borderWidth:1,borderColor:t.line,borderRadius:12,color:t.ink,fontFamily:'Tajawal_400Regular',textAlign:'right'}}/>
-        <Button secondary title="تطبيق القسيمة" disabled={busy||!coupon.trim()} onPress={()=>void validateCoupon()}/>
-        {appliedCoupon?<Txt style={{color:t.green}}>تم قبول {appliedCoupon}: خصم {formatPrice(appliedDiscount,settings.currency)}</Txt>:null}
-      </View>
-      <View style={{padding:20,borderRadius:18,backgroundColor:t.paper,gap:14}}><Txt weight="extra" style={{fontSize:21}}>ملخص الطلب</Txt>
-        {items.map(item=><Txt key={item.productId}>{products.find(p=>p.id===item.productId)?.name||item.productId} × {item.quantity}</Txt>)}
-        <Txt>المنتجات: {formatPrice(subtotal,settings.currency)}</Txt><Txt>الخصم: {formatPrice(appliedDiscount,settings.currency)}</Txt><Txt>التوصيل: {formatPrice(shipping,settings.currency)}</Txt><Txt weight="extra" style={{fontSize:22}}>التقدير الحالي: {formatPrice(Math.max(0,subtotal-appliedDiscount)+shipping,settings.currency)}</Txt>
-        <Txt style={{color:t.muted}}>القيمة النهائية يحددها الخادم. لن تُرسل بيانات بطاقة دفع.</Txt>
-        {error?<Txt accessibilityRole="alert" style={{color:t.danger}}>{error}</Txt>:null}
-        <Button title={busy?'جارٍ تأكيد الطلب…':'تأكيد الطلب على الخادم'} disabled={busy||locating} onPress={()=>void submit()}/>
-      </View>
-    </View>}
-  </Shell>;
+  const items = useMemo(() => Object.entries(lines).map(([productId, quantity]) => ({ productId, quantity })), [lines]);
+  const giftPayload = gift.wrap || gift.message.trim() ? { wrap: gift.wrap, message: gift.message.trim() || undefined, recipient: gift.recipient.trim() || undefined } : null;
+  useEffect(() => {
+    let active = true;
+    if (!configured || !items.length) return;
+    api.post<Quote>("/checkout/quote", { items, couponCode: params.coupon || undefined, address: { city: draft.city }, deliverySlot: slot || undefined, gift: giftPayload || undefined })
+      .then((q) => { if (active) setQuote(q); }).catch((e) => { if (active) setError(e instanceof Error ? e.message : "تعذر حساب الطلب"); });
+    return () => { active = false; };
+  }, [configured, items, params.coupon, draft.city, slot, gift.wrap]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!user) return <Shell title="إتمام الطلب"><EmptyState title="سجّل الدخول أولًا" detail="نحتاج حسابك لحفظ العنوان ومتابعة الطلب." action="تسجيل الدخول" href="/login" /></Shell>;
+  if (!items.length) return <Shell title="إتمام الطلب"><EmptyState title="لا توجد منتجات للطلب" detail="أضف منتجات إلى السلة أولًا." /></Shell>;
+  const productName = (id: string) => store.products.find((p) => p.id === id)?.name || id;
+  const days = [...new Set((slots.data?.slots || []).map((s) => s.date))];
+  async function toPayment() {
+    setError("");
+    const problem = addressProblem(draft); if (problem) { setError(problem); return; }
+    if (selected === "new" && saveAddress && configured) {
+      try { const created = await api.post<{ address: Address & { id: string } }>("/addresses", addressPayload(draft)); setSelected(created.address.id); addresses.reload(); } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ العنوان"); return; }
+    }
+    setStep("payment");
+  }
+  async function toReview() {
+    setError("");
+    if (method === "card" && !cardToken) {
+      const [month, year] = card.expiry.split("/").map((v) => Number(v.trim()));
+      setBusy(true);
+      try {
+        const token = await api.post<{ token: string; brand: string; last4: string }>("/payments/card/tokenize", { number: card.number, name: card.name, expMonth: month, expYear: year, cvc: card.cvc });
+        setCardToken(token); setCard({ number: "", name: "", expiry: "", cvc: "" });
+      } catch (e) { setError(e instanceof Error ? e.message : "تعذر التحقق من البطاقة"); setBusy(false); return; }
+      setBusy(false);
+    }
+    if (method === "wallet" && quote && (wallet.data?.balance ?? 0) < quote.total) { setError("رصيد المحفظة غير كافٍ لهذا الطلب"); return; }
+    setStep("review");
+  }
+  async function confirm() {
+    setBusy(true); setError("");
+    try {
+      const order = await store.submitOrder({ items: lines, address: addressPayload(draft) as Address, paymentMethod: method, couponCode: params.coupon || undefined, idempotencyKey: idempotency.current, deliverySlot: slot, deliveryNotes: notes.trim() || undefined, gift: giftPayload, acceptTerms: terms, cardToken: cardToken?.token });
+      router.replace({ pathname: "/order/[id]", params: { id: order.id, placed: "1" } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذر إنشاء الطلب");
+      if (method === "card") setCardToken(null);
+    } finally { setBusy(false); }
+  }
+  return (
+    <Shell title={step === "address" ? "وين نوصلك؟" : step === "payment" ? "طريقة الدفع" : "مراجعة الطلب"} subtitle={params.mode === "buy-now" ? "شراء مباشر" : undefined} back testID="checkout-screen">
+      <Tabs testID="checkout-steps" value={step} onChange={(next) => { if (next === "address" || (next === "payment" && step === "review")) setStep(next); }} tabs={[{ id: "address", label: "١ العنوان" }, { id: "payment", label: "٢ الدفع" }, { id: "review", label: "٣ المراجعة" }]} />
+      {error ? <View style={{ marginTop: 10 }}><Notice text={error} tone="danger" /></View> : null}
+
+      {step === "address" ? (
+        <View style={{ gap: 14, marginTop: 14 }}>
+          {addresses.data?.addresses?.length ? (
+            <Card style={{ gap: 8 }}>
+              <Txt weight="bold">{tr("عناويني المحفوظة")}</Txt>
+              <Row wrap>{addresses.data.addresses.map((a) => <Chip key={a.id} testID={`saved-address-${a.id}`} label={`${a.label || a.city} · ${a.street}`} active={selected === a.id} onPress={() => { setSelected(a.id); setDraft(draftFrom(a)); }} />)}<Chip label="+ عنوان جديد" active={selected === "new"} onPress={() => { setSelected("new"); setDraft(emptyAddress); }} /></Row>
+            </Card>
+          ) : null}
+          <Card><AddressForm value={draft} onChange={(next) => { setDraft(next); if (selected !== "new") setSelected("new"); }} /></Card>
+          {selected === "new" ? <Toggle label="احفظ العنوان لطلباتي القادمة" value={saveAddress} onChange={setSaveAddress} /> : null}
+          <Card style={{ gap: 10 }} testID="slots">
+            <Txt weight="bold">{tr("موعد التوصيل")}</Txt>
+            {days.map((date) => (
+              <View key={date} style={{ gap: 6 }}>
+                <Txt style={{ color: t.muted, fontSize: 12 }}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("ar-JO", { weekday: "long", day: "numeric", month: "long" })}</Txt>
+                <Row wrap>{slots.data!.slots.filter((s) => s.date === date).map((s) => <Chip key={`${s.date}-${s.window}`} testID={`slot-${s.date}-${s.window}`} label={`${s.label} ${s.from}–${s.to}${s.available ? "" : ` · ${tr(s.remaining ? "مغلق" : "ممتلئ")}`}`} active={slot?.date === s.date && slot?.window === s.window} onPress={s.available ? () => setSlot({ date: s.date, window: s.window }) : undefined} />)}</Row>
+              </View>
+            ))}
+            {!configured ? <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("المواعيد تظهر عند الاتصال بخادم المتجر.")}</Txt> : null}
+            {slot ? <Chip label="أقرب وقت متاح بدل الموعد" onPress={() => setSlot(null)} /> : null}
+          </Card>
+          <Field label="ملاحظات للسائق" testID="delivery-notes" value={notes} onChangeText={setNotes} placeholder={tr("اتصل قبل الوصول، الباب الخلفي…")} multiline />
+          <Card style={{ gap: 8 }}>
+            <Toggle testID="gift-wrap" label="تغليف هدية 🎁" detail={tr("رسوم {m}", { m: money.format(store.settings.giftWrapFee ?? 1.5) })} value={gift.wrap} onChange={(wrap) => setGift((g) => ({ ...g, wrap }))} />
+            {gift.wrap ? <><Field label="رسالة الهدية" testID="gift-message" value={gift.message} onChangeText={(message) => setGift((g) => ({ ...g, message }))} maxLength={200} /><Field label="اسم المُهدى إليه" value={gift.recipient} onChangeText={(recipient) => setGift((g) => ({ ...g, recipient }))} /></> : null}
+          </Card>
+          <Button title={tr("متابعة للدفع")} testID="to-payment" onPress={() => void toPayment()} />
+        </View>
+      ) : null}
+
+      {step === "payment" ? (
+        <View style={{ gap: 12, marginTop: 14 }}>
+          {([["card", "بطاقة ائتمان", CreditCard], ["cod", "الدفع عند الاستلام", Banknote], ["wallet", "رصيد المحفظة", Wallet]] as const).map(([id, label, Icon]) => (
+            <Card key={id} onPress={() => setMethod(id)} testID={`pay-${id}`} accessibilityLabel={tr(label)} style={{ borderColor: method === id ? t.primary : t.line, borderWidth: method === id ? 2 : 1 }}>
+              <Row><Icon size={22} color={method === id ? t.primary : t.muted} /><Txt weight="bold" style={{ flex: 1 }}>{tr(label)}</Txt>{id === "wallet" && wallet.data ? <Badge label={money.format(wallet.data.balance)} /> : null}{method === id ? <Badge label="مختار" tone="success" /> : null}</Row>
+            </Card>
+          ))}
+          {method === "card" ? (
+            <Card style={{ gap: 10 }} testID="card-form">
+              <Notice text="وضع تجريبي — لا خصم فعلي. استخدم بطاقة الاختبار 4242 4242 4242 4242." tone="warning" />
+              {cardToken ? <Row><ShieldCheck size={18} color={t.success} /><Txt style={{ flex: 1 }}>{tr("بطاقة {b} تنتهي بـ {l} جاهزة", { b: cardToken.brand.toUpperCase(), l: cardToken.last4 })}</Txt><Chip label="تغيير" onPress={() => setCardToken(null)} /></Row> : <>
+                <Field label="رقم البطاقة" testID="card-number" value={card.number} onChangeText={(number) => setCard((c) => ({ ...c, number }))} keyboardType="number-pad" placeholder="4242 4242 4242 4242" autoComplete="cc-number" />
+                <Field label="الاسم على البطاقة" testID="card-name" value={card.name} onChangeText={(name) => setCard((c) => ({ ...c, name }))} autoComplete="cc-name" />
+                <Row style={{ alignItems: "flex-start" }}>
+                  <View style={{ flex: 1 }}><Field label="تاريخ الانتهاء" testID="card-expiry" value={card.expiry} onChangeText={(expiry) => setCard((c) => ({ ...c, expiry }))} placeholder="12/29" /></View>
+                  <View style={{ flex: 1 }}><Field label="رمز التحقق" testID="card-cvc" value={card.cvc} onChangeText={(cvc) => setCard((c) => ({ ...c, cvc }))} keyboardType="number-pad" secureTextEntry maxLength={4} /></View>
+                </Row>
+                <Txt style={{ color: t.muted, fontSize: 11 }}>{tr("لا نحفظ رقم البطاقة ولا رمز التحقق؛ نحتفظ بآخر أربعة أرقام فقط.")}</Txt>
+              </>}
+            </Card>
+          ) : null}
+          <Button title={tr("مراجعة الطلب")} testID="to-review" busy={busy} onPress={() => void toReview()} />
+        </View>
+      ) : null}
+
+      {step === "review" ? (
+        <View style={{ gap: 12, marginTop: 14 }}>
+          <Card style={{ gap: 6 }}>
+            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("العنوان")}</Txt><Pressable onPress={() => setStep("address")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
+            <Txt style={{ color: t.muted }}>{[draft.name, draft.city, draft.district, draft.street, draft.building].filter(Boolean).join("، ")}</Txt>
+            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("الموعد")}</Txt><Pressable onPress={() => setStep("address")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
+            <Txt style={{ color: t.muted }} testID="review-slot">{slot ? `${slots.data?.slots.find((s) => s.date === slot.date && s.window === slot.window)?.label || ""} · ${slot.date}` : quote?.zone ? tr("أقرب وقت (حوالي {h} ساعة)", { h: Math.round(quote.zone.etaMinutes / 60) }) : tr("أقرب وقت متاح")}</Txt>
+            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("الدفع")}</Txt><Pressable onPress={() => setStep("payment")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
+            <Txt style={{ color: t.muted }}>{method === "card" && cardToken ? `${cardToken.brand.toUpperCase()} •••• ${cardToken.last4} (${tr("تجريبي")})` : tr(method === "cod" ? "الدفع عند الاستلام" : method === "wallet" ? "رصيد المحفظة" : "بطاقة ائتمان")}</Txt>
+            {notes ? <Txt style={{ color: t.muted, fontSize: 12 }}>📝 {notes}</Txt> : null}
+            {gift.wrap ? <Txt style={{ color: t.muted, fontSize: 12 }}>🎁 {gift.message || tr("تغليف هدية")}</Txt> : null}
+          </Card>
+          <Card testID="review-summary">
+            {items.map((i) => <KeyValue key={i.productId} label={`${productName(i.productId)} × ${i.quantity}`} value={money.format((store.products.find((p) => p.id === i.productId)?.price || 0) * i.quantity)} />)}
+            <View style={{ height: 1, backgroundColor: t.line, marginVertical: 6 }} />
+            <KeyValue label="المجموع الفرعي" value={money.format(quote?.subtotal ?? 0)} />
+            {quote?.discount ? <KeyValue label="الخصم" value={`- ${money.format(quote.discount)}`} /> : null}
+            <KeyValue label={quote?.zone ? tr("التوصيل ({z})", { z: quote.zone.name }) : "التوصيل"} value={money.format(quote?.shipping ?? 0)} />
+            {quote?.tier && quote.tier !== "bronze" ? <Txt style={{ color: t.success, fontSize: 12 }}>{tr("ميزة عضويتك طُبّقت على التوصيل")}</Txt> : null}
+            {quote?.giftWrapFee ? <KeyValue label="تغليف الهدية" value={money.format(quote.giftWrapFee)} /> : null}
+            <KeyValue label="الإجمالي" value={money.format(quote?.total ?? 0)} strong testID="review-total" />
+          </Card>
+          {quote?.budget?.exceeds ? <Notice text={tr("هذا الطلب يتجاوز ميزانيتك الأسبوعية (المتبقي {m})", { m: money.format(quote.budget.remaining ?? 0) })} tone="warning" /> : null}
+          <Pressable testID="accept-terms" accessibilityRole="checkbox" accessibilityState={{ checked: terms }} onPress={() => setTerms((v) => !v)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, minHeight: 44 }}>
+            {terms ? <CheckSquare size={22} color={t.primary} /> : <Square size={22} color={t.muted} />}
+            <Txt style={{ flex: 1 }}>{tr("أوافق على الشروط والأحكام وسياسة الإرجاع")}</Txt>
+          </Pressable>
+          <Button title={tr("تأكيد الطلب")} testID="confirm-order" busy={busy} disabled={!terms || !quote} onPress={() => void confirm()} />
+        </View>
+      ) : null}
+    </Shell>
+  );
 }

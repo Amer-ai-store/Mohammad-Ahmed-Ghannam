@@ -1,410 +1,154 @@
-import React from "react";
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from "react-native";
-import {
-  ArrowLeft,
-  Check,
-  ChevronLeft,
-  Coffee,
-  Headphones,
-  Leaf,
-  Shirt,
-  Sparkles,
-  Truck,
-  ShoppingBag,
-} from "lucide-react-native";
+import React, { useMemo, useState } from "react";
+import { Pressable, ScrollView, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
+import { Camera, Mic, Search, CalendarCheck, ArrowLeft, Sparkles } from "lucide-react-native";
 import { Shell } from "../components/Shell";
-import { EmptyState, SectionTitle, Txt } from "../components/ui";
+import { Button, Card, Chip, Row, SectionTitle, Txt } from "../components/ui";
+import { ProductCard } from "../components/ProductCard";
 import { ProductGrid } from "../components/ProductGrid";
-import { formatPrice } from "../data/products";
+import { Mascot } from "../components/Robot";
+import { Countdown } from "../components/Countdown";
+import { CategoryIcon } from "../components/CategoryIcon";
 import { useStore } from "../lib/store";
-import { Palette, useTheme, useThemedStyles } from "../lib/theme";
+import { useSession } from "../lib/session";
+import { useTheme } from "../lib/theme";
+import { useI18n } from "../lib/i18n";
+import { useApi } from "../lib/useApi";
+import { api } from "../lib/api";
+import { categoryName, useCategories } from "../lib/catalog";
+import { useRobot } from "../lib/robot";
+import type { Product } from "../data/products";
 
-const groups = [
-  {
-    id: "electronics",
-    title: "إلكترونيات",
-    detail: "تقنية تجعل يومك أسهل",
-    icon: Headphones,
-    bg: "#EEECE3",
-    color: "#727A6B",
-  },
-  {
-    id: "home",
-    title: "المنزل والحياة",
-    detail: "تفاصيل تصنع الفرق",
-    icon: Coffee,
-    bg: "#EEE6DA",
-    color: "#AA8C60",
-  },
-  {
-    id: "fashion",
-    title: "أزياء وإكسسوارات",
-    detail: "أسلوب يشبهك",
-    icon: Shirt,
-    bg: "#E8EAE2",
-    color: "#788464",
-  },
-  {
-    id: "care",
-    title: "العناية والجمال",
-    detail: "وقت صغير لنفسك",
-    icon: Leaf,
-    bg: "#F3E8E3",
-    color: "#B18A80",
-  },
-];
+type Campaign = { id: string; title: string; subtitle: string; color: string; link: string; cta: string };
+type Deal = { id: string; productId: string; product: Product; price: number; endsAt: string; remaining: number | null };
+
 export default function Home() {
-  const { colors: t, isDark } = useTheme();
-  const s = useThemedStyles(makeStyles);
-  const { products, settings } = useStore();
-  const storefront = settings.storefront || {};
-  const displayProducts = products.filter((p) => !p.variantOf);
-  const activeCategories = [...new Set(displayProducts.map((p) => p.category))];
-  const visibleGroups = activeCategories.map((id) => groups.find((group) => group.id === id) || { id, title: id, detail: "اكتشف منتجات هذا القسم", icon: ShoppingBag, bg: t.secondary, color: t.orange });
+  const { colors: t } = useTheme();
+  const { t: tr, lang, isRTL } = useI18n();
+  const store = useStore();
+  const { user } = useSession();
+  const robot = useRobot();
   const { width } = useWindowDimensions();
-  const desktop = width >= 950;
+  const categories = useCategories();
+  const [query, setQuery] = useState("");
+  const campaigns = useApi<{ campaigns: Campaign[] }>("/campaigns");
+  const deals = useApi<{ serverTime: string; deals: Deal[] }>("/flash-deals");
+  const recent = store.recentIds.slice(0, 10).join(",");
+  const recommendations = useApi<{ personalized: boolean; products: (Product & { reason: string })[] }>(`/recommendations?limit=8${recent ? `&recent=${encodeURIComponent(recent)}` : ""}`);
+  const prefs = useApi<{ preferences: { onboarded: boolean; interests: string[] } }>("/me/preferences", { needsUser: true });
+  const checkin = useApi<{ checkedInToday: boolean; streak: number; nextReward: number }>("/rewards/check-in", { needsUser: true });
+  const [interests, setInterests] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const columns = width >= 900 ? 4 : 2;
+  const recommended = recommendations.data?.products?.length ? recommendations.data.products : [...store.products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8).map((p) => ({ ...p, reason: "الأعلى تقييمًا" }));
+  const recentlyViewed = useMemo(() => store.recentIds.map((id) => store.products.find((p) => p.id === id)).filter((p): p is Product => !!p).slice(0, 10), [store.recentIds, store.products]);
+  const featured = useMemo(() => store.products.filter((p) => (p.stock ?? 1) > 0).slice(0, 8), [store.products]);
+  const submit = () => router.navigate({ pathname: "/explore", params: query.trim() ? { q: query.trim() } : {} });
+  const saveInterests = async () => {
+    setBusy(true);
+    try { await api.patch("/me/preferences", { interests, onboarded: true }); prefs.reload(); recommendations.reload(); robot.react("hello", tr("رتّبت لك المتجر حسب ذوقك ✨")); }
+    catch { store.notify("تعذر حفظ الاهتمامات"); } finally { setBusy(false); }
+  };
+  const doCheckin = async () => {
+    try {
+      const result = await api.post<{ awarded: number; streak: number }>("/rewards/check-in", {});
+      checkin.reload(); robot.react("checkin", tr("+{n} نقاط! حضورك {d} يوم متتالي", { n: result.awarded, d: result.streak }));
+    } catch { store.notify("تعذر تسجيل الحضور"); }
+  };
+  const Arrow = ArrowLeft;
   return (
-    <Shell title="" search>
-      <View style={s.welcome}>
-        <View style={{ flex: 1 }}>
-          <Txt weight="extra" style={{ fontSize: desktop ? 26 : 23 }}>
-            أهلًا بك، لُقطتك تنتظرك <Txt style={{ fontSize: 22 }}>✦</Txt>
-          </Txt>
-          <Txt style={{ color: t.muted, fontSize: 13, marginTop: 7 }}>
-            اختيارات جميلة. تفاصيل ذكية. كلّها في مكان واحد.
-          </Txt>
+    <Shell title="" testID="home">
+      <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Txt style={{ color: t.muted }}>{user ? tr("أهلًا {name} 👋", { name: user.name.split(" ")[0] }) : tr("أهلًا بك 👋")}</Txt>
+          <Txt accessibilityRole="header" weight="extra" style={{ fontSize: 30, lineHeight: 42 }}>{tr("شو بدك اليوم؟")}</Txt>
         </View>
-        {desktop ? (
-          <View style={s.edition}>
-            <View style={s.dot} />
-            <Txt weight="medium" style={{ color: t.green, fontSize: 11 }}>
-              {displayProducts.length} منتج في المتجر
-            </Txt>
-          </View>
-        ) : null}
+        <Mascot size={92} bubble="top" message={tr("اسألني أي شي!")} />
       </View>
-      <View style={[s.hero, { minHeight: desktop ? 320 : 285 }]}>
-        <Image
-          source={require("../../assets/hero.jpg")}
-          style={[s.heroImage, { width: desktop ? "49%" : "47%" }]}
-        />
-        <View
-          style={[
-            s.heroCopy,
-            { width: desktop ? "56%" : "65%", padding: desktop ? 33 : 22 },
-          ]}
-        >
-          <View style={s.heroPill}>
-            <View
-              style={{
-                width: 4,
-                height: 4,
-                borderRadius: 3,
-                backgroundColor: t.orange,
-              }}
-            />
-            <Txt weight="bold" style={{ fontSize: 10, color: t.muted }}>
-              أشياء قليلة، تُحدث فرقًا كبيرًا
-            </Txt>
-          </View>
-          <Txt
-            weight="extra"
-            style={{
-              fontSize: desktop ? 43 : 30,
-              lineHeight: desktop ? 55 : 42,
-              marginTop: 17,
-            }}
-          >
-            {storefront.heroTitle || "لُقطات تستحق أن تكون لك"}
-          </Txt>
-          <Txt
-            style={{
-              color: t.muted,
-              fontSize: desktop ? 14 : 12,
-              lineHeight: 24,
-              marginTop: 10,
-              maxWidth: 320,
-            }}
-          >
-            {storefront.heroSubtitle || "من تفاصيل منزلك إلى إيقاع يومك، اكتشف منتجات تُشبه ذوقك."}
-          </Txt>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.navigate("/explore")}
-            style={s.heroButton}
-          >
-            <Txt weight="bold" style={{ color: t.onAccent, fontSize: 13 }}>
-              اكتشف المجموعة
-            </Txt>
-            <ArrowLeft color={t.onAccent} size={16} />
-          </Pressable>
-        </View>
-        {desktop ? (
-          <View style={s.heroCaption}>
-            <Txt
-              weight="bold"
-              style={{ color: "white", fontSize: 10, letterSpacing: 2 }}
-            >
-              THE EVERYDAY COLLECTION
-            </Txt>
-          </View>
-        ) : null}
+      <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, backgroundColor: t.paper, borderRadius: 20, borderWidth: 1, borderColor: t.line, paddingHorizontal: 8, minHeight: 56 }}>
+        <Search size={19} color={t.muted} />
+        <TextInput testID="home-search" accessibilityLabel={tr("ابحث عن منتج")} value={query} onChangeText={setQuery} onSubmitEditing={submit} returnKeyType="search" placeholder={tr("ابحث عن منتج، قسم أو وصفة…")} placeholderTextColor={t.muted} style={{ flex: 1, minHeight: 50, color: t.ink, fontFamily: "Tajawal_500Medium", fontSize: 15, textAlign: isRTL ? "right" : "left" }} />
+        <Pressable testID="home-voice" accessibilityRole="button" accessibilityLabel={tr("بحث صوتي")} onPress={() => router.navigate({ pathname: "/explore", params: { mode: "voice" } })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.primarySoft, alignItems: "center", justifyContent: "center" }}><Mic size={18} color={t.primary} /></Pressable>
+        <Pressable testID="home-camera" accessibilityRole="button" accessibilityLabel={tr("بحث بالصورة")} onPress={() => router.navigate({ pathname: "/explore", params: { mode: "image" } })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.orangeSoft, alignItems: "center", justifyContent: "center" }}><Camera size={18} color={t.orange} /></Pressable>
       </View>
-      {storefront.showAssistant !== false ? <Pressable
-        accessibilityRole="button"
-        onPress={() => router.navigate("/assistant")}
-        style={[s.aiBanner, !desktop ? { padding: 17 } : null]}
-      >
-        <View style={s.aiIcon}>
-          <Sparkles size={23} color={t.orange} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View
-            style={{
-              flexDirection: "row-reverse",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <Txt weight="bold" style={{ fontSize: desktop ? 17 : 15 }}>
-              ذوقك هو البداية. مساعدك يُكملها.
-            </Txt>
-            <View style={s.aiLabel}>
-              <Txt weight="bold" style={{ color: t.orange, fontSize: 9 }}>
-                AI
-              </Txt>
+
+      {user && prefs.data && !prefs.data.preferences.onboarded ? (
+        <Card style={{ marginTop: 16, gap: 10 }} tone="soft" testID="onboarding">
+          <Row><Sparkles size={18} color={t.primary} /><Txt weight="extra" style={{ fontSize: 17, flex: 1 }}>{tr("خلّينا نعرف ذوقك")}</Txt></Row>
+          <Txt style={{ color: t.muted, fontSize: 13 }}>{tr("اختر اهتماماتك لنرتب لك المتجر والتوصيات.")}</Txt>
+          <Row wrap>{categories.map((c) => <Chip key={c.id} testID={`interest-${c.id}`} label={categoryName(c, lang)} active={interests.includes(c.id)} onPress={() => setInterests((x) => (x.includes(c.id) ? x.filter((v) => v !== c.id) : [...x, c.id]))} />)}</Row>
+          <Button title={tr("احفظ اهتماماتي")} testID="save-interests" busy={busy} disabled={!interests.length} onPress={saveInterests} tone="primary" />
+        </Card>
+      ) : null}
+
+      {user && checkin.data ? (
+        <Card style={{ marginTop: 14 }} testID="checkin-card">
+          <Row>
+            <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: t.warningSoft, alignItems: "center", justifyContent: "center" }}><CalendarCheck size={22} color={t.warning} /></View>
+            <View style={{ flex: 1 }}>
+              <Txt weight="bold">{checkin.data.checkedInToday ? tr("سجّلت حضورك اليوم ✅") : tr("سجّل حضورك اليومي")}</Txt>
+              <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("سلسلة {n} يوم · المكافأة القادمة {p} نقاط", { n: checkin.data.streak, p: checkin.data.nextReward })}</Txt>
             </View>
-          </View>
-          <Txt style={{ color: t.muted, fontSize: 12, marginTop: 5 }}>
-            صف ما تحتاجه، واعثر على اختيار يناسبك وميزانيتك.
-          </Txt>
-        </View>
-        {desktop ? (
-          <View style={s.aiAction}>
-            <Txt weight="bold" style={{ fontSize: 12 }}>
-              ساعدني أختار
-            </Txt>
-            <ArrowLeft size={15} color={t.ink} />
-          </View>
-        ) : (
-          <ChevronLeft size={20} color={t.orange} />
-        )}
-      </Pressable> : null}
-      <SectionTitle
-        title="على ذوقك، في كل قسم"
-        action="كل الأقسام"
-        onPress={() => router.navigate("/explore")}
-      />
-      <View style={s.categories}>
-        {visibleGroups.map((group) => (
-          <Pressable
-            accessibilityRole="button"
-            key={group.id}
-            onPress={() =>
-              router.navigate({
-                pathname: "/explore",
-                params: { category: group.id },
-              })
-            }
-            style={[s.category, { width: width < 700 ? "48%" : "23.5%" }]}
-          >
-            <View style={[s.categoryIcon, { backgroundColor: isDark ? t.secondary : group.bg }]}>
-              <group.icon size={26} strokeWidth={1.4} color={t.orange} />
-            </View>
-            <Txt weight="bold" style={{ fontSize: 14, textAlign: "center" }}>
-              {group.title}
-            </Txt>
-            <Txt
-              style={{
-                fontSize: 10,
-                color: t.muted,
-                marginTop: 5,
-                textAlign: "center",
-              }}
-            >
-              {group.detail}
-            </Txt>
+            {!checkin.data.checkedInToday ? <Button title={tr("سجّل")} testID="checkin" onPress={doCheckin} style={{ minHeight: 42, paddingVertical: 8 }} /> : null}
+          </Row>
+        </Card>
+      ) : null}
+
+      <SectionTitle title="الأقسام" action="كل الأقسام" onPress={() => router.navigate("/explore")} />
+      <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
+        {categories.slice(0, 4).map((c) => (
+          <Pressable key={c.id} testID={`category-${c.id}`} accessibilityRole="button" accessibilityLabel={categoryName(c, lang)} onPress={() => router.navigate({ pathname: "/explore", params: { category: c.id } })} style={{ width: "23%", alignItems: "center", gap: 6 }}>
+            <View style={{ width: "100%", aspectRatio: 1, maxWidth: 86, borderRadius: 24, backgroundColor: `${c.color}22`, alignItems: "center", justifyContent: "center" }}><CategoryIcon name={c.icon} size={28} color={c.color} /></View>
+            <Txt weight="bold" numberOfLines={1} style={{ fontSize: 12, textAlign: "center" }}>{categoryName(c, lang)}</Txt>
           </Pressable>
         ))}
       </View>
-      <SectionTitle
-        title="اختيارات لُقطة"
-        subtitle="تشكيلة اخترناها لتفاصيل يومك"
-        action="عرض الكل"
-        onPress={() => router.navigate("/explore")}
-      />
-      {displayProducts.length ? <ProductGrid items={displayProducts.slice(0, 4)} /> : <EmptyState title="لا توجد منتجات منشورة" detail="ستظهر الأصناف هنا بعد إضافتها أو مزامنتها من لوحة الإدارة." action="تصفح المتجر" />}
-      <View style={s.promiseRow}>
-        <View style={s.promise}>
-          <Truck size={20} color={t.muted} />
-          <View>
-            <Txt weight="bold" style={{ fontSize: 12 }}>
-              شحن محسوب بوضوح
-            </Txt>
-            <Txt style={{ color: t.muted, fontSize: 10, marginTop: 3 }}>
-              {`مجاني للطلبات من ${formatPrice(settings.freeShippingThreshold, settings.currency)}`}
-            </Txt>
-          </View>
-        </View>
-        <View style={s.promise}>
-          <Check size={20} color={t.muted} />
-          <View>
-            <Txt weight="bold" style={{ fontSize: 12 }}>
-              تفاصيل قبل الاختيار
-            </Txt>
-            <Txt style={{ color: t.muted, fontSize: 10, marginTop: 3 }}>
-              مواصفات وأسعار واضحة
-            </Txt>
-          </View>
-        </View>
-        <View style={s.promise}>
-          <Sparkles size={20} color={t.muted} />
-          <View>
-            <Txt weight="bold" style={{ fontSize: 12 }}>
-              اختيار يناسب احتياجك
-            </Txt>
-            <Txt style={{ color: t.muted, fontSize: 10, marginTop: 3 }}>
-              مساعدك معك في كل خطوة
-            </Txt>
-          </View>
-        </View>
-      </View>
-      <SectionTitle
-        title="تفاصيل تُكمل يومك"
-        subtitle="اكتشف لُقطات أخرى قد تعجبك"
-        action="استكشف المزيد"
-        onPress={() => router.navigate("/explore")}
-      />
-      <ProductGrid items={displayProducts.slice(4, 8)} />
+
+      {campaigns.data?.campaigns?.length ? (
+        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginTop: 20 }} contentContainerStyle={{ gap: 12 }} testID="campaigns">
+          {campaigns.data.campaigns.map((c) => (
+            <Pressable key={c.id} testID={`campaign-${c.id}`} accessibilityRole="button" accessibilityLabel={c.title} onPress={() => router.navigate(c.link as never)} style={{ width: Math.min(width - 36, 560), minHeight: 132, borderRadius: 26, backgroundColor: c.color, padding: 18, justifyContent: "space-between" }}>
+              <View style={{ gap: 4 }}>
+                <Txt weight="extra" style={{ color: "#FFFFFF", fontSize: 21 }}>{c.title}</Txt>
+                <Txt style={{ color: "#FFFFFFDD", fontSize: 13 }}>{c.subtitle}</Txt>
+              </View>
+              <View style={{ alignSelf: "flex-end", flexDirection: "row-reverse", alignItems: "center", gap: 6, backgroundColor: "#FFFFFF", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
+                <Txt weight="bold" style={{ color: c.color, fontSize: 13 }}>{c.cta}</Txt><Arrow size={14} color={c.color} />
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {deals.data?.deals?.length ? (
+        <>
+          <SectionTitle title="عروض خاطفة ⚡" subtitle="تنتهي قريبًا — الكمية محدودة" action="كل العروض" onPress={() => router.navigate("/offers")} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} testID="flash-deals">
+            {deals.data.deals.map((d) => (
+              <View key={d.id} style={{ width: 186, gap: 8 }}>
+                <Countdown endsAt={d.endsAt} serverTime={deals.data?.serverTime} onEnd={deals.reload} />
+                <ProductCard product={{ ...d.product, price: d.price }} width={186} />
+              </View>
+            ))}
+          </ScrollView>
+        </>
+      ) : null}
+
+      <SectionTitle title="مختارة لك" subtitle={recommendations.data?.personalized ? "حسب اهتماماتك ومشترياتك" : "الأكثر طلبًا الآن"} />
+      <ProductGrid items={recommended.slice(0, columns * 2)} reasons={Object.fromEntries(recommended.map((p) => [p.id, p.reason]))} />
+
+      {recentlyViewed.length ? (
+        <>
+          <SectionTitle title="شاهدتها مؤخرًا" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} testID="recently-viewed">
+            {recentlyViewed.map((p) => <ProductCard key={p.id} product={p} width={170} />)}
+          </ScrollView>
+        </>
+      ) : null}
+
+      <SectionTitle title="منتجات مميزة" action="عرض الكل" onPress={() => router.navigate("/explore")} />
+      <ProductGrid items={featured} />
+      <Button title={tr("ابدأ التسوق")} testID="start-shopping" onPress={() => router.navigate("/explore")} style={{ marginTop: 22 }} />
     </Shell>
   );
 }
-const makeStyles = (t: Palette) => StyleSheet.create({
-  welcome: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 24,
-    gap: 10,
-  },
-  edition: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    backgroundColor: t.secondary,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    gap: 5,
-  },
-  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: t.green },
-  hero: { backgroundColor: t.secondary, borderRadius: 22, overflow: "hidden" },
-  heroImage: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    height: "100%",
-    resizeMode: "cover",
-  },
-  heroCopy: {
-    alignSelf: "flex-end",
-    backgroundColor: t.secondary,
-    borderTopLeftRadius: 90,
-    borderBottomLeftRadius: 60,
-  },
-  heroPill: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    alignSelf: "flex-end",
-    gap: 6,
-  },
-  heroButton: {
-    flexDirection: "row-reverse",
-    alignSelf: "flex-end",
-    alignItems: "center",
-    backgroundColor: t.orange,
-    borderRadius: 11,
-    paddingHorizontal: 17,
-    paddingVertical: 13,
-    gap: 15,
-    marginTop: 22,
-  },
-  heroCaption: { position: "absolute", left: 23, bottom: 20 },
-  aiBanner: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 16,
-    padding: 20,
-    marginTop: 19,
-    borderWidth: 1,
-    borderColor: t.line,
-    borderRadius: 15,
-    backgroundColor: t.orangeSoft,
-  },
-  aiIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: t.orangeSoft,
-  },
-  aiLabel: {
-    backgroundColor: t.orangeSoft,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  aiAction: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: t.paper,
-  },
-  categories: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 14,
-  },
-  category: {
-    paddingVertical: 19,
-    paddingHorizontal: 8,
-    alignItems: "center",
-    backgroundColor: t.paper,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: t.line,
-  },
-  categoryIcon: {
-    width: 60,
-    height: 60,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 20,
-    marginBottom: 13,
-  },
-  promiseRow: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: 18,
-    justifyContent: "space-between",
-    marginTop: 25,
-    borderWidth: 1,
-    borderColor: t.line,
-    borderRadius: 14,
-    paddingVertical: 20,
-    paddingHorizontal: 22,
-  },
-  promise: { flexDirection: "row-reverse", alignItems: "center", gap: 9 },
-});

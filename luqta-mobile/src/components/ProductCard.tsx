@@ -1,9 +1,11 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
-import { Heart, Plus, Star, ShoppingBag } from "lucide-react-native";
+import { Heart, Plus, Star, ShoppingBag, Zap } from "lucide-react-native";
 import { router } from "expo-router";
-import { Product, formatPrice, products as sampleProducts } from "../data/products";
+import { Product, products as sampleProducts } from "../data/products";
 import { useStore } from "../lib/store";
+import { useMoney } from "../lib/money";
+import { useI18n } from "../lib/i18n";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 import { Txt } from "./ui";
 
@@ -21,207 +23,88 @@ const images: Record<string, ReturnType<typeof require>> = {
   fragrance: require("../../assets/products/fragrance.jpg"),
   diffuser: require("../../assets/products/diffuser.jpg"),
 };
-export function ProductImage({
-  product,
-  style,
-}: {
-  product: Product;
-  style?: object;
-}) {
+
+// Photo when the product has one; otherwise an illustrated tile (emoji on the product colour) so groceries still look great.
+export function ProductImage({ product, style, uri }: { product: Product; style?: object; uri?: string }) {
   const { colors: t } = useTheme();
-  const sourceKey = `${product.id}:${String(product.image)}`;
+  const { t: tr } = useI18n();
+  const source = uri ?? product.image;
+  const sourceKey = `${product.id}:${String(source)}`;
   const [failedSource, setFailedSource] = React.useState("");
   const failed = failedSource === sourceKey;
   const original = sampleProducts.find((item) => item.id === product.id);
-  const bundled = original?.image === product.image ? images[product.id] : undefined;
-  const remote = typeof product.image === "string" && /^https?:\/\//i.test(product.image)
-    ? { uri: product.image }
-    : undefined;
-  if (failed || (!bundled && !remote))
+  const bundled = !uri && original?.image === product.image ? images[product.id] : undefined;
+  const remote = typeof source === "string" && /^https?:\/\//i.test(source) ? { uri: source } : undefined;
+  if (failed || (!bundled && !remote)) {
+    const tint = product.colors?.find((c) => /^#[0-9a-f]{6}$/i.test(c)) || t.primary;
     return (
-      <View accessibilityRole="image" accessibilityLabel={`صورة غير متاحة: ${product.name}`} style={[{ width: "100%", height: "100%", backgroundColor: t.imageBackground, alignItems: "center", justifyContent: "center" }, style]}>
-        <ShoppingBag color={t.muted} size={38} />
+      <View accessibilityRole="image" accessibilityLabel={product.name} style={[{ width: "100%", height: "100%", backgroundColor: `${tint}26`, alignItems: "center", justifyContent: "center" }, style]}>
+        {product.emoji ? <Txt style={{ fontSize: 58, textAlign: "center", lineHeight: 70 }}>{product.emoji}</Txt> : <ShoppingBag color={t.muted} size={38} />}
+        {product.emoji ? null : <Txt style={{ fontSize: 11, color: t.muted, textAlign: "center" }}>{tr("صورة غير متاحة")}</Txt>}
       </View>
     );
-  return (
-    <Image
-      accessibilityLabel={product.name}
-      source={bundled || remote}
-      onError={() => setFailedSource(sourceKey)}
-      style={[{ width: "100%", height: "100%", resizeMode: "cover" }, style]}
-    />
-  );
+  }
+  return <Image accessibilityLabel={product.name} source={bundled || remote} onError={() => setFailedSource(sourceKey)} style={[{ width: "100%", height: "100%", resizeMode: "cover" }, style]} />;
 }
-export function ProductCard({
-  product,
-  width,
-}: {
-  product: Product;
-  width: number | `${number}%`;
-}) {
+
+export function ProductCard({ product, width, reason }: { product: Product; width: number | `${number}%`; reason?: string }) {
   const { colors: t } = useTheme();
   const s = useThemedStyles(makeStyles);
-  const { favorites, toggleFavorite, addToCart, settings } = useStore();
+  const { favorites, toggleFavorite, addToCart, cart, branchStock } = useStore();
+  const money = useMoney();
+  const { t: tr } = useI18n();
   const outOfStock = typeof product.stock === "number" && product.stock <= 0;
+  const inBranch = branchStock ? branchStock[product.id] ?? 0 : null;
   const liked = favorites.includes(product.id);
+  const discount = product.oldPrice && product.oldPrice > product.price ? Math.round((1 - product.price / product.oldPrice) * 100) : 0;
+  const approx = money.approx(product.price);
   return (
-    <View style={[s.card, { width }]}>
+    <View style={[s.card, { width }]} testID={`product-card-${product.id}`}>
       <View style={s.photo}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`تفاصيل ${product.name}`}
-          onPress={() => router.push(`/product/${product.id}`)}
-          style={{ flex: 1 }}
-        >
+        <Pressable accessibilityRole="button" accessibilityLabel={`${tr("تفاصيل")} ${product.name}`} onPress={() => router.push(`/product/${product.id}`)} style={{ flex: 1 }}>
           <ProductImage product={product} />
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            liked
-              ? `إزالة ${product.name} من المفضلة`
-              : `حفظ ${product.name} في المفضلة`
-          }
-          accessibilityState={{ selected: liked }}
-          onPress={() => toggleFavorite(product.id)}
-          style={s.heart}
-        >
-          <Heart
-            size={18}
-            color={liked ? t.orange : t.ink}
-            fill={liked ? t.orange : "transparent"}
-          />
+        <Pressable testID={`favorite-${product.id}`} accessibilityRole="button" accessibilityLabel={liked ? `${tr("إزالة من المفضلة")} ${product.name}` : `${tr("حفظ في المفضلة")} ${product.name}`} accessibilityState={{ selected: liked }} onPress={() => toggleFavorite(product.id)} style={s.heart}>
+          <Heart color={liked ? t.orange : t.ink} fill={liked ? t.orange : "transparent"} size={17} />
         </Pressable>
-        {product.badge ? (
-          <View style={s.badge}>
-            <Txt weight="bold" style={{ color: t.green, fontSize: 11 }}>
-              {product.badge}
-            </Txt>
-          </View>
+        {product.flash ? (
+          <View style={[s.badge, { backgroundColor: t.orange }]}><Zap size={11} color={t.onAccent} fill={t.onAccent} /><Txt weight="bold" style={{ color: t.onAccent, fontSize: 10 }}>{tr("خاطف")}</Txt></View>
+        ) : discount ? (
+          <View style={[s.badge, { backgroundColor: t.primary }]}><Txt weight="bold" style={{ color: t.onPrimary, fontSize: 10 }}>-{discount}%</Txt></View>
+        ) : product.badge ? (
+          <View style={[s.badge, { backgroundColor: t.paper }]}><Txt weight="bold" style={{ color: t.primary, fontSize: 10 }}>{product.badge}</Txt></View>
         ) : null}
       </View>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push(`/product/${product.id}`)}
-        style={s.info}
-      >
-        <Txt style={s.brand}>{product.brand}</Txt>
-        <Txt weight="bold" numberOfLines={1} style={{ fontSize: 16 }}>
-          {product.name}
-        </Txt>
-        <Txt
-          numberOfLines={1}
-          style={{ color: t.muted, fontSize: 12, marginTop: 5 }}
-        >
-          {product.subtitle}
-        </Txt>
-        <View style={s.rating}>
-          {product.reviews > 0 ? <>
-            <Star color={t.orange} fill={t.orange} size={12} />
-            <Txt weight="bold" style={{ fontSize: 12 }}>{product.rating.toFixed(1)}</Txt>
-            <Txt style={{ color: t.muted, fontSize: 12 }}>({product.reviews})</Txt>
-          </> : <Txt style={{ color: t.muted, fontSize: 12 }}>لا تقييمات بعد</Txt>}
+      <View style={{ padding: 12, gap: 4, flex: 1 }}>
+        <Txt weight="bold" numberOfLines={2} style={{ fontSize: 14, lineHeight: 21, minHeight: 42 }}>{product.name}</Txt>
+        <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4 }}>
+          {product.rating ? <><Star size={12} color={t.warning} fill={t.warning} /><Txt style={{ fontSize: 11, color: t.muted }}>{product.rating}</Txt></> : null}
+          <Txt numberOfLines={1} style={{ fontSize: 11, color: t.muted, flex: 1 }}>{product.unit || product.subtitle}</Txt>
         </View>
-        {typeof product.stock === "number" ? <Txt style={{ color: outOfStock ? t.danger : t.green, fontSize: 12, marginTop: 7 }}>
-          {outOfStock ? "نفدت الكمية" : product.stock <= 5 ? `متبقي ${product.stock}` : "متوفر في المخزون"}
-        </Txt> : null}
-      </Pressable>
-      <View style={s.bottom}>
-        <View
-          style={{
-            flexDirection: "row-reverse",
-            alignItems: "baseline",
-            gap: 4,
-            flexWrap: "wrap",
-            flex: 1,
-          }}
-        >
-          <Txt weight="extra" style={{ fontSize: 17 }}>
-            {formatPrice(product.price, settings.currency)}
-          </Txt>
-          {product.oldPrice ? (
-            <Txt
-              style={{
-                fontSize: 11,
-                color: t.muted,
-                textDecorationLine: "line-through",
-                marginRight: 6,
-              }}
-            >
-              {formatPrice(product.oldPrice, settings.currency)}
-            </Txt>
-          ) : null}
+        {reason ? <Txt style={{ fontSize: 11, color: t.primary }} numberOfLines={1}>✨ {tr(reason)}</Txt> : null}
+        {inBranch !== null ? <Txt style={{ fontSize: 11, color: inBranch > 0 ? t.success : t.danger }}>{inBranch > 0 ? tr("متوفر في الفرع: {n}", { n: inBranch }) : tr("غير متوفر في هذا الفرع")}</Txt> : null}
+        <View style={{ flex: 1 }} />
+        <View style={{ flexDirection: "row-reverse", alignItems: "flex-end", justifyContent: "space-between", gap: 6 }}>
+          <View style={{ flex: 1 }}>
+            <Txt weight="extra" style={{ color: t.orange, fontSize: 16 }}>{money.format(product.price)}</Txt>
+            {product.oldPrice && product.oldPrice > product.price ? <Txt style={{ fontSize: 11, color: t.muted, textDecorationLine: "line-through" }}>{money.format(product.oldPrice)}</Txt> : null}
+            {approx ? <Txt style={{ fontSize: 10, color: t.muted }}>{approx}</Txt> : null}
+          </View>
+          <Pressable testID={`add-${product.id}`} accessibilityRole="button" accessibilityLabel={outOfStock ? `${tr("غير متوفر")} ${product.name}` : `${tr("أضف إلى السلة")} ${product.name}`} disabled={outOfStock} onPress={() => (product.hasVariants ? router.push(`/product/${product.id}`) : addToCart(product.id))} style={[s.add, outOfStock ? { backgroundColor: t.line } : null]}>
+            <Plus size={18} color={outOfStock ? t.muted : t.onPrimary} />
+            {cart[product.id] ? <View style={s.count}><Txt style={{ fontSize: 10, color: t.onAccent, textAlign: "center" }}>{cart[product.id]}</Txt></View> : null}
+          </Pressable>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={product.hasVariants ? `اختر مقاس أو لون ${product.name}` : `إضافة ${product.name} للسلة`}
-          onPress={() => product.hasVariants ? router.push(`/product/${product.id}`) : addToCart(product.id)}
-          accessibilityState={{ disabled: outOfStock }}
-          disabled={outOfStock}
-          style={[s.plus, outOfStock && { opacity: 0.4 }]}
-        >
-          <Plus size={19} color={t.ink} />
-        </Pressable>
+        {outOfStock ? <Txt weight="bold" style={{ fontSize: 11, color: t.danger }}>{tr("نفد من المخزون")}</Txt> : null}
       </View>
     </View>
   );
 }
 const makeStyles = (t: Palette) => StyleSheet.create({
-  card: {
-    backgroundColor: t.paper,
-    borderRadius: 18,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: t.line,
-    overflow: "hidden",
-  },
-  photo: {
-    aspectRatio: 1.08,
-    borderRadius: 12,
-    backgroundColor: t.imageBackground,
-    overflow: "hidden",
-  },
-  heart: {
-    position: "absolute",
-    left: 10,
-    top: 10,
-    width: 44,
-    height: 44,
-    borderRadius: 17,
-    backgroundColor: t.paper,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badge: {
-    position: "absolute",
-    right: 10,
-    top: 10,
-    backgroundColor: t.paper,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  info: { padding: 10, paddingBottom: 0 },
-  brand: { fontSize: 10, color: t.muted, letterSpacing: 1.5, marginBottom: 7 },
-  rating: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 9,
-  },
-  bottom: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 10,
-    paddingTop: 8,
-  },
-  plus: {
-    width: 44,
-    height: 44,
-    borderRadius: 11,
-    backgroundColor: t.secondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  card: { backgroundColor: t.paper, borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: t.line, minHeight: 290 },
+  photo: { height: 150, backgroundColor: t.imageBackground },
+  heart: { position: "absolute", top: 10, left: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: t.paper, alignItems: "center", justifyContent: "center" },
+  badge: { position: "absolute", top: 10, right: 10, flexDirection: "row-reverse", alignItems: "center", gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
+  add: { width: 40, height: 40, borderRadius: 20, backgroundColor: t.primary, alignItems: "center", justifyContent: "center" },
+  count: { position: "absolute", top: -4, left: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: t.orange, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
 });
