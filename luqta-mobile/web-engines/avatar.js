@@ -359,7 +359,7 @@
   var state = { action: 'idle', started: performance.now() / 1000, yaw: 0.25, targetYaw: 0.25, paused: false };
   var current = zeroPose();
   function setAction(a) {
-    if (!ACTIONS[a]) { post({ type: 'error', code: 'UNKNOWN_ACTION', action: a }); return; }
+    if (!Object.prototype.hasOwnProperty.call(ACTIONS, a) || typeof ACTIONS[a] !== 'function') { post({ type: 'error', code: 'UNKNOWN_ACTION', action: a }); return; }
     state.action = a; state.started = performance.now() / 1000;
     cart.visible = a === 'cart';
     pillow.visible = a === 'sleep';
@@ -451,7 +451,10 @@
     lastRender = now;
     var dt = Math.min(0.05, (now - last) / 1000); last = now;
     var t = now / 1000 - state.started;
-    var pose = ACTIONS[state.action](t);
+    var actionFn = (Object.prototype.hasOwnProperty.call(ACTIONS, state.action) && typeof ACTIONS[state.action] === 'function')
+      ? ACTIONS[state.action]
+      : ACTIONS.idle;
+    var pose = actionFn(t);
     apply(pose, 1 - Math.pow(0.0008, dt));
     state.yaw += (state.targetYaw - state.yaw) * (1 - Math.pow(0.002, dt));
     root.rotation.y = state.yaw;
