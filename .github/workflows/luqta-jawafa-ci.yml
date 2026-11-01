@@ -17,7 +17,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
@@ -41,7 +41,7 @@ jobs:
   # Drives the exported web app and the central dashboard in Chromium against the real server, then requires
   # passing evidence for all 125 features on every surface they list (server, app, dashboard).
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:

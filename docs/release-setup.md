@@ -2,8 +2,14 @@
 
 | الجزء | متى يُنشر | أين |
 |---|---|---|
-| تطبيق Android المدموج «لُقطة» | مع كل دمج أو push إلى `main` يغيّر `luqta-mobile/` | [GitHub Releases](https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam/releases) |
-| لوحة التحكم (الويب) | مع كل دمج أو push إلى `main` يغيّر `dashboard/` | https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/ |
+| تطبيق Android المدموج «لُقطة» | يُبنى مع كل push إلى `main` يغيّر `luqta-mobile/`؛ **النشر مُجمّد** (Issue #102) | artifact في GitHub Actions، وبعد رفع التجميد [GitHub Releases](https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam/releases) |
+| لوحة التحكم (الويب) | **مُجمّد** (Issue #102): `pages.yml` لا ينشر شيئًا حتى يرفع المالك التجميد | https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/ |
+
+> ⛔ **النشر مُجمّد حاليًا (Issue #102).** يبني الـ workflow ملف APK موقّعًا ويحفظه كـ artifact في كل تشغيل، لكنه لا ينشر أي Release.
+> لرفع التجميد لاحقًا، بعد قبول المالك الصريح:
+> 1. أنشئ بيئة باسم `production` في **Settings → Environments**، وأضف لها **Required reviewers**.
+> 2. أضف متغيرًا (وليس سرًا) باسم `RELEASE_PUBLISHING_ENABLED` بقيمة `true`.
+> بدون هذا المتغير تُتخطّى مهمة النشر تمامًا، ولا يحصل طلب دمج (PR) أبدًا على صلاحية الكتابة أو مفتاح التوقيع الحقيقي.
 
 ## تطبيق Android (`.github/workflows/release.yml`)
 يُنشر الآن التطبيق المدموج في `luqta-mobile/` (Expo وReact Native)، بدل تطبيق Kotlin القديم في `app/`.
@@ -11,7 +17,7 @@
 
 1. يشغّل فحص الأنواع والـ lint واختبارات الخادم، وإذا فشل أي منها لا يُنشر شيء.
 2. يولّد مشروع Android الأصلي (`expo prebuild`)، ثم يبني نسخة **release** لمعالجات arm64 وarmv7، ويوقّعها بمفتاح الرفع، ويتحقق من التوقيع.
-3. ينشئ Release باسم `v2.0.<رقم التشغيل>` فيه الملف `amer-store.apk` وقائمة التغييرات تلقائيًا.
+3. يحفظ الـ APK كـ artifact باسم `luqta-release-apk`، ويُنشئ Release باسم `v2.0.<رقم التشغيل>` فيه `amer-store.apk` فقط عند رفع التجميد (انظر أعلاه).
 
 رابط ثابت لأحدث نسخة دائمًا (لم يتغيّر):
 https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam/releases/latest/download/amer-store.apk

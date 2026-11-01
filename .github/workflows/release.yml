@@ -1,8 +1,8 @@
 name: Release Android app
-# Publishes the merged Luqta app (luqta-mobile/, Expo + React Native). Every push to main that changes it runs the
-# checks, builds a signed release APK and publishes it as a GitHub Release. The newest APK is always at:
-# https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam/releases/latest/download/amer-store.apk
-# Pull request and manual runs outside main build and upload the APK but publish nothing. See docs/release-setup.md.
+# Builds the merged Luqta app (luqta-mobile, Expo + React Native) as a signed release APK and keeps it as a build
+# artifact. Publishing it as a GitHub Release is FROZEN (Issue #102): the publish job runs only when the repository
+# variable RELEASE_PUBLISHING_ENABLED is 'true', through the protected `production` environment. Pull requests never
+# publish and never receive the real signing key. See docs/release-setup.md.
 on:
   push:
     branches: [main]
@@ -20,21 +20,22 @@ on:
       - '.github/workflows/release.yml'
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: android-release-${{ github.ref }}
   cancel-in-progress: false
+env:
+  # Read by app.config.js; a rising versionCode lets each APK install over the previous one.
+  VERSION_CODE: ${{ github.run_number }}
+  VERSION_NAME: 2.0.${{ github.run_number }}
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-24.04
     timeout-minutes: 75
     defaults:
       run:
         working-directory: luqta-mobile
     env:
-      # Read by app.config.js; a rising versionCode lets each APK install over the previous one.
-      VERSION_CODE: ${{ github.run_number }}
-      VERSION_NAME: 2.0.${{ github.run_number }}
       # Optional public store server baked into the app; without it shoppers enter the server on the connection screen.
       EXPO_PUBLIC_API_URL: ${{ vars.LUQTA_API_URL }}
     steps:
@@ -64,12 +65,12 @@ jobs:
         run: |
           npx expo prebuild --platform android --no-install
           sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g/' android/gradle.properties
-      # The upload key from repository secrets keeps updates installable over each other (alias "upload").
+      # The upload key keeps updates installable over each other (alias "upload"). Pull requests get a one-off key.
       - name: Prepare the signing key
         env:
-          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_KEYSTORE_BASE64: ${{ github.event_name != 'pull_request' && secrets.SIGNING_KEYSTORE_BASE64 || '' }}
+          SIGNING_STORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_STORE_PASSWORD || '' }}
+          SIGNING_KEY_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_KEY_PASSWORD || '' }}
         run: |
           keystore="$RUNNER_TEMP/upload-key.jks"
           if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
@@ -77,7 +78,7 @@ jobs:
             store_password="$SIGNING_STORE_PASSWORD"
             key_password="${SIGNING_KEY_PASSWORD:-$SIGNING_STORE_PASSWORD}"
           else
-            echo "::warning::SIGNING_KEYSTORE_BASE64 is not set, so this APK is signed with a one-off key. Phones must uninstall the previous version before installing it. See docs/release-setup.md."
+            echo "::warning::No upload key for this run, so the APK is signed with a one-off key. Phones must uninstall the previous version before installing it. See docs/release-setup.md."
             store_password="$(openssl rand -hex 16)"
             key_password="$store_password"
             keytool -genkeypair -keystore "$keystore" -storetype PKCS12 -alias upload -keyalg RSA -keysize 2048 \
@@ -97,22 +98,37 @@ jobs:
           "$apksigner" sign --ks "$KEYSTORE_PATH" --ks-key-alias upload --ks-pass env:STORE_PASSWORD --key-pass env:KEY_PASSWORD \
             --out "$RUNNER_TEMP/amer-store.apk" android/app/build/outputs/apk/release/app-release.apk
           "$apksigner" verify --print-certs "$RUNNER_TEMP/amer-store.apk" | grep -v -i 'digest' | head -5
+          rm -f "$KEYSTORE_PATH"
           ls -lh "$RUNNER_TEMP/amer-store.apk"
-      - name: Publish the GitHub Release
-        if: github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
-        run: |
-          gh release create "v$VERSION_NAME" "$RUNNER_TEMP/amer-store.apk" \
-            --repo "$REPO" --target "$SHA" \
-            --title "لُقطة — Amer AI Store $VERSION_NAME" --generate-notes --latest
-      - name: Upload the APK (pull request and manual runs)
-        if: github.ref != 'refs/heads/main'
+      - name: Keep the APK as a build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: luqta-release-apk
           path: ${{ runner.temp }}/amer-store.apk
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
+
+  # Fail-closed publication (Issue #102): skipped unless the owner sets RELEASE_PUBLISHING_ENABLED=true, and gated by
+  # the `production` environment, whose required reviewers approve each release.
+  publish:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.RELEASE_PUBLISHING_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: luqta-release-apk
+          path: ${{ runner.temp }}/apk
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh release create "v$VERSION_NAME" "$RUNNER_TEMP/apk/amer-store.apk" \
+            --repo "$REPO" --target "$SHA" \
+            --title "لُقطة — Amer AI Store $VERSION_NAME" --generate-notes --latest
