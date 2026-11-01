@@ -145,7 +145,6 @@
         ".babelrc",
         ".dockerignore",
         ".gitattributes",
-        ".stylelintrc",
-        ".npmrc"
+        ".stylelintrc"
     ]
 }
