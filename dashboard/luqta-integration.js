@@ -192,6 +192,8 @@
   async function load() {
     if (!client.connected || !body) return;
     const current = tab; let result;
+    // `current` comes from the page address: only this file's own section loaders and renderers may be called.
+    const loader = Object.prototype.hasOwnProperty.call(loaders, current) ? loaders[current] : null;
     if (current === "inventory") {
       const [undo, connector] = await Promise.all([client.request("GET", "/admin/inventory/undo"), client.request("GET", "/admin/inventory/connector")]);
       result = { ...undo, ...connector };
@@ -206,14 +208,13 @@
     } else if (current === "orders") {
       const [orders, users] = await Promise.all([client.request("GET", "/admin/orders"), client.request("GET", "/admin/users")]);
       result = { ...orders, ...users };
-    } else if (Object.prototype.hasOwnProperty.call(loaders, current) && typeof loaders[current] === "function") {
-      // `current` comes from the page address; only the section loaders defined here may be called.
-      result = await loaders[current]();
+    } else if (typeof loader === "function") {
+      result = await loader();
     } else result = await client.request("GET", "/admin/" + current);
     if (tab !== current) return;
     body.replaceChildren();
-    const render = Object.prototype.hasOwnProperty.call(renderers, current) && typeof renderers[current] === "function" ? renderers[current] : null;
-    if (render) render(result || {});
+    const render = Object.prototype.hasOwnProperty.call(renderers, current) ? renderers[current] : null;
+    if (typeof render === "function") render(result || {});
     message(`آخر تحديث: ${new Date().toLocaleString("ar-JO")}`);
   }
   function renderOverview(data) {

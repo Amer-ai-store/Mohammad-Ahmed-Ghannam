@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-01T15:15:34.897Z",
+ "generatedAt": "2026-11-01T15:27:34.089Z",
  "summary": {
   "total": 225,
   "passed": 225,
@@ -1769,7 +1769,7 @@
    ]
   },
   "dashboard-e2e": {
-   "generatedAt": "2026-11-01T15:15:34.897Z",
+   "generatedAt": "2026-11-01T15:27:34.089Z",
    "tests": [
     {
      "name": "L001 L101 the admin signs in to the dashboard, sees live KPIs and the latest orders, signs out and back in",
