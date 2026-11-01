@@ -63,6 +63,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Review the pull request
+        id: review
         if: env.CLAUDE_CONFIGURED == 'true'
         uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
         with:
@@ -91,3 +92,28 @@ jobs:
             Only post GitHub comments; do not reply with review text as a message.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+      # The action hides Claude's output for safety, so a failed run shows only "is_error: true". Print the final
+      # error text alone (e.g. an invalid key, no API credit, no access to the model), never messages or tool output.
+      - name: Explain a failed review
+        if: failure() && steps.review.outcome == 'failure'
+        shell: python
+        env:
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
+        run: |
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ.get("EXECUTION_FILE") or Path(os.environ["RUNNER_TEMP"], "claude-execution-output.json"))
+          try:
+              messages = json.loads(path.read_text(encoding="utf-8"))
+          except (OSError, ValueError):
+              messages = []
+          results = [m for m in messages if isinstance(m, dict) and m.get("type") == "result"] if isinstance(messages, list) else []
+          detail = ""
+          if results and results[-1].get("is_error"):
+              last = results[-1]
+              detail = str(last.get("result") or "; ".join(map(str, last.get("errors") or [])))
+          # One line only: collapsing whitespace drops line breaks, so the text cannot start another workflow command.
+          detail = " ".join(detail.split())[:400].replace("%", "%25")
+          print(f"::error title=Claude review failed::{detail or 'Claude reported no error text; see the step above'} — setup guide: docs/code-review-setup.md")
