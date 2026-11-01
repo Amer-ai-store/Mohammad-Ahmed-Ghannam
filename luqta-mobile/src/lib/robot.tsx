@@ -36,6 +36,7 @@ type RobotState = {
   react: (event: RobotEvent, message?: string) => void;
   play: (motion: RobotMotion, message?: string) => void;
   speak: (text: string) => void;
+  stopSpeaking: () => void;
   speaking: boolean;
 };
 const Context = createContext<RobotState | null>(null);
@@ -88,9 +89,10 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
       Speech.speak(text.replace(/[\p{Extended_Pictographic}]/gu, ""), { language: /[؀-ۿ]/.test(text) ? "ar" : "en-US", pitch: 1.35, rate: Platform.OS === "web" ? 1 : 0.95, onDone: () => setSpeaking(false), onStopped: () => setSpeaking(false), onError: () => setSpeaking(false) });
     } catch { setSpeaking(false); }
   }, [prefs.voice]);
+  const stopSpeaking = useCallback(() => { try { Speech.stop(); } catch { /* nothing is playing */ } setSpeaking(false); }, []);
   const react = useCallback((event: RobotEvent, message?: string) => { const r = REACTIONS[event]; play(r.motion, message ?? r.message); }, [play]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-  const value = useMemo<RobotState>(() => ({ prefs, face, reaction, systemReduceMotion, reduceMotion: prefs.reduceMotion || systemReduceMotion, update, setFace, react, play, speak, speaking }), [prefs, face, reaction, systemReduceMotion, update, setFace, react, play, speak, speaking]);
+  const value = useMemo<RobotState>(() => ({ prefs, face, reaction, systemReduceMotion, reduceMotion: prefs.reduceMotion || systemReduceMotion, update, setFace, react, play, speak, stopSpeaking, speaking }), [prefs, face, reaction, systemReduceMotion, update, setFace, react, play, speak, stopSpeaking, speaking]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

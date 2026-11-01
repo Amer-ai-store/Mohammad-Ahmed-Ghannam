@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { AdminOverview } from "../components/admin/AdminOverview";
+import { fallbackCategories } from "../lib/catalog";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { Shell } from "../components/Shell";
-import { Button, Txt } from "../components/ui";
+import { Button, Txt, Chip as UiChip, Tabs as UiTabs } from "../components/ui";
 import { AdminCard, AdminChoices, AdminField, AdminLoading, AdminNotice, AdminRefresh, numberInput, useAdminAction } from "../components/admin/AdminUI";
 import { api } from "../lib/api";
 import { useSession } from "../lib/session";
@@ -22,7 +24,7 @@ const statuses = [
   { value: "pending", label: "جديد" }, { value: "confirmed", label: "مؤكد" }, { value: "preparing", label: "قيد التجهيز" },
   { value: "out_for_delivery", label: "خرج للتوصيل" }, { value: "delivered", label: "تم التسليم" }, { value: "cancelled", label: "ملغي" },
 ] as const;
-const categories = [{ value: "electronics", label: "إلكترونيات" }, { value: "home", label: "المنزل" }, { value: "fashion", label: "الأزياء" }, { value: "care", label: "العناية" }];
+const categories = fallbackCategories.map((c) => ({ value: c.id, label: c.name }));
 const roles = [{ value: "customer", label: "عميل" }, { value: "driver", label: "سائق" }, { value: "admin", label: "مدير" }] as const;
 const tabs = [
   { id: "overview", label: "نظرة عامة" }, { id: "products", label: "الأصناف" }, { id: "inventory", label: "المخزون والاستيراد" }, { id: "offers", label: "استيراد العروض" }, { id: "appearance", label: "تصميم المتجر" },
@@ -66,31 +68,25 @@ export default function AdminScreen() {
   return <AdminDashboard />;
 }
 
+const moreTabs = tabs.filter((tab) => !["overview", "products", "orders"].includes(tab.id));
 function AdminDashboard() {
-  const { colors: c } = useTheme();
-  const [tab, setTab] = useState("overview");
-  return <Shell title="لوحة قيادة المتجر" subtitle="الطلبات والأصناف والمخزون والوكلاء، مرتبطة بقاعدة بيانات واحدة.">
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row-reverse", gap: 8, paddingVertical: 10 }}>
-      {tabs.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: tab === item.id }} onPress={() => setTab(item.id)} style={{ paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderColor: c.line, borderWidth: 1, backgroundColor: tab === item.id ? c.orange : c.paper }}>
-        <Txt weight="bold" style={{ color: tab === item.id ? "white" : c.ink, fontSize: 14 }}>{item.label}</Txt>
-      </Pressable>)}
-    </ScrollView>
+  const [tab, setTab] = useState<"overview" | "products" | "orders" | "more">("overview");
+  const [more, setMore] = useState("inventory");
+  return <Shell title="لوحة القيادة" subtitle="المبيعات والطلبات والمخزون والمزامنة في مكان واحد" testID="admin">
+    <UiTabs testID="admin-tabs" value={tab} onChange={setTab} tabs={[{ id: "overview", label: "نظرة عامة" }, { id: "products", label: "المنتجات" }, { id: "orders", label: "الطلبات" }, { id: "more", label: "المزيد" }]} />
     <View style={{ gap: 16, paddingVertical: 14 }} key={tab}>
-      {tab === "overview" ? <OverviewPanel /> : tab === "products" ? <ProductsPanel /> : tab === "inventory" ? <><InventoryPanel /><JawafaBridgePanel /></> : tab === "offers" ? <OffersPanel /> : tab === "appearance" ? <AppearancePanel /> : tab === "orders" ? <OrdersPanel /> : tab === "returns" ? <ReturnsPanel /> : tab === "coupons" ? <CouponsPanel /> : tab === "users" ? <UsersPanel /> : tab === "tickets" ? <TicketsPanel /> : tab === "agents" ? <AgentsPanel /> : tab === "settings" ? <SettingsPanel /> : <AuditPanel />}
+      {tab === "overview" ? <AdminOverview onTab={setTab} /> : tab === "products" ? <ProductsPanel /> : tab === "orders" ? <><OrdersPanel /><ReturnsPanel /></> : <>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          {moreTabs.map(item => <UiChip key={item.id} label={item.label} active={more === item.id} onPress={() => setMore(item.id)} />)}
+        </ScrollView>
+        <View style={{ gap: 16 }} key={more}>
+          {more === "inventory" ? <><InventoryPanel /><JawafaBridgePanel /></> : more === "offers" ? <OffersPanel /> : more === "appearance" ? <AppearancePanel /> : more === "returns" ? <ReturnsPanel /> : more === "coupons" ? <CouponsPanel /> : more === "users" ? <UsersPanel /> : more === "tickets" ? <TicketsPanel /> : more === "agents" ? <AgentsPanel /> : more === "settings" ? <SettingsPanel /> : <AuditPanel />}
+        </View>
+      </>}
     </View>
   </Shell>;
 }
 
-function OverviewPanel() {
-  const { colors: c } = useTheme();
-  const resource = useAdminData<{ stats: Record<string, number>; recentOrders: Order[]; lowStockProducts: Product[] }>("/admin/overview", { stats: {}, recentOrders: [], lowStockProducts: [] });
-  const labels: Record<string, string> = { products: "الأصناف", lowStock: "مخزون منخفض", orders: "الطلبات", customers: "العملاء", revenue: "إيراد الطلبات المسلّمة", pendingOrders: "طلبات جديدة" };
-  return <><AdminRefresh busy={resource.loading} onPress={() => void resource.reload()} /><AdminNotice error={resource.error} />
-    <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 12 }}>{Object.entries(resource.data.stats).map(([key, value]) => <View key={key} style={{ flexGrow: 1, minWidth: 145, backgroundColor: c.paper, borderWidth: 1, borderColor: c.line, borderRadius: 16, padding: 20, gap: 10 }}><Txt style={{ color: c.muted }}>{labels[key] || key}</Txt><Txt weight="extra" style={{ fontSize: 28, color: c.orange }}>{money(value)}</Txt></View>)}</View>
-    <AdminCard title="أصناف تحتاج إلى إعادة تزويد">{resource.data.lowStockProducts.length ? resource.data.lowStockProducts.map(p => <Details key={p.id}>{p.name} · المتبقي {p.stock}</Details>) : <Details>{resource.loading ? "جارٍ التحميل…" : "لا توجد أصناف منخفضة المخزون."}</Details>}</AdminCard>
-    <AdminCard title="أحدث الطلبات">{resource.data.recentOrders.length ? resource.data.recentOrders.map(o => <Details key={o.id}>{o.id} · {statuses.find(s => s.value === o.status)?.label || o.status} · {money(o.total, o.currency)}</Details>) : <Details>{resource.loading ? "جارٍ التحميل…" : "لا توجد طلبات بعد."}</Details>}</AdminCard>
-  </>;
-}
 
 const blankProduct = { id: "", name: "", price: "", oldPrice: "", stock: "0", category: "electronics", brand: "", description: "", subtitle: "", image: "", tags: "", active: "yes", variantOf: "", variantLabel: "" };
 function ProductsPanel() {
@@ -374,13 +370,13 @@ function AppearancePanel() {
   const action = useAdminAction();
   const design = resource.data.settings?.storefront || {};
   const [edits, setEdits] = useState<{ accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: string }>({});
-  const color = edits.accentColor ?? design.accentColor ?? "#B94721";
+  const color = edits.accentColor ?? design.accentColor ?? "#FF6B4A";
   const title = edits.heroTitle ?? design.heroTitle ?? "لُقطات تستحق أن تكون لك";
   const subtitle = edits.heroSubtitle ?? design.heroSubtitle ?? "اكتشف منتجات تُشبه ذوقك";
   const assistant = edits.showAssistant ?? String(design.showAssistant !== false);
   return <><AdminRefresh busy={resource.loading} onPress={() => void resource.reload()} /><AdminNotice error={resource.error || action.error} message={action.message} />
     <AdminCard title="إدارة التصميم من نفس التطبيق">
-      <AdminField label="لون الهوية بصيغة HEX" value={color} onChangeText={accentColor => setEdits(x => ({...x,accentColor}))} placeholder="#B94721" />
+      <AdminField label="لون الهوية بصيغة HEX" value={color} onChangeText={accentColor => setEdits(x => ({...x,accentColor}))} placeholder="#FF6B4A" />
       <AdminField label="عنوان الرئيسية" value={title} onChangeText={heroTitle => setEdits(x => ({...x,heroTitle}))} />
       <AdminField label="وصف الرئيسية" multiline value={subtitle} onChangeText={heroSubtitle => setEdits(x => ({...x,heroSubtitle}))} />
       <AdminChoices label="إظهار قسم المساعد" value={assistant} choices={[{value:"true",label:"إظهار"},{value:"false",label:"إخفاء"}]} onChange={showAssistant => setEdits(x => ({...x,showAssistant}))} />

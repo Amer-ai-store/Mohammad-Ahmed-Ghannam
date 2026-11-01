@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Pressable, StyleSheet, View } from "react-native";
+import { AppState, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import * as Location from "expo-location";
@@ -27,6 +27,7 @@ export default function DriverScreen() {
   const [sharingKey, setSharingKey] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [otp, setOtp] = useState("");
   const [storedPosition, setStoredPosition] = useState<{ key: string; location: DriverPosition } | null>(null);
   const watcher = useRef<Location.LocationSubscription | null>(null);
   const generation = useRef(0);
@@ -107,7 +108,7 @@ export default function DriverScreen() {
   const updateStatus = async (status: "out_for_delivery" | "delivered") => {
     if (!selected) return;
     setBusy(true); setError("");
-    try { await api.patch(`/driver/orders/${encodeURIComponent(selected.id)}`, { status }); if (status === "delivered") stop("تم تسجيل التسليم وإيقاف مشاركة موقعك."); setNotice(status === "delivered" ? "حُفظ تأكيد تسليم الطلب في الخادم." : "أُبلغ العميل بأن الطلب خرج للتوصيل."); await load(); }
+    try { await api.patch(`/driver/orders/${encodeURIComponent(selected.id)}`, status === "delivered" ? { status, otp: otp.trim() } : { status }); if (status === "delivered") setOtp(""); if (status === "delivered") stop("تم تسجيل التسليم وإيقاف مشاركة موقعك."); setNotice(status === "delivered" ? "حُفظ تأكيد تسليم الطلب في الخادم." : "أُبلغ العميل بأن الطلب خرج للتوصيل."); await load(); }
     catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ حالة التوصيل"); }
     finally { setBusy(false); }
   };
@@ -134,7 +135,11 @@ export default function DriverScreen() {
         {position ? <><Txt style={{ color: t.muted, fontSize: 13 }}>آخر إرسال نجح: {new Date(position.updatedAt).toLocaleString("ar")}{typeof position.accuracy === "number" ? ` · دقة ${Math.round(position.accuracy)} مترًا` : ""}</Txt><Txt selectable style={{ writingDirection: "ltr", textAlign: "left", color: t.muted }}>{position.latitude.toFixed(6)}, {position.longitude.toFixed(6)}</Txt></> : null}
         <DeliveryMap driver={position} destination={destination} />
         {selected.status === "preparing" ? <Button title="تأكيد الخروج للتوصيل وإبلاغ العميل" busy={busy} onPress={() => void updateStatus("out_for_delivery")} /> : null}
-        {selected.status === "out_for_delivery" ? <Button title="تأكيد تسليم الطلب للعميل" busy={busy} onPress={() => void updateStatus("delivered")} /> : null}
+        {selected.status === "out_for_delivery" ? <View style={{ gap: 8 }}>
+          <Txt style={{ fontSize: 13 }}>اطلب من العميل رمز التسليم المكوّن من 4 أرقام الظاهر في تطبيقه.</Txt>
+          <TextInput testID="driver-otp" accessibilityLabel="رمز التسليم" value={otp} onChangeText={(v) => setOtp(v.replace(/\D/g, "").slice(0, 4))} keyboardType="number-pad" maxLength={4} placeholder="0000" placeholderTextColor={t.muted} style={{ minHeight: 52, borderRadius: 16, borderWidth: 1, borderColor: t.line, backgroundColor: t.paper, color: t.ink, fontSize: 24, letterSpacing: 10, textAlign: "center", fontFamily: "Tajawal_700Bold" }} />
+          <Button title="تأكيد تسليم الطلب للعميل" busy={busy} disabled={otp.length !== 4} onPress={() => void updateStatus("delivered")} />
+        </View> : null}
         <Button title="عرض سجل تتبع هذه التوصيلة" secondary onPress={() => router.push(`/tracking/${selected.id}`)} />
       </View> : null}
     </>}

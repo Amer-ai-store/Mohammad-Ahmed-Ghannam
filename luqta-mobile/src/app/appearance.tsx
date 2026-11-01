@@ -1,64 +1,59 @@
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { Check, Monitor, Moon, Sun } from "lucide-react-native";
+import { Pressable, View } from "react-native";
+import { Check, Monitor, Moon, Sun, Languages, Coins } from "lucide-react-native";
 import { Shell } from "../components/Shell";
-import { Txt } from "../components/ui";
-import { Palette, ThemeMode, useTheme, useThemedStyles } from "../lib/theme";
+import { Card, Chip, Notice, Row, Txt } from "../components/ui";
+import { ThemeMode, useTheme } from "../lib/theme";
+import { useI18n, type Lang } from "../lib/i18n";
+import { useMoney } from "../lib/money";
+import { useSession } from "../lib/session";
+import { api } from "../lib/api";
 
-const choices = [
+const THEMES = [
   { mode: "light", title: "الوضع النهاري", detail: "ألوان فاتحة طوال الوقت", icon: Sun },
   { mode: "dark", title: "الوضع الليلي", detail: "ألوان داكنة طوال الوقت", icon: Moon },
   { mode: "system", title: "حسب إعداد الجهاز", detail: "يتغير تلقائيًا مع مظهر جهازك", icon: Monitor },
 ] as const;
+const LANGS: [Lang, string, string][] = [["ar", "العربية", "من اليمين إلى اليسار"], ["en", "English", "Left to right"]];
 
 export default function AppearanceScreen() {
   const { colors: t, mode, setMode, isDark, storageError, hydrated } = useTheme();
-  const s = useThemedStyles(makeStyles);
+  const { t: tr, lang, setLang, displayCurrency, setDisplayCurrency } = useI18n();
+  const money = useMoney();
+  const { user } = useSession();
+  const pickLang = (next: Lang) => { setLang(next); if (user) void api.patch("/me/preferences", { locale: next }).catch(() => {}); };
+  const pickCurrency = (code: string | null) => { setDisplayCurrency(code); if (user) void api.patch("/me/preferences", { displayCurrency: code }).catch(() => {}); };
+  const rates = Object.entries(money.rates);
+  const option = (selected: boolean, key: string, title: string, detail: string, icon: React.ReactNode, onPress: () => void, testID?: string) => (
+    <Pressable key={key} testID={testID} accessibilityRole="radio" accessibilityLabel={tr(title)} accessibilityState={{ checked: selected }} onPress={onPress}
+      style={({ pressed }) => ({ flexDirection: "row-reverse", alignItems: "center", gap: 14, padding: 16, borderRadius: 20, borderWidth: selected ? 2 : 1, borderColor: selected ? t.primary : t.line, backgroundColor: selected ? t.primarySoft : t.paper, opacity: pressed ? 0.85 : 1 })}>
+      {icon}
+      <View style={{ flex: 1, gap: 2 }}><Txt weight="bold">{tr(title)}</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>{tr(detail)}</Txt></View>
+      {selected ? <Check color={t.primary} size={20} /> : null}
+    </Pressable>
+  );
   return (
-    <Shell title="مظهر التطبيق" subtitle="اختر المظهر الأنسب لك. يُحفظ اختيارك على هذا الجهاز.">
-      <View style={s.options} accessibilityRole="radiogroup" accessibilityLabel="مظهر التطبيق">
-        {choices.map((choice) => {
-          const selected = mode === choice.mode;
-          return (
-            <Pressable
-              key={choice.mode}
-              accessibilityRole="radio"
-              accessibilityLabel={choice.title}
-              accessibilityState={{ checked: selected, disabled: !hydrated }}
-              disabled={!hydrated}
-              onPress={() => setMode(choice.mode as ThemeMode)}
-              style={({ pressed }) => [s.option, selected && s.selected, { opacity: pressed ? 0.8 : 1 }]}
-            >
-              <choice.icon color={selected ? t.orange : t.muted} size={24} />
-              <View style={{ flex: 1, gap: 5 }}>
-                <Txt weight="bold" style={{ fontSize: 18 }}>{choice.title}</Txt>
-                <Txt style={{ color: t.muted, lineHeight: 24 }}>{choice.detail}</Txt>
-              </View>
-              {selected ? <Check color={t.orange} size={23} /> : <View style={s.radio} />}
-            </Pressable>
-          );
-        })}
+    <Shell title="اللغة والمظهر" subtitle="يُحفظ اختيارك على هذا الجهاز وفي حسابك" robot testID="appearance">
+      <Txt weight="bold" style={{ marginBottom: 8 }}>{tr("المظهر")}</Txt>
+      <View style={{ gap: 10 }} accessibilityRole="radiogroup">
+        {THEMES.map((c) => option(mode === c.mode, c.mode, c.title, c.detail, <c.icon color={mode === c.mode ? t.primary : t.muted} size={22} />, () => hydrated && setMode(c.mode as ThemeMode), `theme-${c.mode}`))}
       </View>
-      <View accessibilityLiveRegion="polite" style={s.preview}>
-        <Txt weight="bold" style={{ fontSize: 18 }}>
-          المظهر الحالي: {isDark ? "ليلي" : "نهاري"}
-        </Txt>
-        <Txt style={{ color: t.muted, lineHeight: 25 }}>
-          تظهر التغييرات فورًا في القوائم والبطاقات والنصوص دون الحاجة إلى إعادة تشغيل التطبيق.
-        </Txt>
-        {storageError ? (
-          <Txt style={{ color: t.danger, lineHeight: 24 }}>
-            طُبّق المظهر الآن، لكن تعذّر حفظ التفضيل على هذا الجهاز.
-          </Txt>
-        ) : null}
+      <Txt style={{ color: t.muted, fontSize: 12, marginTop: 6 }} testID="theme-state">{tr(isDark ? "المظهر الحالي: ليلي" : "المظهر الحالي: نهاري")}</Txt>
+      {storageError ? <Notice text="طُبّق المظهر الآن، لكن تعذّر حفظ التفضيل على هذا الجهاز." tone="warning" /> : null}
+      <Row style={{ marginTop: 20, marginBottom: 8 }}><Languages size={18} color={t.primary} /><Txt weight="bold">{tr("اللغة")}</Txt></Row>
+      <View style={{ gap: 10 }} accessibilityRole="radiogroup">
+        {LANGS.map(([code, title, detail]) => option(lang === code, code, title, detail, <Txt weight="extra" style={{ fontSize: 18, color: t.primary }}>{code.toUpperCase()}</Txt>, () => pickLang(code), `lang-${code}`))}
       </View>
+      <Row style={{ marginTop: 20, marginBottom: 8 }}><Coins size={18} color={t.primary} /><Txt weight="bold">{tr("عملة العرض")}</Txt></Row>
+      <Card style={{ gap: 10 }} testID="currency">
+        <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("الأسعار تُدفع بعملة المتجر ({c})، ويظهر بجانبها سعر تقريبي بالعملة التي تختارها.", { c: money.currency })}</Txt>
+        <Row wrap>
+          <Chip label={tr("{c} فقط", { c: money.currency })} active={!displayCurrency} onPress={() => pickCurrency(null)} testID="currency-none" />
+          {rates.map(([code, rate]) => <Chip key={code} testID={`currency-${code}`} label={`${code} · ${rate}`} active={displayCurrency === code} onPress={() => pickCurrency(code)} />)}
+        </Row>
+        {!rates.length ? <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("تظهر العملات المتاحة عند الاتصال بخادم المتجر.")}</Txt> : null}
+        <Txt testID="currency-example">{tr("مثال: {p}", { p: money.format(10) })} {money.approx(10) || ""}</Txt>
+      </Card>
     </Shell>
   );
 }
-const makeStyles = (t: Palette) => StyleSheet.create({
-  options: { gap: 14, width: "100%", maxWidth: 720, alignSelf: "center" },
-  option: { flexDirection: "row-reverse", alignItems: "center", gap: 16, padding: 22, minHeight: 90, backgroundColor: t.paper, borderColor: t.line, borderWidth: 1, borderRadius: 18 },
-  selected: { borderColor: t.orange, backgroundColor: t.orangeSoft },
-  radio: { width: 22, height: 22, borderRadius: 11, borderColor: t.muted, borderWidth: 1 },
-  preview: { backgroundColor: t.paper, padding: 24, borderRadius: 18, borderWidth: 1, borderColor: t.line, gap: 12, marginTop: 24, width: "100%", maxWidth: 720, alignSelf: "center" },
-});
