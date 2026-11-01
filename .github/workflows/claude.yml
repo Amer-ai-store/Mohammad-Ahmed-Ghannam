@@ -39,7 +39,7 @@ jobs:
             exit 1
           fi
           for value in "$OAUTH_TOKEN" "$API_KEY"; do
-            if [[ "$value" == * || "$value" == * ]]; then
+            if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
               echo "::error::Claude credential contains a line break; rotate and replace it"
               exit 1
             fi
