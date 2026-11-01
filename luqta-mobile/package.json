@@ -51,7 +51,11 @@
     "server": "node --env-file-if-exists=.env.local server/assistant.mjs",
     "server:commerce": "node server/commerce.mjs",
     "test": "node --test src/lib/*.test.mjs server/*.test.mjs",
-    "preview": "node server/preview.mjs"
+    "preview": "node server/preview.mjs",
+    "e2e:build": "EXPO_PUBLIC_API_URL=http://127.0.0.1:8799 expo export --platform web --output-dir dist-e2e",
+    "e2e": "node --test --test-concurrency=1 e2e/app.e2e.mjs e2e/dashboard.e2e.mjs",
+    "evidence": "node --test --test-reporter=./scripts/feature-reporter.mjs src/lib/*.test.mjs server/*.test.mjs && node --test --test-concurrency=1 --test-reporter=./scripts/feature-reporter.mjs e2e/app.e2e.mjs e2e/dashboard.e2e.mjs && node scripts/verify-evidence.mjs",
+    "verify:features": "node scripts/verify-evidence.mjs"
   },
   "private": true
 }
