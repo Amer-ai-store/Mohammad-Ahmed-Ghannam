@@ -100,7 +100,8 @@ test('delivery rewards redeem atomically and returns claw back redeemed value on
     assert.equal((await request('PATCH', `/admin/orders/${orderId}`, { status: 'confirmed', driverId: driver.user.id }, admin.token)).status, 200);
     assert.equal((await request('PATCH', `/admin/orders/${orderId}`, { status: 'preparing' }, admin.token)).status, 200);
     assert.equal((await request('PATCH', `/driver/orders/${orderId}`, { status: 'out_for_delivery' }, driver.token)).status, 200);
-    assert.equal((await request('PATCH', `/driver/orders/${orderId}`, { status: 'delivered' }, driver.token)).status, 200);
+    const { code } = (await request('GET', `/orders/${orderId}/delivery-code`, undefined, customer.token)).body;
+    assert.equal((await request('PATCH', `/driver/orders/${orderId}`, { status: 'delivered', otp: code }, driver.token)).status, 200);
     return orderId;
   };
   assert.equal((await request('GET', '/rewards', undefined, customer.token)).body.points, 0);

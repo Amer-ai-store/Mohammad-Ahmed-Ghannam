@@ -4,7 +4,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as Linking from "expo-linking";
 import { MapPin, Navigation, Truck } from "lucide-react-native";
 import { Shell } from "../../components/Shell";
-import { Button, Txt } from "../../components/ui";
+import { Button, Row, Txt } from "../../components/ui";
+import { OrderSteps } from "../../components/OrderSteps";
 import DeliveryMap, { MapPoint, validMapPoint } from "../../components/DeliveryMap";
 import { api } from "../../lib/api";
 import { useSession } from "../../lib/session";
@@ -105,18 +106,30 @@ export default function TrackingScreen() {
       ? routeSnapshot : null;
   const routing = routeEligible && routingIdentity === routeIdentity;
   const routeError = routeEligible && routeFailure?.identity === routeIdentity ? routeFailure.message : "";
+  const [deliveryCode, setCode] = useState<string | null>(null);
+  const status = tracking?.status;
+  useEffect(() => { if (!id || status !== "out_for_delivery") return; api.get<{ code: string | null }>(`/orders/${encodeURIComponent(id)}/delivery-code`).then((r) => setCode(r.code)).catch(() => setCode(null)); }, [id, status]);
+  const code = status === "out_for_delivery" ? deliveryCode : null;
+  const cancel = async () => { if (!id) return; setBusy(true); try { await api.post(`/orders/${encodeURIComponent(id)}/cancel`, {}); await load(true); } catch (e) { setError(e instanceof Error ? e.message : "تعذر إلغاء الطلب"); } finally { setBusy(false); } };
   const openDestination = async () => {
     const query = destination ? `${destination.latitude},${destination.longitude}` : [tracking?.destination?.street, tracking?.destination?.city].filter(Boolean).join(" ");
     if (!query) return;
     try { await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`); }
     catch { setError("تعذر فتح تطبيق الخرائط. يمكنك استخدام العنوان الظاهر أدناه."); }
   };
-  return <Shell title="تتبع التوصيل" subtitle="الموقع المنشور من جهاز السائق، مع وقت آخر تحديث حقيقي.">
+  return <Shell title="تتبع الطلب" subtitle="الموقع المنشور من جهاز السائق، مع وقت آخر تحديث حقيقي." robot={tracking?.status === "out_for_delivery" ? "طلبك بالطريق! 🛵" : undefined} back testID="tracking">
     {!configured ? <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}><Txt>يجب ربط التطبيق بخادم المتجر قبل تتبع الطلبات.</Txt><Button title="إعداد اتصال الخادم" onPress={() => router.push("/connection")} /></View> : !user ? <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}><Txt>سجّل الدخول إلى الحساب صاحب الطلب لعرض موقع التوصيل.</Txt><Button title="تسجيل الدخول" onPress={() => router.push("/login")} /></View> : <>
       <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}>
         <View style={s.row}><Truck size={26} color={t.orange} /><View style={{ flex: 1, gap: 5 }}><Txt weight="bold" style={{ fontSize: 21 }}>{tracking ? labels[tracking.status] || tracking.status : "تتبع الطلب"}</Txt><Txt style={{ color: t.muted, fontSize: 13 }}>{id || "رقم الطلب غير صالح"}</Txt></View>{busy ? <ActivityIndicator color={t.orange} /> : null}</View>
         {error ? <Txt accessibilityRole="alert" style={{ color: t.danger, lineHeight: 24 }}>{error}{tracking ? " — المعروض أدناه آخر بيانات ناجحة، وقد لا يكون محدثًا." : ""}</Txt> : null}
         <Button title="تحديث حالة وموقع الطلب" secondary busy={busy} disabled={!id} onPress={() => void load(true)} />
+        {tracking ? <OrderSteps status={tracking.status} /> : null}
+        {code ? <View testID="delivery-code" style={{ backgroundColor: t.primarySoft, borderRadius: 16, padding: 14, gap: 4 }}><Txt weight="bold" style={{ color: t.primary }}>رمز التسليم</Txt><Txt weight="extra" style={{ fontSize: 30, letterSpacing: 8, textAlign: "center", color: t.primary }}>{code}</Txt><Txt style={{ fontSize: 12, color: t.muted }}>أعطه للسائق عند استلام الطلب فقط.</Txt></View> : null}
+        <Row wrap>
+          <Button title="تفاصيل الطلب" secondary onPress={() => router.push(`/order/${id}`)} style={{ flex: 1 }} />
+          <Button title="الدعم" secondary onPress={() => router.push({ pathname: "/support", params: { orderId: id } })} style={{ flex: 1 }} />
+          {tracking && ["pending", "confirmed"].includes(tracking.status) ? <Button title="إلغاء" tone="danger" testID="cancel-order" onPress={() => void cancel()} style={{ flex: 1 }} /> : null}
+        </Row>
         {checkedAt ? <Txt style={{ color: t.muted, fontSize: 12 }}>آخر اتصال بالخادم: {dateLabel(checkedAt)} · تحديث تلقائي كل 15 ثانية أثناء فتح التطبيق.</Txt> : null}
       </View>
       {tracking ? <>

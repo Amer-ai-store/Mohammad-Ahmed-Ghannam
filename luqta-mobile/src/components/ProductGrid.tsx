@@ -2,7 +2,7 @@ import React from "react";
 import { View, useWindowDimensions } from "react-native";
 import { Product } from "../data/products";
 import { ProductCard } from "./ProductCard";
-export function ProductGrid({ items }: { items: Product[] }) {
+export function ProductGrid({ items, reasons }: { items: Product[]; reasons?: Record<string, string> }) {
   const [width, setWidth] = React.useState(0);
   const { fontScale } = useWindowDimensions();
   const effectiveWidth = width / Math.max(1, fontScale / 1.25);
@@ -23,11 +23,11 @@ export function ProductGrid({ items }: { items: Product[] }) {
         flexDirection: "row-reverse",
         flexWrap: "wrap",
         justifyContent: "space-between",
-        rowGap: 18,
+        rowGap: 14,
       }}
     >
       {items.map((product) => (
-        <ProductCard key={product.id} product={product} width={itemWidth} />
+        <ProductCard key={product.id} product={product} width={itemWidth} reason={reasons?.[product.id]} />
       ))}
     </View>
   );

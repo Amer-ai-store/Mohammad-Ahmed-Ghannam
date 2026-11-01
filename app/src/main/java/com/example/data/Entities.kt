@@ -77,7 +77,7 @@ data class CartItemEntity(
     val productName: String,
     val imageUrl: String,
     val price: Double,
-    var quantity: Int,
+    val quantity: Int,
     val orderType: String // "Retail" or "Wholesale"
 )
 
@@ -87,7 +87,7 @@ data class BankCardEntity(
     val userId: Int,
     val cardHolder: String,
     val expiryDate: String,
-    val cvv: String,
+    val cvv: String = "", // Always blank: card security codes are never stored.
     val isPrimary: Boolean = false
 )
 
@@ -122,3 +122,13 @@ data class StoredOrganicItemEntity(
 )
 
 
+
+/** Password hash for LocalAuthBackend (builds without Firebase). Kept apart from users so exports never carry it. */
+@Entity(tableName = "local_credentials")
+data class CredentialEntity(
+    @PrimaryKey val email: String, // normalizeEmail()
+    val passwordHash: String,
+    val salt: String,
+    val algorithm: String,
+    val iterations: Int
+)

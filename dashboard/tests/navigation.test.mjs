@@ -38,7 +38,9 @@ test('mobile navigation is scoped to one group and reports active page', () => {
   assert.match(index,/class:"nav-section"/);
 });
 test('all Luqta sub-screens have deep links and can select their actual code', () => {
-  const tabs = ['overview','products','inventory','offers','appearance','orders','users','coupons','returns','tickets','agents','settings','audit'];
+  // Every section the Luqta integration can draw must be reachable by a deep link, or the router falls back to overview.
+  const tabs = [...luqta.match(/const tabs = \[([\s\S]*?)\];/)[1].matchAll(/\["([a-z]+)",/g)].map(m => m[1]);
+  assert.ok(tabs.length >= 29, 'all integration tabs parsed');
   const ids = new Set(nav.flatMap(group => group[1].map(row => row[0])));
   assert.ok(ids.has('luqta'));
   tabs.filter(x=>x!=='overview').forEach(tab => assert.ok(ids.has('luqta/'+tab)));

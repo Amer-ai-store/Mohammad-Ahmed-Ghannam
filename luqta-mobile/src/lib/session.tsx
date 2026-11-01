@@ -41,6 +41,12 @@ async function saveSession(value: StoredSession | null) {
   else await SecureStore.deleteItemAsync(STORAGE_KEY);
 }
 
+// Names this device in the account's signed-in devices list; browsers are named by the server from their user agent.
+function deviceInfo(): { device?: string } {
+  if (Platform.OS === "web") return {};
+  const model = (Platform.constants as { Model?: string } | undefined)?.Model;
+  return { device: `${Platform.OS === "android" ? "Android" : "iPhone"}${model ? ` · ${model}` : ""} · تطبيق لُقطة`.slice(0, 80) };
+}
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -99,12 +105,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const login = useCallback(async (email: string, password: string) => {
     const origin = api.baseUrl();
-    const result = await api.post<{ token: string; user: SessionUser }>("/auth/login", { email: email.trim().toLowerCase(), password });
+    const result = await api.post<{ token: string; user: SessionUser }>("/auth/login", { email: email.trim().toLowerCase(), password, ...deviceInfo() });
     await acceptSession(result, origin);
   }, [acceptSession]);
   const register = useCallback(async (name: string, email: string, password: string) => {
     const origin = api.baseUrl();
-    const result = await api.post<{ token: string; user: SessionUser; recoveryCode: string }>("/auth/register", { name: name.trim(), email: email.trim().toLowerCase(), password });
+    const result = await api.post<{ token: string; user: SessionUser; recoveryCode: string }>("/auth/register", { name: name.trim(), email: email.trim().toLowerCase(), password, ...deviceInfo() });
     await acceptSession(result, origin);
     if (!result.recoveryCode) throw new ApiError("لم يصدر الخادم رمز استرداد الحساب. راجع إدارة المتجر.");
     return result.recoveryCode;

@@ -15,6 +15,8 @@ object ModelService {
     private const val TAG = "ModelService"
     private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
     private const val MODEL_NAME = "gemini-3.5-flash"
+    // Sent as a header rather than a ?key= query parameter so the key stays out of URLs and request logs.
+    private const val API_KEY_HEADER = "x-goog-api-key"
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
@@ -32,7 +34,7 @@ object ModelService {
             return@withContext getOfflineMockResponse(prompt)
         }
 
-        val url = "$BASE_URL$MODEL_NAME:generateContent?key=$apiKey"
+        val url = "$BASE_URL$MODEL_NAME:generateContent"
         val requestJson = """
             {
                 "contents": [
@@ -50,6 +52,7 @@ object ModelService {
         val body = requestJson.toRequestBody("application/json; charset=utf-8".toMediaType())
         val request = Request.Builder()
             .url(url)
+            .header(API_KEY_HEADER, apiKey)
             .post(body)
             .build()
 
@@ -95,7 +98,7 @@ object ModelService {
             return@withContext getOfflineMockResponse(prompt)
         }
 
-        val url = "$BASE_URL$model:generateContent?key=$apiKey"
+        val url = "$BASE_URL$model:generateContent"
         
         val contentsJson = JSONObject()
         val contentArr = org.json.JSONArray()
@@ -133,6 +136,7 @@ object ModelService {
         val body = requestBodyStr.toRequestBody("application/json; charset=utf-8".toMediaType())
         val request = Request.Builder()
             .url(url)
+            .header(API_KEY_HEADER, apiKey)
             .post(body)
             .build()
 
@@ -172,7 +176,7 @@ object ModelService {
             return@withContext getOfflineMockImageResponse(prompt)
         }
 
-        val url = "${BASE_URL}gemini-3.5-flash:generateContent?key=$apiKey"
+        val url = "${BASE_URL}gemini-3.5-flash:generateContent"
         val base64Image = try {
             val outputStream = java.io.ByteArrayOutputStream()
             bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, outputStream)
@@ -209,6 +213,7 @@ object ModelService {
         val body = requestJson.toRequestBody("application/json; charset=utf-8".toMediaType())
         val request = Request.Builder()
             .url(url)
+            .header(API_KEY_HEADER, apiKey)
             .post(body)
             .build()
 

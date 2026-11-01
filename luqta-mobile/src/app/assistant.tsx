@@ -1,413 +1,131 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from "react-native";
-import { ArrowUp, RotateCcw, Sparkles } from "lucide-react-native";
-import { useLocalSearchParams } from "expo-router";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Camera, Mic, MicOff, Send, ShoppingCart, VolumeX } from "lucide-react-native";
 import { Shell } from "../components/Shell";
-import { ProductGrid } from "../components/ProductGrid";
-import { Txt } from "../components/ui";
+import { Mascot } from "../components/Robot";
+import { ProductImage } from "../components/ProductCard";
+import { Button, Chip, Notice, Row, Txt } from "../components/ui";
 import { useStore } from "../lib/store";
+import { useSession } from "../lib/session";
+import { useTheme } from "../lib/theme";
+import { useI18n } from "../lib/i18n";
+import { useMoney } from "../lib/money";
+import { useRobot, type RobotMotion } from "../lib/robot";
+import { useVoiceInput } from "../lib/voice";
+import { api } from "../lib/api";
 import { recommendProducts } from "../lib/recommendations";
-import { askAssistant, checkAssistant } from "../lib/assistant";
-import { Palette, useTheme, useThemedStyles } from "../lib/theme";
+import type { Product } from "../data/products";
 
-type Message = {
-  role: "user" | "assistant";
-  content: string;
-  productIds?: string[];
-};
-const welcome: Message = {
-  role: "assistant",
-  content:
-    "أهلًا! أخبرني ما الذي تبحث عنه وكم ميزانيتك. هدية، شيء لمنزلك، أو إضافة لمكتبك؟ لنجد لُقطتك المناسبة.",
-};
+type Basket = { budget: number; total: number; remaining: number; items: { product: Product; quantity: number; lineTotal: number; reason: string }[] };
+type Recipe = { id: string; name: string; servings: number; total: number; missing: string[]; ingredients: { ingredient: string; quantity: number; product: Product | null }[] };
+type Action = { intent: string; productId?: string; quantity?: number; path?: string; motion?: RobotMotion; label?: string };
+type Reply = { intent: string; reply: string; products?: Product[]; basket?: Basket; recipe?: Recipe | null; action?: Action };
+type Message = { id: string; role: "user" | "assistant"; text: string; reply?: Reply };
+const STARTERS = ["جهز لي سلة بـ ٢٠ دينار", "وصفة كبسة لـ 6 أشخاص", "أضف ٢ حليب للسلة", "وين طلبي؟", "اقترح لي هدية", "يا لقطي ارقص"];
+
 export default function Assistant() {
-  const { q } = useLocalSearchParams<{ q?: string }>();
-  return <AssistantContent key={q || "new"} initialPrompt={q || ""} />;
-}
-function AssistantContent({ initialPrompt }: { initialPrompt: string }) {
   const { colors: t } = useTheme();
-  const s = useThemedStyles(makeStyles);
-  const { products, settings } = useStore();
-  const prompts = [
-    `هدية بميزانية 250 ${settings.currency}`,
-    "سماعات بميزانية 400",
-    "إضافات لمكتبي تحت 300",
-    "العناية بالبشرة",
-  ];
-  const [messages, setMessages] = useState<Message[]>([welcome]);
-  const [input, setInput] = useState(initialPrompt);
-  const [ready, setReady] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const { t: tr, lang, isRTL } = useI18n();
+  const money = useMoney();
+  const store = useStore();
+  const { configured } = useSession();
+  const robot = useRobot();
+  const voice = useVoiceInput(lang);
+  const params = useLocalSearchParams<{ q?: string }>();
+  const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const { width } = useWindowDimensions();
-  const inputRef = useRef<TextInput>(null);
-  useEffect(() => {
-    let active = true;
-    checkAssistant().then((value) => {
-      if (active) {
-        setReady(value);
-        setChecking(false);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-  const recheck = async () => {
-    setChecking(true);
-    const available = await checkAssistant();
-    setReady(available);
-    setConnected(false);
-    setChecking(false);
+  const [messages, setMessages] = useState<Message[]>([{ id: "hello", role: "assistant", text: tr("أهلًا! أنا لُقطي 🤖 قل لي ميزانيتك أو وصفتك أو اسم منتج، وأنا أجهز لك كل شي.") }]);
+  const scroll = useRef<ScrollView>(null);
+  const asked = useRef(false);
+  const run = (action?: Action) => {
+    if (!action) return;
+    if (action.intent === "add_to_cart" && action.productId) store.addToCart(action.productId, action.quantity || 1);
+    if (action.intent === "remove_from_cart" && action.productId) store.setQuantity(action.productId, 0);
+    if (action.intent === "navigate" && action.path) setTimeout(() => router.push(action.path as never), 600);
+    if (action.intent === "track_order") { const active = store.orders.find((o) => !["delivered", "cancelled"].includes(o.status)); setTimeout(() => router.push(active ? `/tracking/${active.id}` : "/orders"), 600); }
+    if (action.intent === "robot" && action.motion) robot.play(action.motion, tr("حاضر! 🤖"));
   };
-  const send = async (text: string) => {
-    const message = text.trim();
-    if (!message || busy || checking) return;
-    setInput("");
-    setError("");
-    setBusy(true);
-    const history = messages.map(({ role, content }) => ({ role, content }));
-    setMessages((old) => [...old, { role: "user", content: message }]);
+  async function send(text: string) {
+    const message = text.trim(); if (!message || busy) return;
+    setInput(""); setBusy(true);
+    setMessages((m) => [...m, { id: `u${Date.now()}`, role: "user", text: message }]);
     try {
-      const result = ready
-        ? await askAssistant(message, history)
-        : recommendProducts(message, products.filter((p) => !p.variantOf && (p.stock === undefined || p.stock > 0)), settings.currency);
-      if (ready) setConnected(true);
-      setMessages((old) => [
-        ...old,
-        {
-          role: "assistant",
-          content: result.message,
-          productIds: result.productIds
-            .filter((id: string) => products.some((p) => p.id === id && !p.variantOf))
-            .slice(0, 3),
-        },
-      ]);
+      let reply: Reply;
+      if (configured) reply = await api.post<Reply>("/ai/chat", { message });
+      else {
+        const local = recommendProducts(message, store.products, store.settings.currency);
+        const products = local.productIds.map((pid) => store.products.find((p) => p.id === pid)).filter((p): p is Product => !!p);
+        reply = { intent: products.length ? "recommendations" : "no_match", reply: local.message || tr("اربط خادم المتجر لتجربة لُقطي الكاملة."), products };
+      }
+      setMessages((m) => [...m, { id: `a${Date.now()}`, role: "assistant", text: reply.reply, reply }]);
+      run(reply.action);
+      if (!reply.action || reply.action.intent !== "robot") robot.play(reply.basket || reply.recipe ? "jump" : "talk", "");
+      robot.speak(reply.reply);
     } catch (e) {
-      setConnected(false);
-      setMessages((old) => old.slice(0, -1));
-      setError(
-        e instanceof Error ? e.message : "تعذّر الاتصال بالمساعد. حاول مجددًا.",
-      );
-      setInput(message);
-    } finally {
-      setBusy(false);
-    }
+      setMessages((m) => [...m, { id: `e${Date.now()}`, role: "assistant", text: e instanceof Error ? e.message : tr("حصل خطأ، جرّب مرة ثانية") }]);
+      robot.react("error");
+    } finally { setBusy(false); setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 100); }
+  }
+  useEffect(() => { if (params.q && !asked.current) { asked.current = true; void send(params.q); } });
+  const listen = () => {
+    if (!voice.supported) { setMessages((m) => [...m, { id: `v${Date.now()}`, role: "assistant", text: tr("الأوامر الصوتية مدعومة في المتصفح؛ على الهاتف استخدم ميكروفون لوحة المفاتيح.") }]); return; }
+    robot.play("come", tr("أسمعك… 🎙️"));
+    voice.start((text) => void send(text));
   };
+  const addBasket = (basket: Basket) => store.addManyToCart(Object.fromEntries(basket.items.map((i) => [i.product.id, i.quantity])));
+  const addRecipe = (recipe: Recipe) => store.addManyToCart(Object.fromEntries(recipe.ingredients.filter((i) => i.product).map((i) => [i.product!.id, i.quantity])));
+  const saveRecipeList = async (recipe: Recipe) => {
+    try {
+      const created = await api.post<{ list: { id: string } }>("/lists", { name: recipe.name });
+      for (const i of recipe.ingredients) await api.post(`/lists/${created.list.id}/items`, i.product ? { productId: i.product.id, quantity: i.quantity } : { title: i.ingredient, quantity: i.quantity });
+      router.push(`/list/${created.list.id}`);
+    } catch (e) { store.notify(e instanceof Error ? e.message : "سجّل الدخول لحفظ القائمة"); }
+  };
+  const mini = (p: Product, quantity?: number, note?: string) => (
+    <Row key={p.id} style={{ backgroundColor: t.background, borderRadius: 16, padding: 8 }}>
+      <Pressable onPress={() => router.push(`/product/${p.id}`)} style={{ width: 46, height: 46, borderRadius: 12, overflow: "hidden" }}><ProductImage product={p} /></Pressable>
+      <View style={{ flex: 1 }}><Txt weight="bold" numberOfLines={1} style={{ fontSize: 13 }}>{quantity ? `${quantity} × ` : ""}{p.name}</Txt><Txt style={{ color: t.muted, fontSize: 11 }}>{money.format(p.price)}{note ? ` · ${tr(note)}` : ""}</Txt></View>
+      <Pressable testID={`assistant-add-${p.id}`} accessibilityRole="button" accessibilityLabel={`${tr("أضف إلى السلة")} ${p.name}`} onPress={() => store.addToCart(p.id, quantity || 1)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: t.primary, alignItems: "center", justifyContent: "center" }}><Txt weight="extra" style={{ color: t.onPrimary, textAlign: "center" }}>+</Txt></Pressable>
+    </Row>
+  );
   return (
-    <Shell
-      title="اختيارك أسهل، مع مساعدك"
-      subtitle="من أول فكرة إلى اللُقطة المناسبة. أخبرنا عمّا تحتاجه."
-    >
-      <View style={s.statusRow}>
-        <View style={s.status}>
-          <View
-            style={[s.dot, { backgroundColor: ready ? t.green : t.orange }]}
-          />
-          <Txt
-            weight="bold"
-            style={{ color: ready ? t.green : t.muted, fontSize: 11 }}
-          >
-            {checking
-              ? "التحقق من الاتصال..."
-              : connected
-                ? "مساعد OpenAI متصل"
-                : ready
-                  ? "مساعد OpenAI مُعدّ"
-                  : "توصيات محلية"}
-          </Txt>
-        </View>
-        <View style={{ flexDirection: "row-reverse", gap: 15 }}>
-          <Pressable
-            disabled={busy || checking}
-            accessibilityRole="button"
-            onPress={recheck}
-            style={{ minHeight: 44, justifyContent: "center" }}
-          >
-            <Txt style={{ color: t.orange, fontSize: 11 }}>إعادة التحقق</Txt>
-          </Pressable>
-          <Pressable
-            disabled={busy}
-            accessibilityRole="button"
-            accessibilityLabel="بدء محادثة جديدة"
-            onPress={() => {
-              setMessages([welcome]);
-              setError("");
-            }}
-            style={s.reset}
-          >
-            <RotateCcw size={14} color={t.muted} />
-            <Txt style={{ color: t.muted, fontSize: 12 }}>محادثة جديدة</Txt>
-          </Pressable>
-        </View>
-      </View>
-      {!checking && !ready ? (
-        <View style={s.notice}>
-          <Txt style={{ color: t.muted, fontSize: 12, lineHeight: 23 }}>
-            الاتصال بالذكاء الاصطناعي غير مفعّل حاليًا. يمكنك تجربة اقتراحات
-            مبنية على الكلمات والميزانية من منتجات المتجر.
-          </Txt>
-        </View>
-      ) : null}
-      <View style={s.chat}>
-        <View style={s.chatHead}>
-          <View style={s.assistantIcon}>
-            <Sparkles color={t.orange} size={26} />
-          </View>
-          <View>
-            <Txt weight="extra" style={{ fontSize: 20 }}>
-              مساعد لُقطة
-            </Txt>
-            <Txt style={{ color: t.muted, fontSize: 11, marginTop: 4 }}>
-              لأن أفضل اختيار، هو ما يناسبك.
-            </Txt>
-          </View>
-        </View>
-        {messages.map((message, index) => (
-          <View key={index} style={{ marginBottom: 20 }}>
-            <View
-              style={[s.bubble, message.role === "user" ? s.user : s.assistant]}
-            >
-              <Txt
-                style={{
-                  color: message.role === "user" ? t.onAccent : t.ink,
-                  fontSize: 15,
-                  lineHeight: 27,
-                }}
-              >
-                {message.content}
-              </Txt>
-            </View>
-            {message.productIds?.length ? (
-              <View style={{ marginTop: 15 }}>
-                <ProductGrid
-                  items={message.productIds
-                    .map((id) => products.find((p) => p.id === id)!)
-                    .filter(Boolean)}
-                />
+    <Shell title="تسوق بالمحادثة" subtitle="لُقطي يجهز سلتك ووصفاتك ويفهم أوامرك" scroll={false} testID="assistant">
+      <View style={{ flex: 1, gap: 10 }}>
+        <Row style={{ justifyContent: "center" }}><Mascot size={96} bubble="side" /></Row>
+        <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ gap: 10, paddingBottom: 12 }} testID="assistant-messages">
+          {messages.map((m) => (
+            <View key={m.id} style={{ alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
+              <View testID={`bubble-${m.role}`} style={{ maxWidth: "92%", backgroundColor: m.role === "user" ? t.primary : t.paper, borderRadius: 22, borderWidth: m.role === "user" ? 0 : 1, borderColor: t.line, padding: 12, gap: 8 }}>
+                <Txt style={{ color: m.role === "user" ? t.onPrimary : t.ink, lineHeight: 22 }}>{m.text}</Txt>
+                {m.reply?.basket ? <View style={{ gap: 6 }} testID="basket">
+                  {m.reply.basket.items.map((i) => mini(i.product, i.quantity, i.reason))}
+                  <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("المجموع التقديري")}</Txt><Txt weight="extra" style={{ color: t.orange }} testID="basket-total">{money.format(m.reply.basket.total)}</Txt></Row>
+                  <Button title={tr("أضف السلة كاملة")} testID="add-basket" icon={<ShoppingCart size={16} color={t.onAccent} />} onPress={() => addBasket(m.reply!.basket!)} />
+                </View> : null}
+                {m.reply?.recipe ? <View style={{ gap: 6 }} testID="recipe">
+                  <Txt weight="bold">{tr("مكونات {r} ({n} أشخاص)", { r: m.reply.recipe.name, n: m.reply.recipe.servings })}</Txt>
+                  {m.reply.recipe.ingredients.map((i) => i.product ? mini(i.product, i.quantity) : <Txt key={i.ingredient} style={{ color: t.muted, fontSize: 12 }}>• {i.ingredient} — {tr("غير متوفر")}</Txt>)}
+                  <Row><Button title={tr("أضف المكونات للسلة")} testID="add-recipe" onPress={() => addRecipe(m.reply!.recipe!)} style={{ flex: 1 }} /><Button title={tr("احفظها كقائمة")} secondary onPress={() => void saveRecipeList(m.reply!.recipe!)} style={{ flex: 1 }} /></Row>
+                </View> : null}
+                {m.reply?.products?.length ? <View style={{ gap: 6 }} testID="assistant-products">{m.reply.products.slice(0, 4).map((p) => mini(p))}</View> : null}
               </View>
-            ) : null}
-          </View>
-        ))}
-        {busy ? (
-          <View style={s.thinking}>
-            <ActivityIndicator size="small" color={t.orange} />
-            <Txt style={{ color: t.muted, fontSize: 12 }}>
-              أبحث عن اختيار يناسبك...
-            </Txt>
-          </View>
-        ) : null}
-        {error ? (
-          <View accessibilityLiveRegion="polite" style={s.error}>
-            <Txt style={{ color: t.danger, lineHeight: 24, fontSize: 13 }}>
-              {error}
-            </Txt>
-            <Pressable accessibilityRole="button" onPress={() => send(input)}>
-              <Txt
-                weight="bold"
-                style={{ color: t.orange, fontSize: 12, marginTop: 6 }}
-              >
-                إعادة المحاولة
-              </Txt>
-            </Pressable>
-          </View>
-        ) : null}
-        {messages.length === 1 ? (
-          <View style={s.prompts}>
-            {prompts.map((prompt) => (
-              <Pressable
-                accessibilityRole="button"
-                disabled={checking}
-                key={prompt}
-                onPress={() => send(prompt)}
-                style={s.prompt}
-              >
-                <Txt style={{ fontSize: 12, color: t.muted }}>{prompt}</Txt>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-        <View style={s.inputWrap}>
-          <TextInput
-            ref={inputRef}
-            accessibilityLabel="اكتب طلبك لمساعد التسوق"
-            value={input}
-            onChangeText={setInput}
-            placeholder="أبحث عن هدية لشخص يحب القهوة..."
-            placeholderTextColor={t.muted}
-            maxLength={1200}
-            editable={!busy}
-            onSubmitEditing={() => send(input)}
-            returnKeyType="send"
-            style={[s.input, { fontSize: width < 500 ? 13 : 15 }]}
-          />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="إرسال إلى المساعد"
-            disabled={busy || !input.trim() || checking}
-            onPress={() => send(input)}
-            style={[
-              s.send,
-              busy || !input.trim() || checking ? { opacity: 0.4 } : null,
-            ]}
-          >
-            <ArrowUp size={20} color={t.onAccent} />
-          </Pressable>
+            </View>
+          ))}
+          {busy ? <Txt style={{ color: t.muted }}>{tr("لُقطي يفكر…")}</Txt> : null}
+        </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
+          {STARTERS.map((s) => <Chip key={s} testID={`starter-${s}`} label={s} onPress={() => void send(tr(s))} />)}
+        </ScrollView>
+        {voice.listening ? <Notice text="أستمع إليك… تكلّم الآن" tone="accent" /> : null}
+        <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, backgroundColor: t.paper, borderRadius: 24, borderWidth: 1, borderColor: t.line, padding: 6 }}>
+          <Pressable testID="assistant-camera" accessibilityRole="button" accessibilityLabel={tr("بحث بالصورة")} onPress={() => router.push({ pathname: "/explore", params: { mode: "image" } })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.orangeSoft, alignItems: "center", justifyContent: "center" }}><Camera size={18} color={t.orange} /></Pressable>
+          <TextInput testID="assistant-input" accessibilityLabel={tr("اكتب طلبك")} value={input} onChangeText={setInput} onSubmitEditing={() => void send(input)} placeholder={tr("جهز لي سلة بـ ٢٠ دينار…")} placeholderTextColor={t.muted} style={{ flex: 1, minHeight: 42, color: t.ink, fontFamily: "Tajawal_500Medium", textAlign: isRTL ? "right" : "left", paddingHorizontal: 6 }} />
+          {robot.speaking ? <Pressable accessibilityRole="button" accessibilityLabel={tr("إيقاف الصوت")} onPress={robot.stopSpeaking} style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" }}><VolumeX size={18} color={t.muted} /></Pressable> : null}
+          <Pressable testID="assistant-mic" accessibilityRole="button" accessibilityLabel={tr(voice.listening ? "إيقاف الاستماع" : "أمر صوتي")} onPress={() => (voice.listening ? voice.stop() : listen())} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: voice.listening ? t.orange : t.primarySoft, alignItems: "center", justifyContent: "center" }}>{voice.listening ? <MicOff size={18} color={t.onAccent} /> : <Mic size={18} color={t.primary} />}</Pressable>
+          <Pressable testID="assistant-send" accessibilityRole="button" accessibilityLabel={tr("إرسال")} disabled={busy || !input.trim()} onPress={() => void send(input)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.primary, alignItems: "center", justifyContent: "center", opacity: busy || !input.trim() ? 0.5 : 1 }}><Send size={17} color={t.onPrimary} /></Pressable>
         </View>
-        <Txt
-          style={{
-            color: t.muted,
-            fontSize: 10,
-            textAlign: "center",
-            marginTop: 12,
-          }}
-        >
-          الاقتراحات من كتالوج المتجر. راجع تفاصيل المنتج قبل اختياره.
-        </Txt>
-      </View>
-      <View style={s.tip}>
-        <Sparkles color={t.orange} size={18} />
-        <Txt
-          style={{ flex: 1, color: t.muted, fontSize: 12, lineHeight: 23 }}
-        >
-          لنتيجة أقرب لذوقك: حدّد لمن تتسوق، المناسبة، والميزانية.
-        </Txt>
       </View>
     </Shell>
   );
 }
-const makeStyles = (t: Palette) => StyleSheet.create({
-  statusRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 17,
-  },
-  status: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 9,
-    backgroundColor: t.secondary,
-  },
-  dot: { width: 6, height: 6, borderRadius: 4 },
-  reset: { flexDirection: "row-reverse", gap: 6, alignItems: "center", minHeight: 44 },
-  notice: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: t.line,
-    borderRadius: 12,
-    marginBottom: 16,
-    backgroundColor: t.orangeSoft,
-  },
-  chat: {
-    backgroundColor: t.paper,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: t.line,
-    padding: 22,
-    minHeight: 450,
-  },
-  chatHead: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 13,
-    borderBottomWidth: 1,
-    borderColor: t.line,
-    paddingBottom: 22,
-    marginBottom: 24,
-  },
-  assistantIcon: {
-    width: 55,
-    height: 55,
-    borderRadius: 18,
-    backgroundColor: t.orangeSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bubble: {
-    maxWidth: "93%",
-    borderRadius: 15,
-    paddingHorizontal: 18,
-    paddingVertical: 15,
-  },
-  user: {
-    backgroundColor: t.orange,
-    alignSelf: "flex-end",
-    borderTopRightRadius: 4,
-  },
-  assistant: {
-    backgroundColor: t.secondary,
-    alignSelf: "flex-end",
-    borderTopRightRadius: 4,
-  },
-  thinking: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 20,
-  },
-  error: {
-    backgroundColor: t.orangeSoft,
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 17,
-  },
-  prompts: {
-    flexDirection: "row-reverse",
-    gap: 9,
-    flexWrap: "wrap",
-    marginBottom: 24,
-  },
-  prompt: {
-    borderWidth: 1,
-    borderColor: t.line,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 11,
-  },
-  inputWrap: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    backgroundColor: t.secondary,
-    padding: 8,
-    paddingRight: 16,
-    borderRadius: 15,
-    gap: 10,
-    marginTop: 12,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 11,
-    fontFamily: "Tajawal_400Regular",
-    textAlign: "right",
-    color: t.ink,
-  },
-  send: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: t.orange,
-  },
-  tip: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 22,
-    paddingHorizontal: 7,
-  },
-});

@@ -142,7 +142,11 @@ test('actual driver assignment/GPS, delivery, verified review and return refund 
   const tracking = (await request('GET', `/orders/${placed.id}/tracking`, undefined, customer.token)).body;
   assert.equal(tracking.location.latitude, 31.955); assert.equal(tracking.driver.id, driver.user.id); assert.equal(tracking.destination.latitude, address.latitude);
   assert.equal((await request('POST', `/driver/orders/${placed.id}/location`, { latitude: 999, longitude: 0 }, driver.token)).status, 400);
-  await request('PATCH', `/driver/orders/${placed.id}`, { status: 'delivered' }, driver.token);
+  assert.equal((await request('PATCH', `/driver/orders/${placed.id}`, { status: 'delivered' }, driver.token)).status, 403);
+  const { code } = (await request('GET', `/orders/${placed.id}/delivery-code`, undefined, customer.token)).body;
+  assert.match(code, /^\d{4}$/);
+  assert.equal((await request('GET', `/orders/${placed.id}/delivery-code`, undefined, driver.token)).status, 403);
+  assert.equal((await request('PATCH', `/driver/orders/${placed.id}`, { status: 'delivered', otp: code }, driver.token)).status, 200);
   const review = await request('POST', '/products/mug/reviews', { rating: 5, title: 'جيد', body: 'منتج رائع بعد التجربة' }, customer.token); assert.equal(review.status, 201);
   assert.equal((await request('GET', '/products/mug/reviews')).body.rating, 5);
   assert.equal((await request('POST', '/products/mug/reviews', { rating: 4, body: 'مكرر' }, customer.token)).status, 409);

@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1135,7 +1136,7 @@ fun MainLayout(viewModel: MarketViewModel) {
     // Helper translation accessor
     fun txt(key: String): String = Localization.get(key, lang)
 
-    val roles = listOf("Customer", "Merchant", "Delivery", "Admin")
+    val roles by viewModel.availableRoles.collectAsState()
     val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()
     var showProfileDialog by remember { mutableStateOf(false) }
     var profileDialogInitialTab by remember { mutableStateOf(0) }
@@ -5215,11 +5216,25 @@ fun CustomerScreen(viewModel: MarketViewModel) {
                                 Icon(Icons.Default.Menu, contentDescription = "Minus", tint = AccentCoral)
                             }
                             Text("$orderQuantity", fontSize = 14.sp, fontWeight = FontWeight.Black, color = PolarLight)
-                            IconButton(onClick = { orderQuantity++ }) {
+                            IconButton(
+                                onClick = { orderQuantity++ },
+                                enabled = orderQuantity < prod.stockQuantity
+                            ) {
                                 Icon(Icons.Default.Add, contentDescription = "Add", tint = SecondaryMint)
                             }
                         }
                     }
+
+                    Text(
+                        text = when {
+                            prod.stockQuantity <= 0 -> if (lang == "ar") "نفدت الكمية" else "Out of stock"
+                            prod.stockQuantity <= 10 -> if (lang == "ar") "متبقٍ ${prod.stockQuantity} فقط!" else "Only ${prod.stockQuantity} left!"
+                            else -> if (lang == "ar") "متوفر: ${prod.stockQuantity}" else "In stock: ${prod.stockQuantity}"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (prod.stockQuantity <= 10) AccentCoral else SecondaryMint
+                    )
                 }
             },
             confirmButton = {
@@ -5232,6 +5247,7 @@ fun CustomerScreen(viewModel: MarketViewModel) {
                             viewModel.addProductToCart(prod, orderQuantity, orderTypeChosen)
                             selectedProductForDetail = null
                         },
+                        enabled = prod.stockQuantity >= orderQuantity,
                         colors = ButtonDefaults.buttonColors(containerColor = SecondaryMint),
                         modifier = Modifier.weight(1f)
                     ) {
@@ -5248,6 +5264,7 @@ fun CustomerScreen(viewModel: MarketViewModel) {
                             viewModel.placeOrder(prod, orderQuantity, orderTypeChosen)
                             selectedProductForDetail = null
                         },
+                        enabled = prod.stockQuantity >= orderQuantity,
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryCyan),
                         modifier = Modifier.weight(1f)
                     ) {
@@ -5432,15 +5449,15 @@ fun CustomerScreen(viewModel: MarketViewModel) {
             confirmButton = {
                 Button(
                     onClick = {
-                        val trimmedCard = cardNumberState.replace(" ", "")
-                        if (trimmedCard.length < 16) {
-                            cardError = if (lang == "ar") "رقم البطاقة يجب أن يكون مكوناً من 16 رقماً!" else "Card number must contain exactly 16 digits!"
+                        val trimmedCard = cardNumberState.filterNot { it == ' ' || it == '-' }
+                        if (!PaymentValidation.isValidCardNumber(trimmedCard)) {
+                            cardError = if (lang == "ar") "رقم البطاقة غير صحيح، تحقق من الأرقام!" else "Invalid card number, please check the digits!"
                         } else if (cardHolderState.isBlank()) {
                             cardError = if (lang == "ar") "اسم صاحب البطاقة لا يمكن أن يكون فارغاً!" else "Cardholder name cannot be blank!"
-                        } else if (expiryDateState.length < 5 || !expiryDateState.contains("/")) {
-                            cardError = if (lang == "ar") "تاريخ الصلاحية غير صحيح! استخدم صيغة MM/YY" else "Invalid Expiry! Use MM/YY format."
-                        } else if (cvvState.length < 3) {
-                            cardError = if (lang == "ar") "الرمز السري CVV يجب أن يكون من 3 أرقام!" else "CVV must be 3 digits!"
+                        } else if (!PaymentValidation.isValidExpiry(expiryDateState)) {
+                            cardError = if (lang == "ar") "تاريخ الصلاحية غير صحيح أو منتهٍ! استخدم صيغة MM/YY" else "Invalid or expired date! Use MM/YY format."
+                        } else if (!PaymentValidation.isValidCvv(cvvState)) {
+                            cardError = if (lang == "ar") "الرمز السري CVV يجب أن يكون من 3 أو 4 أرقام!" else "CVV must be 3 or 4 digits!"
                         } else {
                             viewModel.linkBankCard(
                                 cardNumber = trimmedCard,
@@ -8611,7 +8628,6 @@ fun ProfileSettings(
     val genderState by viewModel.userGender.collectAsState()
     val ageState by viewModel.userAge.collectAsState()
     val addressState by viewModel.userAddress.collectAsState()
-    val passwordState by viewModel.userPassword.collectAsState()
 
     val aiVoice by viewModel.aiVoiceEnabled.collectAsState()
     val aiDashboard by viewModel.aiDashboardEnabled.collectAsState()
@@ -8622,7 +8638,7 @@ fun ProfileSettings(
 
     // Form editing states
     var nameInput by remember(currentUser) { mutableStateOf(currentUser?.name ?: "") }
-    var emailInput by remember(currentUser) { mutableStateOf(currentUser?.email ?: "") }
+    val emailInput = currentUser?.email ?: ""
     var phoneInput by remember(currentUser) { mutableStateOf(currentUser?.phoneNumber ?: "") }
     var genderInput by remember(genderState) { mutableStateOf(genderState) }
     var ageInput by remember(ageState) { mutableStateOf(ageState.toString()) }
@@ -8773,8 +8789,16 @@ fun ProfileSettings(
                                 // Email Input
                                 OutlinedTextField(
                                     value = emailInput,
-                                    onValueChange = { emailInput = it },
+                                    onValueChange = {},
+                                    readOnly = true,
                                     label = { Text(if (lang == "ar") "البريد الإلكتروني" else "Email Address") },
+                                    supportingText = {
+                                        Text(
+                                            text = if (lang == "ar") "يُستخدم لتسجيل الدخول ولا يمكن تغييره من هنا" else "Used to sign in; it can't be changed here",
+                                            fontSize = 9.sp,
+                                            color = SoftGrayText
+                                        )
+                                    },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = PrimaryCyan,
@@ -8975,7 +8999,6 @@ fun ProfileSettings(
                                         if (nameInput.trim().length >= 3 && !nameInput.contains(" ")) {
                                             viewModel.updateProfile(
                                                 name = nameInput.trim(),
-                                                email = emailInput.trim(),
                                                 phone = phoneInput.trim(),
                                                 gender = genderInput,
                                                 age = ageNum,
@@ -9009,16 +9032,13 @@ fun ProfileSettings(
                                     color = SecondaryMint
                                 )
 
-                                Text(
-                                    text = if (lang == "ar") "كلمة السر الحالية: $passwordState" else "Current Saved Password: $passwordState",
-                                    fontSize = 10.sp,
-                                    color = SoftGrayText
-                                )
-
                                 OutlinedTextField(
                                     value = oldPassInput,
                                     onValueChange = { oldPassInput = it },
-                                    label = { Text(if (lang == "ar") "كلمة السر القديمة" else "Old Password") },
+                                    label = { Text(if (lang == "ar") "كلمة السر الحالية" else "Current Password") },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryCyan)
                                 )
@@ -9027,6 +9047,9 @@ fun ProfileSettings(
                                     value = newPassInput,
                                     onValueChange = { newPassInput = it },
                                     label = { Text(if (lang == "ar") "كلمة السر الجديدة" else "New Password") },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryCyan),
                                     supportingText = {
@@ -9042,6 +9065,9 @@ fun ProfileSettings(
                                     value = confirmPassInput,
                                     onValueChange = { confirmPassInput = it },
                                     label = { Text(if (lang == "ar") "تأكيد كلمة السر الجديدة" else "Confirm New Password") },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryCyan)
                                 )
@@ -9057,19 +9083,18 @@ fun ProfileSettings(
                                     onClick = {
                                         passwordSuccessMsg = ""
                                         passwordErrorMsg = ""
-                                        if (oldPassInput != passwordState) {
-                                            passwordErrorMsg = if (lang == "ar") "كلمة السر القديمة غير صحيحة!" else "Old password is incorrect!"
-                                        } else if (newPassInput != confirmPassInput) {
+                                        if (newPassInput != confirmPassInput) {
                                             passwordErrorMsg = if (lang == "ar") "كلمة السر غير متطابقة!" else "New password confirmation does not match!"
                                         } else {
-                                            val ok = viewModel.changePassword(newPassInput)
-                                            if (ok) {
-                                                passwordSuccessMsg = if (lang == "ar") "تم تغيير كلمة المرور بنجاح! 🔒" else "Password updated successfully! 🔒"
-                                                oldPassInput = ""
-                                                newPassInput = ""
-                                                confirmPassInput = ""
-                                            } else {
-                                                passwordErrorMsg = if (lang == "ar") "لم تستوف شروط الأمان! يجب أن تكون كلمة السر 6 خانات مع رقم وحرف على الأقل." else "Security rules not met! Must be at least 6 characters with a letter and a digit."
+                                            viewModel.changePassword(oldPassInput, newPassInput) { error ->
+                                                if (error == null) {
+                                                    passwordSuccessMsg = if (lang == "ar") "تم تغيير كلمة المرور بنجاح! 🔒" else "Password updated successfully! 🔒"
+                                                    oldPassInput = ""
+                                                    newPassInput = ""
+                                                    confirmPassInput = ""
+                                                } else {
+                                                    passwordErrorMsg = viewModel.authErrorMessage(error)
+                                                }
                                             }
                                         }
                                     },
