@@ -39,7 +39,103 @@ jobs:
             exit 1
           fi
           for value in "$OAUTH_TOKEN" "$API_KEY"; do
-            if [[ "$value" == *$'\\n'* || "$value" == *$'\\r'* ]]; then
+            if [[ "$value" == * || "$value" == * ]]; then
+              echo "::error::Claude credential contains a line break; rotate and replace it"
+              exit 1
+            fi
+          done
+          if [[ -n "$OAUTH_TOKEN" ]]; then
+            echo "CLAUDE_AUTH_MODE=oauth" >> "$GITHUB_ENV"
+          else
+            echo "CLAUDE_AUTH_MODE=api" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Run Claude with OAuth credential
+        if: ${{ env.CLAUDE_AUTH_MODE == 'oauth' }}
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      - name: Run Claude with API key
+        if: ${{ env.CLAUDE_AUTH_MODE == 'api' }}
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+\n'* || "$value" == *$'\\r'* ]]; then
+              echo "::error::Claude credential contains a line break; rotate and replace it"
+              exit 1
+            fi
+          done
+          if [[ -n "$OAUTH_TOKEN" ]]; then
+            echo "CLAUDE_AUTH_MODE=oauth" >> "$GITHUB_ENV"
+          else
+            echo "CLAUDE_AUTH_MODE=api" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Run Claude with OAuth credential
+        if: ${{ env.CLAUDE_AUTH_MODE == 'oauth' }}
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      - name: Run Claude with API key
+        if: ${{ env.CLAUDE_AUTH_MODE == 'api' }}
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+\r'* ]]; then
+              echo "::error::Claude credential contains a line break; rotate and replace it"
+              exit 1
+            fi
+          done
+          if [[ -n "$OAUTH_TOKEN" ]]; then
+            echo "CLAUDE_AUTH_MODE=oauth" >> "$GITHUB_ENV"
+          else
+            echo "CLAUDE_AUTH_MODE=api" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Run Claude with OAuth credential
+        if: ${{ env.CLAUDE_AUTH_MODE == 'oauth' }}
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      - name: Run Claude with API key
+        if: ${{ env.CLAUDE_AUTH_MODE == 'api' }}
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+\n'* || "$value" == * ]]; then
+              echo "::error::Claude credential contains a line break; rotate and replace it"
+              exit 1
+            fi
+          done
+          if [[ -n "$OAUTH_TOKEN" ]]; then
+            echo "CLAUDE_AUTH_MODE=oauth" >> "$GITHUB_ENV"
+          else
+            echo "CLAUDE_AUTH_MODE=api" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Run Claude with OAuth credential
+        if: ${{ env.CLAUDE_AUTH_MODE == 'oauth' }}
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      - name: Run Claude with API key
+        if: ${{ env.CLAUDE_AUTH_MODE == 'api' }}
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+\r'* ]]; then
               echo "::error::Claude credential contains a line break; rotate and replace it"
               exit 1
             fi
