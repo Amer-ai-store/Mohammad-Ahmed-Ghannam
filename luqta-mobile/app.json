@@ -22,7 +22,13 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.luqta.store",
-      "versionCode": 3
+      "versionCode": 3,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/luqta-favicon.png",
@@ -39,6 +45,23 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "اسمح للُقطة باستخدام موقعك أثناء مشاركة موقع التوصيل أو تحديد عنوان الطلب."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "اسمح للُقطة باستخدام الكاميرا لمسح الباركود ولرؤية المنتج في غرفتك.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "اسمح للُقطة باختيار صورة للبحث بالصورة أو لإرفاقها بالمرتجع أو بمحادثة الدعم أو لوضعها على شاشة لُقطي.",
+          "cameraPermission": "اسمح للُقطة بالتقاط صورة للبحث أو للمرتجع أو لشاشة لُقطي.",
+          "microphonePermission": false
         }
       ]
     ],

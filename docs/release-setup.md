@@ -2,18 +2,33 @@
 
 | الجزء | متى يُنشر | أين |
 |---|---|---|
-| تطبيق Android | مع كل دمج أو push إلى `main` يغيّر التطبيق (`app/`، `gradle/`، ملفات Gradle، `.env.example`) | [GitHub Releases](https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam/releases) |
+| تطبيق Android المدموج «لُقطة» | مع كل دمج أو push إلى `main` يغيّر `luqta-mobile/` | [GitHub Releases](https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam/releases) |
 | لوحة التحكم (الويب) | مع كل دمج أو push إلى `main` يغيّر `dashboard/` | https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/ |
 
 ## تطبيق Android (`.github/workflows/release.yml`)
-1. يشغّل اختبارات الوحدة، وإذا فشل أي اختبار لا يُنشر شيء.
-2. يبني نسخة **release** موقّعة (ليست نسخة debug).
-3. ينشئ Release باسم `v1.0.<رقم التشغيل>` فيه الملف `amer-store.apk` وقائمة التغييرات تلقائياً.
+يُنشر الآن التطبيق المدموج في `luqta-mobile/` (Expo وReact Native)، بدل تطبيق Kotlin القديم في `app/`.
+يبقى تطبيق Kotlin في المستودع، ويُبنى ويُختبر في `android-build.yml`، لكنه لا يُنشر.
 
-رابط ثابت لأحدث نسخة دائماً:
+1. يشغّل فحص الأنواع والـ lint واختبارات الخادم، وإذا فشل أي منها لا يُنشر شيء.
+2. يولّد مشروع Android الأصلي (`expo prebuild`)، ثم يبني نسخة **release** لمعالجات arm64 وarmv7، ويوقّعها بمفتاح الرفع، ويتحقق من التوقيع.
+3. ينشئ Release باسم `v2.0.<رقم التشغيل>` فيه الملف `amer-store.apk` وقائمة التغييرات تلقائيًا.
+
+رابط ثابت لأحدث نسخة دائمًا (لم يتغيّر):
 https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam/releases/latest/download/amer-store.apk
 
 كل نسخة تحمل `versionCode` أكبر من السابقة، فتُثبَّت كتحديث فوقها.
+اسم الحزمة `com.luqta.store` يختلف عن تطبيق Kotlin القديم، فيُثبَّت التطبيق الجديد بجانب القديم، ويمكن حذف القديم يدويًا.
+
+### عنوان خادم المتجر داخل التطبيق (اختياري)
+أضف متغيرًا (وليس سرًا) في **Settings → Secrets and variables → Actions → Variables** باسم `LUQTA_API_URL`، وقيمته عنوان خادم المتجر العام بصيغة HTTPS، مثل `https://store.example.com`.
+بدونه يفتح التطبيق شاشة «إعداد الاتصال» ليُدخل المستخدم العنوان.
+
+### اختبارات المتصفح (`luqta-jawafa-ci.yml`)
+في كل PR يغيّر التطبيق أو لوحة التحكم:
+- 44 اختبارًا تشغّل التطبيق في Chromium.
+- 25 اختبارًا تشغّل لوحة التحكم المركزية.
+- يرفض العمل إذا بقيت أي ميزة من الـ125 دون اختبار ناجح على كل واجهة تخصها.
+لقطات الشاشة للخطوات الفاشلة، والملف `feature-status.json`، تُرفع كـ artifact.
 
 ## مفتاح التوقيع (مرة واحدة، مُوصى به)
 بدون مفتاح ثابت يوقَّع كل APK بمفتاح جديد مؤقت، فيرفض الهاتف التحديث حتى تُحذف النسخة السابقة (وتُحذف بياناتها معها).
@@ -34,5 +49,5 @@ https://github.com/Mohammadzxzx1991/Mohammad-Ahmed-Ghannam/releases/latest/downl
 
 ## ملاحظات
 - `ADMIN_PASSWORD` لا يدخل أي APK منشور، لأن الإصدارات عامة ويمكن لأي شخص تنزيلها.
-- أي PR يغيّر هذا الـ workflow أو `app/build.gradle.kts`، وكذلك التشغيل اليدوي من فرع غير `main`، يبني الـ APK ويرفعه كـ artifact دون نشر Release.
+- أي PR يغيّر هذا الـ workflow أو إعدادات التطبيق الأصلية (`luqta-mobile/app.json` و`app.config.js` و`package.json` و`plugins/`)، وكذلك التشغيل اليدوي من فرع غير `main`، يبني الـ APK ويرفعه كـ artifact دون نشر Release.
 - عامل Cloudflare في `aas-cc/` لا يُنشر تلقائياً، لأنه نسخة تجريبية مُختبرة بمحاكاة فقط.
