@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-01T14:36:31.445Z",
+ "generatedAt": "2026-11-01T15:15:34.897Z",
  "summary": {
-  "total": 224,
-  "passed": 224,
+  "total": 225,
+  "passed": 225,
   "failed": 0
  },
  "suites": {
   "server": {
-   "generatedAt": "2026-11-01T14:20:54.418Z",
+   "generatedAt": "2026-11-01T15:13:28.852Z",
    "tests": [
     {
      "name": "one-time recovery codes reset passwords and revoke every prior session",
@@ -1282,11 +1282,20 @@
      "features": [],
      "file": "src/lib/reorder.test.mjs",
      "suite": "server"
+    },
+    {
+     "name": "L088 the 3D viewer page cannot be broken out of by model data",
+     "passed": true,
+     "features": [
+      "L088"
+     ],
+     "file": "src/lib/viewer3d.test.mjs",
+     "suite": "server"
     }
    ]
   },
   "app-e2e": {
-   "generatedAt": "2026-11-01T14:34:01.843Z",
+   "generatedAt": "2026-11-01T15:15:34.897Z",
    "tests": [
     {
      "name": "L001 L002 register in the app, keep the session across reloads, sign out and sign in again",
@@ -1760,7 +1769,7 @@
    ]
   },
   "dashboard-e2e": {
-   "generatedAt": "2026-11-01T14:36:31.445Z",
+   "generatedAt": "2026-11-01T15:15:34.897Z",
    "tests": [
     {
      "name": "L001 L101 the admin signs in to the dashboard, sees live KPIs and the latest orders, signs out and back in",
@@ -3288,6 +3297,15 @@
    "passed": true,
    "features": [],
    "file": "src/lib/reorder.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "L088 the 3D viewer page cannot be broken out of by model data",
+   "passed": true,
+   "features": [
+    "L088"
+   ],
+   "file": "src/lib/viewer3d.test.mjs",
    "suite": "server"
   },
   {
@@ -6039,6 +6057,23 @@
     }
    }
   },
+  "L088": {
+   "tests": [
+    "L088 the 3D viewer page cannot be broken out of by model data",
+    "L088 L089 a 3D viewer that rotates and zooms, and \"try it in my room\" over the camera"
+   ],
+   "failed": false,
+   "surfaces": {
+    "server": {
+     "passed": 1,
+     "failed": 0
+    },
+    "app": {
+     "passed": 1,
+     "failed": 0
+    }
+   }
+  },
   "L081": {
    "tests": [
     "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed"
@@ -6211,18 +6246,6 @@
   "L087": {
    "tests": [
     "L087 put my photo on the robot screen with consent, kept on the device only, and delete it"
-   ],
-   "failed": false,
-   "surfaces": {
-    "app": {
-     "passed": 1,
-     "failed": 0
-    }
-   }
-  },
-  "L088": {
-   "tests": [
-    "L088 L089 a 3D viewer that rotates and zooms, and \"try it in my room\" over the camera"
    ],
    "failed": false,
    "surfaces": {

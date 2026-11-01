@@ -148,9 +148,13 @@ function mountViewer(container, spec, emit) {
   return api;
 }`;
 
+// JSON placed inside <script> must not be able to close the tag or open a comment (<, >) or end the line (U+2028/9).
+const UNSAFE_IN_SCRIPT: Record<string, string> = { "<": "\\u003C", ">": "\\u003E", "\b": "\\b", "\f": "\\f", "\n": "\\n", "\r": "\\r", "\t": "\\t", "\0": "\\0", "\u2028": "\\u2028", "\u2029": "\\u2029" };
+export const scriptJson = (value: unknown) => JSON.stringify(value).replace(/[<>\b\f\n\r\t\0\u2028\u2029]/g, (c) => UNSAFE_IN_SCRIPT[c]);
+
 export function viewerHtml(spec: ModelSpec, background: string) {
   const safe = { shape: String(spec.shape).replace(/[^a-z0-9]/g, ""), color: /^#[0-9a-fA-F]{6}$/.test(spec.color) ? spec.color : "#7C5CFF", scale: Number(spec.scale) || 1 };
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><style>html,body{margin:0;height:100%;background:${/^#[0-9a-fA-F]{6}$/.test(background) ? background : "#F1ECFF"};overflow:hidden}#v{position:absolute;inset:0}</style></head><body><div id="v"></div><script>${VIEWER_JS};var post=function(m){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));};window.viewer=mountViewer(document.getElementById('v'),${JSON.stringify(safe)},post);</script></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><style>html,body{margin:0;height:100%;background:${/^#[0-9a-fA-F]{6}$/.test(background) ? background : "#F1ECFF"};overflow:hidden}#v{position:absolute;inset:0}</style></head><body><div id="v"></div><script>${VIEWER_JS};var post=function(m){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));};window.viewer=mountViewer(document.getElementById('v'),${scriptJson(safe)},post);</script></body></html>`;
 }
 
 export type ViewerEvent = { type: "ready" | "moved" | "zoom" | "state" | "ar" | "ar-error" | "error"; zoom?: number; ar?: boolean; active?: boolean; message?: string };

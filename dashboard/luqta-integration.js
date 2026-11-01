@@ -206,12 +206,13 @@
     } else if (current === "orders") {
       const [orders, users] = await Promise.all([client.request("GET", "/admin/orders"), client.request("GET", "/admin/users")]);
       result = { ...orders, ...users };
-    } else if (loaders[current]) {
+    } else if (Object.prototype.hasOwnProperty.call(loaders, current) && typeof loaders[current] === "function") {
+      // `current` comes from the page address; only the section loaders defined here may be called.
       result = await loaders[current]();
     } else result = await client.request("GET", "/admin/" + current);
     if (tab !== current) return;
     body.replaceChildren();
-    const render = renderers[current];
+    const render = Object.prototype.hasOwnProperty.call(renderers, current) && typeof renderers[current] === "function" ? renderers[current] : null;
     if (render) render(result || {});
     message(`آخر تحديث: ${new Date().toLocaleString("ar-JO")}`);
   }
