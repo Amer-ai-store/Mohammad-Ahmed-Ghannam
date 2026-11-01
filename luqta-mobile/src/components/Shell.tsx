@@ -59,7 +59,7 @@ export function Shell({ children, title, subtitle, search = false, robot, robotM
   const { t: tr } = useI18n();
   const active = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
   const content = (
-    <View style={[s.content, { paddingHorizontal: desktop ? 36 : 18 }]}>
+    <View style={[s.content, { paddingHorizontal: desktop ? 36 : 18 }, scroll ? null : { flex: 1 }]}>
       {title ? (
         <View style={s.pageHeading}>
           <View style={{ flex: 1, gap: 4 }}>

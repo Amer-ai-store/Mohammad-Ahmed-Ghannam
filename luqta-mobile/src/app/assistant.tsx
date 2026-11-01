@@ -114,7 +114,7 @@ export default function Assistant() {
           ))}
           {busy ? <Txt style={{ color: t.muted }}>{tr("لُقطي يفكر…")}</Txt> : null}
         </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
           {STARTERS.map((s) => <Chip key={s} testID={`starter-${s}`} label={s} onPress={() => void send(tr(s))} />)}
         </ScrollView>
         {voice.listening ? <Notice text="أستمع إليك… تكلّم الآن" tone="accent" /> : null}

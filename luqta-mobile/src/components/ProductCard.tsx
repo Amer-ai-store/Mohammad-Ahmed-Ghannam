@@ -33,7 +33,8 @@ export function ProductImage({ product, style, uri }: { product: Product; style?
   const [failedSource, setFailedSource] = React.useState("");
   const failed = failedSource === sourceKey;
   const original = sampleProducts.find((item) => item.id === product.id);
-  const bundled = !uri && original?.image === product.image ? images[product.id] : undefined;
+  // The catalog photo ships inside the app; use that copy (no network needed) whenever the requested image is that photo.
+  const bundled = (!uri || uri === original?.image) && original?.image === product.image ? images[product.id] : undefined;
   const remote = typeof source === "string" && /^https?:\/\//i.test(source) ? { uri: source } : undefined;
   if (failed || (!bundled && !remote)) {
     const tint = product.colors?.find((c) => /^#[0-9a-f]{6}$/i.test(c)) || t.primary;

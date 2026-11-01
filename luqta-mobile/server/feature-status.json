@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-01T14:22:52.252Z",
+ "generatedAt": "2026-11-01T14:34:01.843Z",
  "summary": {
   "total": 224,
   "passed": 224,
@@ -1286,7 +1286,7 @@
    ]
   },
   "app-e2e": {
-   "generatedAt": "2026-11-01T14:22:52.252Z",
+   "generatedAt": "2026-11-01T14:34:01.843Z",
    "tests": [
     {
      "name": "L001 L002 register in the app, keep the session across reloads, sign out and sign in again",
