@@ -192,8 +192,8 @@
   async function load() {
     if (!client.connected || !body) return;
     const current = tab; let result;
-    // `current` comes from the page address: only this file's own section loaders and renderers may be called.
-    const loader = Object.prototype.hasOwnProperty.call(loaders, current) ? loaders[current] : null;
+    // `current` comes from the page address, so sections are looked up in Maps, never as object properties.
+    const loader = loaderTable.get(current);
     if (current === "inventory") {
       const [undo, connector] = await Promise.all([client.request("GET", "/admin/inventory/undo"), client.request("GET", "/admin/inventory/connector")]);
       result = { ...undo, ...connector };
@@ -213,7 +213,7 @@
     } else result = await client.request("GET", "/admin/" + current);
     if (tab !== current) return;
     body.replaceChildren();
-    const render = Object.prototype.hasOwnProperty.call(renderers, current) ? renderers[current] : null;
+    const render = rendererTable.get(current);
     if (typeof render === "function") render(result || {});
     message(`آخر تحديث: ${new Date().toLocaleString("ar-JO")}`);
   }
@@ -624,6 +624,7 @@
     exports: async () => ({}),
     sync: async () => ({ ...(await client.request("GET", "/admin/sync/status")), ...(await client.request("GET", "/admin/sync/receipts")) }),
   };
+  const loaderTable = new Map(Object.entries(loaders));
   let reportDays = 30, stockBranch = "", openChat = "";
   function renderKpis(data) {
     const k = data.kpis || {};
@@ -838,6 +839,7 @@
     agents: renderAgents, audit: renderAudit, reports: renderReports, categories: renderCategories, flash: renderFlash, campaigns: renderCampaigns, questions: renderQuestions,
     giftcards: renderGiftcards, chats: renderChats, faqs: renderFaqs, branches: renderBranches, zones: renderZones, vendors: renderVendors, features: renderFeatures,
     reorder: renderReorder, exports: renderExports, sync: renderSync };
+  const rendererTable = new Map(Object.entries(renderers));
   window.setInterval(() => {
     if (client.connected && document.visibilityState === "visible") void checkLiveBridge();
   }, 90_000);
