@@ -11,7 +11,7 @@
     "through": "2026-08-23",
     "status": "historical_only"
   },
-  "source_as_of": "2026-10-30",
+  "source_as_of": "2026-10-31",
   "source_types": [
     "historical CASHFLOW recovery report from another project",
     "legacy bank reconciliation reports",
@@ -40,7 +40,12 @@
     "private_long_backdate_finance_report": "https://drive.google.com/file/d/18s2hO9I6tOI7kqR4zck-cBTgdq8qnxLm/view",
     "private_restored_ledger_report": "https://drive.google.com/file/d/1PaxR4NskDvbOCjalO_M2giqkmLmKzu1U/view",
     "private_restored_raw_evidence_zip": "https://drive.google.com/file/d/1GUyeYtBp1yILOYj5T5CwJIgmPVpV_e0V/view",
-    "private_all28_matrix": "https://drive.google.com/file/d/1QPK2n8MGQbs59eeg-qZ95W4Qq5R4OUmI/view"
+    "private_all28_matrix": "https://drive.google.com/file/d/1QPK2n8MGQbs59eeg-qZ95W4Qq5R4OUmI/view",
+    "private_latest_cheque_cash_report": "https://drive.google.com/file/d/1io_Hy7wgL9F7mi13oJ1j11lOkYYpNzIF/view",
+    "private_latest_cheque_evidence": "https://drive.google.com/file/d/19a2iFmkxlJVfdhanaEaSBW-johNYWJng/view",
+    "private_latest_export_backup": "https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view",
+    "private_cheque_application_audit": "https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view",
+    "private_cheque_application_events": "https://drive.google.com/file/d/1fY7RFUk3TfycZEikAPnHWIrYU4JgCz6r/view"
   },
   "cases": [
     {
@@ -71,19 +76,19 @@
       "id": "CHEQ-05",
       "title": "الشيكات الواردة والصادرة",
       "status": "exceptions_open",
-      "progress": "28 سند شيكات تاريخية مستعادة بقيمها وأطراف قيدها؛ مطابقة بيانات ورقة الشيك وكشف البنك لم تعتمد. خمس حالات ERP حديثة متغيرة قيد التحقيق."
+      "progress": "استُعيد 28 سند شيكات من النسخ التاريخية؛ 21 تطابقًا بالنظام الحديث و3 بالأرشيف وسند مجمّع من 3 شيكات؛ بقيت 3 غير محسومة. ستة مستندات أصلية غائبة مع بقاء حركاتها. لا اعتماد للصرف البنكي دون كشف المصدر."
     },
     {
       "id": "GL-06",
       "title": "السندات المحذوفة وفك الترحيل",
       "status": "forensic_investigation",
-      "progress": "استُعيدت رؤوس وأطراف 28 من 54 سند قيد شيك من قواعد SQL تاريخية للقراءة فقط، وجميعها متوازنة؛ واستُعيدت 6 من 9 سندات ARP. بقي 26 و3، ولا يوجد إثبات سحب بنكي أو خسارة."
+      "progress": "استعادة 28/54 سند قيد شيك و6/9 سند ARP من SQL READ_ONLY، وتوازن 28/28. فُقدت علاقات 6 مستندات شيكات وبقيت حركاتها؛ سبب الإلغاء/الأرشفة لم يُحسم."
     },
     {
       "id": "CASH-07",
       "title": "الكاش والعجز والإقفالات",
       "status": "exceptions_open",
-      "progress": "جلستا إقفال تغيرتا في v5؛ يلزم تفسير نقد الصندوق والوردية وتوقيت المزامنة"
+      "progress": "فحص 5,528 سجلًا يؤكد معادلة فرق الصندوق 5,528/5,528؛ الإقفال الأخير أضاف 3 سجلات وعدّل سجلًا، ولا يجوز اعتبار الفرق السالب عجزًا دون جرد وإيداع."
     },
     {
       "id": "PROC-08",
@@ -116,11 +121,11 @@
     "All source accounting data are read-only; historical conflicts remain open until independent evidence.",
     "Latest V5 export zipped and uploaded to private Drive, verified by CRC and matching MD5; not a full transactional snapshot."
   ],
-  "status": "HISTORICAL_RESTORED_ROWS_VERIFIED__BANK_AND_AUTHORIZATION_OPEN__GATE15_NOT_ACCEPTED",
+  "status": "OCT31_EXPORT_ARCHIVE_VERIFIED__25_OF_28_CHEQUE_ERP_LINKS__PRIMARY_BANK_AND_GATES_OPEN",
   "latest_export": {
-    "run": "20261030-0100",
+    "run": "20261031-0100",
     "host": "JAWAFFASVR",
-    "location": "C:/Export/hourly-v5/20261030-0100",
+    "location": "C:/Export/hourly-v5/20261031-0100",
     "classification": "HYBRID_V5_NOT_TRANSACTIONAL_SNAPSHOT",
     "total_catalog_tables": 1024,
     "full_success": 1009,
@@ -150,15 +155,18 @@
       "No proof of a fraud, shortage or person from differences"
     ],
     "archive": {
+      "source_run": "20261031-0100",
       "type": "ZIP_DEFLATED_READ_ONLY_COPY",
-      "archive_member_count": 1026,
       "original_csv_count": 1023,
-      "compressed_bytes": 104004989,
-      "local_crc_test": "PASS",
-      "drive_content_md5_comparison": "2_OF_2_MATCH_0_DIFFERENCES",
+      "control_files": 3,
+      "zip_members": 1026,
+      "compressed_bytes": 103892589,
+      "crc_validation": "PASS",
+      "drive_md5_match_count": 2,
+      "drive_md5_mismatch_count": 0,
       "drive_upload_verified": true,
-      "protected_drive_file": "https://drive.google.com/file/d/1z7EkbUAXMEAi-dJIJOpS8WWV3IugEZ4F/view",
-      "full_transactional_snapshot": false
+      "protected_drive_file": "https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view",
+      "source_snapshot_transactionally_consistent": false
     },
     "historical_voucher_gaps_recheck": {
       "main_with_deletion_events_still_absent": 54,
@@ -214,6 +222,28 @@
       "restore_select_queries_completed": 14,
       "bank_disbursements_independently_verified": false,
       "restored_ledger_sources": "Seven historical restored SQL database snapshots, all READ_ONLY"
+    },
+    "previous_archive": {
+      "type": "ZIP_DEFLATED_READ_ONLY_COPY",
+      "archive_member_count": 1026,
+      "original_csv_count": 1023,
+      "compressed_bytes": 104004989,
+      "local_crc_test": "PASS",
+      "drive_content_md5_comparison": "2_OF_2_MATCH_0_DIFFERENCES",
+      "drive_upload_verified": true,
+      "protected_drive_file": "https://drive.google.com/file/d/1z7EkbUAXMEAi-dJIJOpS8WWV3IugEZ4F/view",
+      "full_transactional_snapshot": false,
+      "source_run": "20261030-0100"
+    },
+    "comparison_30_vs_31": {
+      "full_finance_tables_compared": 8,
+      "unchanged_key_finance_tables": 7,
+      "old_keys_missing": 0,
+      "new_cash_key_count": 3,
+      "changed_existing_cash_key_count": 1,
+      "cash_difference_formula_matches": 5528,
+      "closed_sessions_with_zero_real_cash_and_negative_difference": 3714,
+      "cash_shortage_proven": false
     }
   },
   "date_and_purchase_audit": {
@@ -234,5 +264,25 @@
     "four_missing_purchase_history_stable_between_exports": true,
     "risk_state": "DOCUMENTED_EVENTS_WITHOUT_PROVEN_UNAUTHORIZED_CHANGE_OR_LOSS",
     "data_type": "PUBLIC_AGGREGATE_COUNTS_ONLY"
+  },
+  "cheque_recovery_reconciliation": {
+    "asof": "2026-10-31",
+    "historical_GL_journals_recovered": 28,
+    "ERP_current_face_date_matched_journals": 21,
+    "ERP_restored_history_face_date_matched_journals": 3,
+    "ERP_multi_cheque_aggregate_matched_journals": 1,
+    "ERP_unresolved_journals": 3,
+    "cheque_documents_absent_in_current_ERP_with_movement_still_existing": 6,
+    "cheque_document_app_posting_events_matching_selected_doc_ids": 10,
+    "trustsoft_post_issued_cheque_code": "3:239",
+    "trustsoft_cancel_event_explicit_matches_in_selected_functions": 0,
+    "automated_archival_or_deletion_mechanism_confirmed": false,
+    "bank_statement_current_verification": false,
+    "source_scope": "Restored SQL READ_ONLY; full baseline TransactionHistory; Oct 31 V5 CSV; legacy bank-sheet through Aug 23",
+    "private_report": "https://drive.google.com/file/d/1io_Hy7wgL9F7mi13oJ1j11lOkYYpNzIF/view",
+    "private_raw_evidence": "https://drive.google.com/file/d/19a2iFmkxlJVfdhanaEaSBW-johNYWJng/view",
+    "status": "25_OF_28_ACCOUNTING_LINKS_CORROBORATED__BANK_AND_CAUSALITY_NOT_PROVEN",
+    "private_app_event_audit": "https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view",
+    "private_app_event_rows": "https://drive.google.com/file/d/1fY7RFUk3TfycZEikAPnHWIrYU4JgCz6r/view"
   }
 }
