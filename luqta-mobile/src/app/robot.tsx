@@ -60,7 +60,7 @@ export default function RobotScreen() {
         <Card style={{ marginTop: 12, gap: 12 }}>
           <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 }}>
             {MOTIONS.map(([motion, label, Icon]) => (
-              <Pressable key={motion} testID={`motion-${motion}`} accessibilityRole="button" accessibilityLabel={tr(label)} accessibilityState={{ selected: draft.motion === motion }} onPress={() => { setPreview(motion); set("motion", motion); robot.play(motion, tr(label)); }}
+              <Pressable key={motion} testID={`motion-${motion}`} accessibilityRole="button" accessibilityLabel={tr(label)} aria-selected={draft.motion === motion} onPress={() => { setPreview(motion); set("motion", motion); robot.play(motion, tr(label)); }}
                 style={{ width: "31%", aspectRatio: 1.2, borderRadius: 20, alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: draft.motion === motion ? t.primary : t.secondary }}>
                 <Icon size={24} color={draft.motion === motion ? t.onPrimary : t.primary} />
                 <Txt weight="bold" style={{ color: draft.motion === motion ? t.onPrimary : t.ink, fontSize: 13, textAlign: "center" }}>{tr(label)}</Txt>
@@ -82,7 +82,7 @@ export default function RobotScreen() {
       {tab === "look" ? (
         <Card style={{ marginTop: 12, gap: 10 }}>
           <Txt weight="bold">{tr("اللون")}</Txt>
-          <Row wrap>{ROBOT_COLORS.map((c) => <Pressable key={c} testID={`color-${c.slice(1)}`} accessibilityRole="button" accessibilityLabel={c} accessibilityState={{ selected: draft.color === c }} onPress={() => set("color", c)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c, borderWidth: 4, borderColor: draft.color === c ? t.ink : t.paper }} />)}</Row>
+          <Row wrap>{ROBOT_COLORS.map((c) => <Pressable key={c} testID={`color-${c.slice(1)}`} accessibilityRole="button" accessibilityLabel={c} aria-selected={draft.color === c} onPress={() => set("color", c)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c, borderWidth: 4, borderColor: draft.color === c ? t.ink : t.paper }} />)}</Row>
           <Field label="اسم الشخصية" testID="robot-name" value={draft.name} onChangeText={(v) => set("name", v.slice(0, 20))} />
           <Button title={tr("صورتك على شاشة الروبوت")} secondary onPress={() => router.push("/robot-create")} />
         </Card>

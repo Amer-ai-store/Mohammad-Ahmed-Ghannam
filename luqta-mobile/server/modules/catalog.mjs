@@ -210,7 +210,10 @@ export function install(c, api) {
     const trending = all('SELECT query,normalized,COUNT(*) AS n FROM search_history WHERE created_at>? GROUP BY normalized ORDER BY n DESC LIMIT 20', new Date(Date.now() - 30 * 86400_000).toISOString());
     const actor = optionalUser(req);
     if (!q) return { suggestions: [], trending: trending.slice(0, 6).map((t) => t.query), recent: actor ? all('SELECT query FROM search_history WHERE user_id=? ORDER BY created_at DESC LIMIT 8', actor.id).map((r) => r.query) : [] };
-    const products = searchable().filter((p) => normalize(`${p.name} ${p.nameEn || ''}`).split(' ').some((w) => w.startsWith(q) || w.startsWith(q.replace(/^ال/, ''))) || normalize(p.name).includes(q)).slice(0, 5).map((p) => ({ type: 'product', id: p.id, label: p.name, price: p.price }));
+    let matches = searchable().filter((p) => normalize(`${p.name} ${p.nameEn || ''}`).split(' ').some((w) => w.startsWith(q) || w.startsWith(q.replace(/^ال/, ''))) || normalize(p.name).includes(q));
+    // Nothing starts with what was typed (a typo such as «حلييب»): fall back to the typo-tolerant search ranking.
+    if (!matches.length && q.length >= 3) matches = rank(q, searchable()).map((x) => x.p);
+    const products = matches.slice(0, 5).map((p) => ({ type: 'product', id: p.id, label: p.name, price: p.price }));
     const categories = all('SELECT * FROM categories WHERE active=1').filter((r) => normalize(`${r.name} ${r.name_en}`).includes(q)).slice(0, 2).map((r) => ({ type: 'category', id: r.id, label: r.name }));
     const queries = trending.filter((t) => t.normalized.startsWith(q) && t.normalized !== q).slice(0, 3).map((t) => ({ type: 'query', label: t.query }));
     return { suggestions: [...products, ...categories, ...queries].slice(0, 8) };

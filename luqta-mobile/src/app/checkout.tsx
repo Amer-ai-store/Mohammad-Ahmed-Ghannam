@@ -180,7 +180,7 @@ export default function Checkout() {
             <KeyValue label="الإجمالي" value={money.format(quote?.total ?? 0)} strong testID="review-total" />
           </Card>
           {quote?.budget?.exceeds ? <Notice text={tr("هذا الطلب يتجاوز ميزانيتك الأسبوعية (المتبقي {m})", { m: money.format(quote.budget.remaining ?? 0) })} tone="warning" /> : null}
-          <Pressable testID="accept-terms" accessibilityRole="checkbox" accessibilityState={{ checked: terms }} onPress={() => setTerms((v) => !v)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, minHeight: 44 }}>
+          <Pressable testID="accept-terms" accessibilityRole="checkbox" aria-checked={terms} onPress={() => setTerms((v) => !v)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, minHeight: 44 }}>
             {terms ? <CheckSquare size={22} color={t.primary} /> : <Square size={22} color={t.muted} />}
             <Txt style={{ flex: 1 }}>{tr("أوافق على الشروط والأحكام وسياسة الإرجاع")}</Txt>
           </Pressable>

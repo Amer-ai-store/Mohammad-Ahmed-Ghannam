@@ -10,7 +10,7 @@ import { useI18n } from "../../lib/i18n";
 import { useApi } from "../../lib/useApi";
 import { api } from "../../lib/api";
 
-type Feature = { id: string; area: string; title: string; titleEn: string; surfaces: string[]; app: string | null; api: string | null; dashboard: string | null; status: "verified" | "implemented" | "failing"; tests: string[] };
+type Feature = { id: string; area: string; title: string; titleEn: string; surfaces: string[]; app: string | null; api: string | null; dashboard: string | null; status: "verified" | "implemented" | "failing"; tests: string[]; evidence?: Record<string, { passed: number; failed: number }> };
 type Features = { total: number; verified: number; failing: number; testedAt: string | null; areas: { id: string; title: string; titleEn: string }[]; features: Feature[] };
 type Vendor = { id: string; name: string; status: string; commission: number; products: number; members: { userId: string; name: string; email: string; role: string }[] };
 type Campaign = { id: string; title: string; subtitle: string; color: string; link: string; endsAt: string; active: boolean };
@@ -70,7 +70,7 @@ export default function ProjectScreen() {
             <Card key={f.id} onPress={() => setOpen(open === f.id ? null : f.id)} accessibilityLabel={f.title} testID={`feature-${f.id}`} style={{ gap: 6, padding: 12 }}>
               <Row><Txt weight="extra" style={{ color: t.primary, fontSize: 12 }}>{f.id}</Txt><Txt weight="bold" style={{ flex: 1, fontSize: 14 }}>{lang === "en" ? f.titleEn : f.title}</Txt><Badge label={STATUS[f.status][0]} tone={STATUS[f.status][1]} /></Row>
               {open === f.id ? <View style={{ gap: 3 }}>
-                <Txt style={{ fontSize: 12, color: t.muted }}>{tr("الواجهات")}: {f.surfaces.join(" · ")}</Txt>
+                <Txt style={{ fontSize: 12, color: t.muted }} testID={`surfaces-${f.id}`}>{tr("الواجهات")}: {f.surfaces.map((s) => `${s} ${f.evidence?.[s]?.failed ? "✕" : f.evidence?.[s]?.passed ? "✓" : "…"}`).join(" · ")}</Txt>
                 {f.app ? <Txt style={{ fontSize: 12 }}>📱 {f.app}</Txt> : null}
                 {f.api ? <Txt style={{ fontSize: 12 }}>🔌 {f.api}</Txt> : null}
                 {f.dashboard ? <Txt style={{ fontSize: 12 }}>🖥️ {f.dashboard}</Txt> : null}

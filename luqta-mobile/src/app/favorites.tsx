@@ -47,7 +47,7 @@ export default function Choices() {
               return (
                 <Card key={p.id} style={{ padding: 10 }} testID={`favorite-row-${p.id}`}>
                   <Row>
-                    <Pressable testID={`pick-${p.id}`} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={p.name} onPress={() => setPicked((x) => (on ? x.filter((v) => v !== p.id) : [...x, p.id]))} style={{ padding: 6 }}>{on ? <CheckSquare size={22} color={t.primary} /> : <Square size={22} color={t.muted} />}</Pressable>
+                    <Pressable testID={`pick-${p.id}`} accessibilityRole="checkbox" aria-checked={on} accessibilityLabel={p.name} onPress={() => setPicked((x) => (on ? x.filter((v) => v !== p.id) : [...x, p.id]))} style={{ padding: 6 }}>{on ? <CheckSquare size={22} color={t.primary} /> : <Square size={22} color={t.muted} />}</Pressable>
                     <Pressable onPress={() => router.push(`/product/${p.id}`)} style={{ width: 60, height: 60, borderRadius: 14, overflow: "hidden" }}><ProductImage product={p} /></Pressable>
                     <View style={{ flex: 1 }}><Txt weight="bold" numberOfLines={1}>{p.name}</Txt><Txt weight="extra" style={{ color: t.orange }}>{money.format(p.price)}</Txt></View>
                     <Pressable accessibilityRole="button" accessibilityLabel={`${tr("إزالة من المفضلة")} ${p.name}`} onPress={() => toggleFavorite(p.id)} style={{ padding: 8 }}><X size={18} color={t.muted} /></Pressable>

@@ -46,7 +46,7 @@ export default function RobotCreate() {
       {error ? <Notice text={error} tone="danger" /> : null}
       {step === "photo" ? (
         <Card style={{ marginTop: 12, gap: 10 }}>
-          <Pressable testID="face-consent" accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => setConsent((v) => !v)} style={{ flexDirection: "row-reverse", alignItems: "flex-start", gap: 10 }}>
+          <Pressable testID="face-consent" accessibilityRole="checkbox" aria-checked={consent} onPress={() => setConsent((v) => !v)} style={{ flexDirection: "row-reverse", alignItems: "flex-start", gap: 10 }}>
             {consent ? <CheckSquare size={22} color={t.primary} /> : <Square size={22} color={t.muted} />}
             <Txt style={{ flex: 1, lineHeight: 22 }}>{tr("أوافق على استخدام صورتي داخل التطبيق على هذا الجهاز فقط. لا تُرفع الصورة إلى الخادم، ويمكنني حذفها في أي وقت.")}</Txt>
           </Pressable>

@@ -25,7 +25,7 @@ export default function AppearanceScreen() {
   const pickCurrency = (code: string | null) => { setDisplayCurrency(code); if (user) void api.patch("/me/preferences", { displayCurrency: code }).catch(() => {}); };
   const rates = Object.entries(money.rates);
   const option = (selected: boolean, key: string, title: string, detail: string, icon: React.ReactNode, onPress: () => void, testID?: string) => (
-    <Pressable key={key} testID={testID} accessibilityRole="radio" accessibilityLabel={tr(title)} accessibilityState={{ checked: selected }} onPress={onPress}
+    <Pressable key={key} testID={testID} accessibilityRole="radio" accessibilityLabel={tr(title)} aria-checked={selected} onPress={onPress}
       style={({ pressed }) => ({ flexDirection: "row-reverse", alignItems: "center", gap: 14, padding: 16, borderRadius: 20, borderWidth: selected ? 2 : 1, borderColor: selected ? t.primary : t.line, backgroundColor: selected ? t.primarySoft : t.paper, opacity: pressed ? 0.85 : 1 })}>
       {icon}
       <View style={{ flex: 1, gap: 2 }}><Txt weight="bold">{tr(title)}</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>{tr(detail)}</Txt></View>

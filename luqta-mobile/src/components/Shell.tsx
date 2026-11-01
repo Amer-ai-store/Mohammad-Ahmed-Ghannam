@@ -99,7 +99,7 @@ export function Shell({ children, title, subtitle, search = false, robot, robotM
               {[...tabs, ...more].map((item) => {
                 const on = active(item.href);
                 return (
-                  <Pressable key={item.href} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={tr(item.label)} onPress={() => router.navigate(item.href as Href)} style={[s.navItem, on ? { backgroundColor: t.primarySoft } : null]}>
+                  <Pressable key={item.href} accessibilityRole="button" aria-selected={on} accessibilityLabel={tr(item.label)} onPress={() => router.navigate(item.href as Href)} style={[s.navItem, on ? { backgroundColor: t.primarySoft } : null]}>
                     <item.icon size={19} color={on ? t.primary : t.muted} />
                     <Txt weight={on ? "bold" : "medium"} style={{ flex: 1, color: on ? t.primary : t.ink, fontSize: 14 }}>{tr(item.label)}</Txt>
                     {item.href === "/cart" && store.cartCount ? <View style={s.badge}><Txt style={{ color: t.onAccent, fontSize: 10, textAlign: "center" }}>{store.cartCount}</Txt></View> : null}
@@ -138,7 +138,7 @@ export function Shell({ children, title, subtitle, search = false, robot, robotM
                 {tabs.map((item) => {
                   const on = active(item.href);
                   return (
-                    <Pressable key={item.href} testID={`tab-${item.href === "/" ? "home" : item.href.slice(1)}`} accessibilityRole="tab" accessibilityLabel={item.href === "/cart" && store.cartCount ? `${tr(item.label)}، ${store.cartCount}` : tr(item.label)} accessibilityState={{ selected: on }} onPress={() => router.navigate(item.href)} style={s.bottomItem}>
+                    <Pressable key={item.href} testID={`tab-${item.href === "/" ? "home" : item.href.slice(1)}`} accessibilityRole="tab" accessibilityLabel={item.href === "/cart" && store.cartCount ? `${tr(item.label)}، ${store.cartCount}` : tr(item.label)} aria-selected={on} onPress={() => router.navigate(item.href)} style={s.bottomItem}>
                       <View style={[s.tabPill, on ? { backgroundColor: t.primarySoft } : null]}>
                         <item.icon size={21} color={on ? t.primary : t.muted} strokeWidth={on ? 2.4 : 2} />
                         {on ? <Txt weight="bold" style={{ fontSize: 12, color: t.primary }}>{tr(item.label)}</Txt> : null}

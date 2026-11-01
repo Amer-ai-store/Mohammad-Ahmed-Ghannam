@@ -129,7 +129,7 @@ function ProductContent({ id }: { id: string }) {
           ) : <Txt style={{ color: t.muted, lineHeight: 24 }}>{product.description}</Txt>}
           {hexColors.length ? <View style={{ gap: 6 }}>
             <Txt weight="bold" style={{ fontSize: 13 }}>{tr("الألوان")}</Txt>
-            <Row>{hexColors.map((c, i) => <Pressable key={c} accessibilityRole="button" accessibilityLabel={`${tr("اللون")} ${i + 1}`} accessibilityState={{ selected: color === i }} onPress={() => setColor(i)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c, borderWidth: 3, borderColor: color === i ? t.primary : t.paper }} />)}</Row>
+            <Row>{hexColors.map((c, i) => <Pressable key={c} accessibilityRole="button" accessibilityLabel={`${tr("اللون")} ${i + 1}`} aria-selected={color === i} onPress={() => setColor(i)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c, borderWidth: 3, borderColor: color === i ? t.primary : t.paper }} />)}</Row>
           </View> : null}
           {requiresVariant ? <View style={{ gap: 8 }}>
             <Txt weight="bold" style={{ fontSize: 13 }}>{tr("اختر المقاس أو اللون · كل خيار له مخزون مستقل")}</Txt>

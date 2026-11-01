@@ -127,7 +127,14 @@ export function install(c, api) {
   api.route('GET', '/admin/features', ({ req }) => {
     admin(req);
     const catalog = JSON.parse(readFileSync(FEATURES_PATH, 'utf8')), status = featureStatus();
-    const features = catalog.features.map((f) => { const evidence = status?.features?.[f.id]; return { ...f, tests: evidence?.tests || [], status: evidence ? (evidence.failed ? 'failing' : 'verified') : 'implemented' }; });
+    // Verified means passing tests on every surface the feature lists (server, app, dashboard) and no failing test.
+    const features = catalog.features.map((f) => {
+      const evidence = status?.features?.[f.id];
+      const surfaces = Object.fromEntries(f.surfaces.map((s) => [s, { passed: evidence?.surfaces?.[s]?.passed || 0, failed: evidence?.surfaces?.[s]?.failed || 0 }]));
+      const failing = !!evidence?.failed || Object.values(surfaces).some((x) => x.failed);
+      const complete = Object.values(surfaces).every((x) => x.passed > 0);
+      return { ...f, tests: evidence?.tests || [], evidence: surfaces, status: failing ? 'failing' : complete ? 'verified' : 'implemented' };
+    });
     const verified = features.filter((f) => f.status === 'verified').length;
     return { total: features.length, verified, failing: features.filter((f) => f.status === 'failing').length, testedAt: status?.generatedAt || null, areas: catalog.areas, features };
   });

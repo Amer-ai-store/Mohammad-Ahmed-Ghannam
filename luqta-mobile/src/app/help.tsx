@@ -33,7 +33,7 @@ export default function HelpCenter() {
       <View style={{ gap: 8 }}>
         {(faqs.data?.faqs || []).map((f) => (
           <Card key={f.id} testID={`faq-${f.id}`} style={{ gap: 8 }}>
-            <Pressable accessibilityRole="button" accessibilityState={{ expanded: open === f.id }} onPress={() => setOpen(open === f.id ? null : f.id)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+            <Pressable accessibilityRole="button" aria-expanded={open === f.id} onPress={() => setOpen(open === f.id ? null : f.id)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
               <Txt weight="bold" style={{ flex: 1 }}>{f.question}</Txt>
               <ChevronDown size={18} color={t.muted} style={{ transform: [{ rotate: open === f.id ? "180deg" : "0deg" }] }} />
             </Pressable>

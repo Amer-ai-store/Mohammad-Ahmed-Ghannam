@@ -212,7 +212,10 @@ export async function createCommerceServer(options = {}) {
   const admin = (req, scope = null) => { const actor = identity(req); if (actor.kind === 'user' && actor.role === 'admin' || actor.kind === 'agent' && scope && actor.scopes.includes(scope)) return actor; fail(403, 'ليس لديك الإذن لهذه العملية', 'forbidden'); };
   const ownOrder = (actor, orderId, allowDriver = false) => { const o = get('SELECT * FROM orders WHERE id=?', orderId); if (!o) fail(404, 'الطلب غير موجود', 'not_found'); if (o.user_id !== actor.id && actor.role !== 'admin' && !(allowDriver && o.driver_id === actor.id)) fail(403, 'لا يمكنك الوصول إلى هذا الطلب', 'forbidden'); return o; };
   const rateBuckets = new Map();
+  // rateLimitScale > 1 only widens the per-address limits for automated end-to-end runs; production keeps 1.
+  const rateScale = Number.isFinite(options.rateLimitScale) && options.rateLimitScale >= 1 ? options.rateLimitScale : 1;
   const rate = (req, category, limit = 20, interval = 900_000) => {
+    limit *= rateScale;
     const key = `${req.socket.remoteAddress}:${category}`, current = rateBuckets.get(key);
     const bucket = !current || current.until <= Date.now() ? { count: 0, until: Date.now() + interval } : current;
     bucket.count++; rateBuckets.set(key, bucket);
@@ -686,7 +689,7 @@ export async function createCommerceServer(options = {}) {
           if (method === 'PATCH' && p[2]) { const o = get('SELECT * FROM orders WHERE id=?', p[2]); if (!o) fail(404, 'الطلب غير موجود', 'not_found'); return send(200, { order: transaction(() => transition(o, body.status, actor, body.driverId)) }); }
         }
         if (section === 'users') {
-          if (method === 'GET') return send(200, { users: all('SELECT * FROM users ORDER BY created_at DESC LIMIT 1000').map(publicUser) });
+          if (method === 'GET') return send(200, { users: all('SELECT * FROM users ORDER BY created_at DESC LIMIT 1000').map((u) => ({ ...publicUser(u), walletBalance: balance(u.id) })) });
           if (method === 'PATCH' && p[2]) { if (!['customer', 'driver', 'admin'].includes(body.role)) fail(400, 'الدور غير صالح'); const user = get('SELECT * FROM users WHERE id=?', p[2]); if (!user) fail(404, 'المستخدم غير موجود', 'not_found'); if (user.role === 'admin' && body.role !== 'admin' && get("SELECT COUNT(*) AS n FROM users WHERE role='admin'").n <= 1) fail(409, 'لا يمكن إزالة آخر مدير'); run('UPDATE users SET role=? WHERE id=?', body.role, user.id); audit(actor, 'user.role', user.id, { role: body.role }); return send(200, { user: publicUser(get('SELECT * FROM users WHERE id=?', user.id)) }); }
         }
         if (section === 'tickets') {

@@ -177,6 +177,8 @@ export function install(c, api) {
   api.route('GET', '/admin/sync/status', ({ req }) => { admin(req); const last = get('SELECT * FROM sync_receipts ORDER BY created_at DESC,rowid DESC LIMIT 1'); return { config: publicConfig(), lastReceipt: last ? receiptItem(last) : null, receipts: get('SELECT COUNT(*) AS n FROM sync_receipts').n, writableTables: [WRITABLE], limits: LIMITS }; });
   api.route('PUT', '/admin/sync/config', ({ req, body }) => {
     const actor = admin(req, 'settings:write'), previous = setting('aasSync', {}) || {};
+    // A connection provided by the server environment (.env) or start-up options wins; saving here would be silently ignored.
+    if (['env', 'options'].includes(config().source)) fail(409, 'الربط مضبوط من متغيرات بيئة الخادم (AAS_BASE_URL وما معه)؛ عدّلها في ملف ‎.env على الخادم.', 'config_locked');
     const baseUrl = text(body.baseUrl, 'عنوان لوحة القيادة', 8, 300);
     let parsed; try { parsed = new URL(baseUrl); } catch { fail(400, 'عنوان لوحة القيادة غير صالح'); }
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password) fail(400, 'استخدم رابط HTTPS دون بيانات دخول');

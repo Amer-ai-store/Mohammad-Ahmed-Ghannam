@@ -43,8 +43,8 @@ export default function RewardsScreen() {
     redeemKey.current = ""; rewards.reload(); robot.react("reward");
     return tr("استبدلت {p} نقطة — رصيد محفظتك {m}", { p: points, m: money.format(r.walletBalance) });
   });
-  const checkIn = () => run("checkin", async () => { const r = await api.post<{ awarded: number; streak: number; alreadyCheckedIn: boolean }>("/rewards/check-in", {}); checkin.reload(); rewards.reload(); badges.reload(); robot.react("checkin"); return r.alreadyCheckedIn ? tr("سجلت حضورك اليوم مسبقًا") : tr("+{n} نقاط · سلسلة {d} أيام", { n: r.awarded, d: r.streak }); });
-  const applyCode = () => run("apply", async () => { await api.post("/referrals/apply", { code: friendCode.trim() }); setFriendCode(""); referral.reload(); rewards.reload(); return "أُضيفت 20 نقطة ترحيب 🎉"; });
+  const checkIn = () => run("checkin", async () => { const r = await api.post<{ awarded: number; streak: number; alreadyCheckedIn: boolean }>("/rewards/check-in", {}); checkin.reload(); rewards.reload(); tier.reload(); badges.reload(); robot.react("checkin"); return r.alreadyCheckedIn ? tr("سجلت حضورك اليوم مسبقًا") : tr("+{n} نقاط · سلسلة {d} أيام", { n: r.awarded, d: r.streak }); });
+  const applyCode = () => run("apply", async () => { await api.post("/referrals/apply", { code: friendCode.trim() }); setFriendCode(""); referral.reload(); rewards.reload(); tier.reload(); return "أُضيفت 20 نقطة ترحيب 🎉"; });
   const shareCode = async () => { if (!referral.data) return; await Clipboard.setStringAsync(referral.data.code).catch(() => {}); await Share.share({ message: tr("جرّب لُقطة واستخدم رمز دعوتي {c} لتحصل على {n} نقطة ترحيب!", { c: referral.data.code, n: referral.data.friendReward }) }).catch(() => {}); };
   return (
     <Shell title="مكافآتي" subtitle="اجمع النقاط وارفع مستواك" robot="كل يوم نقاط جديدة!" testID="rewards">

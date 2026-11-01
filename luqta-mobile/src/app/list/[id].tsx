@@ -64,7 +64,7 @@ export default function ListScreen() {
       <Card style={{ gap: 4 }} testID="list-items">
         {list.items.map((item) => (
           <Row key={item.id} style={{ minHeight: 52 }}>
-            <Pressable testID={`check-${item.id}`} accessibilityRole="checkbox" accessibilityState={{ checked: item.checked }} accessibilityLabel={item.title} onPress={() => void mutate(() => api.patch(`${base}/items/${item.id}`, { checked: !item.checked }))} style={{ padding: 4 }}>
+            <Pressable testID={`check-${item.id}`} accessibilityRole="checkbox" aria-checked={item.checked} accessibilityLabel={item.title} onPress={() => void mutate(() => api.patch(`${base}/items/${item.id}`, { checked: !item.checked }))} style={{ padding: 4 }}>
               {item.checked ? <CheckSquare size={22} color={t.success} /> : <Square size={22} color={t.muted} />}
             </Pressable>
             <View style={{ flex: 1 }}>

@@ -70,7 +70,7 @@ export default function Returns() {
               const on = (chosen[item.productId] || 0) > 0;
               return (
                 <View key={item.productId} style={{ gap: 6 }}>
-                  <Pressable testID={`return-item-${item.productId}`} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => setChosen((c) => ({ ...c, [item.productId]: on ? 0 : 1 }))} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, minHeight: 40 }}>
+                  <Pressable testID={`return-item-${item.productId}`} accessibilityRole="checkbox" aria-checked={on} onPress={() => setChosen((c) => ({ ...c, [item.productId]: on ? 0 : 1 }))} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, minHeight: 40 }}>
                     {on ? <CheckSquare size={22} color={t.primary} /> : <Square size={22} color={t.muted} />}
                     <Txt style={{ flex: 1 }}>{item.name}</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>{tr("اشتريت {n}", { n: item.quantity })}</Txt>
                   </Pressable>

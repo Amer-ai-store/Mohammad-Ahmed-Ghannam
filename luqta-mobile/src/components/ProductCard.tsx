@@ -64,7 +64,7 @@ export function ProductCard({ product, width, reason }: { product: Product; widt
         <Pressable accessibilityRole="button" accessibilityLabel={`${tr("تفاصيل")} ${product.name}`} onPress={() => router.push(`/product/${product.id}`)} style={{ flex: 1 }}>
           <ProductImage product={product} />
         </Pressable>
-        <Pressable testID={`favorite-${product.id}`} accessibilityRole="button" accessibilityLabel={liked ? `${tr("إزالة من المفضلة")} ${product.name}` : `${tr("حفظ في المفضلة")} ${product.name}`} accessibilityState={{ selected: liked }} onPress={() => toggleFavorite(product.id)} style={s.heart}>
+        <Pressable testID={`favorite-${product.id}`} accessibilityRole="button" accessibilityLabel={liked ? `${tr("إزالة من المفضلة")} ${product.name}` : `${tr("حفظ في المفضلة")} ${product.name}`} aria-selected={liked} onPress={() => toggleFavorite(product.id)} style={s.heart}>
           <Heart color={liked ? t.orange : t.ink} fill={liked ? t.orange : "transparent"} size={17} />
         </Pressable>
         {product.flash ? (

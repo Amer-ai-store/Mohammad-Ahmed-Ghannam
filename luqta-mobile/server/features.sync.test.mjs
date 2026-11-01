@@ -142,3 +142,12 @@ test('L118 sync explains what is missing when the command center is not configur
   const saved = (await request('PUT', '/admin/sync/config', { baseUrl: 'https://cc.example/path', apiKey: 'a-key-1234567890', bridgeId: 'b1' }, admin.token)).body.config;
   assert.deepEqual([saved.baseUrl, saved.apiKeyConfigured, saved.runnerKeyConfigured, saved.source], ['https://cc.example', true, false, 'settings']);
 });
+
+test('L118 a connection set by the server environment cannot be overwritten from the dashboard', async (t) => {
+  const { request, admin } = await fixture(t, { aas: { baseUrl: 'https://cc.example', apiKey: 'a-key-1234567890', fetchImpl: async () => new Response('{}') } });
+  const locked = await request('PUT', '/admin/sync/config', { baseUrl: 'https://other.example' }, admin.token);
+  assert.equal(locked.status, 409);
+  assert.equal(locked.body.code, 'config_locked');
+  const { config } = (await request('GET', '/admin/sync/status', undefined, admin.token)).body;
+  assert.deepEqual([config.baseUrl, config.source], ['https://cc.example', 'options']);
+});

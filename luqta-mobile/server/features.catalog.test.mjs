@@ -85,6 +85,8 @@ test('L022 search history is personal and suggestions mix products, categories a
   assert.equal((await request('GET', '/me/search-history', undefined, two.token)).body.history.length, 0);
   const suggest = (await request('GET', `/search/suggest?q=${encodeURIComponent('حل')}`)).body.suggestions;
   assert.ok(suggest.some((s) => s.type === 'product' && s.id === 'milk'));
+  // A typo with no prefix match still suggests the right product.
+  assert.ok((await request('GET', `/search/suggest?q=${encodeURIComponent('حلييب')}`)).body.suggestions.some((s) => s.id === 'milk'));
   assert.ok((await request('GET', `/search/suggest?q=${encodeURIComponent('ألبان')}`)).body.suggestions.some((s) => s.type === 'category' && s.id === 'dairy'));
   assert.ok((await request('GET', '/search/suggest?q=', undefined, one.token)).body.recent.includes('حليب'));
   assert.equal((await request('DELETE', '/me/search-history', undefined, one.token)).status, 200);

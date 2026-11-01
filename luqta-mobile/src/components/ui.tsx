@@ -21,7 +21,7 @@ export function Button({ title, onPress, secondary = false, disabled = false, bu
   const background = secondary ? t.secondary : tone === "primary" ? t.primary : tone === "danger" ? t.danger : t.orange;
   const color = secondary ? t.ink : tone === "primary" ? t.onPrimary : t.onAccent;
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || busy, busy }} disabled={disabled || busy} onPress={onPress}
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={title} aria-disabled={disabled || busy} aria-busy={busy} disabled={disabled || busy} onPress={onPress}
       style={({ pressed }) => [s.button, { backgroundColor: background, opacity: disabled || busy ? 0.5 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, style]}>
       {busy ? <ActivityIndicator color={color} /> : <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>{icon}<Txt weight="bold" style={{ color, textAlign: "center", fontSize: 16 }}>{title}</Txt></View>}
     </Pressable>
@@ -77,7 +77,7 @@ export function Chip({ label, active = false, onPress, icon, testID, tone = "pri
   const { t: tr } = useI18n();
   const on = tone === "accent" ? t.orange : t.primary;
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={tr(label)} onPress={onPress} disabled={!onPress}
+    <Pressable testID={testID} accessibilityRole="button" aria-selected={active} accessibilityLabel={tr(label)} onPress={onPress} disabled={!onPress}
       style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, minHeight: 38, paddingHorizontal: 14, borderRadius: 999, backgroundColor: active ? on : t.paper, borderWidth: 1, borderColor: active ? on : t.line }}>
       {icon}
       <Txt weight={active ? "bold" : "medium"} style={{ color: active ? (tone === "accent" ? t.onAccent : t.onPrimary) : t.ink, fontSize: 13 }}>{tr(label)}</Txt>
@@ -93,7 +93,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, testID }: { tabs
       {tabs.map((tab) => {
         const active = tab.id === value;
         return (
-          <Pressable key={tab.id} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={tr(tab.label)} onPress={() => onChange(tab.id)}
+          <Pressable key={tab.id} accessibilityRole="tab" aria-selected={active} accessibilityLabel={tr(tab.label)} onPress={() => onChange(tab.id)}
             style={{ flex: 1, minHeight: 40, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: active ? t.paper : "transparent", flexDirection: "row-reverse", gap: 6, paddingHorizontal: 6 }}>
             <Txt weight={active ? "bold" : "medium"} style={{ fontSize: 13, color: active ? t.primary : t.muted, textAlign: "center" }} numberOfLines={1}>{tr(tab.label)}</Txt>
             {tab.count ? <View style={{ minWidth: 20, height: 20, borderRadius: 10, backgroundColor: active ? t.primary : t.line, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 }}><Txt style={{ fontSize: 11, color: active ? t.onPrimary : t.ink }}>{tab.count}</Txt></View> : null}
@@ -156,7 +156,7 @@ export function Toggle({ value, onChange, label, detail, testID }: { value: bool
   const { colors: t } = useTheme();
   const { t: tr } = useI18n();
   return (
-    <Pressable testID={testID} accessibilityRole="switch" accessibilityState={{ checked: value }} accessibilityLabel={tr(label)} onPress={() => onChange(!value)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, minHeight: 52 }}>
+    <Pressable testID={testID} accessibilityRole="switch" aria-checked={value} accessibilityLabel={tr(label)} onPress={() => onChange(!value)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, minHeight: 52 }}>
       <View style={{ flex: 1, gap: 2 }}>
         <Txt weight="bold" style={{ fontSize: 14 }}>{tr(label)}</Txt>
         {detail ? <Txt style={{ fontSize: 12, color: t.muted }}>{tr(detail)}</Txt> : null}
