@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Creates a Claude Code token from your Claude subscription, checks that it works, and saves it as this
 # repository's CLAUDE_CODE_OAUTH_TOKEN Actions secret, so the long token never has to be copied by hand.
+# It then removes the ANTHROPIC_API_KEY secret, which the workflows would otherwise use instead of the token.
 # Meant for a GitHub Codespace opened from a phone's browser; see docs/code-review-setup.md.
 # The token is never printed by this script's own status messages; Claude setup-token may echo it in the private terminal.
 # Never share terminal screenshots or logs. The transcript is deleted on exit.
@@ -79,7 +80,9 @@ PY
 fi
 
 say "2/3  Checking the token with Claude..."
-if ! CLAUDE_CODE_OAUTH_TOKEN="$token" claude -p "Reply with the single word OK." >/dev/null 2>&1; then
+# Other credentials are unset so the check proves this token works, not an API key the Codespace may hold.
+if ! env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN="$token" \
+  claude -p "Reply with the single word OK." >/dev/null 2>&1; then
   echo "Claude rejected the token, so it was not saved. Run this script again."
   exit 1
 fi
@@ -92,5 +95,17 @@ if ! gh secret list -R "$REPO" >/dev/null 2>&1; then
   gh auth login -h github.com -p https -w
 fi
 printf '%s' "$token" | gh secret set "$SECRET" -R "$REPO"
+
+# The workflows use ANTHROPIC_API_KEY instead of this token whenever both secrets exist, so remove the API key
+# to make the reviews run on the Claude subscription. The key itself stays valid in the Anthropic Console.
+if ! names="$(gh secret list -R "$REPO" | cut -f1)"; then
+  echo "$SECRET is saved, but the secrets could not be listed to remove ANTHROPIC_API_KEY."
+  echo "Remove it by hand at https://github.com/$REPO/settings/secrets/actions"
+  exit 1
+fi
+if grep -qx 'ANTHROPIC_API_KEY' <<<"$names"; then
+  gh secret delete ANTHROPIC_API_KEY -R "$REPO"
+  echo "Removed the ANTHROPIC_API_KEY secret, so the reviews now use this subscription token."
+fi
 
 say "Done: $SECRET is saved and was checked against Claude."
