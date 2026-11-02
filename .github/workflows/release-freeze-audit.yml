@@ -1,0 +1,24 @@
+# Issue #102: static policy check only; NO deployment or secrets.
+name: Release freeze source audit (no deploy)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'tools/release_freeze_audit.py'
+      - 'tools/tests/test_release_freeze_audit.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify guard with synthetic tests
+        run: python3 -m unittest discover -s tools/tests -p test_release_freeze_audit.py -v
+      - name: Audit tracked workflow source
+        run: python3 tools/release_freeze_audit.py --root .
