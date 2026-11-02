@@ -11,7 +11,7 @@ const e=(id,patch={})=>({
 const envelope=events=>({
   schema_version:SCHEMA,classification:"PRIVATE_FINANCIAL_AUDIT",
   private_access_verified:true,source_integrity_verified:true,
-  snapshot_id:"SYNTHETIC-TEST",verified_at:"2026-11-02T11:00:00+03:00",events
+  snapshot_id:"SYNTHETIC-TEST",verified_at:"2026-11-02T11:00:00+03:00",history_record_count:events.length,risk_totals:summarize(events),events
 });
 test("verified envelope with complete provenance is accepted",()=>{
   assert.equal(validateEnvelope(envelope([e("a")])).events.length,1);
@@ -20,7 +20,7 @@ test("public or uncertain sources fail closed",()=>{
   for(const patch of [
     {private_access_verified:false},{source_integrity_verified:false},
     {classification:"PUBLIC_OPERATIONAL_METADATA_ONLY"},{schema_version:"other"},
-    {verified_at:null},{events:new Array(501).fill(e("a"))}
+    {verified_at:null},{events:new Array(501).fill(e("a"))},{risk_totals:{P0:9,P1:0,P2:0}}
   ])assert.throws(()=>validateEnvelope({...envelope([]),...patch}));
 });
 test("duplicate event ID is rejected, not silently deduplicated",()=>{
