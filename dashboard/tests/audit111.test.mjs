@@ -33,6 +33,7 @@ test("missing provenance and invalid hash are rejected",()=>{
 });
 test("shared username cannot prove human actor",()=>{
   assert.equal(visibleActor(e("x")),"غير مثبت");
+  assert.equal(visibleActor(e("x",{system_user:"User07"})),"حساب نظام: User07 (الشخص غير مثبت)");
   assert.equal(visibleActor(e("x",{actor_verified:true,actor:"AppUser01"})),"AppUser01");
 });
 test("risk summary groups only supplied source-graded records",()=>{
