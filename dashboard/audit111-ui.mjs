@@ -4,14 +4,14 @@ const root=document.querySelector('[data-view="jawafa-audit111"]');
 if(root){
   const $=id=>document.getElementById(id);
   const cell=(row,value)=>{const td=document.createElement("td");td.textContent=String(value==null?"—":value).slice(0,260);row.append(td)};
-  const state={events:[],verifiedAt:null,snapshot:null};
+  const state={events:[],verifiedAt:null,snapshot:null,riskTotals:null,total:null};
   function status(message,tone="warn"){
     const target=$("audit111-status");
     target.textContent=message;
     target.className="pill "+(tone==="ok"?"ok":tone==="bad"?"bad":"warn");
   }
   function clear(message="NOT_CONNECTED"){
-    state.events=[];state.verifiedAt=null;state.snapshot=null;
+    state.events=[];state.verifiedAt=null;state.snapshot=null;state.riskTotals=null;state.total=null;
     for(const level of ["P0","P1","P2"]) $("audit111-"+level).textContent="—";
     $("audit111-verified").textContent="—";
     $("audit111-snapshot").textContent="لا توجد لقطة متحققة";
@@ -22,10 +22,10 @@ if(root){
     status(message,"bad");
   }
   function render(){
-    const counts=summarize(state.events);
+    const counts=state.riskTotals||summarize(state.events);
     for(const level of ["P0","P1","P2"]) $("audit111-"+level).textContent=counts[level];
     $("audit111-verified").textContent=state.verifiedAt;
-    $("audit111-snapshot").textContent="رقم اللقطة: "+state.snapshot+" · موثقة من واجهة خاصة؛ ليست اتصال SQL مباشرًا";
+    $("audit111-snapshot").textContent="رقم اللقطة: "+state.snapshot+" · آخر "+state.events.length+" من "+state.total+" حدث · البحث في السجلات المعروضة فقط · وقت الخادم غير متزامن";
     const events=filterEvents(state.events,$("audit111-query").value,
       $("audit111-type").value,$("audit111-risk").value);
     const body=$("audit111-rows");body.replaceChildren();
@@ -63,7 +63,7 @@ if(root){
       if(!res.ok)throw new Error("PRIVATE_GATEWAY_"+res.status);
       const payload=validateEnvelope(await res.json());
       state.events=payload.events;state.verifiedAt=payload.verified_at;
-      state.snapshot=payload.snapshot_id;render();
+      state.snapshot=payload.snapshot_id;state.riskTotals=payload.risk_totals;state.total=payload.history_record_count;render();
       status("VERIFIED_SNAPSHOT — ليست بيانات حية مباشرة","ok");
     }catch(err){
       const code=String(err?.message||"UNKNOWN").replace(/[^A-Z0-9_]/g,"").slice(0,48);
