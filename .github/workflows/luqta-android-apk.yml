@@ -157,7 +157,9 @@ jobs:
   publish:
     name: Publish APK and evidence (branch + pre-release)
     needs: [verify, apk, screens]
-    if: always() && needs.apk.result == 'success'
+    # SECURITY FREEZE #102: do not publish APK, push build branch, or create GitHub release.
+    # Preserve job for review; enable only after independent release-gate acceptance.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
