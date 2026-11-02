@@ -38,7 +38,7 @@ if(root){
       const row=document.createElement("tr");
       for(const value of [
         event.severity,event.document_type,event.document_id,
-        event.event_at||"غير مثبت",event.observed_at,visibleActor(event),
+        event.event_at||(event.event_time_raw?event.event_time_raw+" (وقت المصدر غير معتمد)":"غير مثبت"),event.observed_at,visibleActor(event),
         (event.field||"—")+" : "+(event.before??"—")+" ← "+(event.after??"—"),
         event.evidence_level,event.source_ref
       ])cell(row,value);
@@ -56,7 +56,7 @@ if(root){
       const user=auth?.currentUser;
       if(!user || !user.emailVerified)throw new Error("NOT_AUTHENTICATED");
       const token=await user.getIdToken();
-      const res=await fetch("/api/jawafa/v1/audit/111?limit=500",{
+      const res=await fetch("/api/jawafa/v1/audit/111?limit=100",{
         headers:{"Accept":"application/json","Authorization":"Bearer "+token},
         cache:"no-store",credentials:"same-origin",signal:controller.signal
       });
