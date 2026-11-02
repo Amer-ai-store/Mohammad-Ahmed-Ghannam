@@ -16,8 +16,9 @@ const log = [];
 page.on('console', (m) => log.push(m.text()));
 page.on('pageerror', (e) => log.push('PAGEERROR ' + e.message));
 await page.setContent(avatarHtml({ action: 'idle' }), { waitUntil: 'load' });
-await page.waitForFunction(() => !!window.LuqtaAvatar || document.body.getAttribute('data-webgl') === 'none', null, { timeout: 60000, polling: 250 });
-const ready = await page.evaluate(() => ({ actions: window.LuqtaAvatar && window.LuqtaAvatar.actions, bones: window.LuqtaAvatar && window.LuqtaAvatar.skeleton.bones.length, webgl: !!document.querySelector('canvas').getContext }));
+await page.waitForFunction(() => (window.__luqtaLog || []).some((m) => m.type === 'ready' || m.type === 'error'), null, { timeout: 90000, polling: 250 });
+const ready = await page.evaluate(() => { const r = (window.__luqtaLog || []).find((m) => m.type === 'ready') || {}; const e = (window.__luqtaLog || []).find((m) => m.type === 'error'); return { actions: window.LuqtaAvatar && window.LuqtaAvatar.actions, bones: window.LuqtaAvatar && window.LuqtaAvatar.skeleton.bones.length, skinned: !!r.skinned, clips: r.clips, model: r.model, error: e || null, webgl: !!document.querySelector('canvas').getContext }; });
+if (!ready.skinned) { console.error('avatar failed to load', JSON.stringify(ready)); process.exit(1); }
 const cmd = (m) => page.evaluate((x) => window.LuqtaAvatar.command(x), m);
 const probe = async () => { await cmd({ type: 'probe', id: 'p' }); return page.evaluate(() => window.__luqtaLast); };
 const results = {};

@@ -1430,12 +1430,13 @@
    "features": [
     {
      "id": "F-G12-01",
-     "title": "هيكل عظمي: 17 عظمة THREE.Bone ومفصلا الإبهام (19 مفصلًا متحركًا)",
+     "title": "هيكل عظمي احترافي: نموذج GLB مُسلَّح (SkinnedMesh + Skeleton) مع إعادة توجيه المفاصل",
      "source": {
       "file": "web-engines/avatar.js",
       "contains": [
-       "new T.Bone()",
-       "new T.Skeleton("
+       "new T.GLTFLoader()",
+       "o.isBone",
+       "function targetLocal("
       ]
      },
      "evidence": "evidence/avatar/avatar-evidence.json",
@@ -1443,11 +1444,12 @@
     },
     {
      "id": "F-G12-02",
-     "title": "المشي بحركة مفاصل فعلية (ورك/ركبة/كاحل/كتف)",
+     "title": "المشي بحركة مفاصل فعلية من مقطع هيكلي (AnimationMixer) مع بديل إجرائي",
      "source": {
       "file": "web-engines/avatar.js",
       "contains": [
-       "function gait",
+       "walk: { clip: 'walk'",
+       "new T.AnimationMixer(",
        "thighL",
        "kneeL"
       ]

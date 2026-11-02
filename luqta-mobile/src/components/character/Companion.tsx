@@ -28,7 +28,7 @@ type Props = {
 const posterFor = (a: AvatarAction) => (posePosters as Record<string, number>)[a] ?? (a === "wake" || a === "stop" || a === "come" || a === "wave" ? posePosters.idle : posePosters.walk);
 
 export const Companion = forwardRef<CompanionHandle, Props>(function Companion({ action, base = 132, aspect = 0.62, enterFrom = "left", fixedHeight, testID = "companion" }, ref) {
-  const { profile, systemReduceMotion } = useCharacter();
+  const { profile, systemReduceMotion, modelUrl } = useCharacter();
   const { height: screenH } = useWindowDimensions();
   const reduce = profile.reduceMotion || systemReduceMotion;
   const surface = useRef<SurfaceHandle>(null);
@@ -45,7 +45,7 @@ export const Companion = forwardRef<CompanionHandle, Props>(function Companion({
   const initialAction = enterFrom !== "none" && !reduce ? (action === "cart" ? "cart" : "walk") : action;
   // HTML is built once per mount; later changes are sent as messages (no reload).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const html = useMemo(() => avatarHtml({ action: initialAction, profile: toAvatarProfile(profile), reduceMotion: reduce, sound: profile.sound }), [focused]);
+  const html = useMemo(() => avatarHtml({ action: initialAction, profile: toAvatarProfile(profile), reduceMotion: reduce, sound: profile.sound, modelUrl }), [focused, modelUrl]);
 
   const readyRef = useRef(false);
   const queue = useRef<object[]>([]);
@@ -82,7 +82,7 @@ export const Companion = forwardRef<CompanionHandle, Props>(function Companion({
     let m: Record<string, unknown>;
     try { m = JSON.parse(data); } catch { return; }
     if (m.type === "ready") setReady(true);
-    if (m.type === "error" && (m.code === "NO_WEBGL" || m.code === "NO_THREE" || m.code === "WEBVIEW_GONE" || m.code === "WEBVIEW_LOAD")) setFailed(true);
+    if (m.type === "error" && (m.code === "NO_WEBGL" || m.code === "NO_THREE" || m.code === "WEBVIEW_GONE" || m.code === "WEBVIEW_LOAD" || m.code === "MODEL_LOAD" || m.code === "NO_MODEL")) setFailed(true);
     const id = typeof m.id === "string" ? m.id : "";
     if (id && pending.current.has(id)) { pending.current.get(id)!(m); pending.current.delete(id); }
   };
@@ -94,6 +94,8 @@ export const Companion = forwardRef<CompanionHandle, Props>(function Companion({
       {use3d && focused ? (
         <Animated.View style={{ flex: 1, transform: [{ translateX }] }}>
           <AvatarSurface ref={surface} html={html} onMessage={onMessage} />
+          {/* the rigged model takes a moment to parse; show the matching pose until it is ready */}
+          {!ready ? <Image source={posterFor(action)} style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%" }} resizeMode="contain" testID={`${testID}-loading`} /> : null}
         </Animated.View>
       ) : (
         <Image source={posterFor(action)} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
