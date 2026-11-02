@@ -1,7 +1,7 @@
 // Home — reference design "شو بدك اليوم؟"
 import React, { useMemo, useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, TextInput, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Camera, Mic } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
@@ -9,6 +9,8 @@ import { CTA, SectionHeader } from "../components/design/kit";
 import { ProductCard } from "../components/ProductCard";
 import { Companion } from "../components/character/Companion";
 import { designAssets } from "../lib/designAssets";
+import { HomeExtras } from "../components/smart/HomeExtras";
+import { TourOverlay, useTourState } from "../components/smart/TourOverlay";
 import { useStore } from "../lib/store";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 
@@ -24,7 +26,8 @@ export default function Home() {
   const s = useThemedStyles(makeStyles);
   const { products, catalogStatus, catalogError, refreshCatalog } = useStore();
   const [query, setQuery] = useState("");
-  const [voiceHint, setVoiceHint] = useState(false);
+  const params = useLocalSearchParams<{ tour?: string }>();
+  const tour = useTourState(params.tour === "1");
   const input = useRef<TextInput>(null);
   const featured = useMemo(() => {
     const visible = products.filter((p) => p.active !== false && !p.variantOf);
@@ -44,11 +47,10 @@ export default function Home() {
           <View style={s.divider} />
           <TextInput ref={input} testID="home-search" accessibilityLabel="ابحث عن منتج أو اسألني" value={query} onChangeText={setQuery} onSubmitEditing={ask} returnKeyType="search"
             placeholder="ابحث عن منتج أو اسألني..." placeholderTextColor={t.muted} style={s.input} />
-          <Pressable accessibilityRole="button" accessibilityLabel="البحث بالصوت" testID="home-mic" onPress={() => { setVoiceHint(true); input.current?.focus(); }} style={s.mic}>
+          <Pressable accessibilityRole="button" accessibilityLabel="البحث بالصوت" testID="home-mic" onPress={() => router.push("/voice")} style={s.mic}>
             <Mic size={26} color={t.onAccent} strokeWidth={2.2} />
           </Pressable>
         </View>
-        {voiceHint ? <Txt style={{ color: t.muted, fontSize: 12, marginTop: 8, textAlign: "center" }}>اضغط ميكروفون لوحة المفاتيح وتحدّث، ثم اضغط بحث.</Txt> : null}
       </View>
 
       <View style={s.cats}>
@@ -74,6 +76,8 @@ export default function Home() {
         <Companion action="walk" base={128} enterFrom="left" />
       </View>
       <CTA title="ابدأ التسوق" testID="home-start" onPress={() => router.push("/assistant")} />
+      <HomeExtras />
+      <TourOverlay open={tour.open} onClose={tour.close} />
     </Shell>
   );
 }

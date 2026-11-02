@@ -38,6 +38,11 @@ export type Product = {
   variantOf?: string;
   variantLabel?: string;
   hasVariants?: boolean;
+  /** G14: nutrition facts (dashboard import), flash-sale end, freshness date, marketplace merchant */
+  nutrition?: { calories?: number; protein?: number; carbs?: number; fat?: number; sugar?: number; fiber?: number; sodium?: number; per?: string };
+  offerEndsAt?: string;
+  expiresAt?: string;
+  merchantId?: string;
   basePrice?: number;
   baseStock?: number;
   demo?: boolean;

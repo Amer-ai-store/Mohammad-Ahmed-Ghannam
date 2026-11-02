@@ -2,7 +2,7 @@
 import React, { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { Bell, Download, LogOut, PersonStanding, Pencil, Server, Settings, ShieldCheck, Star, Store, Trash2, Truck, UserRound, ChevronLeft, ChevronRight, LayoutDashboard } from "lucide-react-native";
+import { Bell, Download, LogOut, PersonStanding, Pencil, Server, Settings, ShieldCheck, Star, Store, Trash2, Truck, UserRound, ChevronLeft, ChevronRight, LayoutDashboard, Sparkles, Trophy, Users, PiggyBank, BellRing } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
 import { BrandHeader, Card, MenuRow } from "../components/design/kit";
@@ -63,12 +63,18 @@ export default function Profile() {
       </View>
       <View style={{ marginTop: 12 }}>
         <MenuRow testID="menu-details" title="بياناتي وعناويني" subtitle="إدارة بياناتك الشخصية وعناوين التوصيل" icon={UserRound} onPress={() => router.push(user ? "/account-details" : "/addresses")} />
+        <MenuRow testID="menu-smart" title="أدوات لُقطة الذكية" subtitle="نبض السوق، رادار الأسعار، العدسة، الفواتير والمزيد" icon={Sparkles} onPress={() => router.push("/smart-tools")} />
+        <MenuRow testID="menu-rewards" title="المستويات والشارات" subtitle="التسجيل اليومي، الشارات، العب واربح" icon={Trophy} onPress={() => router.push("/rewards")} />
+        <MenuRow testID="menu-lists" title="القوائم ووضع العائلة" subtitle="قوائم مشتركة بميزانية ورمز دعوة" icon={Users} onPress={() => router.push("/lists")} />
+        <MenuRow title="تنبيهات الأسعار" subtitle="المنتجات التي تتابع أسعارها" icon={BellRing} onPress={() => router.push("/watchlist")} />
+        <MenuRow title="رؤى الإنفاق" subtitle="إنفاقك الشهري ونصائح التوفير" icon={PiggyBank} onPress={() => router.push("/insights")} />
         <MenuRow testID="menu-character" title="شخصيتي وحركتها" subtitle="تخصيص شخصية لُقطة وحركاتها" icon={PersonStanding} onPress={() => router.push("/character")} />
         <MenuRow title="اللغة والمظهر" subtitle="اختر اللغة والمظهر المفضل" icon={Settings} onPress={() => router.push("/appearance")} />
         <MenuRow title="الإشعارات" subtitle="إدارة التنبيهات والرسائل" icon={Bell} onPress={() => router.push("/notification-settings")} />
         <MenuRow title="الخصوصية والأجهزة" subtitle="إدارة الخصوصية والأجهزة المرتبطة" icon={ShieldCheck} onPress={() => router.push("/privacy")} />
         <MenuRow testID="menu-export" title="تصدير بياناتي" subtitle="تحميل نسخة من بياناتك" icon={Download} onPress={() => router.push("/export")} />
         <MenuRow title="طلباتي والدعم" subtitle="الطلبات والمرتجعات والمحادثات" icon={Store} onPress={() => router.push("/orders")} />
+        <MenuRow testID="menu-merchant" title="بوابة التاجر" subtitle="بِع منتجاتك عبر لُقطة" icon={Store} onPress={() => router.push("/merchant")} />
         <MenuRow title="اتصال الخادم" subtitle={session.configured ? (session.connected ? "متصل بخادم المتجر" : "عنوان محفوظ · غير مؤكد") : "وضع تجريبي · اربط خادم المتجر"} icon={Server} onPress={() => router.push("/connection")} />
         {user?.role === "admin" ? <MenuRow title="لوحة الإدارة والقيادة" subtitle="المخزون والفروع والمزامنة والطلبات" icon={LayoutDashboard} onPress={() => router.push("/admin")} /> : null}
         {user?.role === "driver" ? <MenuRow title="لوحة السائق" subtitle="الطلبات المسندة ومشاركة الموقع" icon={Truck} onPress={() => router.push("/driver")} /> : null}

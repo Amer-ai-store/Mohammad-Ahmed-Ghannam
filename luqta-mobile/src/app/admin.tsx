@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { GrowthPanel } from "../components/admin/GrowthPanel";
 import { Shell } from "../components/Shell";
 import { Button, Txt } from "../components/ui";
 import { AdminCard, AdminChoices, AdminField, AdminLoading, AdminNotice, AdminRefresh, numberInput, useAdminAction } from "../components/admin/AdminUI";
@@ -27,7 +28,7 @@ const roles = [{ value: "customer", label: "عميل" }, { value: "driver", labe
 const tabs = [
   { id: "overview", label: "نظرة عامة" }, { id: "products", label: "الأصناف" }, { id: "inventory", label: "المخزون والاستيراد" }, { id: "offers", label: "استيراد العروض" }, { id: "appearance", label: "تصميم المتجر" },
   { id: "orders", label: "الطلبات والتوصيل" }, { id: "returns", label: "المرتجعات" }, { id: "coupons", label: "العروض" },
-  { id: "users", label: "المستخدمون والمحفظة" }, { id: "tickets", label: "دعم العملاء" }, { id: "agents", label: "قناة الوكلاء" }, { id: "settings", label: "الإعدادات" }, { id: "audit", label: "سجل العمليات" },
+  { id: "users", label: "المستخدمون والمحفظة" }, { id: "tickets", label: "دعم العملاء" }, { id: "agents", label: "قناة الوكلاء" }, { id: "growth", label: "النمو والمحتوى" }, { id: "settings", label: "الإعدادات" }, { id: "audit", label: "سجل العمليات" },
 ];
 const money = (value: number, currency = "") => `${Number(value || 0).toLocaleString("ar", { maximumFractionDigits: 3 })} ${currency}`;
 const errorText = (e: unknown) => e instanceof Error ? e.message : "تعذّر تحميل البيانات من الخادم.";
@@ -76,7 +77,7 @@ function AdminDashboard() {
       </Pressable>)}
     </ScrollView>
     <View style={{ gap: 16, paddingVertical: 14 }} key={tab}>
-      {tab === "overview" ? <OverviewPanel /> : tab === "products" ? <ProductsPanel /> : tab === "inventory" ? <><InventoryPanel /><JawafaBridgePanel /></> : tab === "offers" ? <OffersPanel /> : tab === "appearance" ? <AppearancePanel /> : tab === "orders" ? <OrdersPanel /> : tab === "returns" ? <ReturnsPanel /> : tab === "coupons" ? <CouponsPanel /> : tab === "users" ? <UsersPanel /> : tab === "tickets" ? <TicketsPanel /> : tab === "agents" ? <AgentsPanel /> : tab === "settings" ? <SettingsPanel /> : <AuditPanel />}
+      {tab === "growth" ? <GrowthPanel /> : tab === "overview" ? <OverviewPanel /> : tab === "products" ? <ProductsPanel /> : tab === "inventory" ? <><InventoryPanel /><JawafaBridgePanel /></> : tab === "offers" ? <OffersPanel /> : tab === "appearance" ? <AppearancePanel /> : tab === "orders" ? <OrdersPanel /> : tab === "returns" ? <ReturnsPanel /> : tab === "coupons" ? <CouponsPanel /> : tab === "users" ? <UsersPanel /> : tab === "tickets" ? <TicketsPanel /> : tab === "agents" ? <AgentsPanel /> : tab === "settings" ? <SettingsPanel /> : <AuditPanel />}
     </View>
   </Shell>;
 }

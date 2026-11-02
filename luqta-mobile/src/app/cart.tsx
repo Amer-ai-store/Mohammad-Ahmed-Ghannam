@@ -2,10 +2,12 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft, ShoppingBasket, Ticket, Trash2 } from "lucide-react-native";
+import { ArrowLeft, Gift, ShoppingBasket, Sparkles, Ticket, Trash2, Truck } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
-import { Card, Chip, CTA, InfoNote, QtyStepper } from "../components/design/kit";
+import { Card, Chip, CTA, InfoNote, QtyStepper, SmallButton } from "../components/design/kit";
+import { ProgressBar } from "../components/smart/Charts";
+import { freeShippingProgress } from "../lib/smart";
 import { ProductImage } from "../components/ProductCard";
 import { Companion } from "../components/character/Companion";
 import { formatPrice } from "../data/products";
@@ -21,7 +23,7 @@ export default function CartScreen() {
   const s = useThemedStyles(makeStyles);
   const { cart, products, subtotal, setQuantity, settings, catalogStatus, hydrated, draft, updateDraft, notify } = useStore();
   const { user } = useSession();
-  const [code, setCode] = useState(draft.coupon?.code || "");
+  const [code, setCode] = useState(draft.pendingCouponCode || draft.coupon?.code || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const items = products.filter((p) => cart[p.id]);
@@ -42,7 +44,7 @@ export default function CartScreen() {
     setBusy(true);
     try {
       const r = await api.post<{ code: string; discount: number }>("/coupons/validate", { code: value, items: Object.entries(cart).map(([productId, quantity]) => ({ productId, quantity })) });
-      updateDraft({ coupon: { code: r.code, discount: r.discount, cartSignature: signature } }); notify("طُبّق رمز الخصم");
+      updateDraft({ coupon: { code: r.code, discount: r.discount, cartSignature: signature }, pendingCouponCode: undefined }); notify("طُبّق رمز الخصم");
     } catch (e) { updateDraft({ coupon: undefined }); setError(e instanceof Error ? e.message : "تعذّر تطبيق الرمز"); }
     finally { setBusy(false); }
   }
@@ -80,6 +82,25 @@ export default function CartScreen() {
               );
             })}
           </Card>
+
+          {(() => {
+            const f = freeShippingProgress(subtotal - (coupon?.discount || 0), settings.freeShippingThreshold);
+            const bundles = (settings.bundles || []).filter((b) => b.active !== false && items.filter((p) => b.productIds.includes(p.id) || b.categories.includes(p.category)).length >= b.minItems);
+            return (
+              <Card style={{ marginTop: 14, gap: 8 }} testID="cart-free-shipping">
+                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+                  <Truck size={22} color={f.qualified ? t.green : t.purple} />
+                  <Txt weight="bold" style={{ flex: 1, color: t.title }}>{f.qualified ? `مؤهل للتوصيل المجاني (وفّرت ${formatPrice(settings.shippingFee, settings.currency)})` : `أضف ${formatPrice(f.remaining, settings.currency)} للتوصيل المجاني`}</Txt>
+                </View>
+                <ProgressBar value={f.progress} color={f.qualified ? t.green : t.orange} />
+                {bundles.length ? <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}><Gift size={18} color={t.green} /><Txt style={{ color: t.green, flex: 1 }}>تنطبق «{bundles[0].name}» — خصم {bundles[0].percent}% يُحسب عند التأكيد</Txt></View> : null}
+                <View style={{ flexDirection: "row-reverse", gap: 8, flexWrap: "wrap" }}>
+                  <SmallButton title="حسّن سلتي" icon={Sparkles} onPress={() => router.push("/basket-optimizer")} testID="open-optimizer" />
+                  <SmallButton title="محفظة الكوبونات" icon={Ticket} tone="soft" onPress={() => router.push("/coupons")} />
+                </View>
+              </Card>
+            );
+          })()}
 
           <Card style={{ marginTop: 14 }}>
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, marginBottom: 10 }}>

@@ -4,6 +4,7 @@ import { Image, Modal, Pressable, StyleSheet, TextInput, View } from "react-nati
 import { useLocalSearchParams } from "expo-router";
 import { ArrowUpDown, Check, ChevronDown, ChevronLeft, MapPin, Search, ShoppingBasket, SlidersHorizontal, X } from "lucide-react-native";
 import { Shell } from "../components/Shell";
+import { SmartStrip } from "../components/smart/HomeExtras";
 import { Txt } from "../components/ui";
 import { BrandHeader, Chip, SectionHeader, SmallButton, Toggle } from "../components/design/kit";
 import { MiniProductCard } from "../components/ProductCard";
@@ -146,6 +147,7 @@ function ExploreContent({ initialQuery, initialCategory }: { initialQuery: strin
         ) : null}
         {catalogStatus === "sample" ? <Chip label="بيانات تجريبية" tone="demo" /> : null}
       </View>
+      <SmartStrip />
     </Shell>
   );
 }

@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -77,8 +78,22 @@ export const darkTheme: Palette = {
   shadow: "#000000",
 };
 
+/** Optional colour skins from the Aura app's theme switcher; "design" keeps the reference palette. */
+export const SKINS = {
+  design: { label: "تصميم لُقطة", orange: null, purple: null },
+  forest: { label: "واحة خضراء", orange: "#0F9D6B", purple: "#2E6B4F" },
+  gold: { label: "ذهبي ملكي", orange: "#C8961E", purple: "#6B4E16" },
+  sakura: { label: "ساكورا", orange: "#E86A92", purple: "#8E4A6B" },
+  slate: { label: "رمادي هادئ", orange: "#3D5A80", purple: "#293241" },
+  neon: { label: "نيون", orange: "#00A8E8", purple: "#4B2BB3" },
+} as const;
+export type SkinId = keyof typeof SKINS;
+const SKIN_KEY = "luqta-skin-v1";
+
 type ThemeValue = {
   colors: Palette;
+  skin: SkinId;
+  setSkin: (skin: SkinId) => void;
   mode: ThemeMode;
   isDark: boolean;
   hydrated: boolean;
@@ -94,6 +109,8 @@ const Context = createContext<ThemeValue>({
   storageError: false,
   setMode: () => {},
   setAccentColor: () => {},
+  skin: "design",
+  setSkin: () => {},
 });
 const STORAGE_KEY = "luqta-appearance-v1";
 
@@ -101,6 +118,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemMode = useColorScheme();
   const [mode, setPreference] = useState<ThemeMode>("system");
   const [accentColor, setAccentColor] = useState<string | null>(null);
+  const [skin, setSkinState] = useState<SkinId>("design");
+  useEffect(() => { AsyncStorage.getItem(SKIN_KEY).then((v) => { if (v && v in SKINS) setSkinState(v as SkinId); }).catch(() => {}); }, []);
+  const setSkin = useCallback((next: SkinId) => { if (!(next in SKINS)) return; setSkinState(next); void AsyncStorage.setItem(SKIN_KEY, next).catch(() => {}); }, []);
   const [hydrated, setHydrated] = useState(false);
   const [storageError, setStorageError] = useState(false);
   useEffect(() => {
@@ -127,7 +147,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .catch(() => setStorageError(true));
   }, [mode, hydrated]);
   const isDark = mode === "dark" || (mode === "system" && systemMode === "dark");
-  const colors = useMemo<Palette>(() => ({ ...(isDark ? darkTheme : theme), ...(accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? { orange: accentColor } : {}) }), [isDark, accentColor]);
+  const colors = useMemo<Palette>(() => {
+    const base = { ...(isDark ? darkTheme : theme), ...(accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? { orange: accentColor } : {}) };
+    const sk = SKINS[skin];
+    return sk.orange ? { ...base, orange: sk.orange, purple: isDark ? base.purple : (sk.purple as string) } : base;
+  }, [isDark, accentColor, skin]);
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
@@ -142,12 +166,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       hydrated,
       storageError,
       setAccentColor,
+      skin,
+      setSkin,
       setMode: (next) => {
         if (next === "light" || next === "dark" || next === "system")
           setPreference(next);
       },
     }),
-    [colors, mode, isDark, hydrated, storageError],
+    [colors, mode, isDark, hydrated, storageError, skin, setSkin],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

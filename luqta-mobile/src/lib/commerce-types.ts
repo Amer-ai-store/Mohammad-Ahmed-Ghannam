@@ -1,7 +1,9 @@
 export type StoreSettings = {
   storeName: string; currency: string; country: string;
   shippingFee: number; freeShippingThreshold: number; returnsDays: number;
-  storefront?: { accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: boolean };
+  storefront?: { accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: boolean; promoVideoUrl?: string | null };
+  character?: { modelUrl?: string | null };
+  bundles?: { id: string; name: string; percent: number; minItems: number; productIds: string[]; categories: string[]; active?: boolean }[];
   branches?: Branch[];
 };
 export type Branch = { id: string; name: string; city?: string };
@@ -12,9 +14,9 @@ export const deliverySlots: { id: DeliverySlot; label: string; time: string }[] 
   { id: 'evening', label: 'مساءً', time: '5:00 - 9:00' },
 ];
 export type PaymentChoice = 'card' | 'cod' | 'wallet';
-export type CheckoutDraft = { address?: Address; slot: DeliverySlot; payment: PaymentChoice; cardLast4?: string; coupon?: { code: string; discount: number; cartSignature: string } };
+export type CheckoutDraft = { address?: Address; slot: DeliverySlot; payment: PaymentChoice; cardLast4?: string; coupon?: { code: string; discount: number; cartSignature: string }; eco?: boolean; pendingCouponCode?: string };
 export type CartIssue = { productId: string; code: 'price_changed' | 'insufficient_stock' | 'product_unavailable' | 'empty'; from?: number; to?: number; available?: number };
-export type CartCheck = { ok: boolean; lines: { productId: string; name?: string; price?: number; quantity: number; available: number; ok: boolean }[]; issues: CartIssue[]; subtotal: number; shipping: number; total: number; currency: string; source: 'server' | 'local'; checkedAt?: string };
+export type CartCheck = { ok: boolean; lines: { productId: string; name?: string; price?: number; quantity: number; available: number; ok: boolean }[]; issues: CartIssue[]; subtotal: number; shipping: number; total: number; currency: string; source: 'server' | 'local'; checkedAt?: string; bundle?: { id: string; name: string; percent: number; productIds: string[]; base: number; discount: number } | null; bundleDiscount?: number };
 export type Address = {
   id?: string; name: string; phone: string; city: string; street: string;
   latitude?: number; longitude?: number; label?: string; isDefault?: boolean;

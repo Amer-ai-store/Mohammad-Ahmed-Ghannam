@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Check, Monitor, Moon, Sun } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
-import { Palette, ThemeMode, useTheme, useThemedStyles } from "../lib/theme";
+import { Palette, SKINS, ThemeMode, useTheme, useThemedStyles, type SkinId } from "../lib/theme";
 
 const choices = [
   { mode: "light", title: "الوضع النهاري", detail: "ألوان فاتحة طوال الوقت", icon: Sun },
@@ -12,7 +12,7 @@ const choices = [
 ] as const;
 
 export default function AppearanceScreen() {
-  const { colors: t, mode, setMode, isDark, storageError, hydrated } = useTheme();
+  const { colors: t, mode, setMode, isDark, storageError, hydrated, skin, setSkin } = useTheme();
   const s = useThemedStyles(makeStyles);
   return (
     <Shell title="مظهر التطبيق" subtitle="اختر المظهر الأنسب لك. يُحفظ اختيارك على هذا الجهاز.">
@@ -38,6 +38,22 @@ export default function AppearanceScreen() {
             </Pressable>
           );
         })}
+      </View>
+      <View style={[s.preview, { marginTop: 18 }]} accessibilityRole="radiogroup" accessibilityLabel="ألوان التطبيق" testID="skin-picker">
+        <Txt weight="bold" style={{ fontSize: 18 }}>ألوان التطبيق</Txt>
+        <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 }}>
+          {(Object.keys(SKINS) as SkinId[]).map((id) => {
+            const sk = SKINS[id], selected = skin === id;
+            return (
+              <Pressable key={id} accessibilityRole="radio" accessibilityState={{ checked: selected }} accessibilityLabel={sk.label} testID={`skin-${id}`} onPress={() => setSkin(id)}
+                style={{ width: "30%", padding: 10, borderRadius: 16, borderWidth: 2, borderColor: selected ? t.orange : t.line, alignItems: "center", gap: 6 }}>
+                <View style={{ flexDirection: "row", gap: 4 }}><View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: sk.orange || "#FE585C" }} /><View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: sk.purple || "#6E4AA6" }} /></View>
+                <Txt weight={selected ? "bold" : "regular"} style={{ fontSize: 13, textAlign: "center" }}>{sk.label}</Txt>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Txt style={{ color: t.muted, fontSize: 13 }}>«تصميم لُقطة» هو التصميم الأصلي المعتمد؛ بقية الألوان اختيارية.</Txt>
       </View>
       <View accessibilityLiveRegion="polite" style={s.preview}>
         <Txt weight="bold" style={{ fontSize: 18 }}>

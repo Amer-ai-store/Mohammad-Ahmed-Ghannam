@@ -92,6 +92,9 @@ export default function Payment() {
               <TextInput accessibilityLabel="تاريخ الانتهاء" editable={cardAllowed} value={expiry} onChangeText={(v) => { const d = v.replace(/\D/g, "").slice(0, 4); setExpiry(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d); }} keyboardType="number-pad" placeholder="MM / YY" placeholderTextColor={t.mutedSoft} style={s.inputField} />
             </View>
           </View>
+          {cardAllowed ? <Pressable accessibilityRole="button" accessibilityLabel="تعبئة بطاقة اختبار" testID="card-sandbox" onPress={() => { setNumber(formatCardNumber("4242424242424242")); setExpiry("12/30"); setCvv("123"); }} style={{ alignSelf: "flex-start", paddingVertical: 8 }}>
+            <Txt style={{ color: t.purple, fontSize: 14 }}>تعبئة بطاقة اختبار (4242…) — للوضع التجريبي فقط</Txt>
+          </Pressable> : null}
           <Pressable accessibilityRole="button" accessibilityLabel="إضافة بطاقة" testID="card-add" disabled={!cardAllowed} onPress={addCard} style={[s.addCard, !cardAllowed && { opacity: 0.45 }]}>
             <Txt weight="medium" style={{ color: t.orange, fontSize: 16 }}>{cardAdded ? "تم إضافة البطاقة — استبدال" : "إضافة بطاقة"}</Txt><Plus size={22} color={t.orange} />
           </Pressable>

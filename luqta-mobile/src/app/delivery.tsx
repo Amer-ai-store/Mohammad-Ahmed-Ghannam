@@ -3,10 +3,11 @@ import React, { useEffect, useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import * as Location from "expo-location";
-import { CircleCheck, ChevronDown, Clock, Crosshair, MapPin, Moon, Plus, Sun, Sunset } from "lucide-react-native";
+import { CircleCheck, ChevronDown, Clock, Crosshair, Leaf, MapPin, Moon, Plus, Sun, Sunset } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
-import { BrandHeader, Card, CTA, Field, FieldRow, HeaderPill, SmallButton } from "../components/design/kit";
+import { BrandHeader, Card, Checkbox, CTA, Field, FieldRow, HeaderPill, SmallButton } from "../components/design/kit";
+import { CO2_PER_TRIP_KG } from "../lib/smart";
 import { MapArt } from "../components/design/MapArt";
 import { Companion } from "../components/character/Companion";
 import { useStore } from "../lib/store";
@@ -124,6 +125,10 @@ export default function Delivery() {
             );
           })}
         </View>
+      </Card>
+      <Card style={{ marginTop: 12 }} testID="eco-delivery">
+        <View style={s.cardTitle}><Leaf size={24} color={t.green} /><Txt weight="bold" style={s.cardTitleText}>توصيل مجمّع صديق للبيئة</Txt></View>
+        <Checkbox checked={!!draft.eco} onChange={(v) => updateDraft({ eco: v })} testID="eco-check" label={<Txt style={{ color: t.ink, flex: 1, lineHeight: 22 }}>نجمع طلبك مع طلبات منطقتك خلال الفترة المختارة (≈ {CO2_PER_TRIP_KG} كغ CO₂ أقل) واحصل على 10 نقاط بعد التسليم.</Txt>} />
       </Card>
       {error ? <Txt accessibilityRole="alert" style={{ color: t.danger, marginTop: 10 }}>{error}</Txt> : null}
       <CTA title="حفظ العنوان والموعد" testID="delivery-save" busy={busy} onPress={() => void save()} style={{ marginTop: 14 }} />

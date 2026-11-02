@@ -11,6 +11,9 @@ import { BackSquare, BrandHeader, Card, Chip, CTA, QtyStepper, SmallButton } fro
 import { Companion } from "../../components/character/Companion";
 import { formatPrice, type ProductSpec } from "../../data/products";
 import { useStore } from "../../lib/store";
+import { PriceInsight } from "../../components/smart/PriceInsight";
+import { NutritionCard } from "../../components/smart/NutritionCard";
+import { FlashBadges, TogetherSection, useProductEvents } from "../../components/smart/ProductExtras";
 import { Palette, useTheme, useThemedStyles } from "../../lib/theme";
 
 const specIcons: Record<ProductSpec["icon"], typeof Box> = { headphones: Headphones, bluetooth: Bluetooth, battery: Battery, ruler: Ruler, weight: Weight, box: Box, leaf: Leaf, clock: Clock };
@@ -33,6 +36,7 @@ function ProductContent({ id }: { id: string }) {
   const [qty, setQty] = useState(1);
   const [showSpecs, setShowSpecs] = useState(false);
   useEffect(() => { if (product?.id) rememberProduct(product.id); }, [product?.id, rememberProduct]);
+  const track = useProductEvents(product?.id);
   if (!product) return (
     <Shell header={<BrandHeader left={<BackSquare />} />} title="المنتج غير متاح" subtitle={catalogStatus === "loading" ? "جارٍ تحميل الكتالوج…" : "قد يكون المنتج مؤرشفًا أو الرابط غير صحيح."}>
       <CTA title="العودة إلى المتجر" onPress={() => router.navigate("/explore")} />
@@ -55,6 +59,7 @@ function ProductContent({ id }: { id: string }) {
   };
   const share = async () => {
     const link = `luqta://product/${encodeURIComponent(product.id)}`;
+    track("share");
     try { await Share.share({ title: product.name, message: `${product.name} — ${formatPrice(selected?.price ?? product.price, settings.currency)}\n${link}`, url: link }); }
     catch (e) { notify(e instanceof Error ? e.message : "تعذّرت مشاركة المنتج"); }
   };
@@ -104,6 +109,7 @@ function ProductContent({ id }: { id: string }) {
         {product.oldPrice && product.oldPrice > product.price ? <Txt style={{ color: t.muted, textDecorationLine: "line-through" }}>{formatPrice(product.oldPrice, settings.currency)}</Txt> : null}
       </View>
       {branchName && !demo ? <Txt style={{ color: t.muted, fontSize: 12 }}>المتوفر في {branchName}: {branchStock}</Txt> : null}
+      <FlashBadges product={product} />
 
       {variants.length ? (
         <Card style={s.row}>
@@ -162,6 +168,9 @@ function ProductContent({ id }: { id: string }) {
       ) : null}
 
       <CTA title={variants.length && !selected ? "اختر الخيار" : remaining < 1 ? "غير متوفر" : "أضف إلى السلة"} icon={ShoppingCart} testID="product-add" disabled={remaining < 1 || (variants.length > 0 && !selected)} onPress={add} style={{ marginTop: 16 }} />
+      <PriceInsight product={product} />
+      <NutritionCard nutrition={product.nutrition} />
+      <TogetherSection product={product} />
       <View style={{ marginTop: 16 }}><ProductReviews productId={product.id} /></View>
     </Shell>
   );
