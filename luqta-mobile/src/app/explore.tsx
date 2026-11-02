@@ -86,11 +86,11 @@ function ExploreContent({ initialQuery, initialCategory }: { initialQuery: strin
         {query ? <Pressable accessibilityRole="button" accessibilityLabel="مسح البحث" onPress={() => setQuery("")} style={{ padding: 10 }}><X size={18} color={t.muted} /></Pressable> : null}
       </View>
       <View style={s.tools}>
-        <Pressable accessibilityRole="button" accessibilityLabel="فلترة" testID="explore-filter" accessibilityState={{ expanded: panel === "filter" }} onPress={() => setPanel(panel === "filter" ? "none" : "filter")} style={[s.tool, filtersOn && { borderColor: t.orange }]}>
-          <ChevronDown size={18} color={t.ink} /><Txt weight="medium" style={{ fontSize: 16, color: t.ink }}>فلترة</Txt><SlidersHorizontal size={24} color={t.ink} />
-        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="ترتيب" testID="explore-sort" accessibilityState={{ expanded: panel === "sort" }} onPress={() => setPanel(panel === "sort" ? "none" : "sort")} style={[s.tool, sort !== "featured" && { borderColor: t.orange }]}>
           <ChevronDown size={18} color={t.ink} /><Txt weight="medium" style={{ fontSize: 16, color: t.ink }}>ترتيب</Txt><ArrowUpDown size={24} color={t.ink} />
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="فلترة" testID="explore-filter" accessibilityState={{ expanded: panel === "filter" }} onPress={() => setPanel(panel === "filter" ? "none" : "filter")} style={[s.tool, filtersOn && { borderColor: t.orange }]}>
+          <ChevronDown size={18} color={t.ink} /><Txt weight="medium" style={{ fontSize: 16, color: t.ink }}>فلترة</Txt><SlidersHorizontal size={24} color={t.ink} />
         </Pressable>
       </View>
       {panel === "filter" ? (
@@ -162,7 +162,7 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   tool: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 52, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: t.line, backgroundColor: t.card },
   panel: { backgroundColor: t.card, borderRadius: 20, borderWidth: 1, borderColor: t.line, padding: 14, marginTop: 10, gap: 10 },
   wrap: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 },
-  tiles: { flexDirection: "row-reverse", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginTop: 16 },
+  tiles: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginTop: 16 },
   tile: { width: "31.6%", aspectRatio: 0.92, backgroundColor: t.card, borderRadius: 20, borderWidth: 1.5, borderColor: t.line, alignItems: "center", justifyContent: "center", padding: 8, gap: 4 },
   tileActive: { borderColor: t.orange, backgroundColor: t.orangeSoft },
   tileImage: { width: "92%", height: "66%" },

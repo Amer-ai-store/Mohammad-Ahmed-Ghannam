@@ -18,8 +18,8 @@
   renderer.setClearColor(0, 0); renderer.outputEncoding = T.sRGBEncoding; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   var scene = new T.Scene();
   var camera = new T.PerspectiveCamera(32, 1, 0.05, 60);
-  scene.add(new T.HemisphereLight(0xffffff, 0xd8ccf2, 0.9));
-  var k = new T.DirectionalLight(0xffffff, 0.9); k.position.set(2, 4, 3); scene.add(k);
+  scene.add(new T.HemisphereLight(0xffffff, 0xd8ccf2, 0.62));
+  var k = new T.DirectionalLight(0xffffff, 0.75); k.position.set(2, 4, 3); scene.add(k);
   var r = new T.DirectionalLight(0xd2c4ff, 0.4); r.position.set(-3, 2, -2); scene.add(r);
   function std(c, ro, me) { return new T.MeshStandardMaterial({ color: c, roughness: ro == null ? 0.7 : ro, metalness: me || 0 }); }
   function at(m, p, x, y, z) { m.position.set(x || 0, y || 0, z || 0); p.add(m); return m; }
@@ -74,7 +74,7 @@
   person.position.set(0.95, 0, -0.4); room.add(person);
   // scale model to true dimensions in room mode
   var trueScale = dims && size.y > 0 ? dims.h / size.y : 1;
-  var mode = '3d', yaw = -0.5, pitch = 0.2, dist = 2.4, auto = true, minD = 1.2, maxD = 5;
+  var mode = '3d', yaw = -0.5, pitch = 0.22, dist = 3.0, auto = true, minD = 1.2, maxD = 6;
   function frame() {
     var target = mode === 'room' ? new T.Vector3(0, 0.6, 0) : new T.Vector3(0, size.y * 0.45, 0);
     camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist);
@@ -82,7 +82,7 @@
   }
   function setMode(m) {
     mode = m === 'room' ? 'room' : '3d'; room.visible = mode === 'room'; platform.visible = mode === '3d';
-    var s = mode === 'room' ? trueScale : 1; model.scale.set(s, s, s); dist = mode === 'room' ? 3.6 : 2.4; pitch = mode === 'room' ? 0.32 : 0.2; frame();
+    var s = mode === 'room' ? trueScale : 1; model.scale.set(s, s, s); dist = mode === 'room' ? 3.8 : 3.0; pitch = mode === 'room' ? 0.32 : 0.22; frame();
     post({ type: 'mode', mode: mode, dimensions: dims });
   }
   function resize() { var w = window.innerWidth || 300, h = window.innerHeight || 300; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); frame(); }

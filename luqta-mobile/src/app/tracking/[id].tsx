@@ -79,11 +79,11 @@ export default function TrackingScreen() {
     <Shell title={demo ? "طلبك التجريبي" : "تتبع طلبك"} subtitle={cancelled ? "تم إلغاء الطلب." : "شكراً لك! تم استلام طلبك وجاري تجهيزه."} side={<Companion action="run" base={112} enterFrom="right" />}>
       {loading ? <LoadingBlock label="جارٍ تحميل حالة الطلب…" /> : error ? <ErrorBlock message={error} onRetry={() => void load()} /> : null}
       <Card style={s.infoRow} testID="order-info">
-        <View style={[s.infoCell, { borderLeftWidth: 1, borderColor: t.line }]}>
+        <View style={[s.infoCell, { borderRightWidth: 1, borderColor: t.line }]}>
           <View style={s.iconBox}><ClipboardList size={30} color={t.purple} /></View>
           <View style={{ alignItems: "flex-end", flex: 1 }}>
             <Txt style={{ color: t.muted, fontSize: 13 }}>رقم الطلب</Txt>
-            <Txt weight="bold" style={{ color: t.title, fontSize: 17 }} numberOfLines={1}>{id}</Txt>
+            <Txt weight="bold" style={{ color: t.title, fontSize: 15 }} numberOfLines={1} adjustsFontSizeToFit>{id}</Txt>
             {demo ? <Chip label="محاكاة" tone="demo" /> : null}
           </View>
         </View>
@@ -143,10 +143,10 @@ export default function TrackingScreen() {
 }
 
 const makeStyles = (t: Palette) => StyleSheet.create({
-  infoRow: { flexDirection: "row-reverse", paddingVertical: 12, paddingHorizontal: 8 },
+  infoRow: { flexDirection: "row", paddingVertical: 12, paddingHorizontal: 8 },
   infoCell: { flex: 1, flexDirection: "row-reverse", alignItems: "center", gap: 8, paddingHorizontal: 6 },
   iconBox: { width: 50, height: 50, borderRadius: 25, backgroundColor: t.purpleSoft, alignItems: "center", justifyContent: "center" },
-  stepper: { flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "center", marginTop: 12, paddingVertical: 16 },
+  stepper: { flexDirection: "row", alignItems: "flex-start", justifyContent: "center", marginTop: 12, paddingVertical: 16 },
   connector: { flex: 1, height: 3, marginTop: 25, borderRadius: 2 },
   stepDot: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
   mapLabelStore: { position: "absolute", left: 28, bottom: 58, backgroundColor: t.card, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },

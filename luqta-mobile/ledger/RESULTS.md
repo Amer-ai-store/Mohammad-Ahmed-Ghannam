@@ -1,4 +1,4 @@
-# نتائج فحص الميزات — commit 8c540e9
+# نتائج فحص الميزات — commit f1af428
 
 الإجمالي 125 ميزة في 13 مجموعة. فشل: 0. الحالات: verified-source=99، verified-auto=20، partial=1، needs-device=3، blocked-external=2.
 

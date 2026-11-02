@@ -82,11 +82,11 @@ export function MiniProductCard({ product, width }: { product: Product; width: n
 }
 
 const makeStyles = (t: Palette) => StyleSheet.create({
-  card: { backgroundColor: t.card, borderRadius: 24, borderWidth: 1, borderColor: t.line, padding: 12, shadowColor: t.shadow, shadowOpacity: 0.07, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
-  photo: { width: "100%", height: 104, marginTop: 4, marginBottom: 8 },
+  card: { backgroundColor: t.card, borderRadius: 24, borderWidth: 1, borderColor: t.line, padding: 10, shadowColor: t.shadow, shadowOpacity: 0.07, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
+  photo: { width: "100%", height: 92, marginTop: 2, marginBottom: 6 },
   name: { fontSize: 17, color: t.title, textAlign: "center" },
   sub: { fontSize: 13, color: t.mutedSoft, textAlign: "center", marginTop: 2 },
-  price: { fontSize: 18, color: t.orange, textAlign: "center", marginTop: 4, marginBottom: 10 },
+  price: { fontSize: 18, color: t.orange, textAlign: "center", marginTop: 2, marginBottom: 8 },
   heart: { position: "absolute", top: 10, left: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: t.field, alignItems: "center", justifyContent: "center" },
   add: { minHeight: 42, borderRadius: 999, backgroundColor: t.orange, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8 },
   mini: { flexDirection: "row-reverse", backgroundColor: t.card, borderRadius: 22, borderWidth: 1, borderColor: t.line, padding: 12, gap: 6, minHeight: 140 },

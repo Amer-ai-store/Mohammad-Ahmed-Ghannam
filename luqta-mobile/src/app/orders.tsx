@@ -62,9 +62,9 @@ export default function Orders() {
               <Pressable accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={`طلب رقم ${o.id}`} onPress={() => setOpen(expanded ? null : o.id)} style={s.head}>
                 <View style={s.thumbs}>{thumbs.map((p, i) => <View key={i} style={[s.thumb, { right: i * 22, zIndex: 3 - i }]}><ProductImage product={p!} /></View>)}</View>
                 <View style={{ flex: 1, alignItems: "flex-end" }}>
-                  <Txt weight="bold" style={{ fontSize: 18, color: t.title }}>طلب رقم #{toArabicDigits(o.id.replace(/^LQ-?/, ""))}</Txt>
+                  <Txt weight="bold" numberOfLines={1} style={{ fontSize: 17, color: t.title }}>طلب رقم #{toArabicDigits(o.id.replace(/^LQ-(DEMO-)?/, "").slice(-8))}</Txt>
                   <Txt style={{ color: t.muted, fontSize: 14 }}>{toArabicDigits(String(o.items.reduce((a, i) => a + i.quantity, 0)))} منتجات</Txt>
-                  <Txt weight="bold" style={{ color: t.orange, fontSize: 18 }}>{formatPrice(o.total, o.currency || settings.currency)}</Txt>
+                  <Txt weight="bold" numberOfLines={1} style={{ color: t.orange, fontSize: 17 }}>{formatPrice(o.total, o.currency || settings.currency)}</Txt>
                 </View>
                 <View style={{ alignItems: "flex-start", gap: 10 }}>
                   <Chip label={orderLabels[o.status] || o.status} tone={delivered ? "success" : o.status === "cancelled" ? "neutral" : "info"} icon={delivered ? CircleCheck : Clock} />

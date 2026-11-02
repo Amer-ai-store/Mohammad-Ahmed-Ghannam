@@ -67,12 +67,12 @@ export default function CartScreen() {
                 <View key={p.id} style={[s.row, i > 0 && { borderTopWidth: 1, borderColor: t.line }]} testID={`cart-row-${p.id}`}>
                   <Pressable accessibilityRole="button" accessibilityLabel={`تفاصيل ${p.name}`} onPress={() => router.push(`/product/${p.id}`)} style={s.image}><ProductImage product={p} /></Pressable>
                   <View style={{ flex: 1, alignItems: "flex-end", gap: 2 }}>
-                    <Txt weight="bold" style={{ fontSize: 19, color: t.title }}>{p.name}{p.variantLabel ? ` — ${p.variantLabel}` : ""}</Txt>
+                    <Txt weight="bold" numberOfLines={2} style={{ fontSize: 17, color: t.title }}>{p.name}{p.variantLabel ? ` — ${p.variantLabel}` : ""}</Txt>
                     <Txt style={{ fontSize: 15, color: t.mutedSoft }}>{p.unit || p.subtitle}</Txt>
-                    <Txt weight="bold" style={{ fontSize: 19, color: t.orange }}>{formatPrice(p.price, settings.currency)}</Txt>
+                    <Txt weight="bold" numberOfLines={1} style={{ fontSize: 17, color: t.orange }}>{formatPrice(p.price, settings.currency)}</Txt>
                     {over ? <Txt style={{ color: t.danger, fontSize: 12 }}>{p.stock === 0 ? "نفدت الكمية" : `المتاح ${p.stock} فقط`}</Txt> : null}
                   </View>
-                  <QtyStepper label={p.name} value={cart[p.id]} min={1} max={max} onChange={(v) => setQuantity(p.id, v)} />
+                  <QtyStepper size="sm" label={p.name} value={cart[p.id]} min={1} max={max} onChange={(v) => setQuantity(p.id, v)} />
                   <Pressable accessibilityRole="button" accessibilityLabel={`حذف ${p.name} من السلة`} testID={`cart-remove-${p.id}`} onPress={() => setQuantity(p.id, 0)} style={s.trash} hitSlop={8}>
                     <Trash2 size={26} color={t.orange} />
                   </Pressable>
@@ -122,9 +122,9 @@ export default function CartScreen() {
 }
 
 const makeStyles = (t: Palette) => StyleSheet.create({
-  row: { flexDirection: "row-reverse", alignItems: "center", gap: 8, padding: 14 },
-  image: { width: 82, height: 92 },
-  trash: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
+  row: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingVertical: 12, paddingHorizontal: 10 },
+  image: { width: 70, height: 84 },
+  trash: { width: 36, height: 44, alignItems: "center", justifyContent: "center" },
   couponInput: { flex: 1, minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: t.line, backgroundColor: t.card, paddingHorizontal: 14, fontFamily: "Tajawal_500Medium", fontSize: 16, color: t.ink, textAlign: "right" },
   apply: { width: "34%", minHeight: 54, borderRadius: 14, backgroundColor: t.orange, alignItems: "center", justifyContent: "center" },
   ctaRow: { flexDirection: "row-reverse", alignItems: "flex-end", gap: 2, marginTop: 12 },

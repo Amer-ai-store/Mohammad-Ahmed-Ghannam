@@ -44,7 +44,7 @@ export default function Profile() {
         <View style={s.avatar}><UserRound size={44} color={t.purple} fill={t.purple} /></View>
         <View style={{ flex: 1, alignItems: "flex-end" }}>
           <Txt weight="extra" style={{ fontSize: 26, color: t.title }}>{user ? user.name : "زائر"}</Txt>
-          <Txt style={{ color: t.muted, fontSize: 15 }}>{user ? "عضو في Amer AI Store" : "سجّل الدخول لحفظ طلباتك"}</Txt>
+          <Txt numberOfLines={2} style={{ color: t.muted, fontSize: 14 }}>{user ? "عضو في Amer AI Store" : "حساب زائر"}</Txt>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={user ? "تعديل الملف" : "تسجيل الدخول"} testID="edit-profile" onPress={() => router.push(user ? "/account-details" : "/login")} style={s.edit}>
           <Txt weight="medium" style={{ fontSize: 15, color: t.ink }}>{user ? "تعديل الملف" : "تسجيل الدخول"}</Txt>
@@ -104,7 +104,7 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   bellDot: { position: "absolute", top: 12, right: 14, width: 11, height: 11, borderRadius: 6, backgroundColor: t.orange, borderWidth: 2, borderColor: t.card },
   profile: { flexDirection: "row-reverse", alignItems: "center", gap: 14 },
   avatar: { width: 76, height: 76, borderRadius: 38, backgroundColor: t.purpleSoft, alignItems: "center", justifyContent: "center" },
-  edit: { flexDirection: "row-reverse", alignItems: "center", gap: 8, minHeight: 42, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: t.line, backgroundColor: t.card },
+  edit: { flexDirection: "row-reverse", alignItems: "center", gap: 6, minHeight: 40, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: t.line, backgroundColor: t.card },
   points: { flexDirection: "row-reverse", alignItems: "center", gap: 12, marginTop: 12, padding: 14, borderRadius: 22, backgroundColor: t.orangeSoft, borderWidth: 1, borderColor: t.chip },
   star: { width: 56, height: 56, borderRadius: 28, backgroundColor: t.chip, alignItems: "center", justifyContent: "center" },
   redeem: { minHeight: 48, paddingHorizontal: 22, borderRadius: 999, backgroundColor: t.orange, alignItems: "center", justifyContent: "center" },

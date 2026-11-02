@@ -74,7 +74,7 @@ export function PageTitle({ title, subtitle, align = "center", side }: { title: 
   const { colors: t } = useTheme();
   const centered = align === "center";
   return (
-    <View style={{ flexDirection: "row-reverse", alignItems: "center", marginTop: 14, marginBottom: 14, minHeight: side ? 96 : undefined }}>
+    <View style={{ flexDirection: "row-reverse", alignItems: "center", marginTop: 8, marginBottom: 12, minHeight: side ? 96 : undefined }}>
       {side ? <View style={{ marginLeft: 4 }}>{side}</View> : null}
       <View style={{ flex: 1, alignItems: centered ? "center" : "flex-end" }}>
         <Txt accessibilityRole="header" weight="extra" style={{ fontSize: 31, lineHeight: 44, color: t.title, textAlign: centered ? "center" : "right" }}>{title}</Txt>
@@ -152,7 +152,7 @@ export function SectionHeader({ title, action, onPress, icon: Icon }: { title: s
   const { colors: t } = useTheme();
   const s = useThemedStyles(makeStyles);
   return (
-    <View style={{ flexDirection: "row-reverse", alignItems: "center", marginTop: 18, marginBottom: 12 }}>
+    <View style={{ flexDirection: "row-reverse", alignItems: "center", marginTop: 14, marginBottom: 10 }}>
       {Icon ? <Icon size={24} color={t.orange} strokeWidth={2.2} /> : null}
       <Txt accessibilityRole="header" weight="extra" style={{ fontSize: 21, color: t.title, marginRight: Icon ? 8 : 0 }}>{title}</Txt>
       <View style={{ flex: 1 }} />
@@ -170,14 +170,15 @@ export function SectionHeader({ title, action, onPress, icon: Icon }: { title: s
 export function QtyStepper({ value, onChange, min = 1, max = 99, label, size = "md" }: { value: number; onChange: (v: number) => void; min?: number; max?: number; label: string; size?: "md" | "sm" }) {
   const { colors: t } = useTheme();
   const s = useThemedStyles(makeStyles);
-  const h = size === "sm" ? 40 : 46;
+  const h = size === "sm" ? 38 : 46;
+  const b = size === "sm" ? 30 : 38;
   return (
     <View style={[s.stepper, { height: h }]} accessibilityLabel={`${label}: ${value}`}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`زيادة كمية ${label}`} disabled={value >= max} onPress={() => onChange(Math.min(max, value + 1))} style={[s.stepBtn, value >= max && { opacity: 0.35 }]} hitSlop={6}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`زيادة كمية ${label}`} disabled={value >= max} onPress={() => onChange(Math.min(max, value + 1))} style={[s.stepBtn, { width: b, height: b }, value >= max && { opacity: 0.35 }]} hitSlop={6}>
         <Plus size={22} color={t.ink} strokeWidth={2.3} />
       </Pressable>
-      <Txt weight="bold" style={{ minWidth: 28, textAlign: "center", fontSize: 19, color: t.ink }}>{value}</Txt>
-      <Pressable accessibilityRole="button" accessibilityLabel={`تقليل كمية ${label}`} disabled={value <= min} onPress={() => onChange(Math.max(min, value - 1))} style={[s.stepBtn, value <= min && { opacity: 0.35 }]} hitSlop={6}>
+      <Txt weight="bold" style={{ minWidth: size === "sm" ? 20 : 28, textAlign: "center", fontSize: size === "sm" ? 17 : 19, color: t.ink }}>{value}</Txt>
+      <Pressable accessibilityRole="button" accessibilityLabel={`تقليل كمية ${label}`} disabled={value <= min} onPress={() => onChange(Math.max(min, value - 1))} style={[s.stepBtn, { width: b, height: b }, value <= min && { opacity: 0.35 }]} hitSlop={6}>
         <Minus size={22} color={t.ink} strokeWidth={2.3} />
       </Pressable>
     </View>
@@ -340,7 +341,7 @@ export function MenuRow({ title, subtitle, icon, onPress, testID }: { title: str
 }
 
 const makeStyles = (t: Palette) => StyleSheet.create({
-  header: { flexDirection: "row-reverse", alignItems: "center", paddingTop: 8, minHeight: 74 },
+  header: { flexDirection: "row-reverse", alignItems: "center", paddingTop: 6, minHeight: 66 },
   brand: { flexDirection: "row-reverse", alignItems: "center", gap: 6, minHeight: 48 },
   logoMark: { width: 58, height: 60 },
   logoText: { fontSize: 33, lineHeight: 40, color: t.title, textAlign: "right" },

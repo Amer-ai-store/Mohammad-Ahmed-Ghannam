@@ -65,7 +65,7 @@ export default function Payment() {
               <o.icon size={34} color={o.id === "cod" ? t.purple : t.title} />
               <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginTop: 8 }}>
                 <RadioDot selected={active} />
-                <Txt weight="bold" style={{ fontSize: 15, color: t.title, flexShrink: 1, textAlign: "center" }}>{o.label}</Txt>
+                <Txt weight="bold" style={{ fontSize: 14, color: t.title, flexShrink: 1, textAlign: "center" }}>{o.label}</Txt>
               </View>
             </Pressable>
           );

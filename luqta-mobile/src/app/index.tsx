@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { Camera, Mic } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
-import { CTA, SectionHeader, Chip } from "../components/design/kit";
+import { CTA, SectionHeader } from "../components/design/kit";
 import { ProductCard } from "../components/ProductCard";
 import { Companion } from "../components/character/Companion";
 import { designAssets } from "../lib/designAssets";
@@ -29,7 +29,7 @@ export default function Home() {
   const featured = useMemo(() => {
     const visible = products.filter((p) => p.active !== false && !p.variantOf);
     const pick = (id: string) => visible.find((p) => p.id === id);
-    const chosen = [pick("rice"), pick("headphones")].filter(Boolean) as typeof visible;
+    const chosen = [pick("headphones"), pick("rice")].filter(Boolean) as typeof visible;
     const rest = [...visible].filter((p) => !chosen.includes(p)).sort((a, b) => Number(!!b.badge) - Number(!!a.badge) || b.rating - a.rating);
     return [...chosen, ...rest].slice(0, 2);
   }, [products]);
@@ -66,7 +66,6 @@ export default function Home() {
       <View style={s.grid}>
         {featured.map((p) => <ProductCard key={p.id} product={p} width="48.3%" />)}
       </View>
-      {catalogStatus === "sample" ? <View style={{ marginTop: 8 }}><Chip label="منتجات تجريبية — اربط خادم المتجر لعرض المخزون الحقيقي" tone="demo" /></View> : null}
 
       <View style={s.companionRow}>
         <View style={s.bubble}>
@@ -81,15 +80,15 @@ export default function Home() {
 
 const makeStyles = (t: Palette) => StyleSheet.create({
   searchCard: { backgroundColor: t.card, borderRadius: 26, padding: 10, borderWidth: 1, borderColor: t.line, shadowColor: t.shadow, shadowOpacity: 0.06, shadowRadius: 12, elevation: 1 },
-  searchInner: { flexDirection: "row-reverse", alignItems: "center", backgroundColor: t.field, borderRadius: 999, minHeight: 58, paddingHorizontal: 8 },
+  searchInner: { flexDirection: "row-reverse", alignItems: "center", backgroundColor: t.field, borderRadius: 999, minHeight: 54, paddingHorizontal: 6 },
   camera: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
   divider: { width: 1.5, height: 30, backgroundColor: t.line, marginHorizontal: 6 },
   input: { flex: 1, fontFamily: "Tajawal_500Medium", fontSize: 16, color: t.ink, textAlign: "right", writingDirection: "rtl", paddingHorizontal: 8, minHeight: 48 },
   mic: { width: 50, height: 50, borderRadius: 25, backgroundColor: t.purple, alignItems: "center", justifyContent: "center" },
-  cats: { flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 14 },
-  cat: { width: "23%", aspectRatio: 0.95, backgroundColor: t.card, borderRadius: 20, borderWidth: 1, borderColor: t.line, alignItems: "center", justifyContent: "center", gap: 6, shadowColor: t.shadow, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
+  cats: { flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 12 },
+  cat: { width: "22.5%", aspectRatio: 1, backgroundColor: t.card, borderRadius: 20, borderWidth: 1, borderColor: t.line, alignItems: "center", justifyContent: "center", gap: 6, shadowColor: t.shadow, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
   catIcon: { width: "62%", height: "48%" },
   grid: { flexDirection: "row-reverse", justifyContent: "space-between", flexWrap: "wrap", rowGap: 14 },
-  companionRow: { flexDirection: "row-reverse", alignItems: "flex-end", justifyContent: "center", marginTop: 6, gap: 2 },
-  bubble: { backgroundColor: t.purpleSoft, borderRadius: 22, paddingHorizontal: 20, paddingVertical: 14, marginBottom: 46, borderWidth: 1, borderColor: t.line },
+  companionRow: { flexDirection: "row-reverse", alignItems: "flex-end", justifyContent: "center", marginTop: 2, marginBottom: -4, gap: 2 },
+  bubble: { backgroundColor: t.purpleSoft, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 12, marginBottom: 40, borderWidth: 1, borderColor: t.line },
 });

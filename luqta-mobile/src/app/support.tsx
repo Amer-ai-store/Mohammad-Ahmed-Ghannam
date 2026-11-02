@@ -89,11 +89,11 @@ export default function Support() {
           ) : <Txt style={{ color: t.muted, marginVertical: 10 }}>لا توجد محادثة مفتوحة. اكتب رسالتك وسنرد عليك.{orderRef ? ` (بخصوص الطلب ${orderRef})` : ""}</Txt>}
           {photo ? <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginTop: 8 }}><Image source={{ uri: photo.uri }} style={{ width: 44, height: 44, borderRadius: 8 }} /><Txt style={{ color: t.muted, fontSize: 12, flex: 1 }}>{photo.name}</Txt><Txt style={{ color: t.orange }} onPress={() => setPhoto(null)}>إزالة</Txt></View> : null}
           <View style={s.inputRow}>
+            <Pressable accessibilityRole="button" accessibilityLabel="إرفاق صورة" onPress={() => void attach()} style={s.attach}><ImageIcon size={24} color={t.title} /><Txt style={{ fontSize: 10, color: t.title }}>إرفاق صورة</Txt></Pressable>
+            <TextInput testID="support-input" accessibilityLabel="اكتب رسالتك" value={text} onChangeText={setText} placeholder="اكتب رسالتك هنا..." placeholderTextColor={t.muted} style={s.input} />
             <Pressable accessibilityRole="button" accessibilityLabel="إرسال" testID="support-send" disabled={busy} onPress={() => void send(text)} style={[s.send, busy && { opacity: 0.6 }]}>
               <Txt weight="bold" style={{ color: t.onAccent, fontSize: 17 }}>إرسال</Txt><SendHorizontal size={22} color={t.onAccent} style={{ transform: [{ scaleX: -1 }] }} />
             </Pressable>
-            <TextInput testID="support-input" accessibilityLabel="اكتب رسالتك" value={text} onChangeText={setText} placeholder="اكتب رسالتك هنا..." placeholderTextColor={t.muted} style={s.input} />
-            <Pressable accessibilityRole="button" accessibilityLabel="إرفاق صورة" onPress={() => void attach()} style={s.attach}><ImageIcon size={24} color={t.title} /><Txt style={{ fontSize: 10, color: t.title }}>إرفاق صورة</Txt></Pressable>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel="طلب موظف" testID="ask-agent" onPress={() => void send("أرغب بالتحدث مع موظف خدمة العملاء")} style={s.agent}>
             <Txt weight="bold" style={{ color: t.orange, fontSize: 17 }}>طلب موظف</Txt><UserRound size={22} color={t.orange} fill={t.orange} />

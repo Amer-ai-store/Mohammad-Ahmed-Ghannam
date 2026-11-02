@@ -80,11 +80,11 @@ export default function CharacterCreate() {
             </Pressable>
           </View>
           <View style={s.example}>
+            <Companion action="crossed" base={130} enterFrom="none" />
             <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
               <Chip label="مثال" tone="demo" />
               <Txt style={{ color: t.title, fontSize: 16, textAlign: "center", lineHeight: 26 }}>هكذا ستبدو{"\n"}شخصيتك الثلاثية الأبعاد</Txt>
             </View>
-            <Companion action="crossed" base={130} enterFrom="none" />
           </View>
           <View style={{ marginTop: 10, borderWidth: 1, borderColor: t.line, borderRadius: 16, paddingHorizontal: 10 }}>
             <Checkbox checked={consent} onChange={setConsent} testID="photo-consent" label="أوافق على استخدام صورتي لإنشاء شخصيتي" />
@@ -123,7 +123,7 @@ export default function CharacterCreate() {
 }
 
 const makeStyles = (t: Palette) => StyleSheet.create({
-  stepper: { flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "center", marginTop: 4 },
+  stepper: { flexDirection: "row", alignItems: "flex-start", justifyContent: "center", marginTop: 4 },
   bar: { width: 70, height: 3, borderRadius: 2, marginTop: 23, marginHorizontal: 6 },
   num: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   drop: { borderWidth: 1.5, borderStyle: "dashed", borderColor: t.mutedSoft, borderRadius: 22, padding: 16, alignItems: "center" },
