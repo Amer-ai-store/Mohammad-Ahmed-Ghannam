@@ -37,3 +37,15 @@ Archive is versioned append-only with immutable SQLite triggers. Do not assume a
 - [ ] Signed immutable/off-host audit receipts and storage encryption evidence
 - [ ] Correct historical document joins, operation classification and clock verification
 - [ ] Acceptance tests with real authenticated access; release freeze cleared
+
+## 02 Nov 2026 — additional independent execution evidence (PRIVATE CASE DATA NOT PUBLISHED)
+
+- Imported the source-verified native TrustSoft operation dictionary into a **separate immutable policy table**. Risk labels now derive from `TypeNo` rather than the earlier text-diff-only heuristic. These are triage flags, not findings of wrongdoing.
+- Independently rechecked every classification against the manifest-verified dictionary; classified event counts and original source chain reconcile with the private archive receipt.
+- Compared audit history document keys with manifest-verified `Receipt`, `InvoiceMain`, `ARPReturns` and `Journal_GL`. Exact identifiers are only candidate joins until fiscal period/branch/type validations are complete.
+- Appended separate source-hash-verified purchase-invoice **note-change** history, with before/after note fields and a new independently verified immutable hash chain. This older note source does **not** establish purchase-return modifications.
+- Scanned the general `TransactionHistory` historical CSV in a bounded-memory reader, compared candidate IDs with return masters, and checked SHA256 against export manifest. A matching transaction key does not show a return amount before/after or prove a human modification.
+- Added `AUDIT-111` as one new `IN PROGRESS` task in the isolated operational task registry; it is separate from the 97 historical AppDeploy reference tasks and remains blocked by the release/private HTTPS/E2E gate.
+- Existing `jawafa-command-bridge/server.cjs` now has a staged GET `/api/jawafa/v1/audit/111` handler using the authenticated owner scope. **Default disabled** unless the review-only instance is explicitly injected with the reader and independent release switch. The public GitHub Pages deployment still has no real private API.
+- Tests: command bridge plus private audit route 9/9 PASS using synthetic QA identities, direct read-only historical archive reader QA PASS with original SHA/chain checks, and immutable note-source verifier PASS. None constitutes public HTTPS/mobile E2E or permission to deploy under #102.
+- Source SQL stays unchanged. The Windows integrated SQL login was refused by SQL Server in an earlier read-only connection check; `sa` access was not demonstrated. No secrets, staff names, financial amounts, raw note contents or archive `.sqlite` files are committed.
