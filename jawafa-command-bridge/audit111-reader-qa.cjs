@@ -12,7 +12,10 @@ try{
  assert.equal(p.source_integrity_verified,true);
  assert.equal(p.live_sql,false);
  assert.equal(p.actor_attribution_verified,false);
- assert.equal(p.history_record_count,22169);
+ assert.equal(p.history_record_count,22776);
+ assert.equal(p.archive_total_records,44945);
+ assert.equal(p.risk_totals.P0+p.risk_totals.P1+p.risk_totals.P2,22776);
+ assert.equal(p.clock_reliability,'UNVERIFIED_FREE_RUNNING_CLOCK');
  assert.equal(p.events.length,3);
  assert(p.events.every(e=>e.evidence_level==='UNVERIFIED'&&e.actor_verified===false));
  assert(p.events.every(e=>e.sha256===p.snapshot_id &&e.event_at===null));
