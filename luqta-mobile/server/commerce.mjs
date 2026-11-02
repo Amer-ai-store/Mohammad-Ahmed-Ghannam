@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { createJawafaBridge } from './jawafaBridge.mjs';
+import { installFeatures } from './features.mjs';
 import { prepareJawafaSnapshot } from './jawafaInventory.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
@@ -133,9 +134,9 @@ export async function createCommerceServer(options = {}) {
   const transaction = (fn) => { db.exec('BEGIN IMMEDIATE'); try { const result = fn(); db.exec('COMMIT'); return result; } catch (error) { db.exec('ROLLBACK'); throw error; } };
   const setting = (key, fallback = null) => parse(get('SELECT value FROM settings WHERE key=?', key)?.value, fallback);
   const setSetting = (key, value) => run('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, json(value));
-  const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, branches: [{ id: 'hashmi', name: 'فرع الهاشمي', city: 'عمان' }], storefront: { accentColor: '#FE585C', heroTitle: 'لُقطات تستحق أن تكون لك', heroSubtitle: 'اكتشف منتجات تُشبه ذوقك', showAssistant: true }, character: { modelUrl: null }, ...options.config };
+  const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, branches: [{ id: 'hashmi', name: 'فرع الهاشمي', city: 'عمان' }], storefront: { accentColor: '#FE585C', heroTitle: 'لُقطات تستحق أن تكون لك', heroSubtitle: 'اكتشف منتجات تُشبه ذوقك', showAssistant: true }, character: { modelUrl: null }, bundles: [], ...options.config };
   for (const [key, value] of Object.entries(defaults)) if (!get('SELECT key FROM settings WHERE key=?', key)) setSetting(key, value);
-  const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays', 'storefront', 'branches', 'character'].map((key) => [key, setting(key)]));
+  const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays', 'storefront', 'branches', 'character', 'bundles'].map((key) => [key, setting(key)]));
   let encryptionKey;
   const secretPath = options.secretPath || (dbPath === ':memory:' ? null : resolve(dirname(dbPath), 'encryption.key'));
   if (secretPath) {
@@ -191,7 +192,7 @@ export async function createCommerceServer(options = {}) {
       active: !!p.active, rating: aggregate.count ? money(aggregate.rating) : 0, reviews: aggregate.count, updatedAt: p.updated_at };
   };
   const order = (o) => ({ id: o.id, userId: o.user_id, date: o.created_at, createdAt: o.created_at, updatedAt: o.updated_at, status: o.status, items: parse(o.items, []), address: parse(o.address, {}), subtotal: o.subtotal, discount: o.discount, shipping: o.shipping, total: o.total, currency: o.currency, paymentMethod: o.payment_method, paymentStatus: o.payment_status, driverId: o.driver_id, events: all('SELECT status,note,created_at AS at FROM order_events WHERE order_id=? ORDER BY created_at,id', o.id) });
-  const coupon = (c) => ({ id: c.id, code: c.code, type: c.type, value: c.value, minSubtotal: c.min_subtotal, maxUses: c.max_uses, uses: c.uses, expiresAt: c.expires_at, active: !!c.active });
+  const coupon = (c) => ({ public: !!c.public, title: c.title ?? null, id: c.id, code: c.code, type: c.type, value: c.value, minSubtotal: c.min_subtotal, maxUses: c.max_uses, uses: c.uses, expiresAt: c.expires_at, active: !!c.active });
   const returnItem = (r) => ({ hasPhoto: !!get('SELECT 1 AS x FROM return_photos WHERE return_id=?', r.id), id: r.id, orderId: r.order_id, userId: r.user_id, reason: r.reason, status: r.status, note: r.note, createdAt: r.created_at, updatedAt: r.updated_at });
   const ticketItem = (t) => ({ photos: get('SELECT COUNT(*) AS n FROM ticket_photos WHERE ticket_id=?', t.id).n, id: t.id, userId: t.user_id, subject: t.subject, message: t.message, status: t.status, createdAt: t.created_at, updatedAt: t.updated_at, replies: all('SELECT r.id,r.user_id AS userId,u.name,r.message,r.created_at AS createdAt FROM ticket_replies r JOIN users u ON u.id=r.user_id WHERE r.ticket_id=? ORDER BY r.created_at,r.id', t.id) });
   const jobItem = (j) => ({ id: j.id, title: j.title, description: j.description, type: j.type, status: j.status, result: j.result, testEvidence: j.test_evidence, createdAt: j.created_at, updatedAt: j.updated_at });
@@ -258,7 +259,7 @@ export async function createCommerceServer(options = {}) {
       if (status === 'out_for_delivery' && !(driverId || o.driver_id)) fail(409, 'عيّن سائقًا قبل خروج الطلب للتوصيل');
       run('UPDATE orders SET status=?,payment_status=?,updated_at=? WHERE id=?', status, status === 'delivered' && o.payment_method === 'cod' ? 'collected' : o.payment_status, now(), o.id);
       event(o, status); notify(o.user_id, 'تحديث حالة الطلب', `أصبحت حالة طلبك: ${status}`, o.id);
-      if (status === 'delivered') earnOrderReward(o);
+      if (status === 'delivered') { earnOrderReward(o); features.onDelivered(o); }
     }
     if (driverId !== undefined) run('UPDATE orders SET driver_id=?,updated_at=? WHERE id=?', driverId, now(), o.id);
     audit(actor, 'order.update', o.id, { status, driverId });
@@ -356,7 +357,8 @@ export async function createCommerceServer(options = {}) {
       return { productId, name: p.name, price: p.price, quantity, available, ok: available >= quantity };
     });
     const shipping = subtotal === 0 || subtotal >= setting('freeShippingThreshold') ? 0 : setting('shippingFee');
-    return { lines, subtotal, shipping, total: money(subtotal + shipping), currency: setting('currency'), issues, ok: issues.length === 0, checkedAt: now() };
+    const bundle = features.bundleFor(lines.filter((l) => l.ok)), bundleDiscount = bundle ? Math.min(subtotal, bundle.discount) : 0;
+    return { lines, subtotal, bundle, bundleDiscount, shipping, total: money(subtotal - bundleDiscount + shipping), currency: setting('currency'), issues, ok: issues.length === 0, checkedAt: now() };
   };
   const ticketPhoto = (ticketId, actorId, value) => {
     if (value == null) return;
@@ -389,6 +391,17 @@ export async function createCommerceServer(options = {}) {
       if (!p.image && p.images.length) p.image = p.images[0];
     }
     if (p.branchStock != null) p.branchStock = validBranchStock(p.branchStock);
+    // G14: nutrition facts, flash-sale end, freshness date
+    if (p.nutrition != null && p.nutrition !== '') {
+      if (typeof p.nutrition !== 'object' || Array.isArray(p.nutrition)) fail(400, 'القيم الغذائية غير صالحة');
+      const n = {}; for (const k of ['calories', 'protein', 'carbs', 'fat', 'sugar', 'fiber', 'sodium']) if (p.nutrition[k] != null && p.nutrition[k] !== '') n[k] = money(number(p.nutrition[k], `القيمة الغذائية ${k}`, 0, 100000));
+      if (p.nutrition.per != null) n.per = text(String(p.nutrition.per), 'وحدة القيم الغذائية', 1, 40);
+      if (Object.keys(n).length) p.nutrition = n; else delete p.nutrition;
+    } else delete p.nutrition;
+    for (const key of ['offerEndsAt', 'expiresAt']) {
+      if (p[key] == null || p[key] === '') { delete p[key]; continue; }
+      const t = Date.parse(p[key]); if (!Number.isFinite(t)) fail(400, key === 'offerEndsAt' ? 'تاريخ انتهاء العرض غير صالح' : 'تاريخ الصلاحية غير صالح'); p[key] = new Date(t).toISOString();
+    }
     for (const key of ['stock', 'active', 'updatedAt', 'rating', 'reviews']) delete p[key];
     if (p.image === '') { if (old.image) p.image = old.image; else delete p.image; }
     if (typeof p.image === 'string' && !/^https:\/\//.test(p.image)) fail(400, 'رابط صورة المنتج يجب أن يستخدم HTTPS');
@@ -473,6 +486,7 @@ export async function createCommerceServer(options = {}) {
     if (!body || Array.isArray(body) || typeof body !== 'object') fail(400, 'محتوى الطلب غير صالح');
     return body;
   }
+  const features = installFeatures({ db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, notify, rewardLedger, rewardBalance, product, setting, setSetting, rate, audit, validateProduct, options });
   const server = http.createServer(async (req, res) => {
     const send = (status, value) => { if (res.headersSent) return; res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(json(value)); };
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -643,7 +657,8 @@ export async function createCommerceServer(options = {}) {
             const { lines, subtotal } = quote(body.items);
             if (body.expectedSubtotal !== undefined && money(Number(body.expectedSubtotal)) !== subtotal) fail(409, 'تغيّرت الأسعار منذ مراجعة السلة؛ راجع المجموع الجديد ثم أكّد مرة أخرى', 'price_changed');
             if (branchId) for (const line of lines) { const bs = parse(get('SELECT data FROM products WHERE id=?', line.productId).data).branchStock; if (bs && (bs[branchId] ?? 0) < line.quantity) fail(409, `الكمية غير متاحة في الفرع المختار للمنتج ${line.name}`, 'out_of_stock'); }
-            const { row: couponRow, discount } = discountFor(body.couponCode, subtotal), shipping = subtotal >= setting('freeShippingThreshold') ? 0 : setting('shippingFee'), total = money(subtotal - discount + shipping);
+            const { row: couponRow, discount: couponDiscount } = discountFor(body.couponCode, subtotal), bundle = features.bundleFor(lines);
+            const discount = money(Math.min(subtotal, couponDiscount + (bundle?.discount || 0))), shipping = subtotal >= setting('freeShippingThreshold') ? 0 : setting('shippingFee'), total = money(subtotal - discount + shipping);
             if (paymentMethod === 'wallet' && balance(actor.id) < total) fail(409, 'رصيد المحفظة غير كافٍ', 'insufficient_balance');
             const orderId = id('LQ'), createdAt = now();
             run('INSERT INTO orders VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', orderId, actor.id, json(lines), json(address), subtotal, discount, shipping, total, setting('currency'), 'pending', paymentMethod, paymentMethod === 'wallet' ? 'paid' : 'pending', null, couponRow?.id || null, key, createdAt, createdAt);
@@ -652,6 +667,7 @@ export async function createCommerceServer(options = {}) {
               if (branchId) { const r = get('SELECT data FROM products WHERE id=?', line.productId), d = parse(r.data); if (d.branchStock) { d.branchStock[branchId] = Math.max(0, (d.branchStock[branchId] ?? 0) - line.quantity); run('UPDATE products SET data=? WHERE id=?', json(d), line.productId); } }
             }
             if (couponRow) run('UPDATE coupons SET uses=uses+1 WHERE id=?', couponRow.id);
+            if (bundle || body.eco === true) features.saveOrderExtras(orderId, { bundle: bundle || null, eco: body.eco === true ? 1 : 0, couponDiscount });
             if (paymentMethod === 'wallet') ledger(actor.id, -total, 'purchase', 'دفع طلب من المحفظة', orderId);
             const o = get('SELECT * FROM orders WHERE id=?', orderId); event(o, 'pending', 'تم إنشاء الطلب'); notify(actor.id, 'تم استلام طلبك', `رقم طلبك ${orderId}`, orderId); audit(actor, 'order.create', orderId, { total, paymentMethod }); return order(o);
           });
@@ -822,7 +838,7 @@ export async function createCommerceServer(options = {}) {
           if (method === 'POST' || method === 'PATCH') {
             const input = { ...(old ? coupon(old) : {}), ...body }, code = text(input.code, 'رمز الخصم', 2, 40).toUpperCase(); if (!/^[A-Z0-9_-]+$/.test(code)) fail(400, 'رمز الخصم يقبل أحرفًا إنجليزية وأرقامًا'); if (!['percent', 'fixed'].includes(input.type)) fail(400, 'نوع الخصم غير صالح'); const value = number(input.value, 'قيمة الخصم', 0.001, input.type === 'percent' ? 100 : 1e7), minimum = number(input.minSubtotal ?? 0, 'الحد الأدنى', 0, 1e7), maxUses = input.maxUses == null ? null : integer(input.maxUses, 'حد الاستخدام', 1, 1e7), expiresAt = input.expiresAt ? date(input.expiresAt, 'تاريخ الانتهاء') : null;
             const duplicate = get('SELECT id FROM coupons WHERE code=?', code); if (duplicate && duplicate.id !== old?.id) fail(409, 'رمز الخصم مستخدم'); const couponId = old?.id || id('cpn');
-            run('INSERT INTO coupons VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET code=excluded.code,type=excluded.type,value=excluded.value,min_subtotal=excluded.min_subtotal,max_uses=excluded.max_uses,expires_at=excluded.expires_at,active=excluded.active', couponId, code, input.type, value, minimum, maxUses, old?.uses || 0, expiresAt, input.active === false ? 0 : 1); audit(actor, 'coupon.save', couponId); return send(old ? 200 : 201, { coupon: coupon(get('SELECT * FROM coupons WHERE id=?', couponId)) });
+            run('INSERT INTO coupons(id,code,type,value,min_subtotal,max_uses,uses,expires_at,active) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET code=excluded.code,type=excluded.type,value=excluded.value,min_subtotal=excluded.min_subtotal,max_uses=excluded.max_uses,expires_at=excluded.expires_at,active=excluded.active', couponId, code, input.type, value, minimum, maxUses, old?.uses || 0, expiresAt, input.active === false ? 0 : 1); audit(actor, 'coupon.save', couponId); return send(old ? 200 : 201, { coupon: coupon(get('SELECT * FROM coupons WHERE id=?', couponId)) });
           }
         }
         if (method === 'POST' && section === 'wallet' && p[2] === 'adjust') {
@@ -872,6 +888,11 @@ export async function createCommerceServer(options = {}) {
                  design.accentColor = body.storefront.accentColor;
                }
                for (const key of ['heroTitle', 'heroSubtitle']) if (body.storefront[key] !== undefined) design[key] = text(body.storefront[key], key, 1, key === 'heroTitle' ? 120 : 300);
+               if (body.storefront.promoVideoUrl !== undefined) {
+                 const v = body.storefront.promoVideoUrl;
+                 if (v !== null && (typeof v !== 'string' || !/^https:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]{6,20}/.test(v))) fail(400, 'رابط فيديو العرض يجب أن يكون رابط YouTube');
+                 design.promoVideoUrl = v;
+               }
                if (body.storefront.showAssistant !== undefined) {
                  if (typeof body.storefront.showAssistant !== 'boolean') fail(400, 'حالة المساعد غير صالحة');
                  design.showAssistant = body.storefront.showAssistant;
@@ -885,6 +906,7 @@ export async function createCommerceServer(options = {}) {
                if (url !== null && (typeof url !== 'string' || url.length > 500 || !/^https:\/\/[^\s"'<>]+\.(glb|gltf)(\?[^\s"'<>]*)?$/i.test(url))) fail(400, 'رابط نموذج الشخصية يجب أن يكون https وينتهي بـ .glb أو .gltf');
                updates.character = { modelUrl: url };
              }
+             if (body.bundles !== undefined) updates.bundles = features.validateBundles(body.bundles);
              transaction(() => { for (const [key, value] of Object.entries(updates)) setSetting(key, value); audit(actor, 'settings.update', '', updates); }); return send(200, { settings: publicSettings() }); }
         }
         if (method === 'GET' && section === 'audit') return send(200, { events: all('SELECT id,actor_id AS actorId,action,entity_id AS entityId,detail,created_at AS createdAt FROM audit ORDER BY created_at DESC,id DESC LIMIT 500').map((r) => ({ ...r, detail: parse(r.detail, {}) })) });
@@ -916,6 +938,7 @@ export async function createCommerceServer(options = {}) {
         } catch (error) { if (error.status) throw error; fail(502, 'فشل الاتصال بفيسبوك أو انتهت المهلة'); } finally { clearTimeout(timer); }
       }
       if (method === 'DELETE' && path === '/api/auth/facebook' || method === 'POST' && path === '/api/auth/facebook/disconnect') { const actor = requireUser(req); run('DELETE FROM facebook_links WHERE user_id=?', actor.id); return send(200, { ok: true }); }
+      { const featureResult = await features.handle(method, path, p, body, req); if (featureResult) return send(featureResult.status, featureResult.body); }
       fail(404, 'المسار غير موجود', 'not_found');
     } catch (error) {
       if (!error.status) console.error('Commerce request failed:', error.message);
