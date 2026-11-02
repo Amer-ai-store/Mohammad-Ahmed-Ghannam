@@ -33,37 +33,52 @@ function verifySource(exportDir,snapshot){
 }
 function validateArchive(db,exportDir){
  db.exec('PRAGMA query_only=ON');
- const ok=db.prepare('PRAGMA integrity_check').all().every(x=>Object.values(x)[0]==='ok');
- if(!ok)fail('AUDIT111_SQLITE_INTEGRITY_FAILURE');
- const snapshots=db.prepare('SELECT source_sha,filename,export_directory FROM source_snapshots').all();
- if(snapshots.length!==1||snapshots[0].filename!==SOURCE_FILE ||
-     path.resolve(snapshots[0].export_directory)!==path.resolve(exportDir))
+ if(!db.prepare('PRAGMA integrity_check').all().every(x=>Object.values(x)[0]==='ok'))
+  fail('AUDIT111_SQLITE_INTEGRITY_FAILURE');
+ const snapshots=db.prepare('SELECT source_sha,filename,export_directory FROM source_snapshots ORDER BY rowid').all();
+ if(!snapshots.length||snapshots.some(x=>x.filename!==SOURCE_FILE) ||
+    path.resolve(snapshots.at(-1).export_directory)!==path.resolve(exportDir))
   fail('AUDIT111_SOURCE_MISMATCH');
- verifySource(exportDir,snapshots[0]);
- const receipt=db.prepare('SELECT source_row_count,final_chain_sha FROM import_receipts WHERE source_sha=?').get(snapshots[0].source_sha);
- if(!receipt)fail('AUDIT111_RECEIPT_MISSING');
- let chain='GENESIS',n=0;
- const events=db.prepare('SELECT event_id,source_sha,source_row,original_json,chain_sha FROM audit_events ORDER BY rowid');
- for(const e of events.iterate()){
-  if(e.source_sha!==snapshots[0].source_sha)fail('AUDIT111_UNEXPECTED_EVENT_SOURCE');
-  const original=JSON.parse(e.original_json);
-  const id=hash(e.source_sha+':'+e.source_row+':'+JSON.stringify(Object.values(original)));
-  if(id!==e.event_id)fail('AUDIT111_EVENT_ID_FAILURE');
-  chain=hash(chain+':'+e.event_id+':'+hash(e.original_json));
-  if(chain!==e.chain_sha)fail('AUDIT111_CHAIN_FAILURE');
-  n++;
+ let chain='GENESIS',archiveCount=0;
+ const events=db.prepare('SELECT event_id,source_sha,source_row,original_json,chain_sha FROM audit_events WHERE source_sha=? ORDER BY rowid');
+ const receipt=db.prepare('SELECT source_row_count,final_chain_sha FROM import_receipts WHERE source_sha=?');
+ for(const snapshot of snapshots){
+  verifySource(snapshot.export_directory,snapshot);
+  const saved=receipt.get(snapshot.source_sha);if(!saved)fail('AUDIT111_RECEIPT_MISSING');
+  let n=0;
+  for(const e of events.iterate(snapshot.source_sha)){
+   const sourceData=JSON.parse(e.original_json);
+   const actualID=hash(e.source_sha+':'+e.source_row+':'+JSON.stringify(Object.values(sourceData)));
+   if(actualID!==e.event_id)fail('AUDIT111_EVENT_ID_FAILURE');
+   chain=hash(chain+':'+e.event_id+':'+hash(e.original_json));
+   if(chain!==e.chain_sha)fail('AUDIT111_CHAIN_FAILURE');
+   n++;
+  }
+  if(n!==saved.source_row_count||chain!==saved.final_chain_sha)
+   fail('AUDIT111_RECEIPT_VALIDATION_FAILURE');
+  archiveCount+=n;
  }
- if(n!==receipt.source_row_count ||chain!==receipt.final_chain_sha)fail('AUDIT111_RECEIPT_VALIDATION_FAILURE');
- const cl=db.prepare('SELECT count(*) AS n FROM audit111_event_classifications WHERE policy=?').get(POLICY)?.n;
- if(cl!==n)fail('AUDIT111_CLASSIFICATIONS_INCOMPLETE');
- const labels=db.prepare('SELECT count(*) AS n, count(DISTINCT type_no) AS u FROM audit111_dictionary WHERE policy=?').get(POLICY);
- if(!labels?.n ||labels.n!==labels.u)fail('AUDIT111_DICTIONARY_INVALID');
- const bad=db.prepare(`SELECT count(*) n FROM audit_events a
- LEFT JOIN audit111_event_classifications c ON a.event_id=c.event_id AND c.policy=?
- LEFT JOIN audit111_dictionary d ON d.type_no=a.transaction_type AND d.source_sha=c.source_dictionary_sha AND d.policy=?
- WHERE c.event_id IS NULL OR d.type_no IS NULL OR d.label_en<>c.operation_label`).get(POLICY,POLICY).n;
- if(bad)fail('AUDIT111_NATIVE_CLASSIFICATION_MISMATCH');
- return {source_sha:snapshots[0].source_sha,record_count:n,chain_sha:chain};
+ const total=db.prepare('SELECT count(*) n FROM audit_events').get().n;
+ if(total!==archiveCount)fail('AUDIT111_UNACCOUNTED_EVENTS');
+ const latest=snapshots.at(-1),recordCount=receipt.get(latest.source_sha).source_row_count;
+ const joined=db.prepare(`SELECT count(*) n FROM audit111_event_classifications c
+  JOIN audit_events e ON e.event_id=c.event_id
+  WHERE c.policy=? AND e.source_sha=?`).get(POLICY,latest.source_sha).n;
+ if(joined!==recordCount)fail('AUDIT111_LATEST_CLASSIFICATIONS_INCOMPLETE');
+ const dictionary=db.prepare(`SELECT count(*) n FROM audit_events e
+  LEFT JOIN audit111_event_classifications c ON c.event_id=e.event_id AND c.policy=?
+  LEFT JOIN audit111_dictionary d ON d.type_no=e.transaction_type
+    AND d.source_sha=c.source_dictionary_sha AND d.policy=?
+  WHERE e.source_sha=? AND (c.event_id IS NULL OR d.type_no IS NULL OR d.label_en<>c.operation_label)`);
+ if(dictionary.get(POLICY,POLICY,latest.source_sha).n)fail('AUDIT111_NATIVE_CLASSIFICATION_MISMATCH');
+ const riskRows=db.prepare(`SELECT c.triage,count(*) n FROM audit111_event_classifications c
+  JOIN audit_events e ON e.event_id=c.event_id
+  WHERE e.source_sha=? AND c.policy=? GROUP BY c.triage`).all(latest.source_sha,POLICY);
+ const riskCounts=Object.fromEntries(['P0','P1','P2'].map(x=>[x,0]));
+ for(const r of riskRows) {if(!(r.triage in riskCounts))fail('AUDIT111_RISK_LABEL_UNKNOWN');riskCounts[r.triage]=r.n}
+ return {source_sha:latest.source_sha,record_count:recordCount,
+   total_archive_records:archiveCount,chain_sha:chain,riskCounts,
+   checked_at:new Date().toISOString()};
 }
 function createAudit111Reader({databaseFile,exportDir}={}){
  if(!databaseFile||!exportDir)fail('AUDIT111_CONFIG_REQUIRED');
@@ -77,8 +92,8 @@ function createAudit111Reader({databaseFile,exportDir}={}){
       (SELECT u.system_login FROM user_directory u WHERE u.user_id=e.user_id
          ORDER BY u.observed_at DESC LIMIT 1) system_login
     FROM audit_events e JOIN audit111_event_classifications c ON c.event_id=e.event_id
-    WHERE c.policy=? ORDER BY e.trans_date DESC,e.trans_time DESC,e.source_row DESC LIMIT ?`);
-  const rows=stmt.all(POLICY,count);
+    WHERE c.policy=? AND e.source_sha=? ORDER BY e.trans_date DESC,e.trans_time DESC,e.source_row DESC LIMIT ?`);
+  const rows=stmt.all(POLICY,verification.source_sha,count);
   const clean=v=>typeof v==='string'?v.slice(0,240):null;
   const events=rows.map(e=>({
    event_id:e.event_id,document_type:'purchase_invoice',document_id:e.document_key,
@@ -95,9 +110,12 @@ function createAudit111Reader({databaseFile,exportDir}={}){
   return {schema_version:'jawafa.audit111.v1',
     classification:'PRIVATE_FINANCIAL_AUDIT',private_access_verified:true,
     source_integrity_verified:true,snapshot_id:verification.source_sha,
-    verified_at:new Date().toISOString(),
+    verified_at:verification.checked_at,
     source_status:'EXPORT_MANIFEST_AND_INTERNAL_CHAIN_VERIFIED_NOT_LIVE_SQL',
     history_record_count:verification.record_count,
+    archive_total_records:verification.total_archive_records,
+    risk_totals:verification.riskCounts,
+    clock_reliability:'UNVERIFIED_FREE_RUNNING_CLOCK',
     archive_final_chain_sha:verification.chain_sha,
     live_sql:false,actor_attribution_verified:false,
     events};
