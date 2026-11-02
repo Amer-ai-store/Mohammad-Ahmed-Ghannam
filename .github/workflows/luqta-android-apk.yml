@@ -38,7 +38,9 @@ jobs:
         run: npm run typecheck 2>&1 | tee ../typecheck.log
       - name: Lint
         if: always()
-        run: npm run lint 2>&1 | tee ../lint.log
+        run: |
+          npm run lint 2>&1 | tee ../lint.log
+          if grep -qE 'problems? \([1-9][0-9]* errors?' ../lint.log; then echo '::error::ESLint reported errors'; exit 1; fi
       - name: Unit, integration and feature-ledger tests
         if: always()
         run: npm test 2>&1 | tee ../test.log
@@ -110,9 +112,50 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  screens:
+    name: Render screens and 3D evidence (web build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: luqta-mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: luqta-mobile/package-lock.json
+      - run: npm ci
+      - name: Export web build
+        run: npx expo export --platform web --output-dir dist
+      - name: Install Playwright Chromium (CI only, not an app dependency)
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1.56.1 >/dev/null
+          npx --prefix /tmp/pw playwright install --with-deps chromium
+          ln -sfn /tmp/pw/node_modules/playwright node_modules/playwright
+      - name: Screenshot every screen
+        run: node tools/screens.mjs dist ../evidence/screens
+      - name: 3D companion joint evidence
+        run: node tools/avatar-evidence.mjs ../evidence/avatar tools/fixtures/face-sample.png
+      - name: Walk animation video
+        run: |
+          sudo apt-get install -y ffmpeg >/dev/null 2>&1 || true
+          ffmpeg -y -framerate 24 -i ../evidence/avatar/frames/walk-%03d.png -vf "scale=440:-2" ../evidence/avatar/walk.mp4 >/dev/null 2>&1 || true
+          rm -rf ../evidence/avatar/frames
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: luqta-evidence
+          path: evidence
+          if-no-files-found: ignore
+          retention-days: 30
+
   publish:
     name: Publish APK and evidence (branch + pre-release)
-    needs: [verify, apk]
+    needs: [verify, apk, screens]
     if: always() && needs.apk.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -126,12 +169,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERIFY: ${{ needs.verify.result }}
+          SCREENS: ${{ needs.screens.result }}
         run: |
           set -e
           mkdir site && cd site
           cp ../out/luqta-2.0.0-apk/* .
           cp ../out/luqta-verification-logs/* . 2>/dev/null || true
-          printf 'commit=%s\nrun=%s\nverify=%s\nbuilt=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$VERIFY" "$(date -u +%FT%TZ)" > BUILD_INFO.txt
+          cp -r ../out/luqta-evidence evidence 2>/dev/null || true
+          printf 'commit=%s\nrun=%s\nverify=%s\nscreens=%s\nbuilt=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$VERIFY" "$SCREENS" "$(date -u +%FT%TZ)" > BUILD_INFO.txt
           git init -q -b luqta-apk-builds
           git config user.name "luqta-ci"; git config user.email "luqta-ci@users.noreply.github.com"
           git add -A && git commit -qm "Luqta APK build for $GITHUB_SHA (run $GITHUB_RUN_ID)"

@@ -18,10 +18,11 @@ export const AvatarSurface = forwardRef<SurfaceHandle, Props>(function AvatarSur
     <View style={{ flex: 1 }} pointerEvents={interactive ? "auto" : "none"} testID={testID} accessibilityLabel={accessibilityLabel}>
       <WebView
         ref={web}
-        source={{ html, baseUrl: "" }}
+        source={{ html }}
         originWhitelist={["about:blank", "about:srcdoc"]}
         onShouldStartLoadWithRequest={(req) => req.url === "about:blank" || req.url.startsWith("data:") || req.url === ""}
         javaScriptEnabled
+        mediaPlaybackRequiresUserAction={false}
         domStorageEnabled={false}
         allowFileAccess={false}
         setSupportMultipleWindows={false}

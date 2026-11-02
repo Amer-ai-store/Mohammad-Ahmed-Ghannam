@@ -52,7 +52,7 @@ export default function TrackingScreen() {
     } catch (e) { setError(e instanceof Error ? e.message : "تعذّر تحميل حالة الطلب"); }
     finally { setLoading(false); }
   }, [demo, id, user]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const timer = setTimeout(() => { void load(); }, 0); return () => clearTimeout(timer); }, [load]);
   useEffect(() => { if (demo) return; const timer = setInterval(() => void load(), 30000); return () => clearInterval(timer); }, [demo, load]);
 
   const current = demo ? demoOrder : order;

@@ -1,5 +1,5 @@
 // "جرّب قبل ما تختار" — interactive 3D product viewer with a true-scale room mode.
-import React, { useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Box, Info, RotateCcw, Rotate3d, ZoomIn, ZoomOut } from "lucide-react-native";
@@ -23,15 +23,15 @@ export default function View3D() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const model: ViewerModel = product?.model3d || "box";
   const html = useMemo(() => viewerHtml({ model, color: product?.swatches?.[0]?.hex, dimensions: product?.dimensions }), [model, product?.swatches, product?.dimensions]);
-  const send = (m: object) => surface.current?.send(m);
+  const send = useCallback((m: object) => surface.current?.send(m), []);
   const onMessage = (data: string) => {
     try { const m = JSON.parse(data); if (m.type === "ready") setState("ready"); if (m.type === "error") setState("error"); } catch { /* ignore */ }
   };
   const tools = [
-    { label: "تدوير", icon: Rotate3d, action: () => send({ type: "rotate" }) },
-    { label: "تقريب", icon: ZoomIn, action: () => send({ type: "zoomIn" }) },
-    { label: "تبعيد", icon: ZoomOut, action: () => send({ type: "zoomOut" }) },
-    { label: "إعادة", icon: RotateCcw, action: () => send({ type: "reset" }) },
+    { label: "تدوير", icon: Rotate3d, cmd: "rotate" },
+    { label: "تقريب", icon: ZoomIn, cmd: "zoomIn" },
+    { label: "تبعيد", icon: ZoomOut, cmd: "zoomOut" },
+    { label: "إعادة", icon: RotateCcw, cmd: "reset" },
   ];
   const dims = product?.dimensions;
   return (
@@ -45,7 +45,7 @@ export default function View3D() {
       </View>
       <Card style={s.tools}>
         {tools.map((tool) => (
-          <Pressable key={tool.label} accessibilityRole="button" accessibilityLabel={tool.label} onPress={tool.action} style={s.tool} disabled={state !== "ready"}>
+          <Pressable key={tool.label} accessibilityRole="button" accessibilityLabel={tool.label} onPress={() => send({ type: tool.cmd })} style={s.tool} disabled={state !== "ready"}>
             <View style={s.toolCircle}><tool.icon size={30} color={t.title} /></View>
             <Txt style={{ color: t.muted, fontSize: 15 }}>{tool.label}</Txt>
           </Pressable>

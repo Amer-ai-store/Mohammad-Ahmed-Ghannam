@@ -1,6 +1,5 @@
 // Bitmaps cut from the Amer AI Store | لُقطة reference designs (tools/extract_assets.py)
 // plus the original bundled product photos. Keys are stable ids used by screens & data.
-/* eslint-disable @typescript-eslint/no-require-imports */
 export const designAssets = {
   logoMark: require("../../assets/design/logo-mark.png"),
   catFood: require("../../assets/design/cat-food.png"),

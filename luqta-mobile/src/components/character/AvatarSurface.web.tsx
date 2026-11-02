@@ -8,7 +8,7 @@ type Props = { html: string; onMessage: (data: string) => void; interactive?: bo
 export const AvatarSurface = forwardRef<SurfaceHandle, Props>(function AvatarSurface({ html, onMessage, interactive = false, testID, accessibilityLabel }, ref) {
   const frame = useRef<HTMLIFrameElement | null>(null);
   const handler = useRef(onMessage);
-  handler.current = onMessage;
+  useEffect(() => { handler.current = onMessage; }, [onMessage]);
   useImperativeHandle(ref, () => ({ send: (message: object) => frame.current?.contentWindow?.postMessage(JSON.stringify(message), "*") }), []);
   useEffect(() => {
     const listener = (e: MessageEvent) => { if (e.source === frame.current?.contentWindow && typeof e.data === "string") handler.current(e.data); };

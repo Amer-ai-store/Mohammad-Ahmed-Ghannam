@@ -7,7 +7,7 @@ export function CaptureButton({ label, color, onPhoto, onError }: { label: strin
   const frame = useRef<HTMLIFrameElement | null>(null);
   const html = useMemo(() => captureHtml(label, color), [label, color]);
   const cb = useRef({ onPhoto, onError });
-  cb.current = { onPhoto, onError };
+  useEffect(() => { cb.current = { onPhoto, onError }; }, [onPhoto, onError]);
   useEffect(() => {
     const l = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow || typeof e.data !== "string") return;

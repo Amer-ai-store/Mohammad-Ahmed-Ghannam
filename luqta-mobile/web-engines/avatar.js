@@ -253,6 +253,18 @@
   function clamp01(x) { return Math.max(0, Math.min(1, x)); }
   function ease(x) { x = clamp01(x); return x * x * (3 - 2 * x); }
   var reduceMotion = false;
+  var soundOn = true, audio = null;
+  function chirp(kind) {
+    if (!soundOn) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      var o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime;
+      var f = { jump: [520, 880], thumbs: [660, 990], wave: [600, 750], come: [500, 700], wake: [400, 800] }[kind] || [600, 700];
+      o.type = 'sine'; o.frequency.setValueAtTime(f[0], t0); o.frequency.exponentialRampToValueAtTime(f[1], t0 + 0.12);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.08, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.2);
+      o.connect(g); g.connect(audio.destination); o.start(t0); o.stop(t0 + 0.22);
+    } catch (e) { /* audio not available */ }
+  }
   var amp = function () { return reduceMotion ? 0.45 : 1; };
 
   var ACTIONS = {
@@ -365,6 +377,7 @@
     pillow.visible = a === 'sleep';
     zzz.forEach(function (z) { z.visible = a === 'sleep'; });
     if (typeof frameCamera === 'function') frameCamera();
+    if (a === 'jump' || a === 'thumbs' || a === 'wave' || a === 'come' || a === 'wake') chirp(a);
     post({ type: 'actionChanged', action: a });
   }
   function apply(pose, k) {
@@ -480,6 +493,7 @@
       case 'profile': applyProfile(msg.profile); break;
       case 'facing': state.targetYaw = Number(msg.yaw) || 0; break;
       case 'reduceMotion': reduceMotion = !!msg.value; break;
+      case 'sound': soundOn = !!msg.value; break;
       case 'pause': state.paused = !!msg.value; break;
       case 'probe': probe(msg.id); break;
       case 'processFace': processFace(String(msg.dataUrl || ''), msg.id); break;
@@ -492,6 +506,7 @@
   var initial = window.__LUQTA_INIT__ || {};
   if (initial.profile) applyProfile(initial.profile);
   if (initial.reduceMotion) reduceMotion = true;
+  if (initial.sound === false) soundOn = false;
   setAction(initial.action || 'idle');
   post({ type: 'ready', webgl: true, bones: skeleton.bones.length, actions: Object.keys(ACTIONS) });
 })();

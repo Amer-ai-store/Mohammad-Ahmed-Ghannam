@@ -26,7 +26,7 @@ function page(body: string, init: unknown, engine: string) {
 <body>${body}<script>window.__LUQTA_INIT__=${safeJson(init)};</script><script>${THREE_JS}</script><script>${engine}</script></body></html>`;
 }
 
-export function avatarHtml(init: { action?: AvatarAction; profile?: AvatarProfile; reduceMotion?: boolean } = {}) {
+export function avatarHtml(init: { action?: AvatarAction; profile?: AvatarProfile; reduceMotion?: boolean; sound?: boolean } = {}) {
   return page('<canvas id="stage" aria-hidden="true"></canvas>', init, AVATAR_JS);
 }
 

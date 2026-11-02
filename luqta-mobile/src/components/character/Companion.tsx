@@ -45,7 +45,7 @@ export const Companion = forwardRef<CompanionHandle, Props>(function Companion({
   const initialAction = enterFrom !== "none" && !reduce ? (action === "cart" ? "cart" : "walk") : action;
   // HTML is built once per mount; later changes are sent as messages (no reload).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const html = useMemo(() => avatarHtml({ action: initialAction, profile: toAvatarProfile(profile), reduceMotion: reduce }), [focused]);
+  const html = useMemo(() => avatarHtml({ action: initialAction, profile: toAvatarProfile(profile), reduceMotion: reduce, sound: profile.sound }), [focused]);
 
   const readyRef = useRef(false);
   const queue = useRef<object[]>([]);
@@ -53,6 +53,7 @@ export const Companion = forwardRef<CompanionHandle, Props>(function Companion({
   useEffect(() => { readyRef.current = ready; if (ready && queue.current.length) { const q = queue.current; queue.current = []; q.forEach((m) => surface.current?.send(m)); } }, [ready]);
   useEffect(() => { if (ready) send({ type: "profile", profile: toAvatarProfile(profile) }); }, [ready, profile]);
   useEffect(() => { if (ready) send({ type: "reduceMotion", value: reduce }); }, [ready, reduce]);
+  useEffect(() => { if (ready) send({ type: "sound", value: profile.sound }); }, [ready, profile.sound]);
   useEffect(() => {
     if (!ready) return;
     if (enterFrom === "none" || reduce) { send({ type: "action", action }); return; }

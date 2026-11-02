@@ -1,0 +1,45 @@
+// F-G08-07 return photo, F-G09-03 support photo + agent request, F-G10-06 deletion removes photos.
+import { strict as assert } from 'node:assert';
+import { test } from 'node:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
+import { createCommerceServer } from './commerce.mjs';
+
+const password = 'photos-test-password-123';
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+test('return and support photos are validated, stored and removed with the account', async (t) => {
+  const directory = await mkdtemp(resolve(tmpdir(), 'luqta-photos-'));
+  const app = await createCommerceServer({ dbPath: resolve(directory, 'store.sqlite'), bootstrapAdmin: { name: 'مدير', email: 'admin@example.test', password } });
+  await new Promise((done) => app.server.listen(0, '127.0.0.1', done));
+  t.after(async () => { await app.close(); await rm(directory, { recursive: true, force: true }); });
+  const base = `http://127.0.0.1:${app.server.address().port}/api`;
+  const request = async (method, path, body, token) => { const r = await fetch(base + path, { method, headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); return { status: r.status, body: await r.json() }; };
+  const admin = (await request('POST', '/auth/login', { email: 'admin@example.test', password })).body;
+  const customer = (await request('POST', '/auth/register', { name: 'عميل', email: 'c@example.test', password })).body;
+  const driver = (await request('POST', '/auth/register', { name: 'سائق', email: 'd@example.test', password })).body;
+  assert.equal((await request('PATCH', `/admin/users/${driver.user.id}`, { role: 'driver' }, admin.token)).status, 200);
+  const product = (await request('GET', '/products')).body.products.find((p) => !p.hasVariants && p.stock > 0);
+  const address = { name: 'محمد', phone: '0790000000', city: 'عمان', street: 'شارع الأمير راشد بن الحسن 12' };
+  const order = (await request('POST', '/orders', { items: [{ productId: product.id, quantity: 1 }], address, idempotencyKey: 'photo-order-1' }, customer.token)).body.order;
+  for (const status of ['confirmed', 'preparing']) assert.equal((await request('PATCH', `/admin/orders/${order.id}`, { status }, admin.token)).status, 200);
+  assert.equal((await request('PATCH', `/admin/orders/${order.id}`, { status: 'out_for_delivery', driverId: driver.user.id }, admin.token)).status, 200);
+  assert.equal((await request('PATCH', `/admin/orders/${order.id}`, { status: 'delivered' }, admin.token)).status, 200);
+  assert.equal((await request('POST', `/orders/${order.id}/returns`, { reason: 'منتج تالف أو غير صالح: منتج × 1', photo: 'data:text/html;base64,PHNjcmlwdD4=' }, customer.token)).body.code, 'invalid_photo');
+  const ret = await request('POST', `/orders/${order.id}/returns`, { reason: 'منتج تالف أو غير صالح: منتج × 1', photo: PNG }, customer.token);
+  assert.equal(ret.status, 201, JSON.stringify(ret.body));
+  assert.equal(ret.body.returnRequest.hasPhoto, true);
+  const ticket = await request('POST', '/tickets', { subject: `الطلب رقم ${order.id}`, message: 'ما هي حالة التوصيل؟', photo: PNG }, customer.token);
+  assert.equal(ticket.status, 201, JSON.stringify(ticket.body));
+  assert.equal(ticket.body.ticket.photos, 1);
+  const agent = await request('POST', `/tickets/${ticket.body.ticket.id}/replies`, { message: 'أرغب بالتحدث مع موظف خدمة العملاء' }, customer.token);
+  assert.equal(agent.status, 201);
+  assert.equal(agent.body.ticket.replies.length, 1);
+  assert.equal(app.db.prepare('SELECT COUNT(*) AS n FROM return_photos').get().n, 1);
+  const processed = await request('PATCH', `/admin/returns/${ret.body.returnRequest.id}`, { status: 'rejected', note: 'اختبار' }, admin.token);
+  assert.equal(processed.status, 200, JSON.stringify(processed.body));
+  const del = await request('DELETE', '/auth/me', { password, confirm: 'حذف حسابي' }, customer.token);
+  assert.equal(del.status, 200, JSON.stringify(del.body));
+  assert.equal(app.db.prepare('SELECT COUNT(*) AS n FROM ticket_photos').get().n, 0, 'support photos deleted with the account');
+  assert.equal(app.db.prepare('SELECT COUNT(*) AS n FROM return_photos').get().n, 0, 'return photos deleted with the account');
+});

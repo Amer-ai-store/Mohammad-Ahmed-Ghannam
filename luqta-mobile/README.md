@@ -1,3 +1,15 @@
+# لُقطة 2.0 — Amer AI Store
+
+النسخة 2.0 تعيد بناء كل الواجهات على تصاميم Amer AI Store (بنفسجي/مرجاني)، وتضيف شخصية ثلاثية الأبعاد بهيكل مفاصل حقيقي تُنشأ من صورة المستخدم، ومزامنة لوحة القيادة (المنتجات والصور والأسعار والكميات والفروع) مع منع التكرار والتحقق من السعر والمخزون قبل التأكيد.
+
+- السجل التراكمي: [ledger/LEDGER.md](ledger/LEDGER.md) — الميزات الـ125: [ledger/features.json](ledger/features.json) — نتائج الفحص: [ledger/RESULTS.md](ledger/RESULTS.md)
+- الاستعادة والعوائق: [ledger/ROLLBACK_AND_BLOCKERS.md](ledger/ROLLBACK_AND_BLOCKERS.md) — خطة الجهاز: [ledger/DEVICE_TEST_PLAN.md](ledger/DEVICE_TEST_PLAN.md)
+- بناء APK: `.github/workflows/luqta-android-apk.yml` ينشر الملف في فرع `luqta-apk-builds` وإصدار `luqta-2.0.0-preview`.
+- محرك الشخصية: `web-engines/avatar.js` (three.js r149 مضمّن) — بعد تعديله شغّل `node tools/build-web-engines.mjs`.
+- أدلة الحركة: `node tools/avatar-evidence.mjs <out> [face.png]`، لقطات الشاشات: `node tools/screens.mjs dist <out>`.
+
+---
+
 # لُقطة — متجر عربي للهاتف
 
 تطبيق React Native/Expo SDK 57 لـAndroid وiOS، وخادم متجر Node 24 + SQLite، ولوحة إدارة وسائق داخل التطبيق. العربية والاتجاه RTL والدينار الأردني JOD هي الإعدادات الافتراضية. النسخة 1.2.0 **تجريبية**: عند عدم إعداد الخادم تُعرض منتجات نموذجية للاستعراض، ولا يُنشأ طلب وهمي.

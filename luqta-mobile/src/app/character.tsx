@@ -46,15 +46,6 @@ export default function CharacterScreen() {
   const tabs: { k: Tab; l: string; icon: typeof Shirt }[] = [
     { k: "motion", l: "حركة", icon: PersonStanding }, { k: "clothes", l: "ملابس", icon: Shirt }, { k: "look", l: "مظهر", icon: Smile }, { k: "sound", l: "صوت", icon: Volume2 },
   ];
-  const Swatches = ({ values, value, onPick, label }: { values: readonly string[]; value: string; onPick: (v: string) => void; label: string }) => (
-    <View style={{ flexDirection: "row", gap: 14 }}>
-      {values.map((c) => (
-        <Pressable key={c} accessibilityRole="radio" accessibilityLabel={`${label} ${c}`} accessibilityState={{ checked: c.toLowerCase() === value.toLowerCase() }} onPress={() => onPick(c)} style={[s.ring, c.toLowerCase() === value.toLowerCase() && { borderColor: t.orange }]}>
-          <View style={[s.dot, { backgroundColor: c }]} />
-        </Pressable>
-      ))}
-    </View>
-  );
   return (
     <Shell header={<BrandHeader left={<CharacterPill />} />} title="تخصيص شخصيتي" subtitle="صمّم مظهرك وتحكّم في حركاتك وصوتك">
       <View style={s.stage}>
@@ -137,6 +128,20 @@ export default function CharacterScreen() {
         <CTA title="حفظ الشخصية" testID="character-save" busy={busy} onPress={() => void persist()} style={{ marginTop: 18 }} />
       </Card>
     </Shell>
+  );
+}
+
+function Swatches({ values, value, onPick, label }: { values: readonly string[]; value: string; onPick: (v: string) => void; label: string }) {
+  const { colors: t } = useTheme();
+  const s = useThemedStyles(makeStyles);
+  return (
+    <View style={{ flexDirection: "row", gap: 14 }}>
+      {values.map((c) => (
+        <Pressable key={c} accessibilityRole="radio" accessibilityLabel={`${label} ${c}`} accessibilityState={{ checked: c.toLowerCase() === value.toLowerCase() }} onPress={() => onPick(c)} style={[s.ring, c.toLowerCase() === value.toLowerCase() && { borderColor: t.orange }]}>
+          <View style={[s.dot, { backgroundColor: c }]} />
+        </Pressable>
+      ))}
+    </View>
   );
 }
 

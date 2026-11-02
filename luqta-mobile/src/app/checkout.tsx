@@ -49,7 +49,7 @@ export default function Checkout() {
   const [terms, setTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const idempotency = useRef(`app-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const idempotency = useRef("");
   const items = products.filter((p) => cart[p.id]);
   const signature = cartSignatureOf(cart);
   const coupon = draft.coupon && draft.coupon.cartSignature === signature ? draft.coupon : undefined;
@@ -59,7 +59,7 @@ export default function Checkout() {
     finally { setChecking(false); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, branchId, catalogStatus]);
-  useEffect(() => { void runCheck(); }, [runCheck]);
+  useEffect(() => { const timer = setTimeout(() => { void runCheck(); }, 0); return () => clearTimeout(timer); }, [runCheck]);
   useEffect(() => { idempotency.current = `app-${Date.now()}-${Math.random().toString(36).slice(2)}`; }, [signature, draft.address, draft.payment]);
 
   const base = check ? check.subtotal : store.subtotal;
@@ -73,6 +73,7 @@ export default function Checkout() {
   async function confirm() {
     setError("");
     if (!gate.ok || !draft.address) { setError(gate.reason || "أكمل البيانات"); return; }
+    if (!idempotency.current) idempotency.current = `app-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     if (demo) {
       const order = createDemoOrder({ address: draft.address, payment: draft.payment, slot: draft.slot, discount: totals.discount });
       router.replace(`/tracking/${order.id}`);

@@ -83,7 +83,7 @@ function ProductContent({ id }: { id: string }) {
           </View>
           <View style={s.mainImage}><ProductImage product={product} image={gallery[imageIndex] || product.image} /></View>
           <View style={s.galleryBottom}>
-            <View style={{ position: "absolute", left: -10, bottom: -6 }}><Companion action="thumbs" base={120} enterFrom="none" /></View>
+            <View style={{ position: "absolute", right: -8, bottom: 40 }} pointerEvents="none"><Companion action="thumbs" base={120} enterFrom="none" /></View>
             <View style={{ flex: 1 }} />
             {product.model3d ? (
               <Pressable accessibilityRole="button" accessibilityLabel="عرض ثلاثي الأبعاد" testID="open-3d" onPress={() => router.push(`/view3d/${product.id}`)} style={s.pill3d}>
