@@ -1,413 +1,179 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from "react-native";
-import { ArrowUp, RotateCcw, Sparkles } from "lucide-react-native";
-import { useLocalSearchParams } from "expo-router";
+// "تسوق بالمحادثة" — chat shopping with basket suggestions (reference design).
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Image, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
+import { Calculator, Camera, Mic, Plus, SendHorizontal, ShoppingCart, UserRound, Volume2, VolumeX } from "lucide-react-native";
 import { Shell } from "../components/Shell";
-import { ProductGrid } from "../components/ProductGrid";
 import { Txt } from "../components/ui";
+import { Card, Chip, CTA } from "../components/design/kit";
+import { ProductImage } from "../components/ProductCard";
+import { Companion } from "../components/character/Companion";
+import { formatPrice } from "../data/products";
+import { designAssets } from "../lib/designAssets";
 import { useStore } from "../lib/store";
+import { useCharacter } from "../lib/character";
 import { recommendProducts } from "../lib/recommendations";
 import { askAssistant, checkAssistant } from "../lib/assistant";
+import { buildBasket, parseBasketRequest, type BasketLine } from "../lib/basket";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 
-type Message = {
-  role: "user" | "assistant";
-  content: string;
-  productIds?: string[];
-};
-const welcome: Message = {
-  role: "assistant",
-  content:
-    "أهلًا! أخبرني ما الذي تبحث عنه وكم ميزانيتك. هدية، شيء لمنزلك، أو إضافة لمكتبك؟ لنجد لُقطتك المناسبة.",
-};
+type Message = { role: "user" | "assistant"; content: string; lines?: BasketLine[] };
+
 export default function Assistant() {
-  const { q } = useLocalSearchParams<{ q?: string }>();
-  return <AssistantContent key={q || "new"} initialPrompt={q || ""} />;
+  const { q, mode } = useLocalSearchParams<{ q?: string; mode?: string }>();
+  return <AssistantContent key={`${q || ""}:${mode || ""}`} initialPrompt={q || ""} photoMode={mode === "photo"} />;
 }
-function AssistantContent({ initialPrompt }: { initialPrompt: string }) {
+
+function AssistantContent({ initialPrompt, photoMode }: { initialPrompt: string; photoMode: boolean }) {
   const { colors: t } = useTheme();
   const s = useThemedStyles(makeStyles);
-  const { products, settings } = useStore();
-  const prompts = [
-    `هدية بميزانية 250 ${settings.currency}`,
-    "سماعات بميزانية 400",
-    "إضافات لمكتبي تحت 300",
-    "العناية بالبشرة",
-  ];
-  const [messages, setMessages] = useState<Message[]>([welcome]);
-  const [input, setInput] = useState(initialPrompt);
-  const [ready, setReady] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const { products, settings, cart, setQuantity, notify, catalogStatus } = useStore();
+  const { profile, update } = useCharacter();
+  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", content: "أهلًا! أخبرني بما تحتاجه أو بميزانيتك، مثل: «جهّز لي سلة بـ 20 دينار»، وسأقترح عليك من منتجات المتجر." }]);
+  const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const { width } = useWindowDimensions();
+  const [serverAssistant, setServerAssistant] = useState(false);
+  const [hint, setHint] = useState("");
   const inputRef = useRef<TextInput>(null);
-  useEffect(() => {
-    let active = true;
-    checkAssistant().then((value) => {
-      if (active) {
-        setReady(value);
-        setChecking(false);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-  const recheck = async () => {
-    setChecking(true);
-    const available = await checkAssistant();
-    setReady(available);
-    setConnected(false);
-    setChecking(false);
-  };
-  const send = async (text: string) => {
+  const sentInitial = useRef(false);
+  useEffect(() => { let a = true; checkAssistant().then((v) => { if (a) setServerAssistant(v); }); return () => { a = false; }; }, []);
+  const available = useMemo(() => products.filter((p) => !p.variantOf && (p.stock === undefined || p.stock > 0)), [products]);
+
+  async function send(text: string) {
     const message = text.trim();
-    if (!message || busy || checking) return;
-    setInput("");
-    setError("");
+    if (!message || busy) return;
+    setInput(""); setHint("");
+    setMessages((m) => [...m, { role: "user", content: message }]);
     setBusy(true);
-    const history = messages.map(({ role, content }) => ({ role, content }));
-    setMessages((old) => [...old, { role: "user", content: message }]);
     try {
-      const result = ready
-        ? await askAssistant(message, history)
-        : recommendProducts(message, products.filter((p) => !p.variantOf && (p.stock === undefined || p.stock > 0)), settings.currency);
-      if (ready) setConnected(true);
-      setMessages((old) => [
-        ...old,
-        {
-          role: "assistant",
-          content: result.message,
-          productIds: result.productIds
-            .filter((id: string) => products.some((p) => p.id === id && !p.variantOf))
-            .slice(0, 3),
-        },
-      ]);
+      const basket = parseBasketRequest(message);
+      if (basket) {
+        const r = buildBasket(basket.budget, available);
+        setMessages((m) => [...m, { role: "assistant", content: r.message, lines: r.lines }]);
+      } else {
+        const r = serverAssistant ? await askAssistant(message, messages.map(({ role, content }) => ({ role, content }))) : recommendProducts(message, available, settings.currency);
+        const lines = r.productIds.filter((id: string) => available.some((p) => p.id === id)).slice(0, 4).map((id: string) => ({ productId: id, quantity: 1, price: available.find((p) => p.id === id)!.price }));
+        setMessages((m) => [...m, { role: "assistant", content: r.message, lines }]);
+      }
     } catch (e) {
-      setConnected(false);
-      setMessages((old) => old.slice(0, -1));
-      setError(
-        e instanceof Error ? e.message : "تعذّر الاتصال بالمساعد. حاول مجددًا.",
-      );
-      setInput(message);
-    } finally {
-      setBusy(false);
-    }
-  };
+      setMessages((m) => [...m, { role: "assistant", content: e instanceof Error ? e.message : "تعذّر الرد الآن، حاول مجددًا." }]);
+    } finally { setBusy(false); }
+  }
+  useEffect(() => {
+    if (sentInitial.current) return; sentInitial.current = true;
+    if (initialPrompt) void send(initialPrompt);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  async function pickPhoto() {
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false });
+      if (picked.canceled || !picked.assets?.[0]) return;
+      setMessages((m) => [...m, { role: "user", content: `📷 صورة منتج: ${picked.assets[0].name}` }, {
+        role: "assistant",
+        content: "استلمت الصورة على جهازك. التعرف على المنتج من الصورة يحتاج تفعيل خدمة الرؤية على خادم المتجر، وهي غير مفعّلة في هذه النسخة؛ اكتب اسم المنتج أو وصفه وسأجده لك.",
+      }]);
+      inputRef.current?.focus();
+    } catch { notify("تعذّر فتح الصور"); }
+  }
+  useEffect(() => { if (photoMode) void pickPhoto(); /* open picker on arrival from the camera button */ // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photoMode]);
+
+  const lastLines = [...messages].reverse().find((m) => m.lines?.length)?.lines || [];
+  const estimate = lastLines.reduce((a, l) => a + l.price * l.quantity, 0);
+  const addLine = (l: BasketLine) => { setQuantity(l.productId, (cart[l.productId] || 0) + l.quantity); notify("أُضيف إلى السلة — لن يُطلب شيء قبل تأكيدك"); };
+  const reviewAll = () => { lastLines.forEach((l) => setQuantity(l.productId, Math.max(cart[l.productId] || 0, l.quantity))); router.push("/cart"); };
+
+  const footer = (
+    <View style={s.inputBar}>
+      <Pressable accessibilityRole="button" accessibilityLabel="تحدث" onPress={() => { setHint("استخدم ميكروفون لوحة المفاتيح للإملاء الصوتي ثم اضغط إرسال."); inputRef.current?.focus(); }} style={s.micBtn}><Mic size={26} color={t.onAccent} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="أرسل صورة منتج" onPress={() => void pickPhoto()} style={s.cameraBtn}><Camera size={26} color={t.ink} /></Pressable>
+      <TextInput ref={inputRef} testID="chat-input" accessibilityLabel="اكتب أو احكي" value={input} onChangeText={setInput} onSubmitEditing={() => void send(input)} returnKeyType="send" placeholder="اكتب أو احكي..." placeholderTextColor={t.muted} style={s.input} />
+      <Pressable accessibilityRole="button" accessibilityLabel="إرسال" testID="chat-send" disabled={busy || !input.trim()} onPress={() => void send(input)} style={[s.send, (!input.trim() || busy) && { opacity: 0.55 }]}>
+        <SendHorizontal size={26} color={t.onAccent} style={{ transform: [{ scaleX: -1 }] }} />
+      </Pressable>
+    </View>
+  );
   return (
-    <Shell
-      title="اختيارك أسهل، مع مساعدك"
-      subtitle="من أول فكرة إلى اللُقطة المناسبة. أخبرنا عمّا تحتاجه."
-    >
-      <View style={s.statusRow}>
-        <View style={s.status}>
-          <View
-            style={[s.dot, { backgroundColor: ready ? t.green : t.orange }]}
-          />
-          <Txt
-            weight="bold"
-            style={{ color: ready ? t.green : t.muted, fontSize: 11 }}
-          >
-            {checking
-              ? "التحقق من الاتصال..."
-              : connected
-                ? "مساعد OpenAI متصل"
-                : ready
-                  ? "مساعد OpenAI مُعدّ"
-                  : "توصيات محلية"}
-          </Txt>
-        </View>
-        <View style={{ flexDirection: "row-reverse", gap: 15 }}>
-          <Pressable
-            disabled={busy || checking}
-            accessibilityRole="button"
-            onPress={recheck}
-            style={{ minHeight: 44, justifyContent: "center" }}
-          >
-            <Txt style={{ color: t.orange, fontSize: 11 }}>إعادة التحقق</Txt>
-          </Pressable>
-          <Pressable
-            disabled={busy}
-            accessibilityRole="button"
-            accessibilityLabel="بدء محادثة جديدة"
-            onPress={() => {
-              setMessages([welcome]);
-              setError("");
-            }}
-            style={s.reset}
-          >
-            <RotateCcw size={14} color={t.muted} />
-            <Txt style={{ color: t.muted, fontSize: 12 }}>محادثة جديدة</Txt>
-          </Pressable>
-        </View>
-      </View>
-      {!checking && !ready ? (
-        <View style={s.notice}>
-          <Txt style={{ color: t.muted, fontSize: 12, lineHeight: 23 }}>
-            الاتصال بالذكاء الاصطناعي غير مفعّل حاليًا. يمكنك تجربة اقتراحات
-            مبنية على الكلمات والميزانية من منتجات المتجر.
-          </Txt>
-        </View>
-      ) : null}
-      <View style={s.chat}>
-        <View style={s.chatHead}>
-          <View style={s.assistantIcon}>
-            <Sparkles color={t.orange} size={26} />
+    <Shell title="تسوق بالمحادثة" subtitle="أخبرني بما تحتاجه، وسأجهز لك أفضل الخيارات من متجري." side={<Companion action="listen" base={128} enterFrom="right" />} footer={footer}>
+      <View style={{ gap: 12 }} accessibilityLiveRegion="polite">
+        {messages.map((m, i) => m.role === "user" ? (
+          <View key={i} style={s.userRow}>
+            <View style={s.userBubble}><Txt weight="medium" style={{ fontSize: 17, color: t.title }}>{m.content}</Txt></View>
+            <View style={s.avatar}><UserRound size={26} color={t.purple} fill={t.purple} /></View>
           </View>
-          <View>
-            <Txt weight="extra" style={{ fontSize: 20 }}>
-              مساعد لُقطة
-            </Txt>
-            <Txt style={{ color: t.muted, fontSize: 11, marginTop: 4 }}>
-              لأن أفضل اختيار، هو ما يناسبك.
-            </Txt>
-          </View>
-        </View>
-        {messages.map((message, index) => (
-          <View key={index} style={{ marginBottom: 20 }}>
-            <View
-              style={[s.bubble, message.role === "user" ? s.user : s.assistant]}
-            >
-              <Txt
-                style={{
-                  color: message.role === "user" ? t.onAccent : t.ink,
-                  fontSize: 15,
-                  lineHeight: 27,
-                }}
-              >
-                {message.content}
-              </Txt>
-            </View>
-            {message.productIds?.length ? (
-              <View style={{ marginTop: 15 }}>
-                <ProductGrid
-                  items={message.productIds
-                    .map((id) => products.find((p) => p.id === id)!)
-                    .filter(Boolean)}
-                />
-              </View>
-            ) : null}
+        ) : (
+          <View key={i} style={s.botRow}>
+            <View style={s.botAvatar}><Image source={designAssets.logoMark} style={{ width: 34, height: 34 }} resizeMode="contain" /></View>
+            <View style={s.botBubble}><Txt style={{ fontSize: 16, lineHeight: 27, color: t.title }}>{m.content}</Txt></View>
           </View>
         ))}
-        {busy ? (
-          <View style={s.thinking}>
-            <ActivityIndicator size="small" color={t.orange} />
-            <Txt style={{ color: t.muted, fontSize: 12 }}>
-              أبحث عن اختيار يناسبك...
-            </Txt>
-          </View>
-        ) : null}
-        {error ? (
-          <View accessibilityLiveRegion="polite" style={s.error}>
-            <Txt style={{ color: t.danger, lineHeight: 24, fontSize: 13 }}>
-              {error}
-            </Txt>
-            <Pressable accessibilityRole="button" onPress={() => send(input)}>
-              <Txt
-                weight="bold"
-                style={{ color: t.orange, fontSize: 12, marginTop: 6 }}
-              >
-                إعادة المحاولة
-              </Txt>
-            </Pressable>
-          </View>
-        ) : null}
-        {messages.length === 1 ? (
-          <View style={s.prompts}>
-            {prompts.map((prompt) => (
-              <Pressable
-                accessibilityRole="button"
-                disabled={checking}
-                key={prompt}
-                onPress={() => send(prompt)}
-                style={s.prompt}
-              >
-                <Txt style={{ fontSize: 12, color: t.muted }}>{prompt}</Txt>
-              </Pressable>
+        {busy ? <Txt style={{ color: t.muted, textAlign: "center" }}>يكتب المساعد…</Txt> : null}
+        {messages.length === 1 && !busy ? (
+          <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 }}>
+            {["جهّز لي سلة بـ 20 دينار", "سماعات لاسلكية", "أساسيات الفطور تحت 10 دينار", "هدية بحدود 30 دينار"].map((p) => (
+              <Pressable key={p} accessibilityRole="button" accessibilityLabel={p} testID={`prompt-${p.slice(0, 8)}`} onPress={() => void send(p)} style={s.prompt}><Txt style={{ color: t.purple, fontSize: 14 }}>{p}</Txt></Pressable>
             ))}
           </View>
         ) : null}
-        <View style={s.inputWrap}>
-          <TextInput
-            ref={inputRef}
-            accessibilityLabel="اكتب طلبك لمساعد التسوق"
-            value={input}
-            onChangeText={setInput}
-            placeholder="أبحث عن هدية لشخص يحب القهوة..."
-            placeholderTextColor={t.muted}
-            maxLength={1200}
-            editable={!busy}
-            onSubmitEditing={() => send(input)}
-            returnKeyType="send"
-            style={[s.input, { fontSize: width < 500 ? 13 : 15 }]}
-          />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="إرسال إلى المساعد"
-            disabled={busy || !input.trim() || checking}
-            onPress={() => send(input)}
-            style={[
-              s.send,
-              busy || !input.trim() || checking ? { opacity: 0.4 } : null,
-            ]}
-          >
-            <ArrowUp size={20} color={t.onAccent} />
-          </Pressable>
-        </View>
-        <Txt
-          style={{
-            color: t.muted,
-            fontSize: 10,
-            textAlign: "center",
-            marginTop: 12,
-          }}
-        >
-          الاقتراحات من كتالوج المتجر. راجع تفاصيل المنتج قبل اختياره.
-        </Txt>
       </View>
-      <View style={s.tip}>
-        <Sparkles color={t.orange} size={18} />
-        <Txt
-          style={{ flex: 1, color: t.muted, fontSize: 12, lineHeight: 23 }}
-        >
-          لنتيجة أقرب لذوقك: حدّد لمن تتسوق، المناسبة، والميزانية.
-        </Txt>
-      </View>
+
+      {lastLines.length ? (
+        <Card style={{ marginTop: 14 }} testID="basket-suggestions">
+          <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+            <ShoppingCart size={26} color={t.orange} /><Txt weight="extra" style={{ fontSize: 20, color: t.title, flex: 1 }}>مقترحات السلة</Txt>
+            {catalogStatus !== "connected" ? <Chip label="مقترحات تجريبية" tone="demo" /> : null}
+          </View>
+          <Txt style={{ color: t.muted, fontSize: 13, marginTop: 4 }}>مختارة من كتالوج المتجر بناء على طلبك.</Txt>
+          {lastLines.map((l) => {
+            const p = products.find((x) => x.id === l.productId); if (!p) return null;
+            return (
+              <View key={l.productId} style={s.line}>
+                <View style={{ width: 70, height: 80 }}><ProductImage product={p} /></View>
+                <View style={{ flex: 1, alignItems: "flex-end" }}>
+                  <Txt weight="bold" style={{ fontSize: 17, color: t.title }}>{p.name}{l.quantity > 1 ? ` × ${l.quantity}` : ""}</Txt>
+                  <Txt style={{ fontSize: 14, color: t.mutedSoft }}>{p.unit || p.subtitle}</Txt>
+                  <Txt weight="bold" style={{ fontSize: 17, color: t.orange }}>{formatPrice(p.price, settings.currency)}</Txt>
+                </View>
+                <Pressable accessibilityRole="button" accessibilityLabel={`أضف ${p.name}`} testID={`suggest-add-${p.id}`} onPress={() => addLine(l)} style={s.addBtn}>
+                  <Txt weight="bold" style={{ color: t.onAccent, fontSize: 17 }}>{cart[p.id] ? "أُضيف" : "أضف"}</Txt><Plus size={20} color={t.onAccent} />
+                </Pressable>
+              </View>
+            );
+          })}
+          <View style={s.estimate}>
+            <Calculator size={26} color={t.purple} /><Txt weight="medium" style={{ fontSize: 16, color: t.title, flex: 1 }}>المجموع التقديري</Txt>
+            <Txt weight="extra" style={{ fontSize: 24, color: t.orange }}>{formatPrice(estimate, settings.currency)}</Txt>
+          </View>
+          <Txt style={{ color: t.muted, fontSize: 13, marginTop: 8 }}>يمكنك إضافة أو إزالة منتجات قبل المتابعة.</Txt>
+        </Card>
+      ) : null}
+      {lastLines.length ? <CTA title="راجع السلة المقترحة" testID="review-basket" onPress={reviewAll} style={{ marginTop: 12 }} /> : null}
+      <Pressable accessibilityRole="switch" accessibilityState={{ checked: !profile.sound }} accessibilityLabel={profile.sound ? "إيقاف الصوت" : "تشغيل الصوت"} onPress={() => update({ sound: !profile.sound })} style={s.voice}>
+        <Txt weight="medium" style={{ color: t.ink, fontSize: 15 }}>{profile.sound ? "إيقاف الصوت" : "تشغيل الصوت"}</Txt>
+        {profile.sound ? <VolumeX size={22} color={t.purple} /> : <Volume2 size={22} color={t.purple} />}
+      </Pressable>
+      {hint ? <Txt style={{ color: t.muted, fontSize: 12, textAlign: "center", marginTop: 6 }}>{hint}</Txt> : null}
+      <Txt style={{ color: t.mutedSoft, fontSize: 11, textAlign: "center", marginTop: 6 }}>{serverAssistant ? "مساعد الخادم متصل" : "توصيات محلية من كتالوج المتجر"} · المساعد يقترح فقط ولا يشتري عنك.</Txt>
     </Shell>
   );
 }
+
 const makeStyles = (t: Palette) => StyleSheet.create({
-  statusRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 17,
-  },
-  status: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 9,
-    backgroundColor: t.secondary,
-  },
-  dot: { width: 6, height: 6, borderRadius: 4 },
-  reset: { flexDirection: "row-reverse", gap: 6, alignItems: "center", minHeight: 44 },
-  notice: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: t.line,
-    borderRadius: 12,
-    marginBottom: 16,
-    backgroundColor: t.orangeSoft,
-  },
-  chat: {
-    backgroundColor: t.paper,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: t.line,
-    padding: 22,
-    minHeight: 450,
-  },
-  chatHead: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 13,
-    borderBottomWidth: 1,
-    borderColor: t.line,
-    paddingBottom: 22,
-    marginBottom: 24,
-  },
-  assistantIcon: {
-    width: 55,
-    height: 55,
-    borderRadius: 18,
-    backgroundColor: t.orangeSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bubble: {
-    maxWidth: "93%",
-    borderRadius: 15,
-    paddingHorizontal: 18,
-    paddingVertical: 15,
-  },
-  user: {
-    backgroundColor: t.orange,
-    alignSelf: "flex-end",
-    borderTopRightRadius: 4,
-  },
-  assistant: {
-    backgroundColor: t.secondary,
-    alignSelf: "flex-end",
-    borderTopRightRadius: 4,
-  },
-  thinking: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 20,
-  },
-  error: {
-    backgroundColor: t.orangeSoft,
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 17,
-  },
-  prompts: {
-    flexDirection: "row-reverse",
-    gap: 9,
-    flexWrap: "wrap",
-    marginBottom: 24,
-  },
-  prompt: {
-    borderWidth: 1,
-    borderColor: t.line,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 11,
-  },
-  inputWrap: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    backgroundColor: t.secondary,
-    padding: 8,
-    paddingRight: 16,
-    borderRadius: 15,
-    gap: 10,
-    marginTop: 12,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 11,
-    fontFamily: "Tajawal_400Regular",
-    textAlign: "right",
-    color: t.ink,
-  },
-  send: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: t.orange,
-  },
-  tip: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 22,
-    paddingHorizontal: 7,
-  },
+  userRow: { flexDirection: "row-reverse", alignItems: "center", gap: 10 },
+  userBubble: { backgroundColor: t.purpleSoft, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 14, maxWidth: "75%" },
+  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: t.purpleSoft, alignItems: "center", justifyContent: "center", marginRight: "auto" },
+  botRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  botAvatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: t.card, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: t.line },
+  botBubble: { flex: 1, backgroundColor: t.card, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 14, borderWidth: 1, borderColor: t.line },
+  line: { flexDirection: "row-reverse", alignItems: "center", gap: 10, paddingVertical: 12, borderTopWidth: 1, borderColor: t.line, marginTop: 8 },
+  addBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 8, minHeight: 48, paddingHorizontal: 22, borderRadius: 999, backgroundColor: t.orange },
+  estimate: { flexDirection: "row-reverse", alignItems: "center", gap: 10, backgroundColor: t.field, borderRadius: 16, padding: 14, marginTop: 6 },
+  prompt: { paddingHorizontal: 14, minHeight: 40, justifyContent: "center", borderRadius: 999, backgroundColor: t.purpleSoft, borderWidth: 1, borderColor: t.line },
+  voice: { flexDirection: "row-reverse", alignItems: "center", gap: 8, alignSelf: "center", minHeight: 46, paddingHorizontal: 20, borderRadius: 999, borderWidth: 1, borderColor: t.line, backgroundColor: t.card, marginTop: 12 },
+  inputBar: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: t.card, borderRadius: 999, borderWidth: 1, borderColor: t.line, padding: 6 },
+  send: { width: 52, height: 52, borderRadius: 26, backgroundColor: t.orange, alignItems: "center", justifyContent: "center" },
+  input: { flex: 1, minHeight: 48, borderRadius: 999, backgroundColor: t.field, paddingHorizontal: 16, fontFamily: "Tajawal_500Medium", fontSize: 16, color: t.ink, textAlign: "right", writingDirection: "rtl" },
+  cameraBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: t.field, alignItems: "center", justifyContent: "center" },
+  micBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: t.purple, alignItems: "center", justifyContent: "center" },
 });

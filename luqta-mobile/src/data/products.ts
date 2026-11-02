@@ -1,4 +1,11 @@
+// SAMPLE catalogue shown only while no commerce server is connected ("وضع تجريبي").
+// Prices are demonstration values in JOD, never real selling prices. When the app is
+// connected, every product, image, price, quantity and branch comes from the server
+// (fed by the control dashboard through POST /api/admin/dashboard-sync).
 export type ProductCategory = string;
+
+export type ProductSpec = { label: string; value: string; icon: "headphones" | "bluetooth" | "battery" | "ruler" | "weight" | "box" | "leaf" | "clock" };
+export type Swatch = { name: string; hex: string };
 
 export type Product = {
   id: string;
@@ -10,427 +17,94 @@ export type Product = {
   oldPrice?: number;
   rating: number;
   reviews: number;
+  /** "local:<key>" for bundled demo images, or an https URL from the server */
   image: any;
+  images?: string[];
   tags: string[];
   description: string;
   features: string[];
   colors: string[];
+  swatches?: Swatch[];
+  specs?: ProductSpec[];
+  unit?: string;
+  model3d?: "chair" | "headphones" | "box";
+  dimensions?: { w: number; d: number; h: number };
   badge?: string;
   sku?: string;
+  barcode?: string;
   stock?: number;
+  branchStock?: Record<string, number>;
   active?: boolean;
   variantOf?: string;
   variantLabel?: string;
   hasVariants?: boolean;
   basePrice?: number;
   baseStock?: number;
+  demo?: boolean;
 };
 
-export const categories: {
-  id: ProductCategory;
-  label: string;
-  icon: string;
-}[] = [
-  { id: "electronics", label: "إلكترونيات", icon: "headphones" },
-  { id: "home", label: "المنزل", icon: "home" },
-  { id: "fashion", label: "الأزياء", icon: "shopping-bag" },
-  { id: "care", label: "العناية", icon: "droplet" },
+export const categories: { id: ProductCategory; label: string; short: string; icon: string }[] = [
+  { id: "grocery", label: "بقالة ومأكولات", short: "غذاء", icon: "food" },
+  { id: "electronics", label: "إلكترونيات", short: "إلكترونيات", icon: "electronics" },
+  { id: "fashion", label: "أزياء وموضة", short: "أزياء", icon: "fashion" },
+  { id: "home", label: "المنزل والمطبخ", short: "منزل", icon: "home" },
+  { id: "beauty", label: "العناية والجمال", short: "العناية", icon: "beauty" },
+  { id: "sports", label: "الرياضة واللياقة", short: "رياضة", icon: "sports" },
 ];
+/** legacy category ids from 1.x servers */
+export const categoryAliases: Record<string, string> = { care: "beauty", food: "grocery" };
+export const categoryLabel = (id: string) => categories.find((c) => c.id === (categoryAliases[id] || id))?.label || id;
+
+const p = (x: Omit<Product, "rating" | "reviews" | "tags" | "features" | "colors" | "brand" | "description"> & Partial<Product>): Product => ({
+  rating: 0, reviews: 0, tags: [], features: [], colors: [], brand: "لُقطة", description: "", demo: true, active: true, ...x,
+});
 
 export const products: Product[] = [
-  {
-    id: "headphones",
-    name: "سماعات هدوء لاسلكية",
-    subtitle: "صوت أقرب. عالم أهدأ.",
-    brand: "SONORA",
-    category: "electronics",
-    price: 249,
-    oldPrice: 349,
-    rating: 4.8,
-    reviews: 128,
-    image:
-      "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "سماعات",
-      "سماعة",
-      "لاسلكية",
-      "عزل الضوضاء",
-      "موسيقى",
-      "عمل",
-      "مكتب",
-      "هدية",
-      "headphones",
-      "audio",
-    ],
-    description:
-      "سماعات مريحة للأيام الطويلة، مع عزل للضوضاء وصوت واضح للموسيقى والمكالمات. تصميم خفيف يرافقك في المكتب وأثناء التنقل.",
-    features: [
-      "عزل نشط للضوضاء",
-      "بطارية حتى ٣٠ ساعة",
-      "اتصال Bluetooth",
-      "وسائد مريحة وقابلة للتعديل",
-    ],
-    colors: ["#2A2A2A", "#E1DACE", "#66756E"],
-    badge: "الأكثر طلبًا",
-  },
-  {
-    id: "speaker",
-    name: "مكبر صوت ميني",
-    subtitle: "موسيقاك، أينما كنت",
-    brand: "SONORA",
-    category: "electronics",
-    price: 179,
-    oldPrice: 219,
-    rating: 4.7,
-    reviews: 94,
-    image:
-      "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "مكبر صوت",
-      "صوت",
-      "موسيقى",
-      "لاسلكي",
-      "رحلات",
-      "هدية",
-      "speaker",
-      "audio",
-    ],
-    description:
-      "مكبر صوت محمول بحجم صغير وصوت غني. مناسب لجلسات المنزل ورحلات نهاية الأسبوع، مع تصميم بسيط يسهل حمله.",
-    features: [
-      "بطارية حتى ١٢ ساعة",
-      "مقاوم للرذاذ",
-      "اتصال Bluetooth",
-      "وزن خفيف وسهل الحمل",
-    ],
-    colors: ["#202523", "#B6C1B4", "#DDD3C6"],
-    badge: "اختيار لقطة",
-  },
-  {
-    id: "keyboard",
-    name: "لوحة مفاتيح كلاود",
-    subtitle: "مساحة عمل تلهمك",
-    brand: "FORM",
-    category: "electronics",
-    price: 199,
-    rating: 4.6,
-    reviews: 62,
-    image:
-      "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "لوحة مفاتيح",
-      "كيبورد",
-      "حاسوب",
-      "كمبيوتر",
-      "مكتب",
-      "عمل",
-      "دراسة",
-      "keyboard",
-      "office",
-    ],
-    description:
-      "لوحة مفاتيح لاسلكية بتصميم مضغوط ومفاتيح مريحة. لمسة أنيقة لمكتبك مع سهولة الانتقال بين أجهزتك.",
-    features: [
-      "اتصال لاسلكي",
-      "تصميم مضغوط",
-      "مفاتيح هادئة",
-      "متوافقة مع الكمبيوتر والأجهزة اللوحية",
-    ],
-    colors: ["#F2EFE9", "#303433"],
-  },
-  {
-    id: "lamp",
-    name: "مصباح هالة",
-    subtitle: "ضوء دافئ لتفاصيلك",
-    brand: "NEST",
-    category: "home",
-    price: 129,
-    oldPrice: 169,
-    rating: 4.8,
-    reviews: 87,
-    image:
-      "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "مصباح",
-      "إضاءة",
-      "لمبة",
-      "مكتب",
-      "عمل",
-      "غرفة",
-      "نوم",
-      "منزل",
-      "ديكور",
-      "هدية",
-      "lamp",
-      "office",
-      "bedroom",
-    ],
-    description:
-      "مصباح طاولة بإضاءة دافئة وتصميم هادئ. يضيف أجواء مريحة لركن القراءة أو الطاولة بجوار سريرك.",
-    features: [
-      "إضاءة LED دافئة",
-      "٣ مستويات سطوع",
-      "تحكم باللمس",
-      "قاعدة ثابتة",
-    ],
-    colors: ["#E8DDCB", "#727F71"],
-    badge: "وصل حديثًا",
-  },
-  {
-    id: "chair",
-    name: "كرسي ركن",
-    subtitle: "مكانك المفضل للاسترخاء",
-    brand: "NEST",
-    category: "home",
-    price: 449,
-    oldPrice: 549,
-    rating: 4.9,
-    reviews: 43,
-    image:
-      "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "كرسي",
-      "أثاث",
-      "منزل",
-      "غرفة",
-      "ديكور",
-      "قراءة",
-      "راحة",
-      "chair",
-      "home",
-    ],
-    description:
-      "كرسي بذراعين وخطوط بسيطة، مع مقعد مبطن وأرجل خشبية. قطعة تضيف الدفء والراحة إلى غرفة المعيشة.",
-    features: [
-      "مقعد مبطن",
-      "أرجل خشبية",
-      "قماش ناعم",
-      "تصميم مناسب للمساحات الصغيرة",
-    ],
-    colors: ["#DDCEB7", "#8F9B8A", "#C49B7E"],
-  },
-  {
-    id: "mug",
-    name: "كوب صباح سيراميك",
-    subtitle: "بداية صغيرة، جميلة",
-    brand: "NEST",
-    category: "home",
-    price: 59,
-    rating: 4.7,
-    reviews: 156,
-    image:
-      "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "كوب",
-      "سيراميك",
-      "قهوة",
-      "شاي",
-      "منزل",
-      "مكتب",
-      "عمل",
-      "هدية",
-      "mug",
-      "coffee",
-      "office",
-    ],
-    description:
-      "كوب سيراميك بملمس لطيف ومقبض مريح. للقهوة الصباحية والشاي في استراحة يومك، أو هدية بسيطة لمن تحب.",
-    features: ["سعة ٣٥٠ مل", "سيراميك متين", "آمن لغسالة الصحون", "مقبض مريح"],
-    colors: ["#D7C3A6", "#6B7E71", "#F0E9DC"],
-  },
-  {
-    id: "sneakers",
-    name: "حذاء ستريت اليومي",
-    subtitle: "خفّة ترافق كل خطوة",
-    brand: "PACE",
-    category: "fashion",
-    price: 219,
-    oldPrice: 289,
-    rating: 4.8,
-    reviews: 112,
-    image:
-      "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "حذاء",
-      "أحذية",
-      "جزمة",
-      "سنيكرز",
-      "أزياء",
-      "موضة",
-      "مشي",
-      "رياضي",
-      "sneakers",
-      "shoes",
-    ],
-    description:
-      "حذاء يومي بوسادة قدم مريحة ونعل مرن. تصميم سهل التنسيق يناسب المشي والتنقل وإطلالاتك البسيطة.",
-    features: ["نعل مرن", "بطانة مريحة", "خامة تسمح بالتهوية", "تصميم يومي"],
-    colors: ["#F1ECE2", "#1E2221", "#C4AF8E"],
-    badge: "اختيار لقطة",
-  },
-  {
-    id: "bag",
-    name: "حقيبة كل يوم",
-    subtitle: "كل ما تحتاجه، بخفّة",
-    brand: "ROAM",
-    category: "fashion",
-    price: 149,
-    rating: 4.6,
-    reviews: 73,
-    image:
-      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "حقيبة",
-      "شنطة",
-      "ظهر",
-      "أزياء",
-      "عمل",
-      "مكتب",
-      "دراسة",
-      "سفر",
-      "هدية",
-      "bag",
-      "backpack",
-      "office",
-    ],
-    description:
-      "حقيبة قماشية واسعة بتصميم بسيط ومقابض مريحة. رفيقة للمشاوير والعمل والتسوق، مع مساحة لترتيب أغراضك اليومية.",
-    features: ["خامة قماشية", "مساحة داخلية واسعة", "مقابض مريحة", "وزن خفيف"],
-    colors: ["#3C4A40", "#BBA484", "#272C2A"],
-    badge: "وصل حديثًا",
-  },
-  {
-    id: "watch",
-    name: "ساعة مومنت",
-    subtitle: "تفصيل لا يمرّ",
-    brand: "MOMENT",
-    category: "fashion",
-    price: 279,
-    oldPrice: 329,
-    rating: 4.7,
-    reviews: 58,
-    image:
-      "https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "ساعة",
-      "إكسسوارات",
-      "أزياء",
-      "موضة",
-      "هدية",
-      "watch",
-      "accessories",
-    ],
-    description:
-      "ساعة ذكية بواجهة بسيطة وسوار مريح. تجمع بين لمسة أنيقة ومتابعة نشاطك اليومي وإشعارات الهاتف.",
-    features: [
-      "شاشة ملونة",
-      "سوار قابل للتعديل",
-      "متابعة النشاط اليومي",
-      "إشعارات الهاتف",
-    ],
-    colors: ["#B6A16B", "#AEB5B3", "#363A38"],
-  },
-  {
-    id: "serum",
-    name: "سيروم الترطيب اليومي",
-    subtitle: "عناية تبدأ بلحظة",
-    brand: "BOTANICA",
-    category: "care",
-    price: 89,
-    oldPrice: 119,
-    rating: 4.8,
-    reviews: 104,
-    image:
-      "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "سيروم",
-      "بشرة",
-      "عناية",
-      "ترطيب",
-      "وجه",
-      "جمال",
-      "serum",
-      "skincare",
-      "care",
-    ],
-    description:
-      "سيروم خفيف للترطيب اليومي بقوام سريع الامتصاص. أضفه إلى روتين العناية بالبشرة، مع اختبار المنتج على مساحة صغيرة أولًا.",
-    features: ["حجم ٣٠ مل", "قوام خفيف", "سريع الامتصاص", "للاستخدام اليومي"],
-    colors: ["#DDC9A9"],
-  },
-  {
-    id: "fragrance",
-    name: "عطر وود آند مسك",
-    subtitle: "أثر هادئ، لا يُنسى",
-    brand: "ATELIER",
-    category: "care",
-    price: 199,
-    rating: 4.9,
-    reviews: 91,
-    image:
-      "https://images.unsplash.com/photo-1541643600914-78b084683601?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "عطر",
-      "عطور",
-      "مسك",
-      "خشب",
-      "عناية",
-      "هدية",
-      "perfume",
-      "fragrance",
-      "care",
-    ],
-    description:
-      "عطر يجمع نغمات الخشب والمسك مع لمسة دافئة. عبوة أنيقة تصلح للاستخدام اليومي ولإهداء شخص عزيز.",
-    features: [
-      "حجم ٥٠ مل",
-      "نغمات خشبية",
-      "لمسات من المسك",
-      "عبوة قابلة لإعادة الاستخدام",
-    ],
-    colors: ["#B39157"],
-    badge: "الأكثر طلبًا",
-  },
-  {
-    id: "diffuser",
-    name: "فواحة سكون",
-    subtitle: "مساحة تتنفّس هدوءًا",
-    brand: "BOTANICA",
-    category: "care",
-    price: 119,
-    rating: 4.7,
-    reviews: 66,
-    image:
-      "https://images.unsplash.com/photo-1602928321679-560bb453f190?w=900&auto=format&fit=crop&q=85",
-    tags: [
-      "فواحة",
-      "رائحة",
-      "عناية",
-      "استرخاء",
-      "منزل",
-      "غرفة",
-      "نوم",
-      "هدية",
-      "diffuser",
-      "care",
-      "bedroom",
-    ],
-    description:
-      "فواحة منزلية بعيدان خشبية ورائحة لطيفة. تمنح ركنك المفضل أجواء هادئة دون الحاجة إلى الكهرباء.",
-    features: [
-      "حجم ١٠٠ مل",
-      "عيدان خشبية",
-      "لا تحتاج كهرباء",
-      "رائحة لطيفة للمنزل",
-    ],
-    colors: ["#D6C5A8", "#ADBAA7"],
-  },
+  p({ id: "rice", name: "أرز بسمتي", subtitle: "1 كجم", unit: "1 كجم", category: "grocery", price: 3.25, stock: 40, image: "local:rice", badge: "أساسيات",
+    tags: ["أرز", "رز", "بسمتي", "طبخ", "أساسيات", "سلة", "rice"], description: "أرز بسمتي طويل الحبة، مناسب للأطباق اليومية والمناسبات.", features: ["حبة طويلة", "عبوة 1 كجم"],
+    specs: [{ label: "الوزن", value: "1 كجم", icon: "weight" }, { label: "النوع", value: "بسمتي", icon: "leaf" }, { label: "التخزين", value: "مكان جاف", icon: "box" }] }),
+  p({ id: "milk", name: "حليب طويل الأمد", subtitle: "1 لتر", unit: "1 لتر", category: "grocery", price: 2.2, stock: 60, image: "local:milk",
+    tags: ["حليب", "ألبان", "فطور", "أساسيات", "سلة", "milk"], description: "حليب كامل الدسم طويل الأمد، عبوة 1 لتر.", features: ["كامل الدسم", "1 لتر"],
+    specs: [{ label: "الحجم", value: "1 لتر", icon: "box" }, { label: "الصلاحية", value: "طويل الأمد", icon: "clock" }, { label: "النوع", value: "كامل الدسم", icon: "leaf" }] }),
+  p({ id: "banana", name: "موز", subtitle: "1 كجم", unit: "1 كجم", category: "grocery", price: 1.75, stock: 25, image: "local:banana",
+    tags: ["موز", "فواكه", "فاكهة", "صحي", "سلة", "banana"], description: "موز طازج بالكيلو.", features: ["طازج", "بالكيلو"],
+    specs: [{ label: "الوزن", value: "1 كجم", icon: "weight" }, { label: "المصدر", value: "طازج", icon: "leaf" }, { label: "التخزين", value: "حرارة الغرفة", icon: "box" }] }),
+  p({ id: "headphones", name: "سماعات لاسلكية", subtitle: "بلوتوث", unit: "بلوتوث", category: "electronics", price: 12.5, stock: 8, image: "local:headphones", model3d: "headphones",
+    images: ["local:headphones", "local:headphones-2", "local:headphones-3", "local:headphones-4"], badge: "الأكثر طلبًا",
+    tags: ["سماعات", "سماعة", "لاسلكية", "بلوتوث", "موسيقى", "headphones", "audio"], description: "صوت نقي وتجربة استماع مريحة طوال اليوم.",
+    features: ["بلوتوث 5.3", "بطارية حتى 20 ساعة", "وسائد مريحة"], colors: ["أسود", "أبيض", "أزرق", "وردي"],
+    swatches: [{ name: "أسود", hex: "#1D1D1F" }, { name: "أبيض", hex: "#E8E4DC" }, { name: "أزرق", hex: "#4D7CC4" }, { name: "وردي", hex: "#F2A9C1" }],
+    specs: [{ label: "نوع السماعة", value: "سماعة رأس لاسلكية", icon: "headphones" }, { label: "الاتصال", value: "بلوتوث 5.3", icon: "bluetooth" }, { label: "عمر البطارية", value: "حتى ٢٠ ساعة", icon: "battery" }] }),
+  p({ id: "armchair", name: "كرسي مريح", subtitle: "قماش بيج", unit: "78×80×82 سم", category: "home", price: 89, stock: 3, image: "local:armchair", model3d: "chair", dimensions: { w: 0.78, d: 0.8, h: 0.82 },
+    tags: ["كرسي", "أثاث", "صالة", "منزل", "chair"], description: "كرسي بذراعين بقماش ناعم وأرجل خشبية.", features: ["قماش ناعم", "أرجل خشب"],
+    swatches: [{ name: "بيج", hex: "#D8BF98" }, { name: "رمادي", hex: "#A9A6A3" }, { name: "أخضر", hex: "#8FA58A" }],
+    specs: [{ label: "المقاسات", value: "78×80×82 سم", icon: "ruler" }, { label: "الخامة", value: "قماش وخشب", icon: "box" }, { label: "الوزن", value: "14 كجم", icon: "weight" }] }),
+  p({ id: "speaker", name: "مكبر صوت ميني", subtitle: "محمول", category: "electronics", price: 18, stock: 12, image: "local:speaker", model3d: "box", tags: ["مكبر صوت", "سماعة", "موسيقى", "speaker"], description: "مكبر صوت محمول بصوت غني." }),
+  p({ id: "watch", name: "ساعة ذكية", subtitle: "مقاومة للماء", category: "electronics", price: 35, stock: 6, image: "local:watch", tags: ["ساعة", "ذكية", "رياضة", "watch"], description: "ساعة ذكية لمتابعة نشاطك اليومي." }),
+  p({ id: "keyboard", name: "لوحة مفاتيح لاسلكية", subtitle: "تصميم مضغوط", category: "electronics", price: 22, stock: 9, image: "local:keyboard", tags: ["لوحة مفاتيح", "كيبورد", "مكتب", "keyboard"], description: "لوحة مفاتيح لاسلكية هادئة." }),
+  p({ id: "bag", name: "حقيبة يد", subtitle: "جلد صناعي", category: "fashion", price: 27, stock: 7, image: "local:bag", tags: ["حقيبة", "شنطة", "أزياء", "bag"], description: "حقيبة يومية أنيقة." }),
+  p({ id: "sneakers", name: "حذاء رياضي", subtitle: "مريح للمشي", category: "sports", price: 39, stock: 10, image: "local:sneakers", tags: ["حذاء", "رياضة", "مشي", "sneakers"], description: "حذاء خفيف للمشي والتمرين." }),
+  p({ id: "lamp", name: "مصباح طاولة", subtitle: "ضوء دافئ", category: "home", price: 16, stock: 11, image: "local:lamp", model3d: "box", tags: ["مصباح", "إضاءة", "منزل", "lamp"], description: "مصباح بضوء دافئ للقراءة." }),
+  p({ id: "mug", name: "كوب سيراميك", subtitle: "350 مل", category: "home", price: 4.5, stock: 30, image: "local:mug", tags: ["كوب", "مطبخ", "قهوة", "mug"], description: "كوب سيراميك للقهوة والشاي." }),
+  p({ id: "diffuser", name: "معطر جو", subtitle: "زيوت عطرية", category: "home", price: 12, stock: 14, image: "local:diffuser", tags: ["معطر", "منزل", "عطر", "diffuser"], description: "معطر جو بزيوت طبيعية." }),
+  p({ id: "serum", name: "سيروم للبشرة", subtitle: "30 مل", category: "beauty", price: 14, stock: 15, image: "local:serum", tags: ["سيروم", "بشرة", "عناية", "serum"], description: "سيروم مرطب للاستخدام اليومي." }),
+  p({ id: "fragrance", name: "عطر", subtitle: "50 مل", category: "beauty", price: 29, stock: 5, image: "local:fragrance", tags: ["عطر", "عناية", "هدية", "fragrance"], description: "عطر بنفحات منعشة." }),
 ];
 
+const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+export const toArabicDigits = (s: string) => s.replace(/\d/g, (d) => AR_DIGITS[Number(d)]);
+
+/** JOD shows 3 decimals ("٣٫٢٥٠ د.أ") as in the designs; other currencies fall back to Intl. */
 export function formatPrice(price: number, currency = "JOD"): string {
+  const value = Number.isFinite(price) ? price : 0;
+  if (currency === "JOD") {
+    const [whole, frac] = Math.abs(value).toFixed(3).split(".");
+    const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, "٬");
+    return `${value < 0 ? "-" : ""}${toArabicDigits(grouped)}٫${toArabicDigits(frac)} د.أ`;
+  }
   try {
-    return new Intl.NumberFormat("ar", { style: "currency", currency }).format(price);
+    return new Intl.NumberFormat("ar", { style: "currency", currency }).format(value);
   } catch {
-    return `${Number(price).toFixed(2)} ${currency}`;
+    return `${value.toFixed(2)} ${currency}`;
   }
 }

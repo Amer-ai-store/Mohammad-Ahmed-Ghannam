@@ -8,6 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StoreProvider } from "../lib/store";
 import { ThemeProvider, useTheme } from "../lib/theme";
 import { SessionProvider } from "../lib/session";
+import { CharacterProvider } from "../lib/character";
 
 export default function RootLayout() {
   return <ThemeProvider><AppLayout /></ThemeProvider>;
@@ -22,7 +23,7 @@ function AppLayout() {
   });
   const metadata = (
     <Head>
-      <title>لُقطة — اختيارات ذكية، لحياة أسهل</title>
+      <title>Amer AI Store | لُقطة</title>
       <meta
         name="description"
         content="متجر عربي مع مساعد تسوق وكتالوج منتجات ومفضلة وسلة مشتريات."
@@ -50,17 +51,17 @@ function AppLayout() {
   return (
     <SafeAreaProvider>
       {metadata}
-      <SessionProvider><StoreProvider>
+      <SessionProvider><StoreProvider><CharacterProvider>
         <StatusBar style={isDark ? "light" : "dark"} />
         <Stack
           screenOptions={{
-            title: "لُقطة — اختيارات ذكية، لحياة أسهل",
+            title: "Amer AI Store | لُقطة",
             headerShown: false,
             contentStyle: { backgroundColor: theme.background },
             animation: "fade",
           }}
         />
-      </StoreProvider></SessionProvider>
+      </CharacterProvider></StoreProvider></SessionProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,81 +1,59 @@
+// App frame matching the Amer AI Store | لُقطة designs: lavender gradient page,
+// brand header, centered title, scrolling content and the 4-tab floating nav.
 import React from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Bell,
-  ChevronDown,
-  Compass,
-  Heart,
-  House,
-  MapPin,
-  Search,
-  ShoppingBag,
-  Sparkles,
-  UserRound,
-  ArrowUpLeft,
-  Moon,
-  Sun,
-} from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Compass, House, ShoppingBasket, UserRound, WifiOff } from "lucide-react-native";
 import { router, usePathname } from "expo-router";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 import { useStore } from "../lib/store";
-import { useSession } from "../lib/session";
 import { Txt } from "./ui";
+import { BrandHeader, PageTitle, SmallButton } from "./design/kit";
 
-const navigation = [
-  { href: "/", label: "الرئيسية", icon: House },
-  { href: "/explore", label: "اكتشف المنتجات", short: "تصفح", icon: Compass },
-  {
-    href: "/assistant",
-    label: "مساعد التسوق",
-    short: "المساعد",
-    icon: Sparkles,
-  },
-  { href: "/favorites", label: "المفضلة", icon: Heart },
-  { href: "/cart", label: "سلة المشتريات", short: "السلة", icon: ShoppingBag },
-] as const;
+export function Logo() {
+  return <BrandHeader left={null} />;
+}
 
-const utilityNavigation = [
-  { href: "/orders", label: "طلباتي" },
-  { href: "/offers", label: "العروض والخصومات" },
-  { href: "/compare", label: "مقارنة المنتجات" },
-  { href: "/appearance", label: "مظهر التطبيق" },
-] as const;
+export type TabKey = "home" | "explore" | "cart" | "account";
+const tabs: { key: TabKey; href: "/" | "/explore" | "/cart" | "/profile"; label: string; icon: typeof House }[] = [
+  { key: "home", href: "/", label: "الرئيسية", icon: House },
+  { key: "explore", href: "/explore", label: "اكتشف", icon: Compass },
+  { key: "cart", href: "/cart", label: "السلة", icon: ShoppingBasket },
+  { key: "account", href: "/profile", label: "حسابي", icon: UserRound },
+];
+export function tabForPath(path: string): TabKey {
+  if (path === "/explore" || path.startsWith("/product") || path === "/offers" || path === "/compare" || path === "/favorites") return "explore";
+  if (path === "/cart") return "cart";
+  if (["/profile", "/orders", "/notifications", "/support", "/wallet", "/addresses", "/appearance", "/privacy", "/returns", "/login", "/register", "/delete-account", "/recover-account", "/connection", "/admin", "/driver", "/command-center", "/social"].some((p) => path === p || path.startsWith(`${p}/`)) || path.startsWith("/order/")) return "account";
+  return "home";
+}
 
-export function Logo({ small = false }: { small?: boolean }) {
+export function BottomNav() {
   const { colors: t } = useTheme();
   const s = useThemedStyles(makeStyles);
+  const path = usePathname();
+  const { cartCount } = useStore();
+  const active = tabForPath(path);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="لُقطة — الرئيسية"
-      onPress={() => router.navigate("/")}
-      style={s.logo}
-    >
-      <View
-        style={[
-          s.logoMark,
-          small ? { width: 30, height: 30, borderRadius: 10 } : null,
-        ]}
-      >
-        <ShoppingBag color={t.onAccent} size={small ? 17 : 23} strokeWidth={2.2} />
+    <SafeAreaView edges={["bottom"]} style={s.navWrap}>
+      <View style={s.nav} accessibilityRole="tablist">
+        {tabs.map((tab) => {
+          const selected = tab.key === active;
+          return (
+            <Pressable key={tab.key} testID={`tab-${tab.key}`} accessibilityRole="tab" accessibilityState={{ selected }}
+              accessibilityLabel={tab.key === "cart" && cartCount ? `${tab.label}، ${cartCount} منتج` : tab.label}
+              onPress={() => router.navigate(tab.href)} style={[s.tab, selected && s.tabActive]}>
+              <View>
+                <tab.icon size={27} color={selected ? t.orange : t.purple} strokeWidth={selected ? 2.4 : 2} fill={selected && tab.key === "home" ? t.orange : "none"} />
+                {tab.key === "cart" && cartCount > 0 ? <View style={s.badge}><Txt weight="bold" style={{ color: t.onAccent, fontSize: 11, textAlign: "center" }}>{cartCount > 99 ? "99+" : cartCount}</Txt></View> : null}
+              </View>
+              <Txt weight={selected ? "bold" : "medium"} style={{ fontSize: 15, marginTop: 3, color: selected ? t.orange : t.muted, textAlign: "center" }}>{tab.label}</Txt>
+            </Pressable>
+          );
+        })}
       </View>
-      <Txt weight="extra" style={{ fontSize: small ? 26 : 32, lineHeight: 44 }}>
-        لُقطة
-        <Txt weight="extra" style={{ color: t.orange, fontSize: 32 }}>
-          .
-        </Txt>
-      </Txt>
-    </Pressable>
+    </SafeAreaView>
   );
 }
 
@@ -83,536 +61,75 @@ export function Shell({
   children,
   title,
   subtitle,
-  search = false,
+  header,
+  side,
+  footer,
+  hideNav = false,
+  scroll = true,
+  titleAlign = "center",
 }: {
   children: React.ReactNode;
-  title: string;
+  title?: string;
   subtitle?: string;
+  /** legacy prop kept for older screens; the search lives on the home/explore screens now */
   search?: boolean;
+  header?: React.ReactNode;
+  side?: React.ReactNode;
+  footer?: React.ReactNode;
+  hideNav?: boolean;
+  scroll?: boolean;
+  titleAlign?: "center" | "right";
 }) {
-  const { colors: t, isDark } = useTheme();
+  const { colors: t } = useTheme();
   const s = useThemedStyles(makeStyles);
-  const { width } = useWindowDimensions();
-  const desktop = width >= 950;
-  const path = usePathname();
   const store = useStore();
-  const { user } = useSession();
-  const [query, setQuery] = React.useState("");
-  const submitSearch = () =>
-    router.navigate({ pathname: "/explore", params: { q: query } });
-  return (
-    <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
-      <View style={s.frame}>
-        {desktop ? (
-          <View style={s.sidebar}>
-            <Logo />
-            <Txt style={s.sideTag}>كل يوم، لُقطة جديدة</Txt>
-            <View style={s.nav}>
-              {navigation.map((item) => {
-                const active = path === item.href;
-                return (
-                  <Pressable
-                    key={item.href}
-                    accessibilityRole="button"
-                    accessibilityLabel={item.href === "/cart" && store.cartCount ? `${item.label}، ${store.cartCount} منتج` : item.label}
-                    accessibilityState={{ selected: active }}
-                    onPress={() => router.navigate(item.href)}
-                    style={[s.navItem, active ? s.navActive : null]}
-                  >
-                    <item.icon
-                      size={20}
-                      color={active ? t.orange : t.muted}
-                    />
-                    <Txt
-                      weight={active ? "bold" : "medium"}
-                      style={{ flex: 1, color: active ? t.orange : t.muted }}
-                    >
-                      {item.label}
-                    </Txt>
-                    {item.href === "/cart" && store.cartCount > 0 ? (
-                      <View style={s.cartBadge}>
-                        <Txt
-                          weight="bold"
-                          style={{ color: t.orange, fontSize: 11 }}
-                        >
-                          {store.cartCount}
-                        </Txt>
-                      </View>
-                    ) : null}
-                    {item.href === "/assistant" ? (
-                      <View style={s.aiBadge}>
-                        <Txt
-                          weight="bold"
-                          style={{ fontSize: 9, color: t.orange }}
-                        >
-                          AI
-                        </Txt>
-                      </View>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View style={{ marginTop: 18, gap: 4 }}>
-              {utilityNavigation.map((item) => <Pressable key={item.href} accessibilityRole="button" onPress={() => router.navigate(item.href)} style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: 14 }}>
-                <Txt style={{ color: t.muted, fontSize: 13 }}>{item.label}</Txt>
-              </Pressable>)}
-            </View>
-            <View style={{ flex: 1 }} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="ابدأ محادثة مساعد التسوق"
-              onPress={() => router.navigate("/assistant")}
-              style={s.sidebarPromo}
-            >
-              <View style={s.promoIcon}>
-                <Sparkles size={19} color={t.orange} />
-              </View>
-              <Txt weight="bold" style={{ fontSize: 16 }}>
-                حائر في الاختيار؟
-              </Txt>
-              <Txt style={{ color: t.muted, fontSize: 12, lineHeight: 21 }}>
-                دع مساعدك يجد لك ما يناسبك.
-              </Txt>
-              <View style={s.promoLink}>
-                <Txt weight="bold" style={{ color: t.orange, fontSize: 12 }}>
-                  ابدأ المحادثة
-                </Txt>
-                <ArrowUpLeft size={14} color={t.orange} />
-              </View>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={user ? `الملف الشخصي، ${user.name}` : "الملف الشخصي للزائر"}
-              onPress={() => router.navigate("/profile")}
-              style={s.sideProfile}
-            >
-              <View style={s.avatar}>
-                <UserRound color={t.muted} size={20} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Txt weight="bold" style={{ fontSize: 13 }}>
-                  {user ? `أهلًا، ${user.name}` : "أهلًا بك في لُقطة"}
-                </Txt>
-                <Txt style={{ color: t.muted, fontSize: 11, marginTop: 3 }}>
-                  {user ? "حسابك في لُقطة" : "حساب الزائر"}
-                </Txt>
-              </View>
-              <ChevronDown size={14} color={t.muted} />
-            </Pressable>
-          </View>
-        ) : null}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={s.main}
-        >
-          <View style={[s.header, !desktop ? s.mobileHeader : null]}>
-            {desktop ? (
-              <View style={s.location}>
-                <MapPin size={17} color={t.orange} />
-                <View>
-                  <Txt style={{ fontSize: 10, color: t.muted }}>
-                    عملة المتجر
-                  </Txt>
-                  <Txt weight="bold" style={{ fontSize: 12 }}>
-                    {store.settings.country} · {store.settings.currency}
-                  </Txt>
-                </View>
-              </View>
-            ) : (
-              <Logo small />
-            )}
-            {desktop ? (
-              <View style={s.headerSearch}>
-                <Search size={17} color={t.muted} />
-                <TextInput
-                  accessibilityLabel="البحث في المتجر"
-                  placeholder="ابحث عن لُقطتك القادمة..."
-                  value={query}
-                  onChangeText={setQuery}
-                  onSubmitEditing={submitSearch}
-                  returnKeyType="search"
-                  placeholderTextColor={t.muted}
-                  style={s.headerInput}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="تنفيذ البحث"
-                  onPress={submitSearch}
-                  style={{ minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center", paddingHorizontal: 5 }}
-                >
-                  <Txt style={{ color: t.muted, fontSize: 11 }}>بحث</Txt>
-                </Pressable>
-              </View>
-            ) : null}
-            <View style={s.headerActions}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="مظهر التطبيق"
-                onPress={() => router.navigate("/appearance")}
-                style={s.iconButton}
-              >
-                {isDark ? <Sun size={20} color={t.ink} /> : <Moon size={20} color={t.ink} />}
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="الإشعارات"
-                onPress={() => router.navigate("/notifications")}
-                style={s.iconButton}
-              >
-                <Bell size={19} color={t.ink} />
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="حسابي وطلباتي"
-                onPress={() => router.navigate("/profile")}
-                style={[s.iconButton, { backgroundColor: t.secondary }]}
-              >
-                <UserRound size={19} color={t.ink} />
-              </Pressable>
-            </View>
-          </View>
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={[s.content, { paddingHorizontal: desktop ? 38 : 20 }]}>
-              {title ? (
-                <View style={s.pageHeading}>
-                  <Txt accessibilityRole="header" weight="extra" style={{ fontSize: desktop ? 28 : 25 }}>
-                    {title}
-                  </Txt>
-                  {subtitle ? (
-                    <Txt
-                      style={{ color: t.muted, lineHeight: 24, marginTop: 6 }}
-                    >
-                      {subtitle}
-                    </Txt>
-                  ) : null}
-                </View>
-              ) : null}
-              {search && !desktop ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="البحث عن المنتجات"
-                  onPress={() => router.navigate("/explore")}
-                  style={s.mobileSearch}
-                >
-                  <Search size={19} color={t.muted} />
-                  <Txt style={{ color: t.muted, flex: 1 }}>
-                    ابحث عن لُقطتك القادمة...
-                  </Txt>
-                  <View style={s.searchHint}>
-                    <Txt weight="bold" style={{ fontSize: 11 }}>
-                      بحث
-                    </Txt>
-                  </View>
-                </Pressable>
-              ) : null}
-              {(path === "/" || path === "/explore" || path === "/cart" || path.startsWith("/product/")) && store.catalogStatus !== "connected" ? (
-                <View style={s.connectionBanner}>
-                  <View style={{ flex: 1, gap: 5 }}>
-                    <Txt weight="bold" style={{ fontSize: 13 }}>
-                      {store.catalogStatus === "loading" ? "جارٍ مزامنة الكتالوج…" : store.catalogStatus === "offline" ? "الخادم غير متاح حاليًا" : "كتالوج نموذجي"}
-                    </Txt>
-                    <Txt style={{ color: t.muted, fontSize: 12, lineHeight: 21 }}>
-                      {store.catalogStatus === "offline" ? "نعرض آخر نسخة متاحة. أعد الاتصال قبل إتمام الطلب." : store.catalogStatus === "loading" ? "نسترجع المنتجات والكميات من قاعدة بيانات المتجر." : "اربط خادم المتجر للوصول إلى المنتجات والمخزون والطلبات المشتركة."}
-                    </Txt>
-                  </View>
-                  <Pressable accessibilityRole="button" accessibilityLabel="إعداد اتصال الخادم" style={s.bannerAction} onPress={() => router.navigate("/connection")}>
-                    <Txt weight="bold" style={{ color: t.orange, fontSize: 12 }}>إعداد الاتصال</Txt>
-                  </Pressable>
-                  {store.catalogStatus === "offline" ? <Pressable accessibilityRole="button" accessibilityLabel="إعادة الاتصال بالخادم" style={s.bannerAction} onPress={() => { void store.refreshCatalog(); }}>
-                    <Txt weight="bold" style={{ color: t.orange, fontSize: 12 }}>إعادة المحاولة</Txt>
-                  </Pressable> : null}
-                </View>
-              ) : null}
-              {children}
-              <View style={s.footer}>
-                <Txt
-                  style={{
-                    color: t.muted,
-                    fontSize: 11,
-                    textAlign: "center",
-                  }}
-                >
-                  {store.catalogStatus === "connected" ? "لُقطة · كتالوج متصل بالخادم" : store.catalogStatus === "offline" ? "لُقطة · الاتصال بالخادم غير متاح" : "لُقطة · كتالوج نموذجي دون ربط بالخادم"}
-                </Txt>
-                <Txt
-                  style={{
-                    color: t.muted,
-                    fontSize: 11,
-                    textAlign: "center",
-                    marginTop: 5,
-                  }}
-                >
-                  صُنعت لتجعل اختيارك أسهل.
-                </Txt>
-              </View>
-            </View>
-          </ScrollView>
-          {!desktop ? (
-            <SafeAreaView edges={["bottom"]} style={s.bottomWrap}>
-              <View style={s.bottomNav}>
-                {navigation.map((item) => {
-                  const active = item.href === path;
-                  return (
-                    <Pressable
-                      key={item.href}
-                      accessibilityRole="button"
-                      accessibilityLabel={item.href === "/cart" && store.cartCount ? `${item.label}، ${store.cartCount} منتج` : item.label}
-                      accessibilityState={{ selected: active }}
-                      onPress={() => router.navigate(item.href)}
-                      style={s.bottomItem}
-                    >
-                      <View>
-                        <item.icon
-                          size={22}
-                          color={active ? t.orange : t.muted}
-                        />
-                        {item.href === "/cart" && store.cartCount ? (
-                          <View style={s.mobileBadge}>
-                            <Txt style={{ color: t.onAccent, fontSize: 10 }}>
-                              {store.cartCount}
-                            </Txt>
-                          </View>
-                        ) : null}
-                      </View>
-                      <Txt
-                        weight={active ? "bold" : "medium"}
-                        style={{
-                          fontSize: 10,
-                          color: active ? t.orange : t.muted,
-                          marginTop: 5,
-                        }}
-                      >
-                        {"short" in item ? item.short : item.label}
-                      </Txt>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </SafeAreaView>
-          ) : null}
-        </KeyboardAvoidingView>
-      </View>
-      {store.toast ? (
-        <View accessibilityLiveRegion="polite" style={s.toast}>
-          <Txt
-            weight="bold"
-            style={{ color: t.onToast, textAlign: "center", fontSize: 14 }}
-          >
-            {store.toast}
-          </Txt>
+  const path = usePathname();
+  const showOffline = store.catalogStatus === "offline" && ["/", "/explore", "/cart", "/checkout"].includes(path);
+  const body = (
+    <View style={s.content}>
+      {header === undefined ? <BrandHeader /> : header}
+      {title ? <PageTitle title={title} subtitle={subtitle} side={side} align={titleAlign} /> : side ? <View style={{ alignItems: "flex-start" }}>{side}</View> : null}
+      {showOffline ? (
+        <View style={s.offline} accessibilityRole="alert">
+          <WifiOff size={18} color={t.danger} />
+          <Txt style={{ flex: 1, color: t.ink, fontSize: 13, lineHeight: 20 }}>الخادم غير متاح حاليًا. نعرض آخر نسخة، ويُعاد التحقق من السعر والمخزون قبل التأكيد.</Txt>
+          <SmallButton title="إعادة المحاولة" tone="soft" onPress={() => void store.refreshCatalog()} />
         </View>
       ) : null}
-    </SafeAreaView>
+      {children}
+    </View>
+  );
+  return (
+    <LinearGradient colors={[t.background, t.backgroundDeep]} style={{ flex: 1 }}>
+      <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+          {scroll ? (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingBottom: 18 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {body}
+            </ScrollView>
+          ) : <View style={{ flex: 1 }}>{body}</View>}
+          {footer ? <View style={s.footer}>{footer}</View> : null}
+          {!hideNav ? <BottomNav /> : null}
+        </KeyboardAvoidingView>
+        {store.toast ? (
+          <View accessibilityLiveRegion="polite" pointerEvents="none" style={s.toast}>
+            <Txt weight="bold" style={{ color: t.onToast, textAlign: "center", fontSize: 14 }}>{store.toast}</Txt>
+          </View>
+        ) : null}
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
+
 const makeStyles = (t: Palette) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: t.background, direction: "ltr" },
-  frame: { flex: 1, flexDirection: "row-reverse" },
-  sidebar: {
-    width: 228,
-    backgroundColor: t.paper,
-    borderLeftWidth: 1,
-    borderColor: t.line,
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 24,
-  },
-  logo: {
-    minHeight: 44,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 10,
-    alignSelf: "flex-end",
-  },
-  logoMark: {
-    width: 39,
-    height: 39,
-    borderRadius: 13,
-    backgroundColor: t.orange,
-    alignItems: "center",
-    justifyContent: "center",
-    transform: [{ rotate: "-5deg" }],
-  },
-  sideTag: { color: t.muted, fontSize: 11, marginTop: 7, marginRight: 50 },
-  nav: { marginTop: 43, gap: 11 },
-  navItem: {
-    flexDirection: "row-reverse",
-    gap: 13,
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 15,
-    borderRadius: 12,
-  },
-  navActive: { backgroundColor: t.orangeSoft },
-  cartBadge: {
-    minWidth: 21,
-    height: 21,
-    borderRadius: 7,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: t.orangeSoft,
-  },
-  aiBadge: {
-    paddingHorizontal: 5,
-    paddingTop: 3,
-    paddingBottom: 1,
-    backgroundColor: t.orangeSoft,
-    borderRadius: 5,
-  },
-  sidebarPromo: {
-    backgroundColor: t.paper,
-    padding: 17,
-    borderRadius: 16,
-    marginBottom: 22,
-    gap: 8,
-  },
-  promoIcon: {
-    alignSelf: "flex-end",
-    width: 35,
-    height: 35,
-    borderRadius: 12,
-    backgroundColor: t.orangeSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 5,
-  },
-  promoLink: {
-    flexDirection: "row-reverse",
-    gap: 6,
-    alignItems: "center",
-    marginTop: 6,
-  },
-  sideProfile: {
-    flexDirection: "row-reverse",
-    gap: 10,
-    paddingTop: 19,
-    borderTopWidth: 1,
-    borderColor: t.line,
-    alignItems: "center",
-  },
-  avatar: {
-    width: 35,
-    height: 35,
-    borderRadius: 12,
-    backgroundColor: t.secondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  main: { flex: 1, minWidth: 0 },
-  header: {
-    backgroundColor: t.background,
-    minHeight: 95,
-    paddingHorizontal: 38,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderColor: t.line,
-    gap: 20,
-  },
-  mobileHeader: { minHeight: 75, paddingHorizontal: 20 },
-  location: { flexDirection: "row-reverse", alignItems: "center", gap: 9 },
-  headerSearch: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: t.line,
-    backgroundColor: t.secondary,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    minHeight: 44,
-    width: "43%",
-    maxWidth: 420,
-  },
-  headerInput: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 13,
-    color: t.ink,
-    textAlign: "right",
-    flex: 1,
-    padding: 0,
-  },
-  headerActions: { flexDirection: "row-reverse", gap: 12 },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    width: "100%",
-    maxWidth: 1280,
-    alignSelf: "center",
-    paddingTop: 28,
-    paddingBottom: 28,
-  },
-  pageHeading: { marginBottom: 24 },
-  connectionBanner: { flexDirection: "row-reverse", flexWrap: "wrap", alignItems: "center", gap: 10, backgroundColor: t.orangeSoft, borderWidth: 1, borderColor: t.line, padding: 15, borderRadius: 14, marginBottom: 20 },
-  bannerAction: { minHeight: 44, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
-  mobileSearch: {
-    backgroundColor: t.paper,
-    borderWidth: 1,
-    borderColor: t.line,
-    borderRadius: 13,
-    minHeight: 50,
-    paddingHorizontal: 15,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 9,
-    marginBottom: 22,
-  },
-  searchHint: { backgroundColor: t.secondary, padding: 7, borderRadius: 8 },
-  footer: {
-    marginTop: 40,
-    paddingTop: 23,
-    borderTopWidth: 1,
-    borderColor: t.line,
-  },
-  bottomWrap: {
-    backgroundColor: t.paper,
-    borderTopWidth: 1,
-    borderColor: t.line,
-  },
-  bottomNav: {
-    flexDirection: "row-reverse",
-    minHeight: 66,
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  bottomItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 52,
-    minHeight: 55,
-    paddingVertical: 5,
-  },
-  mobileBadge: {
-    position: "absolute",
-    top: -5,
-    right: -8,
-    backgroundColor: t.orange,
-    minWidth: 18,
-    minHeight: 18,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  toast: {
-    position: "absolute",
-    bottom: 85,
-    alignSelf: "center",
-    backgroundColor: t.toast,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 16,
-    maxWidth: "90%",
-    zIndex: 99,
-  },
+  safe: { flex: 1, direction: "ltr" },
+  content: { width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: 18 },
+  offline: { flexDirection: "row-reverse", alignItems: "center", gap: 8, padding: 12, borderRadius: 16, backgroundColor: t.orangeSoft, borderWidth: 1, borderColor: t.chip, marginBottom: 12, flexWrap: "wrap" },
+  footer: { width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: 18, paddingTop: 6 },
+  navWrap: { backgroundColor: "transparent" },
+  nav: { flexDirection: "row-reverse", marginHorizontal: 12, marginBottom: 8, marginTop: 4, padding: 8, borderRadius: 30, backgroundColor: t.card, borderWidth: 1, borderColor: t.line, shadowColor: t.shadow, shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: -2 }, elevation: 6, maxWidth: 560, alignSelf: "center", width: "94%" },
+  tab: { flex: 1, minHeight: 60, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  tabActive: { backgroundColor: t.orangeSoft },
+  badge: { position: "absolute", top: -8, right: -12, minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 4, backgroundColor: t.orange, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: t.card },
+  toast: { position: "absolute", bottom: 110, alignSelf: "center", backgroundColor: t.toast, paddingHorizontal: 22, paddingVertical: 13, borderRadius: 16, maxWidth: "90%", zIndex: 99 },
 });

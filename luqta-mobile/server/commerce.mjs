@@ -121,6 +121,8 @@ export async function createCommerceServer(options = {}) {
     CREATE TABLE IF NOT EXISTS agent_jobs(id TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL,type TEXT NOT NULL,status TEXT NOT NULL,result TEXT NOT NULL DEFAULT '',test_evidence TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS oauth_states(state_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires_at TEXT NOT NULL,return_url TEXT);
     CREATE TABLE IF NOT EXISTS facebook_links(user_id TEXT PRIMARY KEY REFERENCES users(id),facebook_id TEXT NOT NULL,name TEXT NOT NULL,token TEXT NOT NULL,permissions TEXT NOT NULL,linked_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS return_photos(return_id TEXT PRIMARY KEY REFERENCES returns(id),data TEXT NOT NULL,created_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS ticket_photos(id TEXT PRIMARY KEY,ticket_id TEXT NOT NULL REFERENCES tickets(id),user_id TEXT NOT NULL REFERENCES users(id),data TEXT NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS tickets(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),subject TEXT NOT NULL,message TEXT NOT NULL,status TEXT NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS ticket_replies(id TEXT PRIMARY KEY,ticket_id TEXT NOT NULL REFERENCES tickets(id),user_id TEXT NOT NULL REFERENCES users(id),message TEXT NOT NULL,created_at TEXT NOT NULL);
   `);
@@ -131,9 +133,9 @@ export async function createCommerceServer(options = {}) {
   const transaction = (fn) => { db.exec('BEGIN IMMEDIATE'); try { const result = fn(); db.exec('COMMIT'); return result; } catch (error) { db.exec('ROLLBACK'); throw error; } };
   const setting = (key, fallback = null) => parse(get('SELECT value FROM settings WHERE key=?', key)?.value, fallback);
   const setSetting = (key, value) => run('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, json(value));
-  const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, storefront: { accentColor: '#B94721', heroTitle: 'لُقطات تستحق أن تكون لك', heroSubtitle: 'اكتشف منتجات تُشبه ذوقك', showAssistant: true }, ...options.config };
+  const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, branches: [{ id: 'hashmi', name: 'فرع الهاشمي', city: 'عمان' }], storefront: { accentColor: '#FE585C', heroTitle: 'لُقطات تستحق أن تكون لك', heroSubtitle: 'اكتشف منتجات تُشبه ذوقك', showAssistant: true }, ...options.config };
   for (const [key, value] of Object.entries(defaults)) if (!get('SELECT key FROM settings WHERE key=?', key)) setSetting(key, value);
-  const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays', 'storefront'].map((key) => [key, setting(key)]));
+  const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays', 'storefront', 'branches'].map((key) => [key, setting(key)]));
   let encryptionKey;
   const secretPath = options.secretPath || (dbPath === ':memory:' ? null : resolve(dirname(dbPath), 'encryption.key'));
   if (secretPath) {
@@ -190,8 +192,8 @@ export async function createCommerceServer(options = {}) {
   };
   const order = (o) => ({ id: o.id, userId: o.user_id, date: o.created_at, createdAt: o.created_at, updatedAt: o.updated_at, status: o.status, items: parse(o.items, []), address: parse(o.address, {}), subtotal: o.subtotal, discount: o.discount, shipping: o.shipping, total: o.total, currency: o.currency, paymentMethod: o.payment_method, paymentStatus: o.payment_status, driverId: o.driver_id, events: all('SELECT status,note,created_at AS at FROM order_events WHERE order_id=? ORDER BY created_at,id', o.id) });
   const coupon = (c) => ({ id: c.id, code: c.code, type: c.type, value: c.value, minSubtotal: c.min_subtotal, maxUses: c.max_uses, uses: c.uses, expiresAt: c.expires_at, active: !!c.active });
-  const returnItem = (r) => ({ id: r.id, orderId: r.order_id, userId: r.user_id, reason: r.reason, status: r.status, note: r.note, createdAt: r.created_at, updatedAt: r.updated_at });
-  const ticketItem = (t) => ({ id: t.id, userId: t.user_id, subject: t.subject, message: t.message, status: t.status, createdAt: t.created_at, updatedAt: t.updated_at, replies: all('SELECT r.id,r.user_id AS userId,u.name,r.message,r.created_at AS createdAt FROM ticket_replies r JOIN users u ON u.id=r.user_id WHERE r.ticket_id=? ORDER BY r.created_at,r.id', t.id) });
+  const returnItem = (r) => ({ hasPhoto: !!get('SELECT 1 AS x FROM return_photos WHERE return_id=?', r.id), id: r.id, orderId: r.order_id, userId: r.user_id, reason: r.reason, status: r.status, note: r.note, createdAt: r.created_at, updatedAt: r.updated_at });
+  const ticketItem = (t) => ({ photos: get('SELECT COUNT(*) AS n FROM ticket_photos WHERE ticket_id=?', t.id).n, id: t.id, userId: t.user_id, subject: t.subject, message: t.message, status: t.status, createdAt: t.created_at, updatedAt: t.updated_at, replies: all('SELECT r.id,r.user_id AS userId,u.name,r.message,r.created_at AS createdAt FROM ticket_replies r JOIN users u ON u.id=r.user_id WHERE r.ticket_id=? ORDER BY r.created_at,r.id', t.id) });
   const jobItem = (j) => ({ id: j.id, title: j.title, description: j.description, type: j.type, status: j.status, result: j.result, testEvidence: j.test_evidence, createdAt: j.created_at, updatedAt: j.updated_at });
   const session = (user) => { const token = randomBytes(32).toString('base64url'); run('INSERT INTO sessions VALUES(?,?,?)', hash(token), user.id, new Date(Date.now() + 30 * 86400_000).toISOString()); return { token, user: publicUser(user) }; };
   const identity = (req) => {
@@ -262,6 +264,107 @@ export async function createCommerceServer(options = {}) {
     audit(actor, 'order.update', o.id, { status, driverId });
     return order(get('SELECT * FROM orders WHERE id=?', o.id));
   };
+  const branchIds = () => (setting('branches', []) || []).map((b) => b.id);
+  const validBranchStock = (value, ids = null) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) fail(400, 'مخزون الفروع غير صالح');
+    const known = new Set(ids || branchIds()), out = {};
+    for (const [branchId, qty] of Object.entries(value)) {
+      if (!known.has(branchId)) fail(400, `الفرع ${branchId} غير معروف؛ أضفه من إعدادات الفروع أولًا`, 'unknown_branch');
+      out[branchId] = integer(qty, 'مخزون الفرع', 0, 1e7);
+    }
+    return out;
+  };
+  const validateBranches = (value) => {
+    if (!Array.isArray(value) || !value.length || value.length > 100) fail(400, 'قائمة الفروع يجب أن تحتوي على 1 إلى 100 فرع');
+    const seen = new Set();
+    return value.map((b) => {
+      const branchId = text(b && b.id, 'معرّف الفرع', 1, 60);
+      if (!/^[\w-]+$/.test(branchId)) fail(400, 'معرّف الفرع يقبل الأحرف الإنجليزية والأرقام والشرطة');
+      if (seen.has(branchId)) fail(400, 'معرّف فرع مكرر'); seen.add(branchId);
+      return { id: branchId, name: text(b.name, 'اسم الفرع', 2, 100), city: b.city ? text(b.city, 'مدينة الفرع', 2, 100) : '' };
+    });
+  };
+  // Dashboard sync: upsert products from the control dashboard, never creating duplicates.
+  // Identity is resolved by id, then SKU, then barcode, both inside the payload and against the DB.
+  const dashboardSync = (body, actor) => {
+    const rows = body.products;
+    if (!Array.isArray(rows) || !rows.length || rows.length > 5000) fail(400, 'قائمة منتجات لوحة القيادة يجب أن تحتوي على 1 إلى 5000 صنف');
+    const incomingBranches = body.branches !== undefined ? validateBranches(body.branches) : null;
+    const knownIds = incomingBranches ? incomingBranches.map((b) => b.id) : branchIds();
+    const findExisting = (r) => {
+      if (r.id) { const byId = get('SELECT * FROM products WHERE id=?', String(r.id)); if (byId) return byId; }
+      if (r.sku) { const bySku = get("SELECT * FROM products WHERE json_extract(data,'$.sku')=?", String(r.sku)); if (bySku) return bySku; }
+      if (r.barcode) { const byCode = get("SELECT * FROM products WHERE json_extract(data,'$.barcode')=?", String(r.barcode).replace(/\s+/g, '')); if (byCode) return byCode; }
+      return null;
+    };
+    const merged = new Map(), aliases = new Map(), rejected = []; let duplicatesMerged = 0;
+    rows.forEach((raw, index) => {
+      if (!raw || typeof raw !== 'object') { rejected.push({ row: index + 1, reason: 'صف غير صالح' }); return; }
+      const keys = [raw.id && `id:${raw.id}`, raw.sku && `sku:${raw.sku}`, raw.barcode && `bc:${String(raw.barcode).replace(/\s+/g, '')}`].filter(Boolean);
+      if (!keys.length) { rejected.push({ row: index + 1, reason: 'يلزم معرّف أو SKU أو باركود' }); return; }
+      const hit = keys.map((k) => aliases.get(k)).find(Boolean);
+      const canonical = hit || keys[0];
+      if (hit) { duplicatesMerged++; merged.set(canonical, { ...merged.get(canonical), ...raw, _row: index + 1 }); }
+      else merged.set(canonical, { ...raw, _row: index + 1 });
+      keys.forEach((k) => aliases.set(k, canonical));
+    });
+    const plan = [];
+    for (const raw of merged.values()) {
+      try {
+        const existing = findExisting(raw);
+        const productId = existing ? existing.id : text(String(raw.id || raw.sku || raw.barcode), 'معرّف الصنف', 1, 100).replace(/[^\w-]/g, '-');
+        const price = money(number(raw.price, 'السعر', 0.001, 1e7));
+        const branchStock = raw.branchStock != null ? validBranchStock(raw.branchStock, knownIds) : undefined;
+        const stock = branchStock ? Object.values(branchStock).reduce((a, b) => a + b, 0) : integer(raw.stock ?? raw.quantity ?? (existing ? existing.stock : 0), 'المخزون', 0, 1e7);
+        const { _row, quantity, ...fields } = raw; void quantity;
+        const { branchStock: _ignored, ...rest } = fields; void _ignored;
+        const data = { ...validateProduct({ ...rest, id: productId, price }, existing ? parse(existing.data) : {}), ...(branchStock ? { branchStock } : {}) };
+        plan.push({ id: productId, data, stock, existed: !!existing, before: existing, row: _row });
+      } catch (error) { rejected.push({ row: raw._row, reason: error.message }); }
+    }
+    const summary = { branches: incomingBranches ? incomingBranches.length : branchIds().length, received: rows.length, unique: merged.size, duplicatesMerged, created: plan.filter((r) => !r.existed).length, updated: plan.filter((r) => r.existed).length, rejected };
+    if (body.dryRun) return { dryRun: true, ...summary };
+    if (!plan.length) fail(400, 'لا توجد صفوف صالحة للمزامنة', 'nothing_to_sync');
+    return transaction(() => {
+      const snapshot = [], time = now();
+      if (incomingBranches) setSetting('branches', incomingBranches);
+      for (const row of plan) {
+        run('INSERT INTO products(id,data,stock,active,updated_at) VALUES(?,?,?,1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,stock=excluded.stock,updated_at=excluded.updated_at', row.id, json(row.data), row.stock, time);
+        snapshot.push({ id: row.id, before: row.before || null, after: get('SELECT * FROM products WHERE id=?', row.id) });
+      }
+      const syncId = id('sync');
+      run('INSERT INTO inventory_imports VALUES(?,?,?,?,?,NULL)', syncId, actor.id, 'dashboard-sync', json(snapshot), time);
+      setSetting('lastDashboardSync', { syncId, at: time, ...summary, rejected: rejected.length });
+      audit(actor, 'dashboard.sync', syncId, { ...summary, rejected: rejected.length });
+      return { syncId, ...summary };
+    });
+  };
+  // Pre-confirmation check: current server price and availability for each cart line (branch aware).
+  const checkCart = (items, branchId) => {
+    if (!Array.isArray(items) || !items.length || items.length > 100) fail(400, 'السلة فارغة أو غير صالحة');
+    if (branchId != null && !branchIds().includes(branchId)) fail(400, 'الفرع غير معروف', 'unknown_branch');
+    const issues = []; let subtotal = 0;
+    const lines = items.map((line) => {
+      const productId = text(line.productId, 'معرّف المنتج', 1, 100), quantity = integer(line.quantity, 'الكمية', 1, 1000);
+      const row = get('SELECT * FROM products WHERE id=?', productId);
+      if (!row || !row.active) { issues.push({ productId, code: 'product_unavailable' }); return { productId, quantity, available: 0, ok: false }; }
+      const p = parse(row.data), available = branchId && p.branchStock ? Math.min(row.stock, p.branchStock[branchId] ?? 0) : row.stock;
+      const expected = line.price === undefined ? undefined : Number(line.price);
+      if (expected !== undefined && money(expected) !== p.price) issues.push({ productId, code: 'price_changed', from: money(expected), to: p.price });
+      if (available < quantity) issues.push({ productId, code: 'insufficient_stock', available });
+      subtotal = money(subtotal + p.price * Math.min(quantity, available));
+      return { productId, name: p.name, price: p.price, quantity, available, ok: available >= quantity };
+    });
+    const shipping = subtotal === 0 || subtotal >= setting('freeShippingThreshold') ? 0 : setting('shippingFee');
+    return { lines, subtotal, shipping, total: money(subtotal + shipping), currency: setting('currency'), issues, ok: issues.length === 0, checkedAt: now() };
+  };
+  const ticketPhoto = (ticketId, actorId, value) => {
+    if (value == null) return;
+    const photo = String(value);
+    if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo) || photo.length > 2_800_000) fail(400, 'الصورة يجب أن تكون JPEG/PNG/WebP بحجم أقل من 2 ميغابايت', 'invalid_photo');
+    if (get('SELECT COUNT(*) AS n FROM ticket_photos WHERE ticket_id=?', ticketId).n >= 10) fail(409, 'الحد الأقصى 10 صور لكل تذكرة');
+    run('INSERT INTO ticket_photos VALUES(?,?,?,?,?)', id('tph'), ticketId, actorId, photo, now());
+  };
   const validateProduct = (body, old = {}) => {
     const p = { ...old, ...body };
     p.name = text(p.name, 'اسم المنتج', 2, 200); p.price = money(number(p.price, 'السعر', 0.001, 1e7));
@@ -279,6 +382,13 @@ export async function createCommerceServer(options = {}) {
       if (!parent || parse(parent.data, {}).variantOf) fail(400, 'المنتج الأب يجب أن يكون صنفًا منشورًا ومستقلًا');
       p.variantLabel = text(p.variantLabel, 'وصف المقاس أو اللون', 2, 80);
     } else { delete p.variantOf; delete p.variantLabel; }
+    if (p.barcode != null && p.barcode !== '') p.barcode = text(String(p.barcode), 'الباركود', 4, 64).replace(/\s+/g, ''); else delete p.barcode;
+    if (p.images != null) {
+      if (!Array.isArray(p.images) || p.images.length > 8 || p.images.some((u) => typeof u !== 'string' || !/^https:\/\//.test(u) || u.length > 2000)) fail(400, 'صور المنتج يجب أن تكون حتى 8 روابط HTTPS');
+      p.images = [...new Set(p.images)];
+      if (!p.image && p.images.length) p.image = p.images[0];
+    }
+    if (p.branchStock != null) p.branchStock = validBranchStock(p.branchStock);
     for (const key of ['stock', 'active', 'updatedAt', 'rating', 'reviews']) delete p[key];
     if (p.image === '') { if (old.image) p.image = old.image; else delete p.image; }
     if (typeof p.image === 'string' && !/^https:\/\//.test(p.image)) fail(400, 'رابط صورة المنتج يجب أن يستخدم HTTPS');
@@ -438,6 +548,8 @@ export async function createCommerceServer(options = {}) {
             run('DELETE FROM oauth_states WHERE user_id=?', actor.id);
             run('DELETE FROM facebook_links WHERE user_id=?', actor.id);
             run('DELETE FROM ticket_replies WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?)', actor.id);
+            run('DELETE FROM ticket_photos WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?) OR user_id=?', actor.id, actor.id);
+            run('DELETE FROM return_photos WHERE return_id IN (SELECT id FROM returns WHERE user_id=?)', actor.id);
             run('DELETE FROM tickets WHERE user_id=?', actor.id);
             run("UPDATE ticket_replies SET message='تم حذف بيانات المرسل' WHERE user_id=?", actor.id);
             run('DELETE FROM reward_ledger WHERE user_id=?', actor.id);
@@ -516,6 +628,8 @@ export async function createCommerceServer(options = {}) {
         if (method === 'PATCH') { const address = validateAddress({ ...parse(row.data), ...body }); transaction(() => { if (address.isDefault) for (const a of all('SELECT * FROM addresses WHERE user_id=?', actor.id)) run('UPDATE addresses SET data=? WHERE id=?', json({ ...parse(a.data), isDefault: false }), a.id); run('UPDATE addresses SET data=? WHERE id=?', json(address), row.id); }); return send(200, { address: { ...address, id: row.id } }); }
       }
       if (path === '/api/wishlist') { const actor = requireUser(req); if (method === 'GET') return send(200, { productIds: parse(get('SELECT product_ids FROM wishlists WHERE user_id=?', actor.id)?.product_ids, []) }); if (method === 'PUT') { if (!Array.isArray(body.productIds) || body.productIds.length > 500 || body.productIds.some((v) => typeof v !== 'string' || !get('SELECT id FROM products WHERE id=?', v))) fail(400, 'قائمة المفضلة غير صالحة'); const productIds = [...new Set(body.productIds)]; run('INSERT INTO wishlists VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET product_ids=excluded.product_ids', actor.id, json(productIds)); return send(200, { productIds }); } }
+      if (method === 'GET' && path === '/api/branches') return send(200, { branches: setting('branches', []) });
+      if (method === 'POST' && path === '/api/orders/check') { rate(req, 'cart-check', 120, 60_000); return send(200, checkCart(body.items, body.branchId ?? null)); }
       if (method === 'POST' && path === '/api/coupons/validate') { requireUser(req); const code = text(body.code, 'رمز الخصم', 1, 40), { subtotal } = quote(body.items), { row, discount } = discountFor(code, subtotal); return send(200, { code: row.code, discount, subtotal, currency: setting('currency') }); }
       if (path === '/api/orders') {
         const actor = requireUser(req);
@@ -525,11 +639,18 @@ export async function createCommerceServer(options = {}) {
           if (existing) return send(200, { order: order(existing), reused: true });
           const address = validateAddress(body.address || {}), paymentMethod = body.paymentMethod || 'cod'; if (!['cod', 'wallet'].includes(paymentMethod)) fail(400, 'طريقة الدفع غير مدعومة');
           const created = transaction(() => {
-            const { lines, subtotal } = quote(body.items), { row: couponRow, discount } = discountFor(body.couponCode, subtotal), shipping = subtotal >= setting('freeShippingThreshold') ? 0 : setting('shippingFee'), total = money(subtotal - discount + shipping);
+            const branchId = body.branchId ?? null; if (branchId !== null && !branchIds().includes(branchId)) fail(400, 'الفرع غير معروف', 'unknown_branch');
+            const { lines, subtotal } = quote(body.items);
+            if (body.expectedSubtotal !== undefined && money(Number(body.expectedSubtotal)) !== subtotal) fail(409, 'تغيّرت الأسعار منذ مراجعة السلة؛ راجع المجموع الجديد ثم أكّد مرة أخرى', 'price_changed');
+            if (branchId) for (const line of lines) { const bs = parse(get('SELECT data FROM products WHERE id=?', line.productId).data).branchStock; if (bs && (bs[branchId] ?? 0) < line.quantity) fail(409, `الكمية غير متاحة في الفرع المختار للمنتج ${line.name}`, 'out_of_stock'); }
+            const { row: couponRow, discount } = discountFor(body.couponCode, subtotal), shipping = subtotal >= setting('freeShippingThreshold') ? 0 : setting('shippingFee'), total = money(subtotal - discount + shipping);
             if (paymentMethod === 'wallet' && balance(actor.id) < total) fail(409, 'رصيد المحفظة غير كافٍ', 'insufficient_balance');
             const orderId = id('LQ'), createdAt = now();
             run('INSERT INTO orders VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', orderId, actor.id, json(lines), json(address), subtotal, discount, shipping, total, setting('currency'), 'pending', paymentMethod, paymentMethod === 'wallet' ? 'paid' : 'pending', null, couponRow?.id || null, key, createdAt, createdAt);
-            for (const line of lines) run('UPDATE products SET stock=stock-?,updated_at=? WHERE id=?', line.quantity, createdAt, line.productId);
+            for (const line of lines) {
+              run('UPDATE products SET stock=stock-?,updated_at=? WHERE id=?', line.quantity, createdAt, line.productId);
+              if (branchId) { const r = get('SELECT data FROM products WHERE id=?', line.productId), d = parse(r.data); if (d.branchStock) { d.branchStock[branchId] = Math.max(0, (d.branchStock[branchId] ?? 0) - line.quantity); run('UPDATE products SET data=? WHERE id=?', json(d), line.productId); } }
+            }
             if (couponRow) run('UPDATE coupons SET uses=uses+1 WHERE id=?', couponRow.id);
             if (paymentMethod === 'wallet') ledger(actor.id, -total, 'purchase', 'دفع طلب من المحفظة', orderId);
             const o = get('SELECT * FROM orders WHERE id=?', orderId); event(o, 'pending', 'تم إنشاء الطلب'); notify(actor.id, 'تم استلام طلبك', `رقم طلبك ${orderId}`, orderId); audit(actor, 'order.create', orderId, { total, paymentMethod }); return order(o);
@@ -545,7 +666,10 @@ export async function createCommerceServer(options = {}) {
         const delivered = get("SELECT created_at FROM order_events WHERE order_id=? AND status='delivered' ORDER BY created_at DESC LIMIT 1", o.id);
         if (!delivered || Date.now() - Date.parse(delivered.created_at) > setting('returnsDays') * 86400_000) fail(409, 'انتهت مهلة الإرجاع');
         if (get('SELECT id FROM returns WHERE order_id=?', o.id)) fail(409, 'يوجد طلب إرجاع لهذا الطلب');
-        const returnId = id('ret'), time = now(); run('INSERT INTO returns VALUES(?,?,?,?,?,?,?,?)', returnId, o.id, actor.id, reason, 'requested', '', time, time); notify(actor.id, 'طلب إرجاع جديد', 'تم تسجيل طلب الإرجاع للمراجعة', o.id); return send(201, { returnRequest: returnItem(get('SELECT * FROM returns WHERE id=?', returnId)) });
+        const photo = body.photo == null ? null : String(body.photo);
+        if (photo !== null && (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo) || photo.length > 2_800_000)) fail(400, 'صورة الإرجاع يجب أن تكون JPEG/PNG/WebP بحجم أقل من 2 ميغابايت', 'invalid_photo');
+        const returnId = id('ret'), time = now(); run('INSERT INTO returns VALUES(?,?,?,?,?,?,?,?)', returnId, o.id, actor.id, reason, 'requested', '', time, time);
+        if (photo) run('INSERT INTO return_photos VALUES(?,?,?)', returnId, photo, time); notify(actor.id, 'طلب إرجاع جديد', 'تم تسجيل طلب الإرجاع للمراجعة', o.id); return send(201, { returnRequest: returnItem(get('SELECT * FROM returns WHERE id=?', returnId)) });
       }
       if (method === 'GET' && path === '/api/returns') { const actor = requireUser(req); return send(200, { returns: all('SELECT * FROM returns WHERE user_id=? ORDER BY created_at DESC', actor.id).map(returnItem) }); }
       if (method === 'GET' && (match = path.match(/^\/api\/orders\/([^/]+)\/tracking$/))) {
@@ -577,8 +701,8 @@ export async function createCommerceServer(options = {}) {
         });
         return send(200, result);
       }
-      if (path === '/api/tickets') { const actor = requireUser(req); if (method === 'GET') return send(200, { tickets: all('SELECT * FROM tickets WHERE user_id=? ORDER BY updated_at DESC LIMIT 200', actor.id).map(ticketItem) }); if (method === 'POST') { const ticketId = id('tkt'), time = now(); run('INSERT INTO tickets VALUES(?,?,?,?,?,?,?)', ticketId, actor.id, text(body.subject, 'موضوع التذكرة', 3, 200), text(body.message, 'الرسالة', 5, 5000), 'open', time, time); return send(201, { ticket: ticketItem(get('SELECT * FROM tickets WHERE id=?', ticketId)) }); } }
-      if (method === 'POST' && (match = path.match(/^\/api\/tickets\/([^/]+)\/replies$/))) { const actor = requireUser(req), ticket = get('SELECT * FROM tickets WHERE id=? AND user_id=?', match[1], actor.id); if (!ticket) fail(404, 'التذكرة غير موجودة', 'not_found'); if (ticket.status === 'resolved') fail(409, 'التذكرة مغلقة؛ أنشئ تذكرة جديدة'); const replyId = id('rpl'), time = now(); run('INSERT INTO ticket_replies VALUES(?,?,?,?,?)', replyId, ticket.id, actor.id, text(body.message, 'الرسالة', 2, 5000), time); run('UPDATE tickets SET updated_at=? WHERE id=?', time, ticket.id); return send(201, { ticket: ticketItem(get('SELECT * FROM tickets WHERE id=?', ticket.id)) }); }
+      if (path === '/api/tickets') { const actor = requireUser(req); if (method === 'GET') return send(200, { tickets: all('SELECT * FROM tickets WHERE user_id=? ORDER BY updated_at DESC LIMIT 200', actor.id).map(ticketItem) }); if (method === 'POST') { const ticketId = id('tkt'), time = now(); run('INSERT INTO tickets VALUES(?,?,?,?,?,?,?)', ticketId, actor.id, text(body.subject, 'موضوع التذكرة', 3, 200), text(body.message, 'الرسالة', 5, 5000), 'open', time, time); ticketPhoto(ticketId, actor.id, body.photo); return send(201, { ticket: ticketItem(get('SELECT * FROM tickets WHERE id=?', ticketId)) }); } }
+      if (method === 'POST' && (match = path.match(/^\/api\/tickets\/([^/]+)\/replies$/))) { const actor = requireUser(req), ticket = get('SELECT * FROM tickets WHERE id=? AND user_id=?', match[1], actor.id); if (!ticket) fail(404, 'التذكرة غير موجودة', 'not_found'); if (ticket.status === 'resolved') fail(409, 'التذكرة مغلقة؛ أنشئ تذكرة جديدة'); const replyId = id('rpl'), time = now(); run('INSERT INTO ticket_replies VALUES(?,?,?,?,?)', replyId, ticket.id, actor.id, text(body.message, 'الرسالة', 2, 5000), time); ticketPhoto(ticket.id, actor.id, body.photo); run('UPDATE tickets SET updated_at=? WHERE id=?', time, ticket.id); return send(201, { ticket: ticketItem(get('SELECT * FROM tickets WHERE id=?', ticket.id)) }); }
       if (method === 'GET' && path === '/api/notifications') { const actor = requireUser(req); return send(200, { notifications: all('SELECT id,title,body,is_read AS read,order_id AS orderId,created_at AS createdAt FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 200', actor.id).map((r) => ({ ...r, read: !!r.read })) }); }
       if (method === 'POST' && path === '/api/notifications/read-all') { const actor = requireUser(req); run('UPDATE notifications SET is_read=1 WHERE user_id=?', actor.id); return send(200, { ok: true }); }
       if (method === 'PATCH' && (match = path.match(/^\/api\/notifications\/([^/]+)$/))) { const actor = requireUser(req); if (!get('SELECT id FROM notifications WHERE id=? AND user_id=?', match[1], actor.id)) fail(404, 'الإشعار غير موجود', 'not_found'); run('UPDATE notifications SET is_read=? WHERE id=?', body.read === false ? 0 : 1, match[1]); return send(200, { ok: true }); }
@@ -590,7 +714,7 @@ export async function createCommerceServer(options = {}) {
       }
       if (path.startsWith('/api/admin/')) {
         const section = p[1];
-        const scope = section === 'products' || section === 'offers' ? 'catalog:write' : section === 'inventory' ? 'inventory:write' : section === 'orders' ? 'orders:write' : section === 'settings' ? 'settings:write' : section === 'agent-jobs' ? 'jobs:write' : null;
+        const scope = section === 'products' || section === 'offers' ? 'catalog:write' : section === 'inventory' || section === 'dashboard-sync' || section === 'branches' ? 'inventory:write' : section === 'orders' ? 'orders:write' : section === 'settings' ? 'settings:write' : section === 'agent-jobs' ? 'jobs:write' : null;
         const actor = admin(req, scope);
         if (method === 'GET' && section === 'overview') {
           return send(200, { stats: { products: get('SELECT COUNT(*) AS n FROM products WHERE active=1').n, lowStock: get('SELECT COUNT(*) AS n FROM products WHERE active=1 AND stock<=5').n, orders: get('SELECT COUNT(*) AS n FROM orders').n, customers: get("SELECT COUNT(*) AS n FROM users WHERE role='customer'").n, revenue: money(get("SELECT COALESCE(SUM(total),0) AS n FROM orders WHERE status='delivered' AND payment_status IN ('paid','collected')").n), pendingOrders: get("SELECT COUNT(*) AS n FROM orders WHERE status='pending'").n }, recentOrders: all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 10').map(order), lowStockProducts: all('SELECT * FROM products WHERE active=1 AND stock<=5 ORDER BY stock LIMIT 20').map(product) });
@@ -636,6 +760,14 @@ export async function createCommerceServer(options = {}) {
             });
             return send(200, { imported: checked.length, commerceOnly: true });
           }
+        }
+        if (section === 'dashboard-sync') {
+          if (method === 'POST') return send(200, dashboardSync(body, actor));
+          if (method === 'GET') return send(200, { last: setting('lastDashboardSync', null), undo: inventoryUndoSummary() });
+        }
+        if (section === 'branches') {
+          if (method === 'GET') return send(200, { branches: setting('branches', []) });
+          if (method === 'PUT') { const branches = validateBranches(body.branches); setSetting('branches', branches); audit(actor, 'branches.update', '', { count: branches.length }); return send(200, { branches }); }
         }
         if (section === 'inventory') {
           if (method === 'POST' && p[2] === 'jawafa-preview') {

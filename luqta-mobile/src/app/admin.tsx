@@ -22,7 +22,7 @@ const statuses = [
   { value: "pending", label: "جديد" }, { value: "confirmed", label: "مؤكد" }, { value: "preparing", label: "قيد التجهيز" },
   { value: "out_for_delivery", label: "خرج للتوصيل" }, { value: "delivered", label: "تم التسليم" }, { value: "cancelled", label: "ملغي" },
 ] as const;
-const categories = [{ value: "electronics", label: "إلكترونيات" }, { value: "home", label: "المنزل" }, { value: "fashion", label: "الأزياء" }, { value: "care", label: "العناية" }];
+const categories = [{ value: "grocery", label: "بقالة ومأكولات" }, { value: "electronics", label: "إلكترونيات" }, { value: "fashion", label: "أزياء وموضة" }, { value: "home", label: "المنزل والمطبخ" }, { value: "beauty", label: "العناية والجمال" }, { value: "sports", label: "الرياضة واللياقة" }];
 const roles = [{ value: "customer", label: "عميل" }, { value: "driver", label: "سائق" }, { value: "admin", label: "مدير" }] as const;
 const tabs = [
   { id: "overview", label: "نظرة عامة" }, { id: "products", label: "الأصناف" }, { id: "inventory", label: "المخزون والاستيراد" }, { id: "offers", label: "استيراد العروض" }, { id: "appearance", label: "تصميم المتجر" },

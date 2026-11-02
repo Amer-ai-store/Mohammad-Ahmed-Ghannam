@@ -1,154 +1,156 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, StyleSheet, View } from "react-native";
+// Order tracking — reference design "طلبك التجريبي" (demo) / live order tracking.
+import React, { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import * as Linking from "expo-linking";
-import { MapPin, Navigation, Truck } from "lucide-react-native";
+import { Calendar, Check, CircleX, ClipboardList, Clock, Headset, House, Map as MapIcon, Truck } from "lucide-react-native";
 import { Shell } from "../../components/Shell";
-import { Button, Txt } from "../../components/ui";
-import DeliveryMap, { MapPoint, validMapPoint } from "../../components/DeliveryMap";
+import { Txt } from "../../components/ui";
+import { Card, Chip, CTA, ErrorBlock, LoadingBlock, SmallButton } from "../../components/design/kit";
+import { MapArt } from "../../components/design/MapArt";
+import { Companion } from "../../components/character/Companion";
+import { toArabicDigits } from "../../data/products";
 import { api } from "../../lib/api";
 import { useSession } from "../../lib/session";
-import { useTheme } from "../../lib/theme";
-import { distanceBetweenMeters, fetchDrivingRoute, type DrivingRoute } from "../../lib/deliveryRoute";
+import { useStore } from "../../lib/store";
+import { orderLabels, type CommerceOrder } from "../../lib/commerce-types";
+import { Palette, useTheme, useThemedStyles } from "../../lib/theme";
 
-type Tracking = {
-  orderId: string;
-  status: string;
-  driver: { id: string; name: string } | null;
-  location: (MapPoint & { accuracy?: number | null; updatedAt: string }) | null;
-  destination: (Partial<MapPoint> & { name?: string; phone?: string; city?: string; street?: string }) | null;
-  events: { status: string; at: string; note?: string }[];
-  updatedAt?: string;
-};
-type RouteSnapshot = {
-  identity: string;
-  origin: MapPoint;
-  destination: MapPoint;
-  data: DrivingRoute;
-  calculatedAt: string;
-};
-const labels: Record<string, string> = { pending: "بانتظار التأكيد", confirmed: "تم التأكيد", preparing: "جارٍ التجهيز", out_for_delivery: "في الطريق إليك", delivered: "تم التسليم", cancelled: "ملغي" };
-function dateLabel(value?: string) {
-  if (!value || !Number.isFinite(Date.parse(value))) return "الوقت غير متاح";
-  return new Date(value).toLocaleString("ar", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
+type Tracking = { orderId: string; status: string; events: { status: string; at: string; note?: string }[]; location: unknown; updatedAt?: string };
+const steps = [
+  { key: "received", label: "استلام", statuses: ["pending", "confirmed", "preparing", "out_for_delivery", "delivered"], icon: ClipboardList },
+  { key: "prep", label: "تجهيز", statuses: ["preparing", "out_for_delivery", "delivered"], icon: ClipboardList },
+  { key: "road", label: "بالطريق", statuses: ["out_for_delivery", "delivered"], icon: Truck },
+  { key: "done", label: "تسليم", statuses: ["delivered"], icon: House },
+];
+const stepIndex = (status: string) => steps.reduce((acc, s, i) => (s.statuses.includes(status) ? i : acc), -1);
+const fmtDate = (v?: string) => (v && Number.isFinite(Date.parse(v)) ? new Date(v) : null);
+const dateText = (d: Date | null) => (d ? toArabicDigits(`${d.getDate()} ${["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"][d.getMonth()]} ${d.getFullYear()}`) : "—");
+const timeText = (d: Date | null) => (d ? toArabicDigits(`${String(d.getHours() % 12 || 12).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} ${d.getHours() < 12 ? "ص" : "م"}`) : "");
 
 export default function TrackingScreen() {
   const { colors: t } = useTheme();
-  const params = useLocalSearchParams<{ id: string | string[] }>();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { user, configured, baseUrl } = useSession();
-  const [received, setReceived] = useState<{ ownerId: string; serverUrl: string; data: Tracking } | null>(null);
-  const tracking = received && received.ownerId === user?.id && received.serverUrl === baseUrl && received.data.orderId === id ? received.data : null;
-  const [busy, setBusy] = useState(false);
+  const s = useThemedStyles(makeStyles);
+  const params = useLocalSearchParams<{ id: string }>();
+  const id = String(params.id || "");
+  const demo = id.startsWith("LQ-DEMO-");
+  const { demoOrders, cancelDemoOrder, refreshOrders, notify } = useStore();
+  const { user } = useSession();
+  const [order, setOrder] = useState<CommerceOrder | null>(null);
+  const [tracking, setTracking] = useState<Tracking | null>(null);
+  const [loading, setLoading] = useState(!demo);
   const [error, setError] = useState("");
-  const [checkedAt, setCheckedAt] = useState("");
-  const [clock, setClock] = useState(() => Date.now());
-  const [routeSnapshot, setRouteSnapshot] = useState<RouteSnapshot | null>(null);
-  const [routeFailure, setRouteFailure] = useState<{ identity: string; message: string } | null>(null);
-  const [routingIdentity, setRoutingIdentity] = useState<string | null>(null);
-  const [routeRetry, setRouteRetry] = useState(0);
-  const lastRouteResult = useRef<{ identity: string; origin: MapPoint; destination: MapPoint; at: number; retry: number } | null>(null);
-  const load = useCallback(async (visible = false) => {
-    if (!id || !user || !configured) return;
-    if (visible) setBusy(true);
+  const [cancelling, setCancelling] = useState(false);
+  const demoOrder = demo ? demoOrders.find((o) => o.id === id) || null : null;
+  const load = useCallback(async () => {
+    if (demo) return;
+    if (!user) { setLoading(false); setError("سجّل الدخول لمتابعة طلبك."); return; }
+    setLoading(true); setError("");
     try {
-      const data = await api.get<Tracking>(`/orders/${encodeURIComponent(id)}/tracking`);
-      setReceived({ ownerId: user.id, serverUrl: baseUrl, data });
-      setError("");
-      setCheckedAt(new Date().toISOString());
-      setClock(Date.now());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "تعذر تحديث تتبع الطلب");
-    } finally { setClock(Date.now()); if (visible) setBusy(false); }
-  }, [baseUrl, configured, id, user]);
-  useEffect(() => {
-    const initial = setTimeout(() => void load(true), 0);
-    const timer = setInterval(() => { if (AppState.currentState === "active" || AppState.currentState === null) void load(); }, 15000);
-    return () => { clearTimeout(initial); clearInterval(timer); };
-  }, [load]);
-  const destination = validMapPoint(tracking?.destination as MapPoint | null) ? tracking!.destination as MapPoint : null;
-  const location = validMapPoint(tracking?.location) ? tracking!.location : null;
-  const age = location && Number.isFinite(Date.parse(location.updatedAt)) ? Math.max(0, Math.floor((clock - Date.parse(location.updatedAt)) / 1000)) : null;
-  const stale = age === null || age > 90;
-  const routeIdentity = `${baseUrl}:${user?.id || ""}:${id || ""}`;
-  const routeEligible = Boolean(tracking?.status === "out_for_delivery" && !stale && location && destination);
-  const driverLat = location?.latitude, driverLng = location?.longitude;
-  const destinationLat = destination?.latitude, destinationLng = destination?.longitude;
-  useEffect(() => {
-    if (!routeEligible || driverLat === undefined || driverLng === undefined || destinationLat === undefined || destinationLng === undefined) return;
-    const start = { latitude: driverLat, longitude: driverLng };
-    const end = { latitude: destinationLat, longitude: destinationLng };
-    const previous = lastRouteResult.current;
-    if (previous && previous.identity === routeIdentity && previous.retry === routeRetry && Date.now() - previous.at < 60_000 &&
-        distanceBetweenMeters(previous.origin, start) < 150 && distanceBetweenMeters(previous.destination, end) < 10) return;
-    const controller = new AbortController();
-    let active = true;
-    const timer = setTimeout(() => {
-      setRoutingIdentity(routeIdentity);
-      setRouteFailure(null);
-      fetchDrivingRoute(start, end, { signal: controller.signal }).then((data) => {
-        if (!active) return;
-        lastRouteResult.current = { identity: routeIdentity, origin: start, destination: end, at: Date.now(), retry: routeRetry };
-        setRouteSnapshot({ identity: routeIdentity, origin: start, destination: end, data, calculatedAt: new Date().toISOString() });
-      }).catch((failure) => {
-        if (!active || controller.signal.aborted) return;
-        lastRouteResult.current = { identity: routeIdentity, origin: start, destination: end, at: Date.now(), retry: routeRetry };
-        setRouteSnapshot(null);
-        setRouteFailure({ identity: routeIdentity, message: failure instanceof Error ? failure.message : "تعذر حساب المسار." });
-      }).finally(() => { if (active) setRoutingIdentity(null); });
-    }, 0);
-    return () => { active = false; clearTimeout(timer); controller.abort(); };
-  }, [routeEligible, routeIdentity, driverLat, driverLng, destinationLat, destinationLng, routeRetry]);
-  const activeRoute = routeEligible && routeSnapshot?.identity === routeIdentity && location && destination &&
-    distanceBetweenMeters(routeSnapshot.origin, location) < 150 && distanceBetweenMeters(routeSnapshot.destination, destination) < 10
-      ? routeSnapshot : null;
-  const routing = routeEligible && routingIdentity === routeIdentity;
-  const routeError = routeEligible && routeFailure?.identity === routeIdentity ? routeFailure.message : "";
-  const openDestination = async () => {
-    const query = destination ? `${destination.latitude},${destination.longitude}` : [tracking?.destination?.street, tracking?.destination?.city].filter(Boolean).join(" ");
-    if (!query) return;
-    try { await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`); }
-    catch { setError("تعذر فتح تطبيق الخرائط. يمكنك استخدام العنوان الظاهر أدناه."); }
-  };
-  return <Shell title="تتبع التوصيل" subtitle="الموقع المنشور من جهاز السائق، مع وقت آخر تحديث حقيقي.">
-    {!configured ? <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}><Txt>يجب ربط التطبيق بخادم المتجر قبل تتبع الطلبات.</Txt><Button title="إعداد اتصال الخادم" onPress={() => router.push("/connection")} /></View> : !user ? <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}><Txt>سجّل الدخول إلى الحساب صاحب الطلب لعرض موقع التوصيل.</Txt><Button title="تسجيل الدخول" onPress={() => router.push("/login")} /></View> : <>
-      <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}>
-        <View style={s.row}><Truck size={26} color={t.orange} /><View style={{ flex: 1, gap: 5 }}><Txt weight="bold" style={{ fontSize: 21 }}>{tracking ? labels[tracking.status] || tracking.status : "تتبع الطلب"}</Txt><Txt style={{ color: t.muted, fontSize: 13 }}>{id || "رقم الطلب غير صالح"}</Txt></View>{busy ? <ActivityIndicator color={t.orange} /> : null}</View>
-        {error ? <Txt accessibilityRole="alert" style={{ color: t.danger, lineHeight: 24 }}>{error}{tracking ? " — المعروض أدناه آخر بيانات ناجحة، وقد لا يكون محدثًا." : ""}</Txt> : null}
-        <Button title="تحديث حالة وموقع الطلب" secondary busy={busy} disabled={!id} onPress={() => void load(true)} />
-        {checkedAt ? <Txt style={{ color: t.muted, fontSize: 12 }}>آخر اتصال بالخادم: {dateLabel(checkedAt)} · تحديث تلقائي كل 15 ثانية أثناء فتح التطبيق.</Txt> : null}
+      const tr = await api.get<Tracking>(`/orders/${encodeURIComponent(id)}/tracking`);
+      setTracking(tr);
+      try { setOrder((await api.get<{ order: CommerceOrder }>(`/orders/${encodeURIComponent(id)}`)).order); } catch { /* drivers may not read the full order */ }
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذّر تحميل حالة الطلب"); }
+    finally { setLoading(false); }
+  }, [demo, id, user]);
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (demo) return; const timer = setInterval(() => void load(), 30000); return () => clearInterval(timer); }, [demo, load]);
+
+  const current = demo ? demoOrder : order;
+  const status = demo ? demoOrder?.status || "pending" : tracking?.status || order?.status || "pending";
+  const events = demo ? (demoOrder?.events || []).map((e) => ({ status: e.status, at: e.createdAt || "", note: e.note })) : tracking?.events || [];
+  const last = events[events.length - 1];
+  const created = fmtDate(current?.createdAt || current?.date || events[0]?.at);
+  const lastAt = fmtDate(last?.at);
+  const idx = stepIndex(status);
+  const cancelled = status === "cancelled";
+  const canCancel = ["pending", "confirmed", "preparing"].includes(status) && (demo || ["pending", "confirmed"].includes(status));
+
+  async function cancel() {
+    if (demo) { cancelDemoOrder(id); notify("أُلغي الطلب التجريبي"); return; }
+    setCancelling(true);
+    try { await api.post(`/orders/${encodeURIComponent(id)}/cancel`); await load(); void refreshOrders(); notify("تم إلغاء الطلب"); }
+    catch (e) { setError(e instanceof Error ? e.message : "تعذّر إلغاء الطلب"); }
+    finally { setCancelling(false); }
+  }
+  if (demo && !demoOrder) return (
+    <Shell title="الطلب غير موجود" subtitle="ربما حُذفت بيانات الطلب التجريبي من هذا الجهاز."><CTA title="طلباتي" onPress={() => router.replace("/orders")} /></Shell>
+  );
+  return (
+    <Shell title={demo ? "طلبك التجريبي" : "تتبع طلبك"} subtitle={cancelled ? "تم إلغاء الطلب." : "شكراً لك! تم استلام طلبك وجاري تجهيزه."} side={<Companion action="run" base={112} enterFrom="right" />}>
+      {loading ? <LoadingBlock label="جارٍ تحميل حالة الطلب…" /> : error ? <ErrorBlock message={error} onRetry={() => void load()} /> : null}
+      <Card style={s.infoRow} testID="order-info">
+        <View style={[s.infoCell, { borderLeftWidth: 1, borderColor: t.line }]}>
+          <View style={s.iconBox}><ClipboardList size={30} color={t.purple} /></View>
+          <View style={{ alignItems: "flex-end", flex: 1 }}>
+            <Txt style={{ color: t.muted, fontSize: 13 }}>رقم الطلب</Txt>
+            <Txt weight="bold" style={{ color: t.title, fontSize: 17 }} numberOfLines={1}>{id}</Txt>
+            {demo ? <Chip label="محاكاة" tone="demo" /> : null}
+          </View>
+        </View>
+        <View style={s.infoCell}>
+          <View style={s.iconBox}><Calendar size={28} color={t.purple} /></View>
+          <View style={{ alignItems: "flex-end", flex: 1 }}>
+            <Txt style={{ color: t.muted, fontSize: 13 }}>تاريخ الطلب</Txt>
+            <Txt weight="bold" style={{ color: t.title, fontSize: 15 }}>{dateText(created)}</Txt>
+            <Txt style={{ color: t.muted, fontSize: 13 }}>{timeText(created)}</Txt>
+          </View>
+        </View>
+      </Card>
+      <Card style={s.stepper} testID="order-steps">
+        {steps.map((step, i) => {
+          const done = !cancelled && i <= idx;
+          return (
+            <React.Fragment key={step.key}>
+              {i > 0 ? <View style={[s.connector, { backgroundColor: !cancelled && i <= idx ? t.orange : t.line }]} /> : null}
+              <View style={{ alignItems: "center", width: 66 }} accessibilityLabel={`${step.label}: ${done ? "مكتمل" : "لم يكتمل"}`}>
+                <View style={[s.stepDot, done ? { backgroundColor: t.orange } : { backgroundColor: t.purpleSoft }]}>
+                  {done ? <Check size={26} color={t.onAccent} strokeWidth={3} /> : <step.icon size={24} color={t.purple} />}
+                </View>
+                <Txt weight="bold" style={{ marginTop: 6, fontSize: 15, color: done ? t.orange : t.muted }}>{step.label}</Txt>
+              </View>
+            </React.Fragment>
+          );
+        })}
+      </Card>
+      <View style={{ marginTop: 12 }}>
+        <MapArt height={190} route progress={cancelled ? 0 : idx >= 3 ? 1 : idx === 2 ? 0.55 : 0.12} />
+        <View style={s.mapLabelStore}><Txt style={{ fontSize: 12, color: t.ink }}>المتجر</Txt></View>
+        <View style={s.mapLabelHome}><Txt style={{ fontSize: 12, color: t.ink }}>عنوان التوصيل</Txt></View>
       </View>
-      {tracking ? <>
-        <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}>
-          <View style={s.row}><Navigation size={22} color={t.green} /><Txt weight="bold" style={{ flex: 1, fontSize: 19 }}>موقع السائق</Txt></View>
-          <Txt>{tracking.driver ? `السائق المعيّن: ${tracking.driver.name}` : "لم يُعيّن سائق لهذا الطلب بعد."}</Txt>
-          {location ? <>
-            <Txt style={{ color: stale ? t.danger : t.green }}>{stale ? "آخر موقع قديم؛ لا يدل على مكان السائق الآن." : "موقع حديث منشور من جهاز السائق."}</Txt>
-            <Txt style={{ color: t.muted, fontSize: 13, lineHeight: 23 }}>آخر إرسال: {dateLabel(location.updatedAt)}{age !== null ? ` · منذ ${age} ثانية` : ""}{typeof location.accuracy === "number" ? ` · دقة تقريبية ${Math.round(location.accuracy)} مترًا` : ""}</Txt>
-            <Txt selectable style={{ direction: "ltr", textAlign: "left", color: t.muted, fontSize: 13 }}>{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</Txt>
-          </> : <Txt style={{ color: t.muted, lineHeight: 25 }}>لم يشارك السائق إحداثيات لهذا الطلب بعد. لا يُعرض موقع افتراضي أو حركة تجريبية.</Txt>}
-          {routeEligible ? <View style={{ gap: 8 }}>
-            {routing ? <View style={s.row}><ActivityIndicator color={t.orange} /><Txt>جارٍ حساب طريق القيادة…</Txt></View> : null}
-            {activeRoute ? <>
-              <Txt weight="bold" style={{ color: t.green }}>
-                مسافة القيادة التقريبية {(activeRoute.data.distanceMeters / 1000).toLocaleString("ar-JO", { maximumFractionDigits: 1 })} كم · نحو {Math.max(1, Math.ceil(activeRoute.data.durationSeconds / 60)).toLocaleString("ar-JO")} دقيقة قيادة
-              </Txt>
-              <Txt style={{ color: t.muted, fontSize: 12, lineHeight: 20 }}>حُسب الطريق عند {dateLabel(activeRoute.calculatedAt)} من آخر موقع منشور. الوقت تقديري ولا يشمل التوقف أو وقت تجهيز الطلب.</Txt>
-            </> : null}
-            {routeError ? <><Txt accessibilityRole="alert" style={{ color: t.muted, lineHeight: 23 }}>{routeError} تُعرض النقطتان بخط مباشر فقط دون وقت وصول.</Txt><Button title="إعادة محاولة حساب المسار" secondary onPress={() => setRouteRetry((value) => value + 1)} /></> : null}
-          </View> : null}
-          <DeliveryMap driver={location} destination={destination} route={activeRoute?.data.points ?? null} height={320} />
+      <Card style={s.update}>
+        <View style={{ alignItems: "flex-end" }}>
+          <Txt style={{ color: t.muted, fontSize: 13 }}>{dateText(lastAt)}</Txt>
+          <Txt style={{ color: t.muted, fontSize: 13 }}>{timeText(lastAt)}</Txt>
         </View>
-        <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}>
-          <View style={s.row}><MapPin size={21} color={t.orange} /><Txt weight="bold" style={{ flex: 1, fontSize: 19 }}>عنوان التوصيل</Txt></View>
-          <Txt>{[tracking.destination?.street, tracking.destination?.city].filter(Boolean).join("، ") || "لا تتوفر تفاصيل عنوان إضافية."}</Txt>
-          {!destination ? <Txt style={{ color: t.muted, fontSize: 13, lineHeight: 23 }}>العنوان لا يحتوي على إحداثيات محفوظة؛ قد يتطلب البحث في الخرائط تحديد الموقع يدويًا.</Txt> : null}
-          {(destination || tracking.destination?.street || tracking.destination?.city) ? <Button title="فتح عنوان التوصيل في الخرائط" secondary onPress={() => void openDestination()} /> : null}
+        <View style={{ flex: 1, alignItems: "flex-end", paddingRight: 12, borderRightWidth: 1, borderColor: t.line }}>
+          <Txt weight="bold" style={{ color: t.title, fontSize: 16 }}>آخر تحديث: {demo ? "مثال" : orderLabels[status] || status}</Txt>
+          <Txt style={{ color: t.muted, fontSize: 14 }}>{last?.note || orderLabels[status] || "—"}</Txt>
         </View>
-        <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}><Txt weight="bold" style={{ fontSize: 19 }}>سجل مراحل الطلب</Txt>{tracking.events?.length ? tracking.events.map((event, index) => <View key={`${event.at}-${index}`} style={{ borderRightWidth: 3, borderColor: t.orangeSoft, paddingRight: 14, gap: 5 }}><Txt weight="bold">{labels[event.status] || event.status}</Txt><Txt style={{ color: t.muted, fontSize: 13 }}>{dateLabel(event.at)}</Txt>{event.note ? <Txt style={{ color: t.muted, fontSize: 13 }}>{event.note}</Txt> : null}</View>) : <Txt style={{ color: t.muted }}>لم تُسجّل مراحل بعد.</Txt>}</View>
-      </> : null}
-    </>}
-  </Shell>;
+        <Clock size={30} color={t.purple} />
+      </Card>
+      <CTA title="تفاصيل الطلب" testID="order-details" style={{ marginTop: 12 }} onPress={() => (demo ? router.push("/orders") : router.push(`/order/${encodeURIComponent(id)}`))} />
+      {!demo && status === "out_for_delivery" ? <SmallButton title="الخريطة الحية لموقع السائق" icon={MapIcon} tone="outline" onPress={() => router.push(`/live/${encodeURIComponent(id)}`)} style={{ marginTop: 10 }} /> : null}
+      <View style={{ flexDirection: "row-reverse", gap: 10, marginTop: 10 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="تواصل مع الدعم" onPress={() => router.push({ pathname: "/support", params: { order: id } })} style={[s.half, { borderColor: t.purpleSoft }]}>
+          <Txt weight="medium" style={{ color: t.purple, fontSize: 16 }}>تواصل مع الدعم</Txt><Headset size={24} color={t.purple} />
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="إلغاء الطلب" disabled={!canCancel || cancelling} onPress={() => void cancel()} style={[s.half, { borderColor: t.chip, opacity: canCancel ? 1 : 0.45 }]}>
+          <Txt weight="medium" style={{ color: t.orange, fontSize: 16 }}>{cancelling ? "جارٍ الإلغاء…" : cancelled ? "ملغي" : "إلغاء الطلب"}</Txt><CircleX size={24} color={t.orange} />
+        </Pressable>
+      </View>
+    </Shell>
+  );
 }
-const s = StyleSheet.create({ card: { padding: 20, borderRadius: 19, borderWidth: 1, gap: 15, marginBottom: 18 }, row: { flexDirection: "row-reverse", alignItems: "center", gap: 12 } });
+
+const makeStyles = (t: Palette) => StyleSheet.create({
+  infoRow: { flexDirection: "row-reverse", paddingVertical: 12, paddingHorizontal: 8 },
+  infoCell: { flex: 1, flexDirection: "row-reverse", alignItems: "center", gap: 8, paddingHorizontal: 6 },
+  iconBox: { width: 50, height: 50, borderRadius: 25, backgroundColor: t.purpleSoft, alignItems: "center", justifyContent: "center" },
+  stepper: { flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "center", marginTop: 12, paddingVertical: 16 },
+  connector: { flex: 1, height: 3, marginTop: 25, borderRadius: 2 },
+  stepDot: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
+  mapLabelStore: { position: "absolute", left: 28, bottom: 58, backgroundColor: t.card, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  mapLabelHome: { position: "absolute", right: 22, top: 12, backgroundColor: t.card, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  update: { flexDirection: "row-reverse", alignItems: "center", gap: 12, marginTop: 12 },
+  half: { flex: 1, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 56, borderRadius: 20, borderWidth: 1.5, backgroundColor: t.card },
+});
