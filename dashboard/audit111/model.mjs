@@ -36,8 +36,12 @@ export function validateEnvelope(value) {
   return value;
 }
 export function visibleActor(event) {
-  return event.actor_verified === true && typeof event.actor === "string" && event.actor.trim()
-    ? event.actor.trim() : "غير مثبت";
+  if (event.actor_verified === true && typeof event.actor === "string" && event.actor.trim())
+    return event.actor.trim();
+  const account = event.system_user || event.user_id;
+  return typeof account === "string" && account.trim()
+    ? "حساب نظام: " + account.trim() + " (الشخص غير مثبت)"
+    : "غير مثبت";
 }
 export function summarize(events) {
   return Object.fromEntries(RISK.map(risk=>[risk, events.filter(e=>e.severity===risk).length]));
