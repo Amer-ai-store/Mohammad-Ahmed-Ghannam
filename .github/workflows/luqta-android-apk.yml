@@ -1,0 +1,106 @@
+name: Luqta 2.0 Android APK
+# Builds an installable Android APK of luqta-mobile (Expo SDK 57) and publishes
+# test evidence. Runs on the luqta-2.0 feature branch and on demand.
+on:
+  push:
+    branches: [luqta-2.0-design-3d]
+    paths:
+      - 'luqta-mobile/**'
+      - '.github/workflows/luqta-android-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: luqta-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    name: Typecheck, lint and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: luqta-mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: luqta-mobile/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck 2>&1 | tee ../typecheck.log
+      - name: Lint
+        run: npm run lint 2>&1 | tee ../lint.log
+      - name: Unit, integration and feature-ledger tests
+        run: npm test 2>&1 | tee ../test.log
+      - name: Upload verification logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: luqta-verification-logs
+          path: |
+            typecheck.log
+            lint.log
+            test.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  apk:
+    name: Build release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: luqta-mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: luqta-mobile/package-lock.json
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+      - run: npm ci
+      - name: Expo prebuild (android)
+        run: npx expo prebuild --platform android --no-install --clean
+      - name: Assemble release APK
+        working-directory: luqta-mobile/android
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a \
+            -Pandroid.enableMinifyInReleaseBuilds=false
+      - name: Checksums and APK facts
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          cp "$APK" luqta-2.0.0.apk
+          sha256sum luqta-2.0.0.apk | tee luqta-2.0.0.apk.sha256
+          ls -l luqta-2.0.0.apk
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/aapt2" dump badging luqta-2.0.0.apk | head -5 | tee apk-badging.txt || true
+          "$BT/apksigner" verify --print-certs luqta-2.0.0.apk | tee apk-signature.txt || true
+      - name: Upload APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: luqta-2.0.0-apk
+          path: |
+            luqta-mobile/luqta-2.0.0.apk
+            luqta-mobile/luqta-2.0.0.apk.sha256
+            luqta-mobile/apk-badging.txt
+            luqta-mobile/apk-signature.txt
+          if-no-files-found: error
+          retention-days: 30
