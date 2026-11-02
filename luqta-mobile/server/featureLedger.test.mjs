@@ -4,11 +4,14 @@ import { test } from 'node:test';
 import { checkFeature, ledger } from '../tools/ledger-check.mjs';
 
 const data = ledger();
-test('ledger declares 125 features in 13 groups with unique ids', () => {
+test('ledger declares the 125 original features in 13 groups plus the G14 Aura group, unique ids', () => {
   const ids = data.groups.flatMap((g) => g.features.map((f) => f.id));
-  assert.equal(data.groups.length, 13);
-  assert.equal(ids.length, 125);
-  assert.equal(new Set(ids).size, 125);
+  const original = data.groups.filter((g) => g.id !== 'G14');
+  assert.equal(original.length, 13);
+  assert.equal(original.flatMap((g) => g.features).length, 125);
+  assert.ok(data.groups.find((g) => g.id === 'G14').features.length >= 40);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(data.total, ids.length);
   for (const g of data.groups) for (const f of g.features) assert.ok(['verified-auto', 'verified-source', 'needs-device', 'partial', 'blocked-external'].includes(f.status), f.id);
 });
 for (const g of data.groups) {
