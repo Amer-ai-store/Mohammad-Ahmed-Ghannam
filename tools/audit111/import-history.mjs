@@ -97,6 +97,13 @@ export function ensureSchema(db) {
     CREATE TRIGGER IF NOT EXISTS source111_immutable_update BEFORE UPDATE ON source_snapshots
       BEGIN SELECT RAISE(ABORT,'AUDIT111_APPEND_ONLY'); END;
     CREATE TRIGGER IF NOT EXISTS source111_immutable_delete BEFORE DELETE ON source_snapshots
+      BEGIN SELECT RAISE(ABORT,'AUDIT111_APPEND_ONLY'); END;
+    CREATE TABLE IF NOT EXISTS import_receipts(
+      source_sha TEXT PRIMARY KEY,source_row_count INTEGER NOT NULL,
+      completed_at TEXT NOT NULL,final_chain_sha TEXT NOT NULL);
+    CREATE TRIGGER IF NOT EXISTS receipt111_immutable_update BEFORE UPDATE ON import_receipts
+      BEGIN SELECT RAISE(ABORT,'AUDIT111_APPEND_ONLY'); END;
+    CREATE TRIGGER IF NOT EXISTS receipt111_immutable_delete BEFORE DELETE ON import_receipts
       BEGIN SELECT RAISE(ABORT,'AUDIT111_APPEND_ONLY'); END;`);
 }
 export function importSource(db,src,exportDir){
@@ -132,10 +139,7 @@ export function importSource(db,src,exportDir){
       counts[severity]++;rowsCount++;
       typeCounts[obj.TypeNo]=(typeCounts[obj.TypeNo]||0)+1;
     }
-    // source_snapshots is immutable: finalize rowcount through a separate import receipt table
-    db.exec(`CREATE TABLE IF NOT EXISTS import_receipts(
-      source_sha TEXT PRIMARY KEY,source_row_count INTEGER NOT NULL,
-      completed_at TEXT NOT NULL,final_chain_sha TEXT NOT NULL)`);
+    // The receipt table is created in ensureSchema; its rows are append-only.
     db.prepare("INSERT INTO import_receipts VALUES(?,?,?,?)").run(src.sha,rowsCount,new Date().toISOString(),chain);
     db.exec("COMMIT");
     return {status:"IMPORTED",source_sha:src.sha,row_count:rowsCount,
