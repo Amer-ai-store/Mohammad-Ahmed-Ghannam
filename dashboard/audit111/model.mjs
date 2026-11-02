@@ -20,6 +20,13 @@ export function validateEnvelope(value) {
       typeof value.verified_at !== "string" || !Number.isFinite(Date.parse(value.verified_at))) {
     throw new Error("AUDIT111_MISSING_RECEIPT");
   }
+  if (!Number.isSafeInteger(value.history_record_count) || value.history_record_count < 0 ||
+      !value.risk_totals || typeof value.risk_totals !== "object" ||
+      !RISK.every(k => Number.isSafeInteger(value.risk_totals[k]) && value.risk_totals[k]>=0) ||
+      RISK.reduce((a,k)=>a+value.risk_totals[k],0)!==value.history_record_count ||
+      value.events.length > value.history_record_count) {
+    throw new Error("AUDIT111_INCONSISTENT_AGGREGATE");
+  }
   const ids = new Set();
   for (const e of value.events) {
     if (!e || typeof e !== "object" || typeof e.event_id !== "string" ||
