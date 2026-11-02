@@ -13,7 +13,7 @@ import { formatPrice, toArabicDigits } from "../data/products";
 import { useStore } from "../lib/store";
 import { useSession } from "../lib/session";
 import { ApiError } from "../lib/api";
-import { canConfirmOrder, cartSignatureOf, computeTotals } from "../lib/checkout";
+import { canConfirmOrder, cartSignatureOf, computeTotals, newIdempotencyKey } from "../lib/checkout";
 import { deliverySlots, type CartCheck } from "../lib/commerce-types";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 
@@ -60,7 +60,7 @@ export default function Checkout() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, branchId, catalogStatus]);
   useEffect(() => { const timer = setTimeout(() => { void runCheck(); }, 0); return () => clearTimeout(timer); }, [runCheck]);
-  useEffect(() => { idempotency.current = `app-${Date.now()}-${Math.random().toString(36).slice(2)}`; }, [signature, draft.address, draft.payment]);
+  useEffect(() => { idempotency.current = newIdempotencyKey(); }, [signature, draft.address, draft.payment]);
 
   const base = check ? check.subtotal : store.subtotal;
   const totals = computeTotals(base, coupon?.discount || 0, settings.shippingFee, settings.freeShippingThreshold);
@@ -73,7 +73,7 @@ export default function Checkout() {
   async function confirm() {
     setError("");
     if (!gate.ok || !draft.address) { setError(gate.reason || "أكمل البيانات"); return; }
-    if (!idempotency.current) idempotency.current = `app-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    if (!idempotency.current) idempotency.current = newIdempotencyKey();
     if (demo) {
       const order = createDemoOrder({ address: draft.address, payment: draft.payment, slot: draft.slot, discount: totals.discount });
       router.replace(`/tracking/${order.id}`);

@@ -1,6 +1,8 @@
 // Pure checkout helpers (no React Native imports — unit tested in checkout.test.mjs).
 export const DEMO_COUPON = { code: "LUQTA1", discount: 1 };
 export const cartSignatureOf = (cart: Record<string, number>) => JSON.stringify(Object.entries(cart).sort(([a], [b]) => a.localeCompare(b)));
+/** Unique key so a retried confirm never creates a second order on the server. */
+export const newIdempotencyKey = () => `app-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 export const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
 /** Luhn check used only to validate the demo card form; card data is never stored or sent. */
