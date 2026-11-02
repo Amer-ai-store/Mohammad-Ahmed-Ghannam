@@ -270,10 +270,11 @@
   }
   var rootPose = { y: 0, rz: 0, x: 0 };
   function frameCamera() {
-    var lying = state.action === 'sleep', withCart = state.action === 'cart';
+    var lying = state.action === 'sleep', withCart = state.action === 'cart', tall = state.action === 'wave' || state.action === 'jump' || state.action === 'wake';
     var w = window.innerWidth || 200, h = window.innerHeight || 320; camera.aspect = w / h;
     var fit = lying ? Math.max(1, 2.3 / camera.aspect) : withCart ? Math.max(1, 1.25 / camera.aspect) : Math.max(1, 0.6 / camera.aspect);
-    var ty = lying ? 0.32 : 0.9, tx = withCart ? Math.sin(state.targetYaw) * 0.75 : 0, dist = (lying ? 3.1 : 5.0) * fit;
+    if (tall) fit *= 1.14;
+    var ty = lying ? 0.32 : tall ? 1.0 : 0.9, tx = withCart ? Math.sin(state.targetYaw) * 0.75 : 0, dist = (lying ? 3.1 : 5.0) * fit;
     camera.position.set(tx, ty + (lying ? 0.35 : 0.1), dist); camera.lookAt(tx, ty, 0); camera.updateProjectionMatrix();
   }
   function resize() { renderer.setSize(window.innerWidth || 200, window.innerHeight || 320, false); frameCamera(); }
@@ -327,8 +328,9 @@
       rules.forEach(function (r) { if (!applied && r[1] && r[0].test(name) && m.color) { m.color.set(r[1]); applied = true; } });
       if (!applied && m.userData.base && m.color) m.color.copy(m.userData.base);
       // neutral placeholder mannequin: brand colours (lavender body, coral joints)
-      if (!applied && /Beta_HighLimbs|Beta_Surface|asdf1/i.test(name)) m.color.set(pr.outfit && pr.outfit !== '#141414' ? pr.outfit : '#b8a6ea');
-      if (!applied && /Beta_Joints/i.test(name)) m.color.set(pr.pants || '#fe585c');
+      // neutral placeholder mannequin in the brand palette: soft lavender shell, deep purple joints
+      if (!applied && /Beta_HighLimbs|Beta_Surface|asdf1/i.test(name)) { m.color.set(pr.outfit && pr.outfit !== '#141414' ? pr.outfit : '#ECE5FC'); if (m.roughness != null) m.roughness = 0.45; }
+      if (!applied && /Beta_Joints/i.test(name)) { m.color.set(pr.pants && !/^#(c4161b|1f2937)$/i.test(pr.pants) ? pr.pants : '#6E4AA6'); if (m.metalness != null) m.metalness = 0.15; }
     });
     var faceMat = materials.filter(function (m) { return /face/i.test(m.name || ''); })[0];
     if (pr.faceDataUrl && /^data:image\/(png|jpeg|webp);base64,/.test(pr.faceDataUrl)) {
