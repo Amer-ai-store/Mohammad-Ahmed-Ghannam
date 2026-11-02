@@ -73,7 +73,7 @@ export function ensureSchema(db) {
     CREATE TABLE IF NOT EXISTS source_snapshots(
       source_sha TEXT PRIMARY KEY,filename TEXT NOT NULL,export_directory TEXT NOT NULL,
       bytes INTEGER NOT NULL,verified_manifest INTEGER NOT NULL CHECK(verified_manifest=1),
-      imported_at TEXT NOT NULL,source_record_count INTEGER NOT NULL
+      imported_at TEXT NOT NULL,expected_record_count INTEGER
     );
     CREATE TABLE IF NOT EXISTS audit_events(
       event_id TEXT PRIMARY KEY,source_sha TEXT NOT NULL REFERENCES source_snapshots(source_sha),
@@ -116,7 +116,7 @@ export function importSource(db,src,exportDir){
   db.exec("BEGIN IMMEDIATE");
   try {
     // Number of records is unknown until EOF. Write metadata before events for FK.
-    insertSource.run(src.sha,FILENAME,resolve(exportDir),src.byteSize,1,observedAt,0);
+    insertSource.run(src.sha,FILENAME,resolve(exportDir),src.byteSize,1,observedAt,null);
     for(const [rowNum,values] of src.iterator){
       if(values.length!==src.headers.length)fail("ROW_COLUMN_COUNT_MISMATCH_LINE_"+rowNum);
       const obj=Object.fromEntries(src.headers.map((h,i)=>[h,values[i]]));
