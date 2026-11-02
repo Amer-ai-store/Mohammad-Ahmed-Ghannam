@@ -1,0 +1,77 @@
+[
+ {
+  "name": "01-home",
+  "path": "/",
+  "errors": []
+ },
+ {
+  "name": "02-assistant",
+  "path": "/assistant?q=%D8%AC%D9%87%D8%B2%20%D9%84%D9%8A%20%D8%B3%D9%84%D8%A9%20%D8%A8%D9%80%2020%20%D8%AF%D9%8A%D9%86%D8%A7%D8%B1",
+  "errors": []
+ },
+ {
+  "name": "03-view3d",
+  "path": "/view3d/armchair",
+  "errors": []
+ },
+ {
+  "name": "04-product",
+  "path": "/product/headphones",
+  "errors": []
+ },
+ {
+  "name": "05-explore",
+  "path": "/explore",
+  "errors": []
+ },
+ {
+  "name": "06-cart",
+  "path": "/cart",
+  "errors": []
+ },
+ {
+  "name": "07-character",
+  "path": "/character",
+  "errors": []
+ },
+ {
+  "name": "08-delivery",
+  "path": "/delivery",
+  "errors": []
+ },
+ {
+  "name": "09-checkout",
+  "path": "/checkout",
+  "errors": []
+ },
+ {
+  "name": "10-character-create",
+  "path": "/character-create",
+  "errors": []
+ },
+ {
+  "name": "11-payment",
+  "path": "/payment",
+  "errors": []
+ },
+ {
+  "name": "12-tracking",
+  "path": "/tracking/LQ-DEMO-001",
+  "errors": []
+ },
+ {
+  "name": "13-orders",
+  "path": "/orders",
+  "errors": []
+ },
+ {
+  "name": "14-support",
+  "path": "/support",
+  "errors": []
+ },
+ {
+  "name": "15-profile",
+  "path": "/profile",
+  "errors": []
+ }
+]
