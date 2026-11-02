@@ -33,6 +33,20 @@ export const theme = {
   warningSoft: "#FFF4DD",
   successSoft: "#E3F6EE",
   shadow: "#3B2A8A",
+  // Extra tokens from main's palette (assets and 3D engines work); not used by the screens yet.
+  backgroundDeep: "#EDE7FB",
+  card: "#FCFBFE",
+  title: "#130050",
+  mutedSoft: "#9891B0",
+  chip: "#FADDE5",
+  purple: "#6E4AA6",
+  purpleSoft: "#ECE5FC",
+  field: "#F5F1FE",
+  info: "#146CF8",
+  infoSoft: "#E0EBFD",
+  warn: "#BC7B2A",
+  warnSoft: "#FEF4D5",
+  discount: "#0AA470",
 };
 
 export type Palette = typeof theme;
@@ -59,6 +73,20 @@ export const darkTheme: Palette = {
   warning: "#FFC35C",
   warningSoft: "#3A2E14",
   successSoft: "#143528",
+  // Extra tokens from main's palette.
+  backgroundDeep: "#0F0A1E",
+  card: "#221A3D",
+  title: "#FFFFFF",
+  mutedSoft: "#9C90BB",
+  chip: "#4A2236",
+  purple: "#A68BE0",
+  purpleSoft: "#2E2450",
+  field: "#2A2147",
+  info: "#7FB0FF",
+  infoSoft: "#1B2A4A",
+  warn: "#F0C27A",
+  warnSoft: "#3D3018",
+  discount: "#6FD3A6",
   shadow: "#000000",
 };
 // Stores created before the redesign saved this rust colour as their accent; it now means "use the design accent".
