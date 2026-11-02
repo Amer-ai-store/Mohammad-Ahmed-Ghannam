@@ -133,9 +133,10 @@ jobs:
         run: npx expo export --platform web --output-dir dist
       - name: Install Playwright Chromium (CI only, not an app dependency)
         run: |
-          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1.56.1 >/dev/null
-          npx --prefix /tmp/pw playwright install --with-deps chromium
-          ln -sfn /tmp/pw/node_modules/playwright node_modules/playwright
+          mkdir -p /tmp/pw
+          (cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1.56.1 >/dev/null && npx playwright install --with-deps chromium)
+          ln -sfn /tmp/pw/node_modules/playwright "$GITHUB_WORKSPACE/luqta-mobile/node_modules/playwright"
+          node -e "import('playwright').then(()=>console.log('playwright ok'))"
       - name: Screenshot every screen
         run: node tools/screens.mjs dist ../evidence/screens
       - name: 3D companion joint evidence

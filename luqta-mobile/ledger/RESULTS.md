@@ -1,4 +1,4 @@
-# نتائج فحص الميزات — commit 99bd734
+# نتائج فحص الميزات — commit 8c540e9
 
 الإجمالي 125 ميزة في 13 مجموعة. فشل: 0. الحالات: verified-source=99، verified-auto=20، partial=1، needs-device=3، blocked-external=2.
 
@@ -110,7 +110,7 @@
 | F-G11-07 | تعقيم الملف المحفوظ | verified-auto | pass | src/lib/characterProfile.test.mjs › F-G11-07 |  |
 | F-G11-08 | حذف الصورة والشخصية في أي وقت | verified-source | pass | src/lib/character.tsx |  |
 | F-G11-09 | «تخطي الآن» ومثال الشخصية | verified-source | pass | src/app/character-create.tsx |  |
-| F-G12-01 | هيكل عظمي من 19 مفصلًا (THREE.Bone) | verified-source | pass | web-engines/avatar.js | evidence/avatar/avatar-evidence.json |
+| F-G12-01 | هيكل عظمي: 17 عظمة THREE.Bone ومفصلا الإبهام (19 مفصلًا متحركًا) | verified-source | pass | web-engines/avatar.js | evidence/avatar/avatar-evidence.json |
 | F-G12-02 | المشي بحركة مفاصل فعلية (ورك/ركبة/كاحل/كتف) | verified-source | pass | web-engines/avatar.js | evidence/avatar/walk.mp4 |
 | F-G12-03 | القفز (تحفّز/انطلاق/طيران/هبوط) | verified-source | pass | web-engines/avatar.js | evidence/avatar/pose-jump.png |
 | F-G12-04 | التنقل: الدخول إلى الخانة مشيًا مع الالتفات | verified-source | pass | src/components/character/Companion.tsx |  |

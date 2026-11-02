@@ -1430,7 +1430,7 @@
    "features": [
     {
      "id": "F-G12-01",
-     "title": "هيكل عظمي من 19 مفصلًا (THREE.Bone)",
+     "title": "هيكل عظمي: 17 عظمة THREE.Bone ومفصلا الإبهام (19 مفصلًا متحركًا)",
      "source": {
       "file": "web-engines/avatar.js",
       "contains": [

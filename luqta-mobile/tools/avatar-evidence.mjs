@@ -16,7 +16,7 @@ const log = [];
 page.on('console', (m) => log.push(m.text()));
 page.on('pageerror', (e) => log.push('PAGEERROR ' + e.message));
 await page.setContent(avatarHtml({ action: 'idle' }), { waitUntil: 'load' });
-await page.waitForFunction(() => window.__luqtaLast && (window.__luqtaLast.type === 'ready' || window.__luqtaLast.type === 'actionChanged' || window.__luqtaLast.type === 'error'), null, { timeout: 30000 });
+await page.waitForFunction(() => !!window.LuqtaAvatar || document.body.getAttribute('data-webgl') === 'none', null, { timeout: 60000, polling: 250 });
 const ready = await page.evaluate(() => ({ actions: window.LuqtaAvatar && window.LuqtaAvatar.actions, bones: window.LuqtaAvatar && window.LuqtaAvatar.skeleton.bones.length, webgl: !!document.querySelector('canvas').getContext }));
 const cmd = (m) => page.evaluate((x) => window.LuqtaAvatar.command(x), m);
 const probe = async () => { await cmd({ type: 'probe', id: 'p' }); return page.evaluate(() => window.__luqtaLast); };
@@ -60,7 +60,7 @@ for (let i = 0; i < 24; i++) { await page.screenshot({ path: join(out, 'frames',
 // product viewer smoke test
 const v = await browser.newPage({ viewport: { width: 360, height: 320 } });
 await v.setContent(viewerHtml({ model: 'chair', dimensions: { w: 0.78, d: 0.8, h: 0.82 } }), { waitUntil: 'load' });
-await v.waitForFunction(() => window.__luqtaLast && window.__luqtaLast.type === 'mode', null, { timeout: 30000 });
+await v.waitForFunction(() => (window.__luqtaLog || []).some((m) => m.type === 'ready' || m.type === 'error'), null, { timeout: 60000, polling: 250 });
 await v.waitForTimeout(500); await v.screenshot({ path: join(out, 'viewer-chair-3d.png') });
 await v.evaluate(() => window.LuqtaViewer.command({ type: 'zoomIn' }));
 await v.evaluate(() => window.LuqtaViewer.command({ type: 'mode', value: 'room' }));

@@ -152,7 +152,7 @@
   var photoFace = null;
   function buildPhotoFace(texture, alpha) {
     if (photoFace) { B.head.remove(photoFace); photoFace.geometry.dispose(); photoFace.material.dispose(); }
-    var g = new T.SphereGeometry(0.182, 40, 30, Math.PI * 1.5 - 0.95, 1.9, 0.62, 1.55);
+    var g = new T.SphereGeometry(0.182, 40, 30, Math.PI * 0.5 - 0.95, 1.9, 0.62, 1.55);
     var mat = new T.MeshStandardMaterial({ map: texture, alphaMap: alpha, transparent: true, roughness: 0.6 });
     photoFace = new T.Mesh(g, mat); photoFace.scale.set(0.92, 1.08, 0.98); photoFace.position.set(0, 0.125, 0.006);
     B.head.add(photoFace);
@@ -279,8 +279,8 @@
     run: function (t) { return gait(t, 0.62, 0.85, 0.18); },
     cart: function (t) {
       var p = gait(t, 1.15, 0.38, 0.12);
-      p.shoulderL = [-1.05, 0, 0.05]; p.shoulderR = [-1.05, 0, -0.05];
-      p.elbowL = [-0.35, 0, 0]; p.elbowR = [-0.35, 0, 0];
+      p.shoulderL = [-0.62, 0, 0.04]; p.shoulderR = [-0.62, 0, -0.04];
+      p.elbowL = [-0.3, 0, 0]; p.elbowR = [-0.3, 0, 0];
       p.wristL = [0.3, 0, 0]; p.wristR = [0.3, 0, 0];
       return p;
     },
@@ -432,7 +432,9 @@
           var med = function (a) { a.sort(function (m, n) { return m - n; }); return a[a.length >> 1]; };
           return '#' + [med(r), med(g), med(b)].map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join('');
         };
-        var skin = sample(78, 130, 100, 50), hairC = sample(70, 4, 116, 22);
+        var skin = sample(92, 78, 72, 22), hairC = sample(70, 4, 116, 18);
+        var lum = function (h) { var n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; };
+        if (lum(skin) < 0.22 || lum(skin) > 0.96) skin = '#e0a27c'; // implausible skin sample (hair, beard, glare) → keep default tone
         post({ type: 'faceProcessed', id: id, dataUrl: c.toDataURL('image/jpeg', 0.82), skin: skin, hair: hairC });
       } catch (e) { post({ type: 'error', id: id, code: 'FACE_PROCESS', message: String(e && e.message || e) }); }
     };

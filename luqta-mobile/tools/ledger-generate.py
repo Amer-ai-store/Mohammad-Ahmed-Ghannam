@@ -138,7 +138,7 @@ groups=[
  f("«تخطي الآن» ومثال الشخصية",A+"character-create.tsx",["create-skip","هكذا ستبدو"]),
 ]),
 ("G12","الشخصية ثلاثية الأبعاد: الهيكل والحركة والأمان",[
- f("هيكل عظمي من 19 مفصلًا (THREE.Bone)","web-engines/avatar.js",["new T.Bone()","new T.Skeleton("],evidence="evidence/avatar/avatar-evidence.json"),
+ f("هيكل عظمي: 17 عظمة THREE.Bone ومفصلا الإبهام (19 مفصلًا متحركًا)","web-engines/avatar.js",["new T.Bone()","new T.Skeleton("],evidence="evidence/avatar/avatar-evidence.json"),
  f("المشي بحركة مفاصل فعلية (ورك/ركبة/كاحل/كتف)","web-engines/avatar.js",["function gait","thighL","kneeL"],evidence="evidence/avatar/walk.mp4"),
  f("القفز (تحفّز/انطلاق/طيران/هبوط)","web-engines/avatar.js",["jump:","crouch("],evidence="evidence/avatar/pose-jump.png"),
  f("التنقل: الدخول إلى الخانة مشيًا مع الالتفات",C+"character/Companion.tsx",["Animated.timing","facing"]),

@@ -7,9 +7,10 @@
 (function () {
   'use strict';
   var T = window.THREE;
-  var post = function (m) { var s = JSON.stringify(m); try { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(s); } catch (e) {} try { if (window.parent !== window) window.parent.postMessage(s, '*'); } catch (e) {} window.__luqtaLast = m; };
+  var post = function (m) { var s = JSON.stringify(m); try { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(s); } catch (e) {} try { if (window.parent !== window) window.parent.postMessage(s, '*'); } catch (e) {} window.__luqtaLast = m; (window.__luqtaLog = window.__luqtaLog || []).push(m); };
   if (!T) { post({ type: 'error', code: 'NO_THREE' }); return; }
   var init = window.__LUQTA_INIT__ || {};
+  if (T.ColorManagement) T.ColorManagement.legacyMode = false;
   var canvas = document.getElementById('stage');
   var renderer;
   try { renderer = new T.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, preserveDrawingBuffer: true }); }
