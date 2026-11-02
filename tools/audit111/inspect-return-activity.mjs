@@ -69,7 +69,7 @@ function finishRow(){
 for await(const buf of src){
  hash.update(buf);sourceBytes+=buf.length;
  let s=buf.toString("latin1");
- if(firstChunk){firstChunk=false;if(s.startsWith("\\xef\\xbb\\xbf"))s=s.slice(3)}
+ if(firstChunk){firstChunk=false;if(s.charCodeAt(0)===239&&s.charCodeAt(1)===187&&s.charCodeAt(2)===191)s=s.slice(3)}
  for(let i=0;i<s.length;i++){
   const c=s[i];
   if(skipLF){skipLF=false;if(c==="\n")continue}
