@@ -26,7 +26,7 @@ const ret=verifiedSmall("dbo.ARPReturns.csv");
 const FILE="dbo.TransactionHistory.csv",expected=MANIFEST.get(FILE);
 if(!expected)throw Error("HISTORY_MANIFEST_NOT_FOUND");
 const src=createReadStream(join(base,"data",FILE),{highWaterMark:1<<20}),hash=createHash("sha256");
-let sourceBytes=0,rowNo=0,total=0,quoted=false,afterQuote=false,skipLF=false,field="",record=[],head,idx;
+let firstChunk=true,sourceBytes=0,rowNo=0,total=0,quoted=false,afterQuote=false,skipLF=false,field="",record=[],head,idx;
 const hits={VoucherNo_to_return_voucher:0,VoucherNo_to_return_trans:0,
  TransNo_to_return_trans:0,TransNo_to_return_voucher:0,
  TransactionNo_to_return_trans:0,TransactionNo_to_return_voucher:0,
@@ -68,7 +68,8 @@ function finishRow(){
 }
 for await(const buf of src){
  hash.update(buf);sourceBytes+=buf.length;
- const s=buf.toString("latin1");
+ let s=buf.toString("latin1");
+ if(firstChunk){firstChunk=false;if(s.startsWith("\\xef\\xbb\\xbf"))s=s.slice(3)}
  for(let i=0;i<s.length;i++){
   const c=s[i];
   if(skipLF){skipLF=false;if(c==="\n")continue}
