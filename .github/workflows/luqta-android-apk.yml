@@ -13,6 +13,9 @@ permissions:
 concurrency:
   group: luqta-apk-${{ github.ref }}
   cancel-in-progress: true
+defaults:
+  run:
+    shell: bash
 jobs:
   verify:
     name: Typecheck, lint and tests
@@ -34,8 +37,10 @@ jobs:
       - name: Typecheck
         run: npm run typecheck 2>&1 | tee ../typecheck.log
       - name: Lint
+        if: always()
         run: npm run lint 2>&1 | tee ../lint.log
       - name: Unit, integration and feature-ledger tests
+        if: always()
         run: npm test 2>&1 | tee ../test.log
       - name: Upload verification logs
         if: always()
@@ -104,3 +109,42 @@ jobs:
             luqta-mobile/apk-signature.txt
           if-no-files-found: error
           retention-days: 30
+
+  publish:
+    name: Publish APK and evidence (branch + pre-release)
+    needs: [verify, apk]
+    if: always() && needs.apk.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: out
+      - name: Commit build outputs to the luqta-apk-builds branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY: ${{ needs.verify.result }}
+        run: |
+          set -e
+          mkdir site && cd site
+          cp ../out/luqta-2.0.0-apk/* .
+          cp ../out/luqta-verification-logs/* . 2>/dev/null || true
+          printf 'commit=%s\nrun=%s\nverify=%s\nbuilt=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$VERIFY" "$(date -u +%FT%TZ)" > BUILD_INFO.txt
+          git init -q -b luqta-apk-builds
+          git config user.name "luqta-ci"; git config user.email "luqta-ci@users.noreply.github.com"
+          git add -A && git commit -qm "Luqta APK build for $GITHUB_SHA (run $GITHUB_RUN_ID)"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" luqta-apk-builds
+      - name: Update the luqta-2.0.0-preview pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd site
+          NOTES="Amer AI Store | لُقطة 2.0.0 — نسخة معاينة موقّعة بمفتاح تطوير. commit ${GITHUB_SHA}. تحقق من البصمة SHA-256 في الملف المرفق."
+          if gh release view luqta-2.0.0-preview -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload luqta-2.0.0-preview luqta-2.0.0.apk luqta-2.0.0.apk.sha256 BUILD_INFO.txt -R "$GITHUB_REPOSITORY" --clobber
+            gh release edit luqta-2.0.0-preview -R "$GITHUB_REPOSITORY" --notes "$NOTES" --target "$GITHUB_SHA"
+          else
+            gh release create luqta-2.0.0-preview luqta-2.0.0.apk luqta-2.0.0.apk.sha256 BUILD_INFO.txt -R "$GITHUB_REPOSITORY" --prerelease --title "لُقطة 2.0.0 (معاينة)" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
