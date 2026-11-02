@@ -26,7 +26,7 @@ const ret=verifiedSmall("dbo.ARPReturns.csv");
 const FILE="dbo.TransactionHistory.csv",expected=MANIFEST.get(FILE);
 if(!expected)throw Error("HISTORY_MANIFEST_NOT_FOUND");
 const src=createReadStream(join(base,"data",FILE),{highWaterMark:1<<20}),hash=createHash("sha256");
-let rowNo=0,total=0,quoted=false,afterQuote=false,skipLF=false,field="",record=[],head,idx;
+let sourceBytes=0,rowNo=0,total=0,quoted=false,afterQuote=false,skipLF=false,field="",record=[],head,idx;
 const hits={VoucherNo_to_return_voucher:0,VoucherNo_to_return_trans:0,
  TransNo_to_return_trans:0,TransNo_to_return_voucher:0,
  TransactionNo_to_return_trans:0,TransactionNo_to_return_voucher:0,
@@ -67,7 +67,7 @@ function finishRow(){
  record=[];
 }
 for await(const buf of src){
- hash.update(buf);
+ hash.update(buf);sourceBytes+=buf.length;
  const s=buf.toString("latin1");
  for(let i=0;i<s.length;i++){
   const c=s[i];
@@ -87,7 +87,7 @@ for await(const buf of src){
 if(quoted)throw Error("TRUNCATED_CSV_QUOTE");
 if(record.length||field)finishRow();
 const actual=hash.digest("hex").toUpperCase();
-if(Number(expected[1])!==180539706 ||expected[2].toUpperCase()!==actual)
+if(Number(expected[1])!==sourceBytes ||expected[2].toUpperCase()!==actual)
  throw Error("LARGE_HISTORY_MANIFEST_MISMATCH");
 const topFns=Object.entries(matchedFns).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([function_id,count])=>({function_id,count}));
 console.log(JSON.stringify({source_file:FILE,source_sha:actual,transactions_seen:total,
