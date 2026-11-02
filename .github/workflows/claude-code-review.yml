@@ -94,14 +94,19 @@ jobs:
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
       # The action hides Claude's output for safety, so a failed run shows only "is_error: true". Print the final
       # error text alone (e.g. an invalid key, no API credit, no access to the model), never messages or tool output.
+      # On a credit error it also prints the end of the Anthropic organization ID that the key bills (not a secret),
+      # so it can be compared with the organization that holds the credit.
       - name: Explain a failed review
         if: failure() && steps.review.outcome == 'failure'
         shell: python
         env:
           EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           import json
           import os
+          import urllib.error
+          import urllib.request
           from pathlib import Path
 
           path = Path(os.environ.get("EXECUTION_FILE") or Path(os.environ["RUNNER_TEMP"], "claude-execution-output.json"))
@@ -115,5 +120,28 @@ jobs:
               last = results[-1]
               detail = str(last.get("result") or "; ".join(map(str, last.get("errors") or [])))
           # One line only: collapsing whitespace drops line breaks, so the text cannot start another workflow command.
-          detail = " ".join(detail.split())[:400].replace("%", "%25")
-          print(f"::error title=Claude review failed::{detail or 'Claude reported no error text; see the step above'} — setup guide: docs/code-review-setup.md")
+          detail = " ".join(detail.split())[:400]
+
+          note = ""
+          key = os.environ.get("ANTHROPIC_API_KEY", "")
+          if key and "credit balance" in detail.lower():
+              # A free, read-only call whose response headers name the organization that the key bills.
+              request = urllib.request.Request(
+                  "https://api.anthropic.com/v1/models?limit=1",
+                  headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=15) as response:
+                      org = response.headers.get("anthropic-organization-id", "")
+              except urllib.error.HTTPError as error:
+                  org = (error.headers or {}).get("anthropic-organization-id", "")
+              except OSError:
+                  org = ""
+              org = "".join(c for c in str(org) if c.isalnum() or c == "-")[-8:]
+              note = (
+                  f" (the key in ANTHROPIC_API_KEY bills the Anthropic organization whose ID ends in {org};"
+                  " compare it with Settings → Organization in the Console)"
+                  if org else " (the API did not say which organization the key bills)"
+              )
+          message = f"{detail or 'Claude reported no error text; see the step above'}{note} — setup guide: docs/code-review-setup.md"
+          print(f"::error title=Claude review failed::{message.replace('%', '%25')}")
