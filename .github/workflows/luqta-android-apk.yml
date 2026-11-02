@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: luqta-apk-${{ github.ref }}
+  group: luqta-apk-${{ github.sha }}
   cancel-in-progress: true
 defaults:
   run:
