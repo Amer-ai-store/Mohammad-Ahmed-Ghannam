@@ -1,6 +1,6 @@
 // Product page additions from the Aura app: live flash-sale countdown, freshness badge,
 // "frequently bought together" (real orders) and view/share tracking for «الرائج».
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { Sparkles, Timer } from "lucide-react-native";
 import { Txt } from "../ui";
@@ -42,15 +42,16 @@ export function TogetherSection({ product }: { product: Product }) {
   const { colors: t } = useTheme();
   const { configured } = useSession();
   const { products } = useStore();
-  const [items, setItems] = useState<Product[]>([]);
-  const [source, setSource] = useState<"orders" | "category" | "local">("local");
+  const local = useMemo(() => products.filter((p) => p.id !== product.id && p.category !== product.category).sort((a, b) => b.rating - a.rating).slice(0, 6), [products, product.id, product.category]);
+  const [remote, setRemote] = useState<{ items: Product[]; source: "orders" | "category" } | null>(null);
   useEffect(() => {
     let active = true;
-    const local = () => products.filter((p) => p.id !== product.id && p.category !== product.category).sort((a, b) => b.rating - a.rating).slice(0, 6);
-    if (!configured) { setItems(local()); setSource("local"); return; }
-    api.get<{ source: "orders" | "category"; products: Product[] }>(`/products/${product.id}/together`).then((r) => { if (!active) return; setItems(r.products.map((p) => products.find((x) => x.id === p.id) || p)); setSource(r.source); }).catch(() => { if (active) { setItems(local()); setSource("local"); } });
+    if (!configured) return;
+    api.get<{ source: "orders" | "category"; products: Product[] }>(`/products/${product.id}/together`).then((r) => { if (active) setRemote({ items: r.products.map((p) => products.find((x) => x.id === p.id) || p), source: r.source }); }).catch(() => { if (active) setRemote(null); });
     return () => { active = false; };
-  }, [product.id, product.category, configured, products]);
+  }, [product.id, configured, products]);
+  const items = configured && remote ? remote.items : local;
+  const source: "orders" | "category" | "local" = configured && remote ? remote.source : "local";
   if (!items.length) return null;
   return (
     <Card style={{ marginTop: 14 }} testID="together">

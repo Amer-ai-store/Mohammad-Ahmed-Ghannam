@@ -19,10 +19,10 @@ export function Txt({
 }: TextProps & { weight?: "regular" | "medium" | "bold" | "extra" }) {
   const { colors: t } = useTheme();
   const font = {
-    regular: "Tajawal_400Regular",
-    medium: "Tajawal_500Medium",
-    bold: "Tajawal_700Bold",
-    extra: "Tajawal_800ExtraBold",
+    regular: "IBMPlexSansArabic_400Regular",
+    medium: "IBMPlexSansArabic_500Medium",
+    bold: "IBMPlexSansArabic_600SemiBold",
+    extra: "IBMPlexSansArabic_700Bold",
   }[weight];
   return (
     <Text

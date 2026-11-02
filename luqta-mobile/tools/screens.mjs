@@ -29,12 +29,16 @@ const routes = [
   ['04-product', '/product/headphones'], ['05-explore', '/explore'], ['06-cart', '/cart'], ['07-character', '/character'],
   ['08-delivery', '/delivery'], ['09-checkout', '/checkout'], ['10-character-create', '/character-create'], ['11-payment', '/payment'],
   ['12-tracking', '/tracking/LQ-DEMO-001'], ['13-orders', '/orders'], ['14-support', '/support'], ['15-profile', '/profile'],
+  // G14 / G15 additions
+  ['16-smart-tools', '/smart-tools'], ['17-market-pulse', '/market-pulse'], ['18-price-radar', '/price-radar?id=headphones'], ['19-basket-optimizer', '/basket-optimizer'],
+  ['20-game', '/game'], ['21-coupons', '/coupons'], ['22-trending', '/trending'], ['23-studio', '/studio'], ['24-lens', '/lens'], ['25-nutrition', '/nutrition'],
+  ['26-green', '/green'], ['27-login', '/login'], ['28-appearance', '/appearance'], ['29-tour', '/?tour=1'], ['30-receipts', '/receipts'],
 ];
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
 const report = [];
 for (const [name, path] of routes) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'ar', isMobile: true, hasTouch: true });
-  await ctx.addInitScript((value) => { try { localStorage.setItem('luqta-store-v2', value); } catch { /* ignore */ } }, seeded);
+  await ctx.addInitScript((value) => { try { localStorage.setItem('luqta-store-v2', value); localStorage.setItem('luqta-tour-v1', 'seen'); } catch { /* ignore */ } }, seeded);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));

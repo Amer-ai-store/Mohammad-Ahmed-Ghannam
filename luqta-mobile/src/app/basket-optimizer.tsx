@@ -32,7 +32,7 @@ export default function BasketOptimizer() {
       else setData(await api.post<Optimization>("/basket/optimize", { objective, branchId, items: Object.entries(cart).filter(([, q]) => q > 0).map(([productId, quantity]) => ({ productId, quantity })) }));
     } catch (e) { setError(e instanceof Error ? e.message : "تعذّر تحسين السلة"); } finally { setLoading(false); }
   }, [configured, products, cart, objective, settings.freeShippingThreshold, settings.shippingFee, branchId]);
-  useEffect(() => { if (items.length) void run(); }, [objective]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!items.length) return; const id = setTimeout(() => void run(), 0); return () => clearTimeout(id); }, [objective]); // eslint-disable-line react-hooks/exhaustive-deps
   function swap(fromId: string, toId: string, quantity: number) { setQuantity(fromId, 0); setQuantity(toId, quantity); notify("استُبدل الصنف بالبديل الأوفر"); void run(); }
   if (!items.length) return <Shell title="محسّن السلة" subtitle="وفّر أكثر في كل طلب"><Card style={{ gap: 10, alignItems: "center" }}><Txt style={{ color: t.muted }}>سلتك فارغة؛ أضف منتجات ثم عد لتحسينها.</Txt><CTA title="ابدأ التسوق" onPress={() => router.navigate("/explore")} style={{ alignSelf: "stretch" }} /></Card></Shell>;
   const ship = data ? freeShippingProgress(data.optimizedSubtotal, data.freeShipping.threshold) : null;

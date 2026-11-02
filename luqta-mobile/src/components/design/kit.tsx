@@ -356,6 +356,6 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   stepBtn: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   segmented: { flexDirection: "row-reverse", backgroundColor: t.card, borderRadius: 999, borderWidth: 1, borderColor: t.line, padding: 4 },
   segment: { flex: 1, minHeight: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", flexDirection: "row-reverse", gap: 8 },
-  field: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: t.line, backgroundColor: t.field, paddingHorizontal: 14, color: t.ink, fontFamily: "Tajawal_500Medium", fontSize: 15, textAlign: "right", writingDirection: "rtl" },
+  field: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: t.line, backgroundColor: t.field, paddingHorizontal: 14, color: t.ink, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 15, textAlign: "right", writingDirection: "rtl" },
   menuRow: { flexDirection: "row-reverse", alignItems: "center", padding: 14, marginBottom: 10 },
 });

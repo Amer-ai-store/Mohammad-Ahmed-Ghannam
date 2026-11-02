@@ -17,7 +17,7 @@ type Bundle = { id: string; name: string; percent: number; minItems: number; pro
 function useLoad<T>(path: string, initial: T) {
   const [data, setData] = useState<T>(initial); const [error, setError] = useState("");
   const reload = useCallback(async () => { try { setData(await api.get<T>(path)); setError(""); } catch (e) { setError(e instanceof Error ? e.message : "تعذّر التحميل"); } }, [path]);
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => { const id = setTimeout(() => void reload(), 0); return () => clearTimeout(id); }, [reload]);
   return { data, error, reload };
 }
 
@@ -34,8 +34,9 @@ export function GrowthPanel() {
   const [camp, setCamp] = useState({ title: "", subtitle: "", image: "", productId: "", endsAt: "" });
   const [bundle, setBundle] = useState({ name: "", percent: "10", minItems: "2", categories: "", productIds: "" });
   const [rates, setRates] = useState("");
-  const [modelUrl, setModelUrl] = useState(""); const [promo, setPromo] = useState("");
-  useEffect(() => { setModelUrl(settings.data.settings.character?.modelUrl || ""); setPromo(settings.data.settings.storefront?.promoVideoUrl || ""); }, [settings.data]);
+  const [modelUrlDraft, setModelUrl] = useState<string | null>(null); const [promoDraft, setPromo] = useState<string | null>(null);
+  const modelUrl = modelUrlDraft ?? settings.data.settings.character?.modelUrl ?? "";
+  const promo = promoDraft ?? settings.data.settings.storefront?.promoVideoUrl ?? "";
   const bundles = settings.data.settings.bundles || [];
   const line = { flexDirection: "row-reverse" as const, alignItems: "center" as const, gap: 8, paddingVertical: 6, borderTopWidth: 1, borderColor: c.line, flexWrap: "wrap" as const };
   return (

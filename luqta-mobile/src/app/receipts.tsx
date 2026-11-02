@@ -48,7 +48,7 @@ function Body() {
       <Segmented value={mode} onChange={setMode} options={[{ value: "photo", label: "تصوير الفاتورة" }, { value: "text", label: "لصق النص" }]} testID="receipt-mode" />
       {mode === "photo" ? <><LensSurface mode="photo" onMessage={(m) => void fromPhoto(m)} height={300} /><InfoNote text="تُقرأ الصورة بالذكاء الاصطناعي على خادم المتجر عند تفعيله؛ وإلا استخدم «لصق النص»." /></> : (
         <Card>
-          <TextInput testID="receipt-text" accessibilityLabel="نص الفاتورة" multiline value={text} onChangeText={setText} placeholder={"الصق نص الفاتورة هنا، سطر لكل صنف\nمثال: حليب 1.25"} placeholderTextColor={t.mutedSoft} style={{ minHeight: 140, textAlign: "right", textAlignVertical: "top", color: t.ink, fontFamily: "Tajawal_500Medium", fontSize: 15 }} />
+          <TextInput testID="receipt-text" accessibilityLabel="نص الفاتورة" multiline value={text} onChangeText={setText} placeholder={"الصق نص الفاتورة هنا، سطر لكل صنف\nمثال: حليب 1.25"} placeholderTextColor={t.mutedSoft} style={{ minHeight: 140, textAlign: "right", textAlignVertical: "top", color: t.ink, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 15 }} />
           <CTA title="تحليل النص" onPress={() => { const r = parseReceiptText(text); setParsed(r); setMatches(null); if (!r.items.length) notify("لم نجد أصنافًا بأسعار في النص"); }} testID="receipt-parse" />
         </Card>
       )}

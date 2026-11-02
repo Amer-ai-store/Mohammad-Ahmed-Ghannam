@@ -5,19 +5,16 @@ import { View } from "react-native";
 import { router } from "expo-router";
 import { Barcode, Camera, Keyboard } from "lucide-react-native";
 import { Shell } from "../components/Shell";
-import { Txt } from "../components/ui";
 import { Card, Chip, Field, InfoNote, LoadingBlock, SectionHeader, Segmented, SmallButton } from "../components/design/kit";
 import { ProductRow } from "../components/smart/Bits";
 import { LensSurface, type LensMessage } from "../components/smart/LensSurface";
 import { api } from "../lib/api";
 import { useSession } from "../lib/session";
 import { useStore } from "../lib/store";
-import { useTheme } from "../lib/theme";
 import type { Product } from "../data/products";
 
 type Mode = "barcode" | "photo";
 export default function LensScreen() {
-  const { colors: t } = useTheme();
   const { products, notify, updateDraft } = useStore();
   const { configured, user } = useSession();
   const [mode, setMode] = useState<Mode>("barcode");

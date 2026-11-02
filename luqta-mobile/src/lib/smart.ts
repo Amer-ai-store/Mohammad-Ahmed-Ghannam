@@ -61,9 +61,9 @@ export function demoOptimize(products: Product[], cart: Record<string, number>, 
   const lines = Object.entries(cart).map(([id, quantity]) => ({ p: products.find((x) => x.id === id), quantity })).filter((l): l is { p: Product; quantity: number } => !!l.p && l.quantity > 0);
   const subtotal = round(lines.reduce((a, l) => a + l.p.price * l.quantity, 0));
   const inCart = new Set(lines.map((l) => l.p.id));
-  const alternatives: Alternative[] = objective === "fastest" ? [] : lines.map((l) => {
+  const alternatives: Alternative[] = objective === "fastest" ? [] : lines.map((l): Alternative | null => {
     const alt = products.filter((c) => c.category === l.p.category && !inCart.has(c.id) && (c.stock ?? 1) >= l.quantity && c.price <= l.p.price * 0.95).sort((a, b) => a.price - b.price || b.rating - a.rating)[0];
-    return alt ? { productId: l.p.id, name: l.p.name, price: l.p.price, quantity: l.quantity, saving: round((l.p.price - alt.price) * l.quantity), replaceWith: { id: alt.id, name: alt.name, price: alt.price, image: typeof alt.image === "string" ? alt.image : undefined, rating: alt.rating } } : null;
+    return alt ? { productId: l.p.id, name: l.p.name, price: l.p.price, quantity: l.quantity, saving: round((l.p.price - alt.price) * l.quantity), replaceWith: { id: alt.id, name: alt.name, price: alt.price, rating: alt.rating, ...(typeof alt.image === "string" ? { image: alt.image } : {}) } } : null;
   }).filter((x): x is Alternative => !!x);
   const alternativesSaving = round(alternatives.reduce((a, x) => a + x.saving, 0));
   const optimizedSubtotal = round(subtotal - alternativesSaving);

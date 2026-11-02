@@ -140,7 +140,7 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   warn: { flexDirection: "row-reverse", alignItems: "center", gap: 6, backgroundColor: t.warnSoft, borderRadius: 12, padding: 10, marginBottom: 10 },
   input: { flexDirection: "row-reverse", alignItems: "center", gap: 10, minHeight: 56, borderRadius: 16, borderWidth: 1, borderColor: t.line, backgroundColor: t.card, paddingHorizontal: 14, marginBottom: 10 },
   inputLabel: { color: t.muted, fontSize: 15 },
-  inputField: { flex: 1, fontFamily: "Tajawal_500Medium", fontSize: 16, color: t.ink, textAlign: "left", writingDirection: "ltr", minHeight: 48 },
+  inputField: { flex: 1, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 16, color: t.ink, textAlign: "left", writingDirection: "ltr", minHeight: 48 },
   addCard: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 54, borderRadius: 18, borderWidth: 1.5, borderColor: t.orange, backgroundColor: t.orangeSoft },
   sumRow: { flexDirection: "row-reverse", justifyContent: "space-between", paddingVertical: 10, borderTopWidth: 1, borderColor: t.line },
   sumLabel: { color: t.muted, fontSize: 16 },

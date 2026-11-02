@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { createJawafaBridge } from './jawafaBridge.mjs';
 import { installFeatures } from './features.mjs';
+import { installAuthProviders } from './authProviders.mjs';
 import { prepareJawafaSnapshot } from './jawafaInventory.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
@@ -487,6 +488,7 @@ export async function createCommerceServer(options = {}) {
     return body;
   }
   const features = installFeatures({ db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, notify, rewardLedger, rewardBalance, product, setting, setSetting, rate, audit, validateProduct, options });
+  const authProviders = installAuthProviders({ db, get, all, run, transaction, id, now, fail, text, rate, session, issueRecoveryCode, notify, passwordHash, publicUser, options, identityOptional: (req) => { try { return req.headers.authorization ? identity(req) : null; } catch { return null; } } });
   const server = http.createServer(async (req, res) => {
     const send = (status, value) => { if (res.headersSent) return; res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(json(value)); };
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -544,7 +546,9 @@ export async function createCommerceServer(options = {}) {
         if (method === 'DELETE') {
           rate(req, 'delete-account', 5);
           if (body.confirm !== 'حذف حسابي') fail(400, 'اكتب «حذف حسابي» لتأكيد حذف الحساب', 'confirmation_required');
-          if (!await passwordValid(body.password, actor.password_hash)) fail(401, 'كلمة المرور غير صحيحة', 'invalid_credentials');
+          // phone/Google accounts have no known password: the recovery code issued at sign-up confirms deletion
+          const viaRecovery = typeof body.recoveryCode === 'string' && body.recoveryCode.length >= 20 && !!get('SELECT 1 AS x FROM recovery_codes WHERE user_id=? AND code_hash=?', actor.id, hash(body.recoveryCode));
+          if (!viaRecovery && !await passwordValid(body.password, actor.password_hash)) fail(401, 'كلمة المرور أو رمز الاسترداد غير صحيح', 'invalid_credentials');
           if (actor.role === 'admin' && get("SELECT COUNT(*) AS n FROM users WHERE role='admin'").n <= 1) fail(409, 'لا يمكن حذف حساب آخر مدير للمتجر', 'last_admin');
           if (get("SELECT id FROM orders WHERE user_id=? AND status NOT IN ('delivered','cancelled') LIMIT 1", actor.id)) fail(409, 'أكمل أو ألغِ طلباتك النشطة قبل حذف الحساب', 'active_orders');
           if (get("SELECT id FROM orders WHERE driver_id=? AND status NOT IN ('delivered','cancelled') LIMIT 1", actor.id)) fail(409, 'أكمل عمليات التوصيل المسندة قبل حذف الحساب', 'active_deliveries');
@@ -561,6 +565,8 @@ export async function createCommerceServer(options = {}) {
             run('DELETE FROM reviews WHERE user_id=?', actor.id);
             run('DELETE FROM oauth_states WHERE user_id=?', actor.id);
             run('DELETE FROM facebook_links WHERE user_id=?', actor.id);
+            run('DELETE FROM user_identities WHERE user_id=?', actor.id);
+            for (const sql of ['DELETE FROM price_watches WHERE user_id=?', 'DELETE FROM receipts WHERE user_id=?', 'DELETE FROM media_likes WHERE user_id=?', 'DELETE FROM list_items WHERE added_by=? AND list_id NOT IN (SELECT id FROM lists WHERE owner_id<>?)', 'DELETE FROM list_members WHERE user_id=?', 'DELETE FROM lists WHERE owner_id=?']) run(sql, ...(sql.includes('owner_id<>?') ? [actor.id, actor.id] : [actor.id]));
             run('DELETE FROM ticket_replies WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?)', actor.id);
             run('DELETE FROM ticket_photos WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?) OR user_id=?', actor.id, actor.id);
             run('DELETE FROM return_photos WHERE return_id IN (SELECT id FROM returns WHERE user_id=?)', actor.id);
@@ -938,6 +944,7 @@ export async function createCommerceServer(options = {}) {
         } catch (error) { if (error.status) throw error; fail(502, 'فشل الاتصال بفيسبوك أو انتهت المهلة'); } finally { clearTimeout(timer); }
       }
       if (method === 'DELETE' && path === '/api/auth/facebook' || method === 'POST' && path === '/api/auth/facebook/disconnect') { const actor = requireUser(req); run('DELETE FROM facebook_links WHERE user_id=?', actor.id); return send(200, { ok: true }); }
+      { const authResult = await authProviders.handle(method, path, body, req, url); if (authResult) { if (authResult.redirect) { res.writeHead(302, { Location: authResult.redirect, 'Cache-Control': 'no-store' }); res.end(); return; } return send(authResult.status, authResult.body); } }
       { const featureResult = await features.handle(method, path, p, body, req); if (featureResult) return send(featureResult.status, featureResult.body); }
       fail(404, 'المسار غير موجود', 'not_found');
     } catch (error) {

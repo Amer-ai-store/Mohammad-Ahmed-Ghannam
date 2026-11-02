@@ -2294,7 +2294,152 @@
      "status": "blocked-external"
     }
    ]
+  },
+  {
+   "id": "G15",
+   "name": "الدخول بالهاتف وGoogle",
+   "features": [
+    {
+     "id": "F-G15-01",
+     "title": "تطبيع أرقام الهاتف (أردني افتراضيًا وأرقام عربية ودولية)",
+     "source": {
+      "file": "server/authProviders.mjs",
+      "contains": [
+       "export function normalizePhone",
+       "+962"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/authProviders.test.mjs",
+      "name": "F-G15-01"
+     }
+    },
+    {
+     "id": "F-G15-02",
+     "title": "الدخول برمز SMS لمرة واحدة: مخزّن مُجزّأ، 5 دقائق، 5 محاولات، 5 رموز/ساعة",
+     "source": {
+      "file": "server/authProviders.mjs",
+      "contains": [
+       "/api/auth/phone/verify",
+       "timingSafeEqual",
+       "OTP_PER_PHONE_HOUR"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/authProviders.test.mjs",
+      "name": "F-G15-02"
+     }
+    },
+    {
+     "id": "F-G15-03",
+     "title": "مزوّد الرسائل من الخادم فقط (Bird/Twilio) ووضع تطوير معطّل في الإنتاج",
+     "source": {
+      "file": "server/authProviders.mjs",
+      "contains": [
+       "'bird'",
+       "production"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/authProviders.test.mjs",
+      "name": "F-G15-03"
+     }
+    },
+    {
+     "id": "F-G15-04",
+     "title": "إرسال SMS عبر Bird دون إرجاع الرمز للعميل",
+     "source": {
+      "file": "server/authProviders.mjs",
+      "contains": [
+       "api.bird.com/workspaces",
+       "AccessKey"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/authProviders.test.mjs",
+      "name": "F-G15-04"
+     }
+    },
+    {
+     "id": "F-G15-05",
+     "title": "ربط رقم الهاتف بحساب قائم وعرض الهويات المرتبطة",
+     "source": {
+      "file": "server/authProviders.mjs",
+      "contains": [
+       "linked: true",
+       "/api/auth/identities"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/authProviders.test.mjs",
+      "name": "F-G15-05"
+     }
+    },
+    {
+     "id": "F-G15-06",
+     "title": "Google: OAuth بالخادم ← رمز تطبيق لمرة واحدة ← جلسة؛ ربط بالبريد الموثّق؛ رمز ID أصلي",
+     "source": {
+      "file": "server/authProviders.mjs",
+      "contains": [
+       "/api/auth/google/callback",
+       "/api/auth/exchange",
+       "tokeninfo"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/authProviders.test.mjs",
+      "name": "F-G15-06"
+     }
+    },
+    {
+     "id": "F-G15-07",
+     "title": "حذف حساب الهاتف/Google برمز الاسترداد وإزالة الهويات",
+     "source": {
+      "file": "server/commerce.mjs",
+      "contains": [
+       "viaRecovery",
+       "DELETE FROM user_identities WHERE user_id=?"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/authProviders.test.mjs",
+      "name": "F-G15-07"
+     }
+    },
+    {
+     "id": "F-G15-08",
+     "title": "واجهة الدخول الجديدة: Google + هاتف/بريد + رمز التحقق وإعادة الإرسال + رمز الاسترداد",
+     "source": {
+      "file": "src/components/AuthExtras.tsx",
+      "contains": [
+       "google-signin",
+       "otp-verify",
+       "RecoveryNotice"
+      ]
+     },
+     "status": "needs-device"
+    },
+    {
+     "id": "F-G15-09",
+     "title": "مسار الرابط العميق luqta://auth لإكمال دخول Google",
+     "source": {
+      "file": "src/app/auth.tsx",
+      "contains": [
+       "/auth/exchange",
+       "adoptSession"
+      ]
+     },
+     "status": "needs-device"
+    }
+   ]
   }
  ],
- "total": 165
+ "total": 174
 }

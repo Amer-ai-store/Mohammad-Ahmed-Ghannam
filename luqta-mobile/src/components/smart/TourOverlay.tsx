@@ -21,15 +21,15 @@ const STEPS: { title: string; text: string; action: AvatarAction; href?: Href }[
 ];
 
 export function useTourState(force: boolean) {
-  const [open, setOpen] = useState(false);
+  const [unseen, setUnseen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   useEffect(() => {
     let active = true;
-    if (force) { setOpen(true); return; }
-    AsyncStorage.getItem(KEY).then((v) => { if (active && !v) setOpen(true); }).catch(() => {});
+    AsyncStorage.getItem(KEY).then((v) => { if (active && !v) setUnseen(true); }).catch(() => {});
     return () => { active = false; };
-  }, [force]);
-  const close = () => { setOpen(false); void AsyncStorage.setItem(KEY, new Date().toISOString()).catch(() => {}); };
-  return { open, close };
+  }, []);
+  const close = () => { setDismissed(true); setUnseen(false); void AsyncStorage.setItem(KEY, new Date().toISOString()).catch(() => {}); };
+  return { open: !dismissed && (force || unseen), close };
 }
 
 export function TourOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {

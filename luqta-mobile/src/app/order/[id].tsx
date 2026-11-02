@@ -183,5 +183,5 @@ const styles = (t: Palette) => StyleSheet.create({
   notice: { borderWidth: 1, borderColor: t.green, padding: 15, borderRadius: 12, backgroundColor: t.paper },
   event: { flexDirection: "row-reverse", gap: 12, paddingVertical: 10 },
   dot: { width: 26, height: 26, alignItems: "center", justifyContent: "center", backgroundColor: t.secondary, borderRadius: 13 },
-  input: { minHeight: 125, borderWidth: 1, borderColor: t.line, borderRadius: 13, padding: 15, color: t.ink, backgroundColor: t.background, fontFamily: "Tajawal_400Regular", textAlign: "right", fontSize: 15 },
+  input: { minHeight: 125, borderWidth: 1, borderColor: t.line, borderRadius: 13, padding: 15, color: t.ink, backgroundColor: t.background, fontFamily: "IBMPlexSansArabic_400Regular", textAlign: "right", fontSize: 15 },
 });

@@ -18,7 +18,7 @@ export function AdminField({ label, value, onChangeText, multiline = false, secr
     <Txt weight="medium" style={{ fontSize: 13, color: c.muted }}>{label}</Txt>
     <TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={c.muted}
       multiline={multiline} secureTextEntry={secret} autoCapitalize="none" autoCorrect={false} keyboardType={numeric ? "decimal-pad" : "default"}
-      style={{ backgroundColor: c.background, color: c.ink, borderColor: c.line, borderWidth: 1, borderRadius: 11, paddingHorizontal: 13, paddingVertical: 12, fontFamily: "Tajawal_400Regular", textAlign: "right", writingDirection: "rtl", minHeight: multiline ? 125 : 48, textAlignVertical: multiline ? "top" : "center" }} />
+      style={{ backgroundColor: c.background, color: c.ink, borderColor: c.line, borderWidth: 1, borderRadius: 11, paddingHorizontal: 13, paddingVertical: 12, fontFamily: "IBMPlexSansArabic_400Regular", textAlign: "right", writingDirection: "rtl", minHeight: multiline ? 125 : 48, textAlignVertical: multiline ? "top" : "center" }} />
   </View>;
 }
 

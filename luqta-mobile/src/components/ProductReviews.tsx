@@ -110,5 +110,5 @@ const styles = (t: Palette) => StyleSheet.create({
   summary: { flexDirection: "row-reverse", alignItems: "center", gap: 10 },
   stars: { flexDirection: "row-reverse", alignItems: "center", gap: 3 },
   starButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
-  input: { minHeight: 51, borderWidth: 1, borderColor: t.line, backgroundColor: t.background, color: t.ink, fontFamily: "Tajawal_400Regular", textAlign: "right", padding: 14, borderRadius: 12, fontSize: 15 },
+  input: { minHeight: 51, borderWidth: 1, borderColor: t.line, backgroundColor: t.background, color: t.ink, fontFamily: "IBMPlexSansArabic_400Regular", textAlign: "right", padding: 14, borderRadius: 12, fontSize: 15 },
 });

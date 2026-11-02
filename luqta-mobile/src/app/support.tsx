@@ -144,7 +144,7 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   ref: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   inputRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
   send: { flexDirection: "row-reverse", alignItems: "center", gap: 8, minHeight: 52, paddingHorizontal: 18, borderRadius: 999, backgroundColor: t.orange },
-  input: { flex: 1, minHeight: 52, borderRadius: 999, borderWidth: 1, borderColor: t.line, backgroundColor: t.card, paddingHorizontal: 14, fontFamily: "Tajawal_500Medium", fontSize: 15, color: t.ink, textAlign: "right" },
+  input: { flex: 1, minHeight: 52, borderRadius: 999, borderWidth: 1, borderColor: t.line, backgroundColor: t.card, paddingHorizontal: 14, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 15, color: t.ink, textAlign: "right" },
   attach: { alignItems: "center", justifyContent: "center", minWidth: 60 },
   agent: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 50, borderRadius: 999, borderWidth: 1.5, borderColor: t.chip, backgroundColor: t.orangeSoft, marginTop: 10 },
   notice: { flexDirection: "row-reverse", alignItems: "center", gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderColor: t.line },

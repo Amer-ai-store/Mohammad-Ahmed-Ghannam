@@ -8,7 +8,7 @@ import { useSession } from "../lib/session";
 
 export function FormField({ label, ...props }: TextInputProps & { label: string }) {
   const { colors: t } = useTheme();
-  return <View style={{ gap: 8 }}><Txt weight="bold" style={{ fontSize: 14 }}>{label}</Txt><TextInput {...props} accessibilityLabel={props.accessibilityLabel || label} placeholderTextColor={t.muted} style={[{ backgroundColor: t.paper, borderColor: t.line, borderWidth: 1, borderRadius: 12, paddingHorizontal: 15, paddingVertical: 14, color: t.ink, fontFamily: "Tajawal_400Regular", fontSize: 16, textAlign: "right", minHeight: 50 }, props.style]} /></View>;
+  return <View style={{ gap: 8 }}><Txt weight="bold" style={{ fontSize: 14 }}>{label}</Txt><TextInput {...props} accessibilityLabel={props.accessibilityLabel || label} placeholderTextColor={t.muted} style={[{ backgroundColor: t.paper, borderColor: t.line, borderWidth: 1, borderRadius: 12, paddingHorizontal: 15, paddingVertical: 14, color: t.ink, fontFamily: "IBMPlexSansArabic_400Regular", fontSize: 16, textAlign: "right", minHeight: 50 }, props.style]} /></View>;
 }
 export function FormMessage({ text, success = false }: { text?: string; success?: boolean }) {
   const { colors: t } = useTheme();

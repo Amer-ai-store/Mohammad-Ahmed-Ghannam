@@ -16,11 +16,13 @@ export default function RootLayout() {
 function AppLayout() {
   const { colors: theme, isDark } = useTheme();
   const [loaded, error] = useFonts({
-    Tajawal_400Regular: require("@expo-google-fonts/tajawal/400Regular/Tajawal_400Regular.ttf"),
-    Tajawal_500Medium: require("@expo-google-fonts/tajawal/500Medium/Tajawal_500Medium.ttf"),
-    Tajawal_700Bold: require("@expo-google-fonts/tajawal/700Bold/Tajawal_700Bold.ttf"),
-    Tajawal_800ExtraBold: require("@expo-google-fonts/tajawal/800ExtraBold/Tajawal_800ExtraBold.ttf"),
+    // IBM Plex Sans Arabic — the typeface of the reference designs (OFL, bundled in assets/fonts)
+    IBMPlexSansArabic_400Regular: require("../../assets/fonts/IBMPlexSansArabic-Regular.ttf"),
+    IBMPlexSansArabic_500Medium: require("../../assets/fonts/IBMPlexSansArabic-Medium.ttf"),
+    IBMPlexSansArabic_600SemiBold: require("../../assets/fonts/IBMPlexSansArabic-SemiBold.ttf"),
+    IBMPlexSansArabic_700Bold: require("../../assets/fonts/IBMPlexSansArabic-Bold.ttf"),
   });
+
   const metadata = (
     <Head>
       <title>Amer AI Store | لُقطة</title>

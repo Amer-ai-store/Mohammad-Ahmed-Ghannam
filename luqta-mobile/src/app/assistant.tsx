@@ -173,7 +173,7 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   voice: { flexDirection: "row-reverse", alignItems: "center", gap: 8, alignSelf: "center", minHeight: 46, paddingHorizontal: 20, borderRadius: 999, borderWidth: 1, borderColor: t.line, backgroundColor: t.card, marginTop: 12 },
   inputBar: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: t.card, borderRadius: 999, borderWidth: 1, borderColor: t.line, padding: 6 },
   send: { width: 52, height: 52, borderRadius: 26, backgroundColor: t.orange, alignItems: "center", justifyContent: "center" },
-  input: { flex: 1, minHeight: 48, borderRadius: 999, backgroundColor: t.field, paddingHorizontal: 16, fontFamily: "Tajawal_500Medium", fontSize: 16, color: t.ink, textAlign: "right", writingDirection: "rtl" },
+  input: { flex: 1, minHeight: 48, borderRadius: 999, backgroundColor: t.field, paddingHorizontal: 16, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 16, color: t.ink, textAlign: "right", writingDirection: "rtl" },
   cameraBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: t.field, alignItems: "center", justifyContent: "center" },
   micBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: t.purple, alignItems: "center", justifyContent: "center" },
 });

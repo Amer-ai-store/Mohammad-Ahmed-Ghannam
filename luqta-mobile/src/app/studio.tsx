@@ -72,7 +72,7 @@ export default function Studio() {
         </ScrollView>
         {!withImages.length ? <InfoNote text="منتجات الكتالوج التجريبي صورها محلية؛ اختر «صورة منتج» من جهازك، أو اربط الخادم لاستخدام صور المنتجات." /> : null}
         <SectionHeader title="عبارة على الصورة" />
-        <TextInput accessibilityLabel="عبارة على الصورة" value={caption} maxLength={40} onChangeText={(v) => { setCaption(v); send({ type: "caption", text: v }); }} placeholder="مثلًا: صباحي مع لُقطة" placeholderTextColor={t.mutedSoft} style={{ minHeight: 48, borderRadius: 14, backgroundColor: t.field, paddingHorizontal: 14, textAlign: "right", color: t.ink, fontFamily: "Tajawal_500Medium" }} />
+        <TextInput accessibilityLabel="عبارة على الصورة" value={caption} maxLength={40} onChangeText={(v) => { setCaption(v); send({ type: "caption", text: v }); }} placeholder="مثلًا: صباحي مع لُقطة" placeholderTextColor={t.mutedSoft} style={{ minHeight: 48, borderRadius: 14, backgroundColor: t.field, paddingHorizontal: 14, textAlign: "right", color: t.ink, fontFamily: "IBMPlexSansArabic_500Medium" }} />
       </Card>
       <CTA title="حفظ الصورة" icon={Download} busy={busy} onPress={() => { setBusy(true); send({ type: "export" }); }} style={{ marginTop: 12 }} testID="studio-save" />
     </Shell>

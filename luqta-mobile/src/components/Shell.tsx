@@ -26,7 +26,7 @@ export function tabForPath(path: string): TabKey {
   if (path === "/explore" || path.startsWith("/product") || ["/offers", "/compare", "/favorites", "/smart-tools", "/market-pulse", "/price-radar", "/trending", "/lens", "/nutrition", "/voice", "/studio", "/reels"].includes(path)) return "explore";
   if (path === "/basket-optimizer") return "cart";
   if (path === "/cart") return "cart";
-  if (["/profile", "/orders", "/notifications", "/support", "/wallet", "/addresses", "/appearance", "/privacy", "/returns", "/login", "/register", "/delete-account", "/recover-account", "/connection", "/admin", "/driver", "/command-center", "/social", "/rewards", "/lists", "/watchlist", "/insights", "/merchant", "/permissions", "/receipts", "/green", "/game", "/coupons"].some((p) => path === p || path.startsWith(`${p}/`)) || path.startsWith("/order/")) return "account";
+  if (["/profile", "/orders", "/notifications", "/support", "/wallet", "/addresses", "/appearance", "/privacy", "/returns", "/login", "/register", "/auth", "/delete-account", "/recover-account", "/connection", "/admin", "/driver", "/command-center", "/social", "/rewards", "/lists", "/watchlist", "/insights", "/merchant", "/permissions", "/receipts", "/green", "/game", "/coupons"].some((p) => path === p || path.startsWith(`${p}/`)) || path.startsWith("/order/")) return "account";
   return "home";
 }
 
