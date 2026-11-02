@@ -47,6 +47,9 @@ for (const [name, path] of routes) {
     await page.goto(base + path, { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForTimeout(4500);
     await page.screenshot({ path: join(out, `${name}.png`), fullPage: true });
+    // CI: also print a compact JPEG into the job log so reviewers (and the agent) can inspect
+    // screens without downloading artifacts. Decode lines starting with LUQTA_SHOT.
+    if (process.env.CI) { const jpg = await page.screenshot({ type: 'jpeg', quality: 50, scale: 'css', fullPage: true }); console.log(`LUQTA_SHOT ${name} ${jpg.toString('base64')}`); }
   } catch (e) { errors.push('navigation: ' + e.message); }
   report.push({ name, path, errors });
   await ctx.close();

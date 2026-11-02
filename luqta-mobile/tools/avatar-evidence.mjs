@@ -31,6 +31,7 @@ for (const action of AVATAR_ACTIONS.filter((a) => !only.length || only.includes(
   const samples = [];
   for (let i = 0; i < 8; i++) { samples.push(await probe()); await page.waitForTimeout(110); }
   await page.screenshot({ path: join(out, `pose-${action}.png`), omitBackground: true });
+  if (process.env.CI) console.log(`LUQTA_SHOT pose-${action} ${(await page.screenshot({ type: 'jpeg', quality: 55, scale: 'css' })).toString('base64')}`);
   const range = {};
   for (const j of Object.keys(samples[0].joints)) {
     const xs = samples.map((s) => s.joints[j][0]), zs = samples.map((s) => s.joints[j][2]);
