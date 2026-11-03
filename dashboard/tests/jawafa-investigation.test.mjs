@@ -55,15 +55,15 @@ test('native command view contains every investigation panel hook and static ass
 
 test('report manifest is source-linked, status-only and not published', () => {
   assert.equal(manifest.schema, 'jawafa-investigation-reports-v1');
-  assert.equal(manifest.classification, 'PUBLIC_STATUS_AND_PRIVATE_EVIDENCE_LINKS_ONLY');
+  assert.equal(manifest.classification, 'PUBLIC_STATUS_ONLY__PRIVATE_LINKS_REDACTED');
   assert.equal(manifest.published_to_production, false);
   assert.equal(manifest.release_gate, 'BLOCKED_ISSUE_102');
   assert.equal(manifest.reports.length, 8);
   assert.equal(new Set(manifest.reports.map(x => x.id)).size, 8);
   for (const report of manifest.reports) {
-    assert.match(report.href, /^https:\/\/(docs|drive)\.google\.com\//);
+    assert.equal(report.href, null);
     assert.match(report.verified, /^DRIVE_METADATA/);
-    assert.equal(report.access, 'PRIVATE_DRIVE');
+    assert.equal(report.access, 'RESTRICTED_NO_PUBLIC_LINK');
   }
   assert.equal(main.source_as_of, '2026-11-02');
   assert.equal(main.latest_export.run, '20261031-0100'); // Older archived export is not falsely labeled 2 Nov.
@@ -84,10 +84,8 @@ test('report viewer actually renders eight cards, eight reports and filter inter
   assert.match(nodes.get('jf-release').textContent, /102/);
   const rows = nodes.get('jf-report-rows').children;
   const link = rows[0].children[4].children[0];
-  assert.equal(link.tagName, 'a');
-  assert.equal(link.target, '_blank');
-  assert.equal(link.rel, 'noopener noreferrer');
-  assert.match(link.href, /^https:\/\/docs\.google\.com/);
+  assert.equal(link.tagName, 'span');
+  assert.match(link.textContent, /لا رابط عام/);
   const btn = nodes.get('jf-report-filters').children.find(x => x.dataset.filter === 'bank');
   btn.listeners.click();
   const expected = manifest.reports.filter(r => r.category === 'all' || r.category === 'bank').length;
@@ -123,4 +121,22 @@ test('failed refresh clears previously loaded reports rather than showing stale 
   assert.match(nodes.get('jf-results-count').textContent, /0/);
   assert.match(nodes.get('jf-release').textContent, /102/);
   assert.match(nodes.get('jf-source-note').textContent, /نتائج قديمة/);
+});
+
+test('private document IDs are absent from public assets', () => {
+  for (const content of [html, js, JSON.stringify(manifest), JSON.stringify(main)]) {
+    assert.doesNotMatch(content, /https:\/\/(docs|drive)\.google\.com\//);
+  }
+  assert.equal(manifest.canonical_casebook, null);
+  assert.equal(manifest.primary_source_export.href, null);
+  assert.ok(manifest.reports.every(r => r.href === null && r.access === 'RESTRICTED_NO_PUBLIC_LINK'));
+  assert.ok(manifest.private_evidence.every(r => r.href === null));
+});
+test('a reintroduced private reference is rejected before rendering', async () => {
+  const injected = structuredClone(manifest);
+  injected.reports[0].href = 'https:' + '//docs.google.com/document/d/DO_NOT_PUBLISH/edit';
+  const nodes = harness(async () => ({ ok: true, json: async () => injected }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(nodes.get('jf-load').textContent, /تعذر استيراد/);
+  assert.equal(nodes.get('jf-report-rows').children.length, 0);
 });
