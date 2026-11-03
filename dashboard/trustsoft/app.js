@@ -1,4 +1,7 @@
 'use strict';
+/* Shared TrustSoft client: standalone and native host use the same 12-screen implementation. */
+(function(){
+function initializeTrustSoft(document){
 const labels={overview:'نظرة عامة',control:'المراقبة والسيطرة',sales:'المبيعات',purchases:'المشتريات',accounting:'المحاسبة',checks:'الشيكات',inventory:'المخزون',users:'المستخدمون',operations:'التقارير التشغيلية',financial:'التقارير المالية',investigation:'التحقيق المالي',schema:'المخطط والعلاقات'};
 const errors={agent_sql_not_verified:'لم يثبت اتصال SQL بواسطة وكيل الخادم',sql_not_configured:'اتصال SQL غير مهيأ',sql_driver_missing:'برنامج تشغيل SQL غير مثبت',sql_connection_or_query_failed:'تعذر الاتصال أو تنفيذ الاستعلام',read_only_principal_required:'الحساب يملك صلاحيات تتجاوز القراءة؛ أُوقفت القراءة',tls_configuration_required:'يلزم اتصال مشفر بشهادة موثوقة',wrong_server:'الخادم لا يطابق JAWAFFASVR',dashboard_unreachable:'تعذر الاتصال بخدمة اللوحة',wrong_database:'قاعدة البيانات لا تطابق Jawafa_DB',invalid_mapping:'ربط الأعمدة غير صالح'};
 const $=id=>document.getElementById(id);
@@ -192,3 +195,23 @@ document.addEventListener?.('visibilitychange',()=>{
  if(document.visibilityState==='visible'&&$('auto').checked&&!localFile)refresh();
 });
 refresh();
+
+return Object.freeze({close:clearPortalState, refresh});
+}
+globalThis.TrustSoftEmbedded = Object.freeze({
+ mount(shadowRoot){
+  if(!shadowRoot || typeof shadowRoot.getElementById!=='function') throw Error('TRUSTSOFT_HOST_REQUIRED');
+  const page=globalThis.document;
+  const scoped={
+   getElementById(id){return shadowRoot.getElementById(id);},
+   querySelectorAll(selector){return shadowRoot.querySelectorAll(selector);},
+   createElement(tag){return page.createElement(tag);},
+   body:{dataset:{apiOrigin:'https://trustsoft-control.zxzx-mohammad91.workers.dev',portalAdmin:'true',defaultSection:'control'}},
+   addEventListener(type,handler){page.addEventListener(type,handler);},
+   get visibilityState(){return page.visibilityState;}
+  };
+  return initializeTrustSoft(scoped);
+ }
+});
+if(globalThis.document?.body?.dataset?.apiOrigin)initializeTrustSoft(globalThis.document);
+})();
