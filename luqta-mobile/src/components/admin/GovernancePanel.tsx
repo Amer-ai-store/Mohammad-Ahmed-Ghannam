@@ -34,6 +34,9 @@ export function GovernancePanel() {
   const stamp = stampDraft ?? { stamps: String(sc?.stamps ?? 5), rewardValue: String(sc?.rewardValue ?? 10), minSubtotal: String(sc?.minSubtotal ?? 0) };
   const express = expressDraft ?? { fee: String(ex?.fee ?? 2), maxKm: String(ex?.maxKm ?? 6) };
   const collections = settings.data.settings.collections || [];
+  const branchRes = useLoad<{ branches: { id: string; name: string; city?: string; latitude?: number; longitude?: number }[] }>("/admin/branches", { branches: [] });
+  const [branchText, setBranchText] = useState<string | null>(null);
+  const branchValue = branchText ?? branchRes.data.branches.map((b) => [b.id, b.name, b.city || "", b.latitude ?? "", b.longitude ?? ""].join(", ")).join("\n");
   const line = { flexDirection: "row-reverse" as const, alignItems: "center" as const, gap: 8, paddingVertical: 6, borderTopWidth: 1, borderColor: c.line };
   return (
     <>
@@ -76,8 +79,13 @@ export function GovernancePanel() {
         <AdminField label="أقل قيمة طلب للختم" numeric value={stamp.minSubtotal} onChangeText={(v) => setStampDraft({ ...stamp, minSubtotal: v })} />
         <Button title="حفظ" secondary onPress={() => void action.run(() => api.patch("/admin/settings", { stampCard: { enabled: true, stamps: numberInput(stamp.stamps, "الأختام"), rewardType: "percent", rewardValue: numberInput(stamp.rewardValue, "القيمة"), minSubtotal: numberInput(stamp.minSubtotal, "الحد الأدنى"), validDays: 30 } }), "حُفظت بطاقة الأختام", settings.reload)} />
       </AdminCard>
+      <AdminCard title="الفروع ومواقعها (للتوصيل السريع والاستلام)">
+        <Txt style={{ color: c.muted, lineHeight: 22 }}>سطر لكل فرع: المعرّف, الاسم, المدينة, خط العرض, خط الطول</Txt>
+        <AdminField label="الفروع" multiline value={branchValue} onChangeText={setBranchText} placeholder={"hashmi, فرع الهاشمي, عمان, 31.96, 35.92"} />
+        <Button title="حفظ الفروع" secondary onPress={() => void action.run(() => api.put("/admin/branches", { branches: branchValue.split(/\n/).map((l) => l.split(/[,،]/).map((x) => x.trim())).filter((r) => r[0] && r[1]).map(([id, name, city, lat, lng]) => ({ id, name, city: city || undefined, ...(lat && lng ? { latitude: numberInput(lat, "خط العرض"), longitude: numberInput(lng, "خط الطول") } : {}) })) }), "حُفظت الفروع", branchRes.reload)} />
+      </AdminCard>
       <AdminCard title="التوصيل السريع">
-        <Txt style={{ color: c.muted, lineHeight: 22 }}>يُحسب من أقرب فرع يتوفر فيه كل أصناف السلة؛ أضف إحداثيات الفروع من «المخزون ← الفروع».</Txt>
+        <Txt style={{ color: c.muted, lineHeight: 22 }}>يُحسب من أقرب فرع يتوفر فيه كل أصناف السلة؛ أضف إحداثيات الفروع في البطاقة السابقة.</Txt>
         <AdminField label="رسوم التوصيل السريع" numeric value={express.fee} onChangeText={(v) => setExpressDraft({ ...express, fee: v })} />
         <AdminField label="أقصى مسافة (كم)" numeric value={express.maxKm} onChangeText={(v) => setExpressDraft({ ...express, maxKm: v })} />
         <Button title="حفظ" secondary onPress={() => void action.run(() => api.patch("/admin/settings", { express: { fee: numberInput(express.fee, "الرسوم"), maxKm: numberInput(express.maxKm, "المسافة") } }), "حُفظ التوصيل السريع", settings.reload)} />
