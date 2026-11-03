@@ -8,7 +8,7 @@ Date: 2026-11-03
 - Archive registry and per-screen source map with SQL mappings explicitly unvalidated.
 
 ## Historical archive location
-Private Google Drive: https://drive.google.com/drive/folders/1HRpt5ZogivEK5H1MKDvLQwd8EyixIuRg
+Private Google Drive: configured outside the public repository; folder reference is retained privately by the owner.
 Existing source root: Jawafa_DB_Exports.
 Subfolders: catalog, immutable snapshots, incremental deltas, cheques/banks, operations, investors, evidence hashes, AI reports, quarantine.
 
