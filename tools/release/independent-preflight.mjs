@@ -5,7 +5,7 @@
  * Signature verification alone does not establish that underlying evidence is genuine.
  */
 import { readFileSync } from 'node:fs';
-import { createPublicKey, verify } from 'node:crypto';
+import { createHash, createPublicKey, timingSafeEqual, verify } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 export const REPO = 'Amer-ai-store/Mohammad-Ahmed-Ghannam';
@@ -57,12 +57,16 @@ export function validateEvidence(manifest, expectedSha, now = Date.now()) {
   return { target_sha: expectedSha, gates: unique.size, signed_at: manifest.signed_at };
 }
 
-export function verifySignedManifest(rawManifest, signatureB64, publicKeyPem, expectedSha, now = Date.now()) {
+export function verifySignedManifest(rawManifest, signatureB64, publicKeyPem, expectedSha, now = Date.now(), trustedReviewerSpkiSha256) {
   requireCondition(typeof rawManifest === 'string' && Buffer.byteLength(rawManifest) <= 131_072, 'MANIFEST_TOO_LARGE');
   requireCondition(typeof signatureB64 === 'string' && /^[A-Za-z0-9+/]{86}==$/.test(signatureB64.trim()), 'SIGNATURE_INVALID_ENCODING');
+  // The trust anchor must be enrolled out of band in a protected environment; never selected by the manifest signer.
+  requireCondition(typeof trustedReviewerSpkiSha256 === 'string' && sha64.test(trustedReviewerSpkiSha256), 'REVIEWER_TRUST_ANCHOR_MISSING');
   let key;
   try { key = createPublicKey(publicKeyPem); } catch { throw new Error('REVIEWER_PUBLIC_KEY_INVALID'); }
   requireCondition(key.asymmetricKeyType === 'ed25519', 'REVIEWER_KEY_MUST_BE_ED25519');
+  const fingerprint = createHash('sha256').update(key.export({ type: 'spki', format: 'der' })).digest();
+  requireCondition(timingSafeEqual(fingerprint, Buffer.from(trustedReviewerSpkiSha256, 'hex')), 'REVIEWER_KEY_NOT_TRUSTED');
   const signature = Buffer.from(signatureB64.trim(), 'base64');
   requireCondition(signature.length === 64 && verify(null, Buffer.from(rawManifest, 'utf8'), key, signature), 'INDEPENDENT_SIGNATURE_INVALID');
   let manifest;
@@ -82,7 +86,9 @@ function main(argv) {
     readFileSync(args.get('--manifest'), 'utf8'),
     readFileSync(args.get('--signature'), 'utf8'),
     readFileSync(args.get('--reviewer-public-key'), 'utf8'),
-    args.get('--sha')
+    args.get('--sha'),
+    Date.now(),
+    process.env.JAWAFA_TRUSTED_REVIEWER_SPKI_SHA256
   );
   // Do not print source refs, owner IDs, tokens or private artifacts.
   process.stdout.write('INDEPENDENT_PREFLIGHT_PASS sha=' + result.target_sha + ' gates=' + result.gates + '\n');

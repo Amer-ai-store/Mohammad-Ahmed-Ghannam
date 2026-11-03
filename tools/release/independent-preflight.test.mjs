@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, sign } from 'node:crypto';
 import { verifySignedManifest, validateEvidence, REQUIRED_GATES, REPO } from './independent-preflight.mjs';
 
 const { privateKey, publicKey } = generateKeyPairSync('ed25519');
 const pem = publicKey.export({ type: 'spki', format: 'pem' });
+const trustedFingerprint = createHash('sha256').update(publicKey.export({ type: 'spki', format: 'der' })).digest('hex');
 const sha = 'a'.repeat(40);
 const now = Date.parse('2026-11-03T18:00:00Z');
 const sample = () => ({
@@ -20,7 +21,7 @@ const sample = () => ({
 });
 const signed = m => {
   const raw = JSON.stringify(m);
-  return verifySignedManifest(raw, sign(null, Buffer.from(raw), privateKey).toString('base64'), pem, sha, now);
+  return verifySignedManifest(raw, sign(null, Buffer.from(raw), privateKey).toString('base64'), pem, sha, now, trustedFingerprint);
 };
 test('synthetic signed envelope passes structurally only, not production approval', () => {
   assert.equal(signed(sample()).gates, REQUIRED_GATES.length);
@@ -42,13 +43,21 @@ test('wrong commit and stale evidence block', () => {
 test('unsigned and tampered evidence block', () => {
   const raw = JSON.stringify(sample());
   const sig = sign(null, Buffer.from(raw), privateKey).toString('base64');
-  assert.throws(() => verifySignedManifest(raw.replace('production','preview'), sig, pem, sha, now), /INDEPENDENT_SIGNATURE_INVALID/);
-  assert.throws(() => verifySignedManifest(raw, 'invalid', pem, sha, now), /SIGNATURE_INVALID_ENCODING/);
+  assert.throws(() => verifySignedManifest(raw.replace('production','preview'), sig, pem, sha, now, trustedFingerprint), /INDEPENDENT_SIGNATURE_INVALID/);
+  assert.throws(() => verifySignedManifest(raw, 'invalid', pem, sha, now, trustedFingerprint), /SIGNATURE_INVALID_ENCODING/);
 });
 test('wrong reviewer public key and missing hash block', () => {
   const another = generateKeyPairSync('ed25519').publicKey.export({ type: 'spki', format: 'pem' });
   const raw = JSON.stringify(sample());
   const sig = sign(null, Buffer.from(raw), privateKey).toString('base64');
-  assert.throws(() => verifySignedManifest(raw, sig, another, sha, now), /INDEPENDENT_SIGNATURE_INVALID/);
+  assert.throws(() => verifySignedManifest(raw, sig, another, sha, now, trustedFingerprint), /REVIEWER_KEY_NOT_TRUSTED/);
   const a = sample(); a.gates[0].artifact_sha256 = 'NOT_A_HASH'; assert.throws(() => signed(a), /EVIDENCE_MISSING/);
+});
+
+test('caller-selected reviewer key is rejected without independently pinned trust anchor', () => {
+  const raw = JSON.stringify(sample());
+  const sig = sign(null, Buffer.from(raw), privateKey).toString('base64');
+  assert.throws(() => verifySignedManifest(raw, sig, pem, sha, now), /REVIEWER_TRUST_ANCHOR_MISSING/);
+  assert.throws(() => verifySignedManifest(raw, sig, pem, sha, now, 'f'.repeat(64)), /REVIEWER_KEY_NOT_TRUSTED/);
+  assert.equal(verifySignedManifest(raw, sig, pem, sha, now, trustedFingerprint).gates, REQUIRED_GATES.length);
 });

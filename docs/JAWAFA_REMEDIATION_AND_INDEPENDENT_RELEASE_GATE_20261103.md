@@ -29,6 +29,8 @@ Date: 2026-11-03. This is a **source-only, non-production** plan, not an announc
 
 `tools/release/independent-preflight.mjs` validates a separately stored, signed JSON evidence manifest using a privately pinned independent reviewer's **Ed25519 public key**. It rejects missing gates, stale evidence, altered bytes, wrong SHA, self-approval and duplicate IDs. A cryptographic signature proves key possession and bytes only; the independent reviewer MUST examine source records, test results, artifacts and key identity out of band. The script has no network, SQL or release calls; no secrets, tokens, UID, private links or signed manifest belong in git.
 
+**Reviewer trust anchor (mandatory):** `JAWAFA_TRUSTED_REVIEWER_SPKI_SHA256` must be pre-enrolled by the independent security reviewer in a separately protected execution environment. It is the SHA-256 fingerprint of the approved Ed25519 public key's DER-encoded SPKI bytes. If absent or not matching, the preflight refuses the signature even when the signature is cryptographically valid. The release operator must not select or overwrite this value. Environment ownership/protection and the reviewer's real identity still require out-of-band independent audit; the script cannot prove them alone.
+
 Run locally/privately:
 ```sh
 node --test tools/release/independent-preflight.test.mjs
