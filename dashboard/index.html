@@ -349,7 +349,26 @@ nav.side{gap:.5rem}
 </section>
 <section class="view" data-view="jawafa-export" aria-labelledby="h-jawafa-export" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · EXPORT V5 · READ ONLY</span><h1 id="h-jawafa-export">مراقبة التصدير المباشر</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-export">Jawafa Export Monitor</span> · آخر تحديث: <span data-jawafa-updated="jawafa-export">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-export">NOT_CONNECTED</span></div>
-<div class="panel" data-jawafa-pane="jawafa-export"><p class="muted">قراءة حالة Export v5 فقط. لا توجد أوامر كتابة على Jawafa_DB.</p></div></section>
+<div class="panel" data-jawafa-pane="jawafa-export"><p class="muted">قراءة حالة Export v5 فقط. لا توجد أوامر كتابة على Jawafa_DB.</p></div>
+<div class="panel" id="audit15-recovery-panel">
+<div class="panel-head"><h2>التحقيق في الجداول الـ15 المستعادة</h2><span id="audit15-status" class="pill bad" role="status" aria-live="polite">NOT_CONNECTED</span></div>
+<p class="small muted">نتائج مطابقة نسخة 26 أكتوبر مع تصدير 3 نوفمبر، مع فصل ملفات FULL عن DELTA. المعروض مصدر تاريخي وليس SQL حيًا، ولا يثبت تعمد حذف أو تعديل السندات.</p>
+<div class="toolbar"><button id="audit15-refresh" type="button" class="btn">تحديث الأدلة الخاصة</button>
+<label class="field">بحث عن جدول<input id="audit15-query" type="search" autocomplete="off" placeholder="اسم الجدول أو مجال التدقيق"></label></div>
+<div class="kpis">
+<div class="kpi"><span class="label">الجداول المتحققة</span><strong class="value" id="audit15-table-count">—</strong></div>
+<div class="kpi"><span class="label">تصدير كامل FULL</span><strong class="value" id="audit15-full-count">—</strong></div>
+<div class="kpi"><span class="label">فروقات DELTA</span><strong class="value" id="audit15-delta-count">—</strong></div>
+<div class="kpi"><span class="label">حركات مستخدمين تاريخية مستعادة</span><strong class="value" id="audit15-history-count">—</strong></div>
+</div>
+<p class="small muted" id="audit15-provenance">لا يوجد اتصال موثوق. لم تُنقل السجلات المحاسبية أو المالية إلى GitHub العام.</p>
+<div class="table-wrap"><table><thead><tr><th>الجدول</th><th>الأهمية للتحقيق</th><th>نوع التصدير</th><th>صفوف الملف</th><th>إجمالي الفهرس</th><th>حالة التحقق</th></tr></thead>
+<tbody id="audit15-table-body"><tr><td colspan="6">لا توجد بيانات من مصدر خاص موثق.</td></tr></tbody></table></div>
+<h3>استثناءات مالية تستلزم الفحص</h3>
+<div class="table-wrap"><table><thead><tr><th>الجدول</th><th>سجلات جديدة</th><th>سجلات تغيرت</th><th>سجلات مفقودة بالمقارنة</th><th>نوع الدليل</th></tr></thead>
+<tbody id="audit15-exceptions"><tr><td colspan="5">لا يوجد تقرير تحقق خاص متصل.</td></tr></tbody></table></div>
+<p class="small muted">الاستيراد التاريخي والحالات المالية للقراءة فقط؛ يجب عدم تفسير فروقات الصفوف أو الترحيل باعتبارها مخالفات قبل المطابقة المحاسبية والتحقق من المستخدم والوقت.</p>
+</div></section>
 <section class="view" data-view="jawafa-accounting" aria-labelledby="h-jawafa-accounting" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-accounting">المحاسبة والقيود</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-accounting">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-accounting">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-accounting">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-accounting"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -2591,6 +2610,7 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
 <script src="jawafa-integration.js" defer></script>
 <script src="jawafa-periodic-report.js" defer></script>
 <script type="module" src="./audit111-ui.mjs"></script>
+<script type="module" src="./audit15-ui.mjs"></script>
 
 <script src="aas-integration.js" defer></script>
 <script>
