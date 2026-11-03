@@ -2,7 +2,20 @@
 const {test}=require('node:test'), assert=require('node:assert/strict'), http=require('node:http'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {createBridge,codeHash}=require('./server.cjs');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'jawafa-test-'));let app,server,url;const secret='JAWAFA_AGENT_SIGNING_TEST_SECRET_32_BYTES_MIN';const qaSecret='JAWAFA_INDEPENDENT_QA_SIGNING_TEST_SECRET_32_BYTES';
-test.before(async()=>{app=createBridge({databaseFile:path.join(dir,'operational.db'),agentSecret:secret,qaSecret,allowedAgentIds:['worker-test'],verifyUser:async token=>{if(!token)throw Object.assign(Error('AUTH_REQUIRED'),{status:401});return token==='Bearer OWNER'?{uid:'owner-uid',role:'owner'}:{uid:'unauthorized',role:'viewer'}}});server=http.createServer(app.handler);await new Promise(ok=>server.listen(0,'127.0.0.1',ok));url='http://127.0.0.1:'+server.address().port});
+test.before(async()=>{
+  const fixture={
+    schema:'jawafa.audit15-agents.v1',classification:'PRIVATE_EVIDENCE_METADATA_ONLY_NO_BUSINESS_ROWS',
+    host:'JAWAFFASVR',database:'Jawafa_DB',checkedUtc:new Date().toISOString(),
+    schemaCatalog:{tableCount:1024,declaredRelations:38},
+    audit15:{tables:Array.from({length:15},(_,i)=>({table:'Test_'+i,referenceRows:10,exportRows:15,
+      laterMinusReference:5,historicalValueDifferenceCandidates:0,priorAuditLatestMode:'FULL',declaredForeignKeyCount:0})),
+      transferGuardStatus:'TRANSFER_VERIFIED_15_OF_15',verifiedTransferFiles:15,verifiedRoundtrips:15,
+      previousVerifiedFull:7,previousVerifiedDelta:8},
+    existingAgents:{agents:[{name:'JawafaExportAgent20Min',category:'data_pipeline',lastSchedulerResult:0,schedulerState:'Ready'}]},
+    export:{mode:'PARTIAL_REFERENCE_ONLY',totalTables:1024,processedTables:1023,remainingTables:1,failedTables:0,progressPercent:99.9}
+  };
+  fs.writeFileSync(path.join(dir,'audit15.json'),JSON.stringify(fixture));
+  app=createBridge({databaseFile:path.join(dir,'operational.db'),audit15File:path.join(dir,'audit15.json'),agentSecret:secret,qaSecret,allowedAgentIds:['worker-test'],verifyUser:async token=>{if(!token)throw Object.assign(Error('AUTH_REQUIRED'),{status:401});return token==='Bearer OWNER'?{uid:'owner-uid',role:'owner'}:{uid:'unauthorized',role:'viewer'}}});server=http.createServer(app.handler);await new Promise(ok=>server.listen(0,'127.0.0.1',ok));url='http://127.0.0.1:'+server.address().port});
 test.after(async()=>{await new Promise(ok=>server.close(ok));app.close();fs.rmSync(dir,{recursive:true,force:true})});
 const api=async(path,opts={})=>{const r=await fetch(url+path,{headers:{authorization:'Bearer OWNER',...opts.headers},method:opts.method||'GET',body:opts.body?JSON.stringify(opts.body):undefined});return {status:r.status,data:await r.json()}};
 const signed=(method,path,body,nonce)=>{const txt=JSON.stringify(body),t=Date.now().toString();return {method,body:txt,headers:{'x-jawafa-agent':'worker-test','x-jawafa-timestamp':t,'x-jawafa-nonce':nonce,'x-jawafa-signature':crypto.createHmac('sha256',secret).update([method,path,codeHash(Buffer.from(txt)),t,nonce].join('\n')).digest('hex')}}};
@@ -34,4 +47,21 @@ test('default Firebase verifier denies missing bearer before owner configuration
     if(saved===undefined)delete process.env.JAWAFA_OWNER_UID;
     else process.env.JAWAFA_OWNER_UID=saved;
   }
+});
+
+test('Private Audit15 endpoint verifies owner and excludes unsafe internal file paths',async()=>{
+  const owner=await api(prefix+'audit15-ops');
+  assert.equal(owner.status,200);
+  assert.equal(owner.data.schema,'jawafa.audit15-agents.v1');
+  assert.equal(owner.data.audit15.tables.length,15);
+  assert.equal(owner.data.schemaCatalog.tableCount,1024);
+  assert.equal(owner.data.existingAgents.agents[0].name,'JawafaExportAgent20Min');
+  assert.equal(owner.data.audit15.historicalRootCauseVerified,false);
+  assert.equal(owner.data.existingAgents.agents[0].aiModelEndpointVerified,false);
+  assert.equal(owner.data.export.completenessAccepted,false);
+  assert.ok(!Object.hasOwn(owner.data,'sourceFiles'));
+  const noAuth=await api(prefix+'audit15-ops',{headers:{authorization:''}});
+  assert.equal(noAuth.status,401);
+  const viewer=await api(prefix+'audit15-ops',{headers:{authorization:'Bearer VIEWER'}});
+  assert.equal(viewer.status,403);
 });
