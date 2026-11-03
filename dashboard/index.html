@@ -373,6 +373,27 @@ nav.side{gap:.5rem}
 <label class="field">الخطورة<select id="audit111-risk"><option value="all">جميع المستويات</option><option value="P0">P0</option><option value="P1">P1</option><option value="P2">P2</option></select></label>
 <label class="field">بحث في المعرّف والحقل<input id="audit111-query" type="search" autocomplete="off" placeholder="رقم المستند أو الحدث"></label></div>
 </div>
+<div class="panel" id="audit111-reports-panel">
+<div class="panel-head"><h2>تقارير التحقيق والمقارنات التاريخية</h2><span id="audit111-report-status" class="pill bad" role="status" aria-live="polite">NOT_CONNECTED</span></div>
+<p class="small muted">مصدر خاص محمي: مقارنة نسختي تصدير؛ الأرقام التالية ليست بيانات SQL حية ولا أحكامًا على مخالفات. حقول الأوقات غير معتمدة بسبب عدم مزامنة ساعة الخادم.</p>
+<div class="kpis" aria-label="المؤشرات التاريخية">
+<div class="kpi"><span class="label">الأحداث الجديدة بين التصديرين</span><strong class="value" id="audit111-report-new">—</strong></div>
+<div class="kpi"><span class="label">مشتريات تغيّرت قيمها</span><strong class="value" id="audit111-report-purchases">—</strong></div>
+<div class="kpi"><span class="label">مردودات تغيّرت حالة ترحيلها</span><strong class="value" id="audit111-report-returns">—</strong></div>
+<div class="kpi"><span class="label">فواتير تغيّر مرجع حركتها</span><strong class="value" id="audit111-report-rekeys">—</strong></div></div>
+<p class="small muted">صافي فرق حقل تكلفة المشتريات بين النسختين: <strong id="audit111-report-cost">—</strong> (ليس خسارة مثبتة). مصدر التقرير: <span id="audit111-report-provenance">غير متصل</span></p>
+<h3>فهرس التقارير</h3>
+<div class="table-wrap"><table><thead><tr><th>التقرير</th><th>عدد السجلات المرتبطة</th><th>حالة الدليل</th></tr></thead>
+<tbody id="audit111-report-catalog"><tr><td colspan="3">لا توجد تقارير معتمدة من بوابة خاصة.</td></tr></tbody></table></div>
+<div class="toolbar"><label class="field">تفاصيل التحقيق<select id="audit111-report-kind">
+<option value="purchase_changes">تعديلات المشتريات</option>
+<option value="returns">مردودات المشتريات</option>
+<option value="invoice_rekeys">مرجع الفواتير</option>
+</select></label></div>
+<div class="table-wrap"><table><thead><tr><th>نوع السند</th><th>المرجع</th><th>القيمة السابقة</th><th>القيمة الحالية</th><th>الفرق أو المبلغ</th><th>الدليل والحالة</th></tr></thead>
+<tbody id="audit111-report-records"><tr><td colspan="6">لا توجد بيانات مالية خاصة معتمدة.</td></tr></tbody></table></div>
+<p class="small muted">الاطلاع على التقارير محصور بصلاحية المالك من بوابة HTTPS خاصة. لا تُستخرج هذه الأرقام من صفحة GitHub العامة؛ وعند فشل المصادقة يتم إخفاؤها بالكامل.</p>
+</div>
 <div class="panel"><h2>تسلسل الأحداث — قبل وبعد</h2>
 <div class="table-wrap"><table><thead><tr><th>الخطورة</th><th>نوع المستند</th><th>رقم المستند</th><th>وقت الحدث المثبت</th><th>وقت رصد الفرق</th><th>المستخدم المثبت</th><th>الحقل · قبل ← بعد</th><th>درجة الدليل</th><th>مرجع المصدر</th></tr></thead>
 <tbody id="audit111-rows"><tr><td colspan="9">لا توجد بيانات معتمدة من بوابة خاصة.</td></tr></tbody></table></div>
