@@ -5,6 +5,9 @@ on:
       - 'luqta-mobile/**'
       - 'dashboard/luqta-*.js'
       - 'dashboard/index.html'
+      - 'aas-cc/command-center/server/**'
+      - 'aas-cc/command-center/scripts/api-live.test.mjs'
+      - 'aas-cc/command-center/scripts/live-state.test.mjs'
       - '.github/workflows/luqta-jawafa-ci.yml'
   push:
     branches: [main]
@@ -12,6 +15,9 @@ on:
       - 'luqta-mobile/**'
       - 'dashboard/luqta-*.js'
       - 'dashboard/index.html'
+      - 'aas-cc/command-center/server/**'
+      - 'aas-cc/command-center/scripts/api-live.test.mjs'
+      - 'aas-cc/command-center/scripts/live-state.test.mjs'
       - '.github/workflows/luqta-jawafa-ci.yml'
 permissions:
   contents: read
@@ -69,3 +75,25 @@ jobs:
             luqta-mobile/server/feature-status.json
           if-no-files-found: ignore
           retention-days: 14
+
+  # Tests the real AAS Worker and D1 adapter. This only uses an isolated fixture;
+  # no production token, database or deployment is touched.
+  command-center-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: aas-cc/command-center
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: aas-cc/command-center/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Test real D1 Worker contract and schema normalization
+        run: node --test scripts/api-live.test.mjs scripts/live-state.test.mjs
