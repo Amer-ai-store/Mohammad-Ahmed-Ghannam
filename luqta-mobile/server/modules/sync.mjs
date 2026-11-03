@@ -1,5 +1,5 @@
 // Central dashboard sync with the AAS Command Center (see the aas-middleware guide):
-//   export  → POST /api/v1/app/sync         (X-AAS-API-Key)    products/orders, price→retailPrice, stock→stockQuantity
+//   export  → POST /api/v1/app/luqta-sync   (X-AAS-API-Key)    isolated Luqta schema with opaque IDs and real line items
 //   snapshot→ POST /api/v1/bridge/snapshot  (X-AAS-Runner-Key) schema + sample rows, never sensitive columns
 //   runner  → GET  /api/v1/bridge/context   (X-AAS-Runner-Key) pending operations, applied with a backup, then
 //             POST /api/v1/bridge/receipts  one receipt per operation
@@ -99,8 +99,8 @@ export function install(c, api) {
     const products = all('SELECT * FROM products WHERE active=1 ORDER BY id').map(c.product).filter((p) => !p.hasVariants).map((p) => ({ id: String(p.id), name: p.name, category: p.category, retailPrice: p.basePrice ?? p.price, stockQuantity: p.baseStock ?? p.stock ?? 0 }));
     const orders = all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 500').map((o) => ({ id: o.id, status: o.status, total: o.total, currency: o.currency, items: parse(o.items, []).map((l) => ({ productId: l.productId, quantity: l.quantity, price: l.price })), createdAt: o.created_at }));
     try {
-      const response = await writeWithRetry((expectedRevision) => call(cfg, 'POST', '/app/sync', { key: 'api', body: { products, orders, store: { name: setting('storeName'), currency: setting('currency') }, observedAt: now(), ...(expectedRevision !== undefined ? { expectedRevision } : {}) } }));
-      return record(actor, 'export', { status: 'success', imported: products.length, summary: `صُدّر ${products.length} صنف و${orders.length} طلب إلى لوحة القيادة`, log: [{ at: now(), level: 'info', message: 'POST /api/v1/app/sync', products: products.length, orders: orders.length, revision: response?.revision ?? null }], retryOf });
+      const response = await writeWithRetry((expectedRevision) => call(cfg, 'POST', '/app/luqta-sync', { key: 'api', body: { schema: 'luqta-commerce-v1', sourceId: cfg.bridgeId || 'luqta-commerce', products, orders, store: { name: setting('storeName'), currency: setting('currency') }, observedAt: now(), ...(expectedRevision !== undefined ? { expectedRevision } : {}) } }));
+      return record(actor, 'export', { status: 'success', imported: products.length, summary: `صُدّر ${products.length} صنف و${orders.length} طلب إلى لوحة القيادة`, log: [{ at: now(), level: 'info', message: 'POST /api/v1/app/luqta-sync', products: products.length, orders: orders.length, revision: response?.revision ?? null }], retryOf });
     } catch (error) { return failure(actor, 'export', error, null, retryOf); }
   };
   const sendSnapshot = async (actor, retryOf = null) => {
