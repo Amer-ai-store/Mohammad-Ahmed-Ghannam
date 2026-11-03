@@ -117,7 +117,7 @@ const flows = {
     const terms = byId(page, 'terms');
     await terms.waitFor({ timeout: 10000 });
     await terms.locator('div').first().click(); // the square itself, not the «terms» link inside the label
-    await page.waitForFunction(() => document.querySelector('[data-testid="terms"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 5000 });
+    await page.waitForTimeout(400); // checkbox state is visual on web (no aria-checked attribute); the confirm button gate below proves it
     await page.waitForFunction(() => document.querySelector('[data-testid="confirm-order"]')?.getAttribute('aria-disabled') !== 'true', null, { timeout: 15000 });
     await byId(page, 'confirm-order').click();
     await page.waitForURL(/\/tracking\//, { timeout: 10000 });
