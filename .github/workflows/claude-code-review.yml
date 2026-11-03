@@ -1,7 +1,8 @@
 name: Claude code review
-# Reviews every pull request with Claude: inline comments on specific lines plus one summary comment.
+# Optional paid Claude review: disabled by default; free static PR review is provided by free-pr-review.yml.
 # Needs one repository secret, CLAUDE_CODE_OAUTH_TOKEN (Claude subscription) or ANTHROPIC_API_KEY (API key).
-# No valid credential => review fails closed. A green review must mean Claude ran successfully.
+# Set the repository variable CLAUDE_REVIEW_ENABLED=true only when paid review is explicitly desired.
+# No valid credential => an enabled review fails closed; a skipped review is NOT AI approval.
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
@@ -15,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   review:
-    if: github.event.pull_request.draft == false
+    if: vars.CLAUDE_REVIEW_ENABLED == 'true' && github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
