@@ -218,8 +218,16 @@ export function install(c, api) {
   api.route('PATCH', '/vendor/:vendorId/products/:productId', ({ req, body, params }) => {
     const { actor } = membership(req, params.vendorId), old = get('SELECT * FROM products WHERE id=?', params.productId);
     if (!old || parse(old.data, {}).vendorId !== params.vendorId) fail(404, 'المنتج لا يتبع هذا المتجر', 'not_found');
-    const data = { ...c.validateProduct({ ...body, id: old.id }, parse(old.data)), vendorId: params.vendorId };
-    // A variant cannot attach to another vendor's or the central store's catalog.
+    // Enforce tenant ownership before validating variant metadata (e.g. variantLabel).
+    // Otherwise an unauthorized parent can return a field-validation error instead of a 403.
+    const previousData = parse(old.data, {});
+    const parentId = Object.hasOwn(body, 'variantOf') ? body.variantOf : previousData.variantOf;
+    if (parentId) {
+      const candidate = get('SELECT data,active FROM products WHERE id=?', text(parentId, 'معرّف المنتج الأب', 1, 100));
+      if (!candidate || !candidate.active || parse(candidate.data, {}).vendorId !== params.vendorId) fail(403, 'لا يمكن ربط متغير بمنتج لا يتبع هذا المتجر', 'vendor_parent_forbidden');
+    }
+    const data = { ...c.validateProduct({ ...body, id: old.id }, previousData), vendorId: params.vendorId };
+    // Keep a second check on the normalized parent before the database write.
     if (data.variantOf) {
       const parent = get('SELECT data,active FROM products WHERE id=?', data.variantOf);
       if (!parent || !parent.active || parse(parent.data, {}).vendorId !== params.vendorId) fail(403, 'لا يمكن ربط متغير بمنتج لا يتبع هذا المتجر', 'vendor_parent_forbidden');
