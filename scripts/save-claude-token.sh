@@ -30,52 +30,20 @@ if ! command -v claude >/dev/null 2>&1; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-log="$(mktemp)"
-trap 'rm -f "$log"' EXIT
+# Run the official login directly without recording a terminal transcript.
+# The token remains on screen only in Claude's interactive output; never capture it in a file.
+say "1/3  Sign in to Claude in this terminal. Copy the complete token privately."
+claude setup-token
 
-say "1/3  Sign in to Claude: open the link that appears, approve, then paste the code you get back here."
-# script(1) keeps the terminal interactive while recording what setup-token prints, so the token is read
-# from the recording instead of being copied off a small screen.
-script -q -e -c "claude setup-token" "$log"
-
-if ! token="$(python3 - "$log" <<'PY'
-import re
-import sys
-
-# newline="" keeps the recorded "\r" characters, which the clean-up below relies on.
-text = open(sys.argv[1], encoding="utf-8", errors="replace", newline="").read()
-# Drop terminal control sequences (colours, cursor moves, titles). A terminal ends recorded lines with
-# "\r\r\n"; collapse those, and turn the remaining lone "\r" (redraws) into line breaks.
-text = re.sub(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b[()][0-9A-Za-z]|\x1b[@-_]", "", text)
-lines = re.sub(r"\r*\n", "\n", text).replace("\r", "\n").split("\n")
-
-TOKEN_CHARS = re.compile(r"[A-Za-z0-9_-]+")
-BORDER = " \t'\"`│┃║|╭╮╰╯─━═"
-VALID = re.compile(r"sk-ant-oat\d+-[A-Za-z0-9_-]{60,}")
-
-found = []
-for i, line in enumerate(lines):
-    start = line.find("sk-ant-oat")
-    while start >= 0:
-        head = TOKEN_CHARS.match(line, start).group(0)
-        parts = [head]
-        # The token is longer than a phone-sized terminal is wide, so it is wrapped; join the pieces.
-        if not line[start + len(head):].strip(BORDER):
-            for nxt in lines[i + 1:]:
-                piece = nxt.strip(BORDER)
-                if not TOKEN_CHARS.fullmatch(piece):
-                    break
-                parts.append(piece)
-        found.append("".join(parts))
-        start = line.find("sk-ant-oat", start + 1)
-
-valid = [t for t in found if VALID.fullmatch(t)]
-if not valid:
-    sys.exit(1)
-print(max(valid, key=len))
-PY
-)"; then
-  echo "No token was found in what setup-token printed, so nothing was saved. Run this script again."
+# read -s suppresses terminal echo. /dev/tty avoids consuming redirected CI stdin.
+say "Paste the complete OAuth token below (the input is hidden):"
+if ! IFS= read -r -s -p "OAuth token: " token </dev/tty; then
+  echo "A private interactive terminal is required; no secret was saved."
+  exit 1
+fi
+printf '\n' >/dev/tty
+if [[ ! "$token" =~ ^sk-ant-oat[0-9]+-[A-Za-z0-9_-]{60,}$ ]]; then
+  echo "Invalid OAuth token format. No secret was saved."
   exit 1
 fi
 
@@ -104,8 +72,8 @@ if ! names="$(gh secret list -R "$REPO" | cut -f1)"; then
   exit 1
 fi
 if grep -qx 'ANTHROPIC_API_KEY' <<<"$names"; then
-  gh secret delete ANTHROPIC_API_KEY -R "$REPO"
-  echo "Removed the ANTHROPIC_API_KEY secret, so the reviews now use this subscription token."
+  echo "NOTICE: ANTHROPIC_API_KEY also exists, and CI prefers that key."
+  echo "Review your authentication choice in GitHub Actions secrets; this script will not delete other secrets."
 fi
 
 say "Done: $SECRET is saved and was checked against Claude."
