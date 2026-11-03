@@ -1,0 +1,84 @@
+{
+  "id": "trustsoft-readonly-forensic-analyst-v1",
+  "displayName": "وكيل TrustSoft للتحليل المالي والتحقق التاريخي",
+  "status": "DEFINED_NOT_DEPLOYED",
+  "scope": "approved_Jawafa_DB_exports_and_private_Drive_snapshots_only",
+  "execution": "SERVER_SIDE_AFTER_SECURITY_ACCEPTANCE",
+  "permissions": {
+    "sql": [
+      "SELECT_APPROVED_VIEWS_ONLY"
+    ],
+    "drive": [
+      "READ_APPROVED_ARCHIVE_OBJECTS"
+    ],
+    "firestore": [
+      "READ_METADATA",
+      "WRITE_SCOPED_FINDINGS_AFTER_AUTH"
+    ],
+    "dashboard": [
+      "PUBLISH_EVIDENCE_LABELED_READONLY_REPORTS"
+    ],
+    "prohibited": [
+      "SQL_DML",
+      "SQL_DDL",
+      "sa_LOGIN",
+      "DATA_DELETION",
+      "SECRET_READBACK",
+      "PUBLIC_FINANCIAL_UPLOAD",
+      "AUTO_APPROVE_ALLEGATIONS",
+      "UNVERIFIED_FINANCIAL_TOTALS"
+    ]
+  },
+  "tasks": [
+    "Validate snapshot manifests and SHA256 continuity",
+    "Map approved physical tables to TrustSoft and Jawafa screen domains",
+    "Compare historical versions of cheques, bank entries, invoices, investments and journal postings",
+    "Compute exact decimal financial totals only for complete validated partitions with source time and scope",
+    "Produce separate facts, deductions and unresolved hypotheses with per-finding evidence IDs",
+    "Write reproducible calculation formulas and request independent reviewer approval",
+    "Reject analysis on stale, partial or unapproved sources"
+  ],
+  "inputs": {
+    "minimum": [
+      "run_id",
+      "source_utc",
+      "schema_fingerprint",
+      "sha256",
+      "rows",
+      "approved_sql_mapping",
+      "source_evidence_ids"
+    ],
+    "maxPayloadPerPartitionBytes": 5000000
+  },
+  "outputs": {
+    "finding_status": [
+      "VERIFIED",
+      "UNVERIFIED",
+      "NEEDS_REVIEW",
+      "BLOCKED"
+    ],
+    "required": [
+      "finding_id",
+      "source_evidence_ids",
+      "formula",
+      "source_query_or_snapshot",
+      "source_timestamp_utc",
+      "assumptions",
+      "review_required"
+    ]
+  },
+  "ai": {
+    "modelProvider": "NOT_CONNECTED",
+    "allowProposalsOnly": true,
+    "neverExecuteFinancialWrites": true,
+    "independentReviewerRequired": true
+  },
+  "activationGates": [
+    "CLOUDFLARE_AUTHENTICATED_E2E",
+    "READ_ONLY_SQL_PRINCIPAL",
+    "DRIVE_ACL_VERIFIED",
+    "FIREBASE_PROJECT_CONNECTED",
+    "GATE_15_INDEPENDENT_ACCEPTANCE",
+    "ISSUE_102_PUBLICATION_ACCEPTANCE"
+  ]
+}
