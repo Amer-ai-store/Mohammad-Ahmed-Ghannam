@@ -61,3 +61,41 @@ export function filterEvents(events, query="",type="all",risk="all") {
       .some(v=>String(v??"").toLocaleLowerCase("ar").includes(q))))
     .sort((a,b)=>Date.parse(b.observed_at)-Date.parse(a.observed_at));
 }
+
+/** Validate a server-authorized, hash-verified PRIVATE report envelope. */
+export function validateReport(value,expectedSnapshot) {
+  if (!value || typeof value!=="object" || Array.isArray(value) ||
+      value.schema_version!=="jawafa.audit111.report.v1" ||
+      value.classification!=="PRIVATE_FINANCIAL_AUDIT" ||
+      value.source_integrity_verified!==true ||
+      value.snapshot_id!==expectedSnapshot ||
+      !Number.isFinite(Date.parse(value.verified_at||"")) ||
+      !value.summary || !value.cases ||
+      !Array.isArray(value.reports) || value.reports.length!==5) {
+    throw new Error("AUDIT111_REPORT_UNVERIFIED_SOURCE");
+  }
+  const counts=value.summary;
+  const validInt=x=>Number.isSafeInteger(x)&&x>=0;
+  if (![counts.old_events,counts.latest_events,counts.new_events,
+         counts.purchase_value_changed,counts.posted_returns_with_gl_candidate,
+         counts.invoice_reference_rekeys,counts.return_value_changed_invoices]
+        .every(validInt) ||
+      counts.latest_events-counts.old_events!==counts.new_events ||
+      !Array.isArray(value.cases.purchase_changes) ||
+      !Array.isArray(value.cases.returns) ||
+      !Array.isArray(value.cases.invoice_rekeys) ||
+      value.cases.purchase_changes.length!==counts.purchase_value_changed ||
+      value.cases.returns.length!==counts.posted_returns_with_gl_candidate ||
+      value.cases.invoice_rekeys.length!==counts.invoice_reference_rekeys ||
+      !Number.isFinite(counts.net_purchase_cost_field_delta)) {
+    throw new Error("AUDIT111_REPORT_INCONSISTENT_TOTALS");
+  }
+  const names=new Set();
+  for (const r of value.reports) {
+    if (!r || typeof r.id!=="string" || names.has(r.id) ||
+        typeof r.title!=="string" || typeof r.state!=="string" || !validInt(r.count))
+      throw new Error("AUDIT111_REPORT_INVALID_CATALOG");
+    names.add(r.id);
+  }
+  return value;
+}
