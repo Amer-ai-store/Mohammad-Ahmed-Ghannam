@@ -101,11 +101,17 @@
         "؛ ليست قراءة بنكية أو SQL مباشرة. لا خسائر أو اتهامات مثبتة.");
     }catch(error){
       set("jf-load","تعذر استيراد فهرس الأدلة: "+String(error.message||error).slice(0,95));
-      if(!source){
-        const a=get("jf-summary"),b=get("jf-tracks");
-        if(a)empty(a,"المؤشرات غير متاحة؛ لن تُعرض أرقام افتراضية.");
-        if(b)empty(b,"تعذر التحقق من الملفات؛ استخدم روابط التقارير الموجودة أعلاه.");
+      // Fail closed on every failed refresh: old evidence must not look current.
+      source=null;active="all";
+      const a=get("jf-summary"),b=get("jf-tracks");
+      if(a)empty(a,"المؤشرات غير متاحة؛ لن تُعرض أرقام افتراضية.");
+      if(b)empty(b,"تعذر التحقق من الملفات؛ استخدم روابط التقارير الموجودة أعلاه.");
+      for(const id of ["jf-report-rows","jf-report-filters","jf-evidence"]){
+        const node=get(id);if(node)node.replaceChildren();
       }
+      set("jf-results-count","المعروض: 0 — فهرس غير متاح");
+      set("jf-release","النشر الإنتاجي غير معتمد — Issue #102");
+      set("jf-source-note","تعذر التحقق من أحدث فهرس؛ لا تعرض هذه الشاشة نتائج قديمة كأنها حديثة.");
     }finally{downloading=false;}
   }
   const button=get("jf-reload");if(button)button.addEventListener("click",reload);
