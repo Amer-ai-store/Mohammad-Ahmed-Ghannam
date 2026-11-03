@@ -104,3 +104,26 @@ test('L070 notifications can be read and their categories switched off', async (
   assert.equal((await request('POST', '/notifications/read-all', {}, customer.token)).status, 200);
   assert.ok((await request('GET', '/notifications', undefined, customer.token)).body.notifications.every((n) => n.read));
 });
+
+
+test('flash deals reject quantity beyond the remaining deal allocation atomically', async (t) => {
+  const { request, register, admin, db } = await fixture(t);
+  const customer = await register();
+  const endsAt = new Date(Date.now() + 3600_000).toISOString();
+  const created = await request('POST', '/admin/flash-deals', { productId: 'olive-oil', price: 4.9, endsAt, limit: 1 }, admin.token);
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const dealId = created.body.deal.id;
+  const before = (await request('GET', '/products/olive-oil')).body.product.stock;
+  const tooMany = await request('POST', '/orders', {
+    items: [{ productId: 'olive-oil', quantity: 3 }], address, paymentMethod: 'cod', idempotencyKey: 'flash-limit-overrun'
+  }, customer.token);
+  assert.equal(tooMany.status, 409, JSON.stringify(tooMany.body));
+  assert.equal(tooMany.body.code, 'flash_deal_sold_out');
+  assert.equal(db.prepare('SELECT sold FROM flash_deals WHERE id=?').get(dealId).sold, 0);
+  assert.equal((await request('GET', '/products/olive-oil')).body.product.stock, before);
+  const valid = await request('POST', '/orders', {
+    items: [{ productId: 'olive-oil', quantity: 1 }], address, paymentMethod: 'cod', idempotencyKey: 'flash-limit-valid'
+  }, customer.token);
+  assert.equal(valid.status, 201, JSON.stringify(valid.body));
+  assert.equal(db.prepare('SELECT sold FROM flash_deals WHERE id=?').get(dealId).sold, 1);
+});
