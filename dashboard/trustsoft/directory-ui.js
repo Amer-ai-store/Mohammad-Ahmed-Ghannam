@@ -125,6 +125,16 @@
     }
     input.addEventListener('input',()=>{pages.set(group,0);paint();});
     paint();
+    // Preserve existing authenticated TrustSoft section rows while adding the directory.
+    // These are explicitly source-limited samples, never a complete accounting report.
+    const section=data?.sections?.[group];
+    if(section?.rows?.length){
+      body.append(element('h3','المخرجات الحالية من TrustSoft — عينة فقط'));
+      body.append(note('حالة العينة: '+String(section.state||'غير محددة')+' • '+String(section.scope||'نطاق غير محدد')+' • ليست إجمالي تقرير مالي ولا تحقق تسلسل الترحيل.'));
+      body.append(tableRenderer(section.rows.slice(0,200)));
+    } else {
+      body.append(note('لا توجد صفوف تشغيلية مثبتة لهذا القسم في الاستجابة الحالية؛ عرض الجداول الوصفية وحده لا يعني ربط التقارير.'));
+    }
     const info=element('div',undefined,'directory-proposals');
     info.append(element('h3','تقارير رقابية وتحليلية مقترحة — ليست تقارير مشغّلة'));
     const list=element('ul');
