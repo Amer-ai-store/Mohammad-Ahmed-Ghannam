@@ -484,7 +484,7 @@ e2e('L118 L119 L120 L121 L122 central sync: export, snapshot, operations with re
   await click('تنفيذ العمليات المعلّقة');
   await done(/SYNC-\d{8}-\d{3}/);
   const sent = stack.center.calls.slice(calls);
-  assert.ok(sent.some((c) => c.path === '/api/v1/app/sync'));
+  assert.ok(sent.some((c) => c.path === '/api/v1/app/luqta-sync'));
   assert.ok(sent.some((c) => c.path === '/api/v1/bridge/snapshot'));
   assert.equal(sent.filter((c) => c.path === '/api/v1/bridge/receipts').length >= 2, true, 'a receipt per operation');
   assert.equal((await products()).water.stock, 77, 'the approved operation was applied');
