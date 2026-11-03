@@ -302,6 +302,16 @@ export function install(c, api) {
   const returnWithDetails = (r) => { const d = get('SELECT * FROM return_details WHERE return_id=?', r.id); return { id: r.id, orderId: r.order_id, reason: r.reason, status: r.status, note: r.note, createdAt: r.created_at, updatedAt: r.updated_at, items: d ? parse(d.items, []) : null, photoId: d?.photo_id || null, refund: d ? d.refund : get('SELECT total FROM orders WHERE id=?', r.order_id)?.total ?? null }; };
   api.route('GET', '/me/returns', ({ req }) => ({ returns: all('SELECT * FROM returns WHERE user_id=? ORDER BY created_at DESC', requireUser(req).id).map(returnWithDetails) }));
   api.route('GET', '/admin/return-details/:returnId', ({ req, params }) => { admin(req); const r = get('SELECT * FROM returns WHERE id=?', params.returnId); if (!r) fail(404, 'طلب الإرجاع غير موجود', 'not_found'); return { returnRequest: returnWithDetails(r) }; });
-  api.on('deleteUser', (userId) => { run('DELETE FROM payment_tokens WHERE user_id=?', userId); run("UPDATE order_ratings SET comment='' WHERE user_id=?", userId); });
+  api.on('deleteUser', (userId) => {
+    run('DELETE FROM payment_tokens WHERE user_id=?', userId);
+    run("UPDATE order_ratings SET comment='' WHERE user_id=?", userId);
+    // Preserve payment, branch and fulfillment records but erase free-text personal data.
+    for (const row of all('SELECT e.order_id,e.data FROM order_extras e JOIN orders o ON o.id=e.order_id WHERE o.user_id=?', userId)) {
+      const extra = parse(row.data, {});
+      extra.deliveryNotes = '';
+      if (extra.gift) extra.gift = { ...extra.gift, recipient: '', message: '' };
+      run('UPDATE order_extras SET data=? WHERE order_id=?', json(extra), row.order_id);
+    }
+  });
   api.use('registerExport')('orderRatings', (userId) => all('SELECT order_id AS orderId,rating,driver_rating AS driverRating,comment FROM order_ratings WHERE user_id=?', userId));
 }
