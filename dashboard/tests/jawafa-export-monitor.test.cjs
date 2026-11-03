@@ -26,7 +26,7 @@ test('100 percent with failures or old export is never shown as healthy',()=>{
  assert.equal(classify({...sample,failedTables:1},now).tone,'bad');
  assert.match(classify({...sample,failedTables:1},now).label,/FAILED_TABLES/);
  assert.equal(classify({...sample,lastWriteAt:'2026-10-29T20:38:18Z'},now).label,'STALE_EXPORT');
- assert.equal(classify({...sample,remainingTables:1},now).label,'INCOMPLETE');
+ assert.equal(classify({...sample,processedTables:1023,remainingTables:1},now).label,'INCOMPLETE');
  assert.equal(classify({...sample,generatedAt:'2026-11-03T09:00:00Z'},now).label,'STALE_MONITOR');
  assert.equal(classify(sample,now).label,'COMPLETED (NOT ACCEPTED)');
  assert.equal(classify(sample,now).tone,'warn');
