@@ -606,7 +606,11 @@ export async function createCommerceServer(options = {}) {
       }
       if (path.startsWith('/api/admin/')) {
         const section = p[1];
-        const scope = section === 'products' || section === 'offers' ? 'catalog:write' : section === 'inventory' ? 'inventory:write' : section === 'orders' ? 'orders:write' : section === 'settings' ? 'settings:write' : section === 'agent-jobs' ? 'jobs:write' : null;
+        const scope = ['products', 'offers', 'categories', 'flash-deals', 'campaigns', 'questions'].includes(section) ? 'catalog:write'
+          : ['inventory', 'branches', 'branch-stock'].includes(section) ? 'inventory:write'
+          : ['orders', 'slots'].includes(section) ? 'orders:write'
+          : ['settings', 'zones'].includes(section) ? 'settings:write'
+          : section === 'agent-jobs' ? 'jobs:write' : null;
         const actor = admin(req, scope);
         if (method === 'GET' && section === 'overview') {
           return send(200, { stats: { products: get('SELECT COUNT(*) AS n FROM products WHERE active=1').n, lowStock: get('SELECT COUNT(*) AS n FROM products WHERE active=1 AND stock<=5').n, orders: get('SELECT COUNT(*) AS n FROM orders').n, customers: get("SELECT COUNT(*) AS n FROM users WHERE role='customer'").n, revenue: money(get("SELECT COALESCE(SUM(total),0) AS n FROM orders WHERE status='delivered' AND payment_status IN ('paid','collected')").n), pendingOrders: get("SELECT COUNT(*) AS n FROM orders WHERE status='pending'").n }, recentOrders: all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 10').map(order), lowStockProducts: all('SELECT * FROM products WHERE active=1 AND stock<=5 ORDER BY stock LIMIT 20').map(product) });
@@ -723,7 +727,10 @@ export async function createCommerceServer(options = {}) {
             transaction(() => {
               if (body.status === 'approved') {
                 const o = get('SELECT * FROM orders WHERE id=?', r.order_id), plan = ext.returnPlan(r, o);
-                for (const line of plan ? plan.lines : parse(o.items)) run('UPDATE products SET stock=stock+?,updated_at=? WHERE id=?', line.quantity, now(), line.productId);
+                const restored = plan ? plan.lines : parse(o.items, []);
+                for (const line of restored) run('UPDATE products SET stock=stock+?,updated_at=? WHERE id=?', line.quantity, now(), line.productId);
+                const branchId = ext.orderExtras(o)?.branchId;
+                if (branchId) ext.moveBranchStock(branchId, restored, 1);
                 let refund = plan ? plan.refund : o.total;
                 const earned = get("SELECT points FROM reward_ledger WHERE order_id=? AND type='earned'", o.id);
                 const reversed = earned ? plan ? Math.min(earned.points, Math.round(earned.points * plan.refund / Math.max(o.total, 0.001))) : earned.points : 0;
