@@ -1,0 +1,37 @@
+name: Jawafa private report gateway isolated QA (no deploy)
+# Never deploy; keep the production freeze Issue #102.
+on:
+  push:
+    branches:
+      - feature/jawafa-chat-report-ledger-current-20261103
+    paths:
+      - 'dashboard/api/jawafa/v1/chat-report-ledger.js'
+      - 'dashboard/jawafa-chat-reports-*.mjs'
+      - 'dashboard/tests/*report*.test.mjs'
+      - 'dashboard/package.json'
+      - '.github/workflows/jawafa-private-reports-qa.yml'
+  pull_request:
+    branches:
+      - feature/audit-111-forensic-monitor-review
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-and-negative-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2 pinned
+        with:
+          persist-credentials: false
+      - name: Node compatibility (>=20, no secrets)
+        run: |
+          node --version
+          node -e "if(Number(process.versions.node.split('.')[0])<20) process.exit(1)"
+      - name: Execute strict read-only private gateway tests
+        run: |
+          cd dashboard
+          npm run test:reports
+      - name: No production deployment configured
+        run: |
+          echo "CI only. No publishing, secrets, SQL, or Google Drive tokens."
