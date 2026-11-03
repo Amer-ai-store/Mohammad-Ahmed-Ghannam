@@ -691,6 +691,20 @@ e2e('L050 buy now checks out one product without touching the cart', async ({ op
   assert.deepEqual(order.items.map((i) => i.productId), ['eggs']);
   await go(page, '/cart');
   await id(page, 'cart-line-bread').waitFor();
+  // A previous buy-now selection must not prevent a normal cart checkout from clearing its lines.
+  await go(page, '/product/eggs');
+  await tap(page, 'buy-now');
+  await go(page, '/cart');
+  await id(page, 'cart-line-bread').waitFor();
+  await tap(page, 'checkout');
+  await until(async () => (await value(page, 'address-street')) === amman.street);
+  await tap(page, 'to-payment');
+  await tap(page, 'to-review');
+  await tap(page, 'accept-terms');
+  await tap(page, 'confirm-order');
+  await id(page, 'order-placed').waitFor();
+  await go(page, '/cart');
+  await see(page, 'سلتك فاضية');
 });
 
 e2e('L036 reorder a previous order with one tap', async ({ open }) => {
