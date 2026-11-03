@@ -1,5 +1,5 @@
 'use strict';
-const labels={overview:'نظرة عامة',control:'المراقبة والسيطرة',catalog:'دليل الجداول',accounting:'المحاسبة',purchases:'المشتريات والموردون',sales:'المبيعات ونقاط البيع',inventory:'المواد والمستودعات',employees:'الموظفون والرواتب',definitions:'التعريفات الرئيسية',users:'المستخدمون والصلاحيات',checks:'الشيكات',operations:'التقارير التشغيلية',financial:'التقارير المالية',investigation:'التحقيق المالي',schema:'المخطط والعلاقات'};
+const labels={overview:'نظرة عامة',control:'المراقبة والسيطرة',catalog:'دليل الجداول',audit15:'تدقيق الجداول الـ15',agents:'مساحات وكلاء الخادم',accounting:'المحاسبة',purchases:'المشتريات والموردون',sales:'المبيعات ونقاط البيع',inventory:'المواد والمستودعات',employees:'الموظفون والرواتب',definitions:'التعريفات الرئيسية',users:'المستخدمون والصلاحيات',checks:'الشيكات',operations:'التقارير التشغيلية',financial:'التقارير المالية',investigation:'التحقيق المالي',schema:'المخطط والعلاقات'};
 const errors={agent_sql_not_verified:'لم يثبت اتصال SQL بواسطة وكيل الخادم',sql_not_configured:'اتصال SQL غير مهيأ',sql_driver_missing:'برنامج تشغيل SQL غير مثبت',sql_connection_or_query_failed:'تعذر الاتصال أو تنفيذ الاستعلام',read_only_principal_required:'الحساب يملك صلاحيات تتجاوز القراءة؛ أُوقفت القراءة',tls_configuration_required:'يلزم اتصال مشفر بشهادة موثوقة',wrong_server:'الخادم لا يطابق JAWAFFASVR',dashboard_unreachable:'تعذر الاتصال بخدمة اللوحة',wrong_database:'قاعدة البيانات لا تطابق Jawafa_DB',invalid_mapping:'ربط الأعمدة غير صالح'};
 const $=id=>document.getElementById(id);
 // GitHub Pages hosts the central UI; its short-lived API session stays in memory.
@@ -54,12 +54,14 @@ function render(){if(!snapshot)return;
  $('alert').hidden=ok;$('alert').textContent=(errors[s.error]||s.error||'بانتظار التحقق')+' — لا توجد بيانات حية مؤكدة. أي بيانات سابقة أدناه قديمة.';
  $('updated').textContent='آخر قراءة ناجحة: '+(s.last_success?new Date(s.last_success*1000).toLocaleString('ar'):'لم تحدث');
  $('cards').replaceChildren();for(const [label,value] of [['حالة القراءة',ok?'ناجحة':'غير مثبتة'],['الجداول والعروض المرئية',d&&d.schema_state!=='not_discovered'?new Set(d.catalog.map(c=>c.schema_name+'.'+c.object_name)).size:'—'],['العلاقات المعلنة',d&&d.schema_state!=='not_discovered'?d.relations.length:'—'],['إخفاقات متتالية',s.failures]]){const c=el('div','');c.className='card';c.append(el('span',label),el('strong',String(value)));$('cards').append(c);}
- const directoryMode=Boolean(globalThis.TrustSoftCatalog?.spec[selected]);
+ const opsMode=selected==='audit15'||selected==='agents';
+  const directoryMode=opsMode||Boolean(globalThis.TrustSoftCatalog?.spec[selected]);
  $('directory-panel').hidden=!directoryMode;
  $('control-panel').hidden=selected!=='control';$('data-panel').hidden=selected==='control'||directoryMode;
  if(selected==='control'){$('cards').hidden=!controlState;$('alert').hidden=true;$('status').textContent='قناة الإدارة • جارٍ التحقق';refreshControl();return renderEvents();}$('cards').hidden=false;
  if(directoryMode){
-   globalThis.TrustSoftDirectoryUI.render({group:selected,snapshot:s,host:$('directory-content'),tableRenderer:table});
+   if(opsMode)globalThis.TrustSoftOperationsUI.render({group:selected,snapshot:s,host:$('directory-content'),tableRenderer:table});
+    else globalThis.TrustSoftDirectoryUI.render({group:selected,snapshot:s,host:$('directory-content'),tableRenderer:table});
    renderEvents();
    return;
  }
