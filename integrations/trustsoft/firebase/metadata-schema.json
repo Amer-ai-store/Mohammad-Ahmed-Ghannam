@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "trustsoft-firestore-metadata-v1",
+  "status": "DRAFT_NOT_PROVISIONED",
+  "collections": {
+    "archive_runs": {
+      "key": "run_id",
+      "fields": [
+        "tenant_id",
+        "source_host",
+        "source_database",
+        "captured_at_utc",
+        "row_count",
+        "snapshot_count",
+        "manifest_hash",
+        "drive_manifest_id",
+        "state",
+        "evidence_ids"
+      ]
+    },
+    "table_catalog": {
+      "key": "table_id",
+      "fields": [
+        "tenant_id",
+        "database",
+        "schema_name",
+        "table_name",
+        "primary_key_cols",
+        "mapping_approved",
+        "domain",
+        "last_seen_utc"
+      ]
+    },
+    "snapshot_shards": {
+      "key": "shard_hash",
+      "fields": [
+        "tenant_id",
+        "run_id",
+        "table_id",
+        "time_bucket",
+        "drive_file_id",
+        "bytes",
+        "rows",
+        "sha256",
+        "source_utc",
+        "quality_state"
+      ]
+    },
+    "evidence_ledger": {
+      "key": "evidence_id",
+      "fields": [
+        "tenant_id",
+        "source_id",
+        "entity_type",
+        "entity_key",
+        "observed_at_utc",
+        "event_type",
+        "file_sha256",
+        "finding_state"
+      ]
+    },
+    "analysis_findings": {
+      "key": "finding_id",
+      "fields": [
+        "tenant_id",
+        "domain",
+        "case_id",
+        "formula",
+        "source_snapshot_ids",
+        "evidence_state",
+        "reviewer_id",
+        "updated_at_utc"
+      ]
+    },
+    "analysis_jobs": {
+      "key": "job_id",
+      "fields": [
+        "tenant_id",
+        "agent_name",
+        "input_manifest_hash",
+        "model_version",
+        "started_at_utc",
+        "completed_at_utc",
+        "run_state",
+        "review_required"
+      ]
+    },
+    "access_audit": {
+      "key": "audit_id",
+      "fields": [
+        "tenant_id",
+        "principal_id",
+        "action",
+        "resource_id",
+        "result",
+        "occurred_at_utc"
+      ]
+    }
+  },
+  "policy": {
+    "defaultDeny": true,
+    "rawFinanceDataInFirestore": false,
+    "encryptedDriveSnapshots": true,
+    "serviceWritesOnly": true,
+    "appendOnlyEvidence": true,
+    "avoidPersonalSecrets": true
+  }
+}
