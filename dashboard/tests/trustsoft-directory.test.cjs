@@ -101,3 +101,19 @@ test('unclassified data rows never become verified reports without a real source
   assert.ok(all.some(x=>x.textContent.includes('1024')));
   assert.ok(all.some(x=>x.textContent.includes('Unexpected_Table_XY')));
 });
+
+test('posting stage visualization applies to sales, purchases, stock movements and cheques',()=>{
+ const ctx=load();
+ for(const group of ['purchases','sales','inventory','checks']){
+   const host=fakeNode('div');
+   ctx.TrustSoftDirectoryUI.render({group,host,
+     snapshot:{state:'disconnected',stale:true,data:{catalog:[],relations:[],sections:{}}},
+     tableRenderer:rows=>{const node=fakeNode('table');node.textContent=JSON.stringify(rows);return node;}
+   });
+   const all=flatten(host);
+   assert.ok(all.some(x=>x.textContent==='طباعة غير مرحّل'),group);
+   assert.ok(all.some(x=>x.textContent==='مدقّق'),group);
+   assert.ok(all.some(x=>x.textContent==='مرحّل'),group);
+   assert.ok(all.some(x=>x.textContent.includes('لا تتيح هذه الشاشة ترحيلًا')),group);
+ }
+});
