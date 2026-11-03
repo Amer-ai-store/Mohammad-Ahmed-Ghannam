@@ -511,6 +511,15 @@ nav.side{gap:.5rem}
             <button type="button" data-action="new-task">إنشاء مهمة تنفيذية</button>
           </div>
         </header>
+        <section class="panel" id="dashboard-connections" aria-labelledby="dashboard-connections-title">
+          <div class="panel-head"><div><span class="eyebrow">CROSS-DASHBOARD · SESSION CHECK</span><h2 id="dashboard-connections-title">حالة اتصال اللوحات</h2></div><button type="button" class="tiny" id="connection-check">تحديث مؤشرات الجلسات</button></div>
+          <p class="small muted">مؤشرات قراءة فقط من جلسة المتصفح الحالية؛ لا تنقل كلمات المرور أو البيانات بين AAS وجوافة ولُقطة، ولا تعتبر وجود صفحة منشورة إثباتًا للاتصال الحي.</p>
+          <div class="grid2">
+            <article class="kpi"><span class="label">AAS · القيادة والوكلاء</span><strong id="connection-aas" aria-live="polite">غير مفحوص</strong><p class="small muted" id="connection-aas-detail">لم يُفحص اتصال المالك بعد.</p><a href="#aas-overview">فتح شاشات AAS الـ14</a> · <a href="./aas-roster.html">تسجيل الوكلاء</a></article>
+            <article class="kpi"><span class="label">جوافة · التحقيق والمراقبة</span><strong id="connection-jawafa" aria-live="polite">غير مفحوص</strong><p class="small muted" id="connection-jawafa-detail">مصدر جوافة الحي لم يُفحص بعد.</p><a href="#jawafa-monitor">فتح مراقبة جوافة</a> · <a href="#jawafa-investigations">التحقيقات</a></article>
+            <article class="kpi"><span class="label">لُقطة · الإدارة والمتجر</span><strong id="connection-luqta" aria-live="polite">غير مفحوص</strong><p class="small muted" id="connection-luqta-detail">يلزم فحص جلسة المدير وخدمة HTTPS.</p><a href="#luqta/overview">فتح لوحة لُقطة</a></article>
+          </div>
+        </section>
         <div class="command-section-heading"><h2>مناطق العمل الرئيسية</h2><p>اختر الوظيفة، أو خصص ترتيب البطاقات أدناه.</p></div>
         <section id="command-zones" class="command-zones" aria-label="مناطق العمل المقسّمة">
           <article class="command-zone" data-zone="workbench">
@@ -2644,3 +2653,4 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 <script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>
 <script src="luqta-integration.js" defer></script>
+<script src="connection-status.js" defer></script>
