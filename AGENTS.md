@@ -6,6 +6,11 @@ Repository: Amer-ai-store/Mohammad-Ahmed-Ghannam. These instructions apply to Co
 ## Autonomous execution
 For each authorized task, inspect the repository and current environment first; select the least-privileged reversible solution; implement, test, and record evidence without repeated approval for routine non-destructive work. If blocked, try a safe alternative and report the precise blocker. Never claim a cloud environment, secret, deployment, or integration exists without verifying it through the corresponding service.
 
+## Commit signing and DCO (required)
+Every Git commit created by Codex, Claude, automation, or a developer must carry a real `Signed-off-by: Full Name <verified-contributor-email>` trailer matching the contributor who certifies the change. When committing locally, configure the correct author identity and use `git commit -s` (or `git -c user.name=... -c user.email=... commit -s`). When creating Git objects through an API, include an exact, complete `Signed-off-by:` footer in each message and verify the GitHub DCO check actually passes.
+Do not invent another contributor's identity, fabricate an attestation, or disable/bypass the DCO app. When an existing PR has unsigned history, preserve the original commits in a separate immutable/archived ref and verify the content/tree before any history rewrite; update a shared ref only with an expected-SHA lease. Prefer additive changes to history rewrites.
+Before marking any PR ready, verify DCO, conflict-free mergeability, source-code tests, security checks, independent review, and every required release gate. Never count skipped, neutral, or unstarted checks as successful.
+
 ## Cloud environment configuration
 Create/configure a Codex cloud environment through ChatGPT settings when the service provides an authorized action. Associate it with this repository and the intended branch. Use the minimal required setup script and pinned dependencies. Enable network access only when necessary, with appropriate destination restrictions. Verify setup by running a non-destructive test.
 
