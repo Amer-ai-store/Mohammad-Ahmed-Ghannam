@@ -2,6 +2,7 @@
 // can confirm. Nothing is ordered without the explicit confirm button + terms checkbox.
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { track } from "../lib/analytics";
+import { useRemote } from "../lib/useRemote";
 import { Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft, Clock, CreditCard, MapPin, RefreshCw, ShoppingCart } from "lucide-react-native";
@@ -73,7 +74,9 @@ export default function Checkout() {
   const totals = { ...baseTotals, shipping: shippingShown, total: Math.round((baseTotals.subtotal - baseTotals.discount + shippingShown + tip) * 1000) / 1000 };
   const slot = deliverySlots.find((d) => d.id === draft.slot) || deliverySlots[1];
   const paymentLabel = draft.payment === "card" ? "بطاقة ائتمان / خصم" : draft.payment === "wallet" ? "رصيد المتجر" : "الدفع عند الاستلام";
-  const paymentSupported = draft.payment !== "card" || demo;
+  const gateway = useRemote<{ card: boolean }>("/payments/methods");
+  const gatewayCard = !demo && !!gateway.data?.card;
+  const paymentSupported = draft.payment !== "card" || demo || gatewayCard;
   const gate = canConfirmOrder({ termsAccepted: terms, hasAddress: !!draft.address, cartChecked: !!check && !checking, cartOk: !!check?.ok, paymentSupported, busy });
   const needsAccount = !demo && (!configured || !user);
 
@@ -88,8 +91,8 @@ export default function Checkout() {
     }
     setBusy(true);
     try {
-      const order = await submitOrder({ address: draft.address, paymentMethod: draft.payment === "wallet" ? "wallet" : "cod", couponCode: coupon?.code, idempotencyKey: idempotency.current, expectedSubtotal: check?.subtotal, deliverySlot: draft.slot, eco: draft.eco === true, deliveryMode: mode, pickupBranchId: mode === "pickup" ? draft.pickupBranchId : undefined, instructions: draft.instructions?.trim() || undefined, contactless: draft.contactless === true, tip });
-      router.replace(`/tracking/${order.id}`);
+      const order = await submitOrder({ address: draft.address, paymentMethod: draft.payment === "wallet" ? "wallet" : draft.payment === "card" ? "card" : "cod", couponCode: coupon?.code, idempotencyKey: idempotency.current, expectedSubtotal: check?.subtotal, deliverySlot: draft.slot, eco: draft.eco === true, deliveryMode: mode, pickupBranchId: mode === "pickup" ? draft.pickupBranchId : undefined, instructions: draft.instructions?.trim() || undefined, contactless: draft.contactless === true, tip });
+      router.replace(draft.payment === "card" ? `/pay/${order.id}` : `/tracking/${order.id}`);
     } catch (e) {
       if (e instanceof ApiError && (e.code === "price_changed" || e.code === "out_of_stock" || e.code === "product_unavailable")) { setTerms(false); void runCheck(); }
       setError(e instanceof Error ? e.message : "تعذّر تأكيد الطلب. لم يُنشأ أي طلب.");

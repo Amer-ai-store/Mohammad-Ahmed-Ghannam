@@ -11,13 +11,18 @@ import {
 import { ArrowLeft, Sparkles } from "lucide-react-native";
 import { router } from "expo-router";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
+import { useLang } from "../lib/i18n";
 
 export function Txt({
   weight = "regular",
   style,
+  children,
   ...props
 }: TextProps & { weight?: "regular" | "medium" | "bold" | "extra" }) {
   const { colors: t } = useTheme();
+  const { lang, tr } = useLang();
+  // Plain string children are looked up in the language dictionary (Arabic fallback).
+  const content = lang !== "ar" && typeof children === "string" ? tr(children) : children;
   const font = {
     regular: "IBMPlexSansArabic_400Regular",
     medium: "IBMPlexSansArabic_500Medium",
@@ -32,12 +37,12 @@ export function Txt({
           fontFamily: font,
           color: t.ink,
           textAlign: "right",
-          writingDirection: "rtl",
+          writingDirection: lang === "ar" ? "rtl" : "ltr",
           fontSize: 15,
         },
         style,
       ]}
-    />
+    >{content}</Text>
   );
 }
 export function Button({

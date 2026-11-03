@@ -9,9 +9,10 @@ import { StoreProvider } from "../lib/store";
 import { ThemeProvider, useTheme } from "../lib/theme";
 import { SessionProvider } from "../lib/session";
 import { CharacterProvider } from "../lib/character";
+import { LanguageProvider } from "../lib/i18n";
 
 export default function RootLayout() {
-  return <ThemeProvider><AppLayout /></ThemeProvider>;
+  return <ThemeProvider><LanguageProvider><AppLayout /></LanguageProvider></ThemeProvider>;
 }
 function AppLayout() {
   const { colors: theme, isDark } = useTheme();

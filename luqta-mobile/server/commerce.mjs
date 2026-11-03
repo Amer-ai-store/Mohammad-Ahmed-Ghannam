@@ -3,6 +3,8 @@ import { createJawafaBridge } from './jawafaBridge.mjs';
 import { installFeatures } from './features.mjs';
 import { installAuthProviders } from './authProviders.mjs';
 import { installCommerceExtras, FLAG_DEFAULTS } from './commerceExtras.mjs';
+import { installPayments } from './payments.mjs';
+import { installPush } from './push.mjs';
 import { prepareJawafaSnapshot } from './jawafaInventory.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
@@ -136,7 +138,7 @@ export async function createCommerceServer(options = {}) {
   const transaction = (fn) => { db.exec('BEGIN IMMEDIATE'); try { const result = fn(); db.exec('COMMIT'); return result; } catch (error) { db.exec('ROLLBACK'); throw error; } };
   const setting = (key, fallback = null) => parse(get('SELECT value FROM settings WHERE key=?', key)?.value, fallback);
   const setSetting = (key, value) => run('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, json(value));
-  const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, branches: [{ id: 'hashmi', name: 'فرع الهاشمي', city: 'عمان' }], storefront: { accentColor: '#FE585C', heroTitle: 'لُقطات تستحق أن تكون لك', heroSubtitle: 'اكتشف منتجات تُشبه ذوقك', showAssistant: true }, character: { modelUrl: null }, bundles: [], ...options.config };
+  const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, branches: [{ id: 'hashmi', name: 'فرع الهاشمي', city: 'عمان', latitude: 31.9739, longitude: 35.9557 }], storefront: { accentColor: '#FE585C', heroTitle: 'لُقطات تستحق أن تكون لك', heroSubtitle: 'اكتشف منتجات تُشبه ذوقك', showAssistant: true }, character: { modelUrl: null }, bundles: [], ...options.config };
   for (const [key, value] of Object.entries(defaults)) if (!get('SELECT key FROM settings WHERE key=?', key)) setSetting(key, value);
   const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays', 'storefront', 'branches', 'character', 'bundles', 'collections', 'flags', 'stampCard', 'express'].map((key) => [key, setting(key)]));
   let encryptionKey;
@@ -159,7 +161,8 @@ export async function createCommerceServer(options = {}) {
     run('INSERT INTO users VALUES(?,?,?,?,?,?)', id('usr'), text(bootstrap.name || 'مدير المتجر', 'الاسم', 2, 100), em, await passwordHash(bootstrap.password), 'admin', now());
   }
   const audit = (actor, action, entityId, detail = {}) => run('INSERT INTO audit VALUES(?,?,?,?,?,?)', id('aud'), actor.id, action, entityId || '', json(detail), now());
-  const notify = (userId, title, body, orderId = null) => run('INSERT INTO notifications VALUES(?,?,?,?,0,?,?)', id('ntf'), userId, title, body, orderId, now());
+  let pushHook = null;
+  const notify = (userId, title, body, orderId = null) => { run('INSERT INTO notifications VALUES(?,?,?,?,0,?,?)', id('ntf'), userId, title, body, orderId, now()); if (pushHook) queueMicrotask(() => { void pushHook(userId, title, body); }); };
   const balance = (userId) => money(get('SELECT COALESCE(SUM(amount),0) AS balance FROM wallet WHERE user_id=?', userId).balance);
   const ledger = (userId, amount, type, note, orderId = null) => { const entry = { id: id('txn'), userId, amount: money(amount), type, note, orderId, date: now() }; run('INSERT INTO wallet VALUES(?,?,?,?,?,?,?)', entry.id, userId, entry.amount, type, note, orderId, entry.date); return entry; };
   const rewardBalance = (userId) => get('SELECT COALESCE(SUM(points),0) AS balance FROM reward_ledger WHERE user_id=?', userId).balance;
@@ -249,7 +252,9 @@ export async function createCommerceServer(options = {}) {
     for (const line of parse(o.items)) run('UPDATE products SET stock=stock+?,updated_at=? WHERE id=?', line.quantity, now(), line.productId);
     if (o.payment_method === 'wallet' && o.payment_status === 'paid') ledger(o.user_id, o.total, 'refund', 'استرداد طلب ملغى', o.id);
     if (o.coupon_id) run('UPDATE coupons SET uses=MAX(0,uses-1) WHERE id=?', o.coupon_id);
-    run("UPDATE orders SET status='cancelled',payment_status=?,updated_at=? WHERE id=?", o.payment_method === 'wallet' ? 'refunded' : 'cancelled', now(), o.id);
+    const refundDue = o.payment_method === 'card' && o.payment_status === 'paid';
+    if (refundDue) for (const a of all("SELECT id FROM users WHERE role='admin'")) notify(a.id, 'استرداد بطاقة مطلوب', `أُلغي الطلب المدفوع ${o.id}؛ نفّذ الاسترداد من لوحة HyperPay`, o.id);
+    run("UPDATE orders SET status='cancelled',payment_status=?,updated_at=? WHERE id=?", o.payment_method === 'wallet' ? 'refunded' : refundDue ? 'refund_due' : 'cancelled', now(), o.id);
     event(o, 'cancelled', 'تم إلغاء الطلب'); notify(o.user_id, 'تم إلغاء الطلب', `أُلغي الطلب ${o.id}`, o.id); audit(actor, 'order.cancel', o.id);
     return order(get('SELECT * FROM orders WHERE id=?', o.id));
   };
@@ -260,6 +265,7 @@ export async function createCommerceServer(options = {}) {
     if (status && status !== o.status) {
       if ((STATUSES.indexOf(status) !== STATUSES.indexOf(o.status) + 1 && !extras.canSkipToDelivered(o, status)) || o.status === 'cancelled') fail(409, 'انتقال حالة الطلب غير مسموح');
       if (status === 'out_for_delivery' && !(driverId || o.driver_id)) fail(409, 'عيّن سائقًا قبل خروج الطلب للتوصيل');
+      if (status === 'confirmed' && o.payment_method === 'card' && o.payment_status !== 'paid') fail(409, 'لا يمكن تأكيد طلب بطاقة قبل اكتمال الدفع', 'payment_pending');
       run('UPDATE orders SET status=?,payment_status=?,updated_at=? WHERE id=?', status, status === 'delivered' && o.payment_method === 'cod' ? 'collected' : o.payment_status, now(), o.id);
       event(o, status); notify(o.user_id, 'تحديث حالة الطلب', `أصبحت حالة طلبك: ${status}`, o.id);
       if (status === 'delivered') { earnOrderReward(o); features.onDelivered(o); extras.onDelivered(o); }
@@ -493,6 +499,8 @@ export async function createCommerceServer(options = {}) {
   const flagOn = (k) => ({ ...FLAG_DEFAULTS, ...(setting('flags', {}) || {}) })[k] !== false;
   const features = installFeatures({ flagOn, db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, notify, rewardLedger, rewardBalance, product, setting, setSetting, rate, audit, validateProduct, options });
   const extras = installCommerceExtras({ db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, notify, product, setting, rate, audit, flagOn, orderExtras: features.orderExtras, saveOrderExtras: features.saveOrderExtras });
+  const push = installPush({ db, get, all, run, now, fail, text, requireUser, rate, options }); pushHook = push.send;
+  const payments = installPayments({ db, get, all, run, transaction, id, now, fail, text, requireUser, notify, setting, audit, options });
   const authProviders = installAuthProviders({ db, get, all, run, transaction, id, now, fail, text, rate, session, issueRecoveryCode, notify, passwordHash, publicUser, options, identityOptional: (req) => { try { return req.headers.authorization ? identity(req) : null; } catch { return null; } } });
   const server = http.createServer(async (req, res) => {
     const send = (status, value) => { if (res.headersSent) return; res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(json(value)); };
@@ -571,6 +579,7 @@ export async function createCommerceServer(options = {}) {
             run('DELETE FROM oauth_states WHERE user_id=?', actor.id);
             run('DELETE FROM facebook_links WHERE user_id=?', actor.id);
             run('DELETE FROM user_identities WHERE user_id=?', actor.id);
+            run('DELETE FROM push_devices WHERE user_id=?', actor.id);
             for (const sql of ['DELETE FROM price_watches WHERE user_id=?', 'DELETE FROM receipts WHERE user_id=?', 'DELETE FROM media_likes WHERE user_id=?', 'DELETE FROM list_items WHERE added_by=? AND list_id NOT IN (SELECT id FROM lists WHERE owner_id<>?)', 'DELETE FROM list_members WHERE user_id=?', 'DELETE FROM lists WHERE owner_id=?']) run(sql, ...(sql.includes('owner_id<>?') ? [actor.id, actor.id] : [actor.id]));
             run('DELETE FROM ticket_replies WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?)', actor.id);
             run('DELETE FROM ticket_photos WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?) OR user_id=?', actor.id, actor.id);
@@ -662,7 +671,7 @@ export async function createCommerceServer(options = {}) {
         if (method === 'POST') {
           const key = text(body.idempotencyKey, 'مفتاح عدم تكرار الطلب', 8, 200), existing = get('SELECT * FROM orders WHERE user_id=? AND idempotency_key=?', actor.id, key);
           if (existing) return send(200, { order: order(existing), reused: true });
-          const address = validateAddress(body.address || {}), paymentMethod = body.paymentMethod || 'cod'; if (!['cod', 'wallet'].includes(paymentMethod)) fail(400, 'طريقة الدفع غير مدعومة');
+          const address = validateAddress(body.address || {}), paymentMethod = body.paymentMethod || 'cod'; if (!['cod', 'wallet', ...(payments.configured() ? ['card'] : [])].includes(paymentMethod)) fail(400, paymentMethod === 'card' ? 'الدفع بالبطاقة يحتاج ربط بوابة دفع على الخادم' : 'طريقة الدفع غير مدعومة', paymentMethod === 'card' ? 'payments_not_configured' : 'invalid_request');
           const created = transaction(() => {
             const branchId = body.branchId ?? null; if (branchId !== null && !branchIds().includes(branchId)) fail(400, 'الفرع غير معروف', 'unknown_branch');
             const { lines, subtotal } = quote(body.items);
@@ -673,7 +682,7 @@ export async function createCommerceServer(options = {}) {
             const delivery = extras.checkout(body, lines, subtotal, baseShipping, address), shipping = delivery.shipping, total = money(subtotal - discount + shipping + delivery.tip);
             if (paymentMethod === 'wallet' && balance(actor.id) < total) fail(409, 'رصيد المحفظة غير كافٍ', 'insufficient_balance');
             const orderId = id('LQ'), createdAt = now();
-            run('INSERT INTO orders VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', orderId, actor.id, json(lines), json(address), subtotal, discount, shipping, total, setting('currency'), 'pending', paymentMethod, paymentMethod === 'wallet' ? 'paid' : 'pending', null, couponRow?.id || null, key, createdAt, createdAt);
+            run('INSERT INTO orders VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', orderId, actor.id, json(lines), json(address), subtotal, discount, shipping, total, setting('currency'), 'pending', paymentMethod, paymentMethod === 'wallet' ? 'paid' : paymentMethod === 'card' ? 'awaiting_payment' : 'pending', null, couponRow?.id || null, key, createdAt, createdAt);
             for (const line of lines) {
               run('UPDATE products SET stock=stock-?,updated_at=? WHERE id=?', line.quantity, createdAt, line.productId);
               if (branchId) { const r = get('SELECT data FROM products WHERE id=?', line.productId), d = parse(r.data); if (d.branchStock) { d.branchStock[branchId] = Math.max(0, (d.branchStock[branchId] ?? 0) - line.quantity); run('UPDATE products SET data=? WHERE id=?', json(d), line.productId); } }
@@ -951,6 +960,8 @@ export async function createCommerceServer(options = {}) {
         } catch (error) { if (error.status) throw error; fail(502, 'فشل الاتصال بفيسبوك أو انتهت المهلة'); } finally { clearTimeout(timer); }
       }
       if (method === 'DELETE' && path === '/api/auth/facebook' || method === 'POST' && path === '/api/auth/facebook/disconnect') { const actor = requireUser(req); run('DELETE FROM facebook_links WHERE user_id=?', actor.id); return send(200, { ok: true }); }
+      { const pushResult = await push.handle(method, path, body, req); if (pushResult) return send(pushResult.status, pushResult.body); }
+      { const pay = await payments.handle(method, path, body, req, url); if (pay) { if (pay.redirect) { res.writeHead(302, { Location: pay.redirect, 'Cache-Control': 'no-store' }); res.end(); return; } if (pay.html) { res.writeHead(pay.status, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': pay.csp, 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY' }); res.end(pay.html); return; } return send(pay.status, pay.body); } }
       { const authResult = await authProviders.handle(method, path, body, req, url); if (authResult) { if (authResult.redirect) { res.writeHead(302, { Location: authResult.redirect, 'Cache-Control': 'no-store' }); res.end(); return; } return send(authResult.status, authResult.body); } }
       { const featureResult = await features.handle(method, path, p, body, req); if (featureResult) return send(featureResult.status, featureResult.body); }
       { const extraResult = await extras.handle(method, path, body, req, url); if (extraResult) return send(extraResult.status, extraResult.body); }

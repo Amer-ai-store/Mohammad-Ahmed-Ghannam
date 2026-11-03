@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
 import { Calculator, Camera, Mic, Plus, SendHorizontal, ShoppingCart, UserRound, Volume2, VolumeX } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
@@ -17,6 +16,9 @@ import { recommendProducts } from "../lib/recommendations";
 import { askAssistant, checkAssistant } from "../lib/assistant";
 import { buildBasket, parseBasketRequest, type BasketLine } from "../lib/basket";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
+import { pickImageDataUrl } from "../lib/media";
+import { api } from "../lib/api";
+import { useSession } from "../lib/session";
 
 type Message = { role: "user" | "assistant"; content: string; lines?: BasketLine[] };
 
@@ -30,6 +32,7 @@ function AssistantContent({ initialPrompt, photoMode }: { initialPrompt: string;
   const s = useThemedStyles(makeStyles);
   const { products, settings, cart, setQuantity, notify, catalogStatus } = useStore();
   const { profile, update } = useCharacter();
+  const session = useSession();
   const [messages, setMessages] = useState<Message[]>([{ role: "assistant", content: "أهلًا! أخبرني بما تحتاجه أو بميزانيتك، مثل: «جهّز لي سلة بـ 20 دينار»، وسأقترح عليك من منتجات المتجر." }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,14 +70,22 @@ function AssistantContent({ initialPrompt, photoMode }: { initialPrompt: string;
   }, []);
   async function pickPhoto() {
     try {
-      const picked = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false });
-      if (picked.canceled || !picked.assets?.[0]) return;
-      setMessages((m) => [...m, { role: "user", content: `📷 صورة منتج: ${picked.assets[0].name}` }, {
-        role: "assistant",
-        content: "استلمت الصورة على جهازك. التعرف على المنتج من الصورة يحتاج تفعيل خدمة الرؤية على خادم المتجر، وهي غير مفعّلة في هذه النسخة؛ اكتب اسم المنتج أو وصفه وسأجده لك.",
-      }]);
-      inputRef.current?.focus();
-    } catch { notify("تعذّر فتح الصور"); }
+      const picked = await pickImageDataUrl(3_500_000);
+      if (!picked) return;
+      setMessages((m) => [...m, { role: "user", content: `📷 صورة منتج: ${picked.name}` }]);
+      if (!session.configured || !session.user) {
+        setMessages((m) => [...m, { role: "assistant", content: "التعرف على المنتج من الصورة يتم على خادم المتجر؛ سجّل الدخول بعد ربط الخادم، أو اكتب اسم المنتج وسأبحث لك." }]);
+        inputRef.current?.focus(); return;
+      }
+      setBusy(true);
+      try {
+        const r = await api.post<{ labels: string[]; products: { id: string }[] }>("/ai/vision", { task: "products", image: picked.dataUrl });
+        const lines = r.products.map((p) => available.find((x) => x.id === p.id)).filter((p): p is NonNullable<typeof p> => !!p).slice(0, 4).map((p) => ({ productId: p.id, quantity: 1, price: p.price }));
+        setMessages((m) => [...m, { role: "assistant", content: lines.length ? `يبدو أنها: ${r.labels.join("، ") || "منتج"}. هذه أقرب المنتجات المتوفرة في المتجر:` : `تعرّفت على: ${r.labels.join("، ") || "منتج"}، لكن لا يوجد منتج مطابق متوفر حاليًا. جرّب وصفه بالكلمات.`, lines }]);
+      } catch (e) {
+        setMessages((m) => [...m, { role: "assistant", content: e instanceof Error ? e.message : "تعذّر تحليل الصورة؛ اكتب اسم المنتج وسأبحث لك." }]);
+      } finally { setBusy(false); }
+    } catch (e) { notify(e instanceof Error ? e.message : "تعذّر فتح الصور"); }
   }
   useEffect(() => { if (photoMode) void pickPhoto(); /* open picker on arrival from the camera button */ // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photoMode]);

@@ -48,3 +48,4 @@ server/data/
 *.sqlite-shm
 *.sqlite-wal
 .env
+deploy/.env

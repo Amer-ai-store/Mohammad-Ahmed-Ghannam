@@ -17,7 +17,7 @@ type Store = State & {
   wishlistSynced: boolean; refreshCatalog:()=>Promise<void>; refreshOrders:()=>Promise<void>; refreshWishlist:()=>Promise<void>;
   addToCart:(id:string)=>void; setQuantity:(id:string,quantity:number)=>void;
   toggleFavorite:(id:string)=>void; toggleCompare:(id:string)=>void; rememberProduct:(id:string)=>void;
-  submitOrder:(input:{address:Address;paymentMethod:'cod'|'wallet';couponCode?:string;idempotencyKey:string;expectedSubtotal?:number;deliverySlot?:string;eco?:boolean;deliveryMode?:string;pickupBranchId?:string;instructions?:string;contactless?:boolean;tip?:number})=>Promise<Order>;
+  submitOrder:(input:{address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;expectedSubtotal?:number;deliverySlot?:string;eco?:boolean;deliveryMode?:string;pickupBranchId?:string;instructions?:string;contactless?:boolean;tip?:number})=>Promise<Order>;
   reorder:(order:Order)=>void; notify:(message:string)=>void; clearCart:()=>void;
   branches: Branch[]; branchId: string; setBranch:(id:string)=>void;
   draft: CheckoutDraft; updateDraft:(patch:Partial<CheckoutDraft>)=>void;
@@ -28,7 +28,7 @@ type Store = State & {
 const Context=createContext<Store|null>(null);
 const initial:State={cart:{},favorites:[],compareIds:[],recentIds:[]};
 const defaults:StoreSettings={storeName:'لُقطة',currency:'JOD',country:'JO',shippingFee:1,freeShippingThreshold:30,returnsDays:14};
-export const DEMO_BRANCHES:Branch[]=[{id:'hashmi',name:'فرع الهاشمي',city:'عمان'},{id:'sweileh',name:'فرع صويلح',city:'عمان'},{id:'khalda',name:'فرع خلدا',city:'عمان'}];
+export const DEMO_BRANCHES:Branch[]=[{id:'hashmi',name:'فرع الهاشمي',city:'عمان',latitude:31.9739,longitude:35.9557},{id:'sweileh',name:'فرع صويلح',city:'عمان',latitude:32.0213,longitude:35.8417},{id:'khalda',name:'فرع خلدا',city:'عمان',latitude:31.9987,longitude:35.8288}];
 const KEY='luqta-store-v2';
 const validId=(id:unknown):id is string=>typeof id==='string' && id.length>0 && id.length<=160;
 const cleanIds=(value:unknown,limit=100):string[]=>Array.isArray(value)?[...new Set(value.filter(validId))].slice(0,limit):[];
@@ -181,7 +181,7 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     return order;
   };
   const cancelDemoOrder=(id:string)=>setState(s=>({...s,demoOrders:(s.demoOrders||[]).map(o=>o.id===id&&['pending','confirmed','preparing'].includes(o.status)?{...o,status:'cancelled' as const,events:[...(o.events||[]),{status:'cancelled',createdAt:new Date().toISOString(),note:'أُلغي الطلب التجريبي'}]}:o)}));
-  const submitOrder=async(input:{address:Address;paymentMethod:'cod'|'wallet';couponCode?:string;idempotencyKey:string;expectedSubtotal?:number;deliverySlot?:string;eco?:boolean;deliveryMode?:string;pickupBranchId?:string;instructions?:string;contactless?:boolean;tip?:number})=>{
+  const submitOrder=async(input:{address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;expectedSubtotal?:number;deliverySlot?:string;eco?:boolean;deliveryMode?:string;pickupBranchId?:string;instructions?:string;contactless?:boolean;tip?:number})=>{
     if(!user)throw new Error('سجّل الدخول لإنشاء طلب على الخادم');
     if(!Object.keys(state.cart).length)throw new Error('السلة فارغة');
     const response=await api.post<{order:Order}>('/orders',{...input,branchId:branchId||undefined,items:Object.entries(state.cart).map(([productId,quantity])=>({productId,quantity}))});

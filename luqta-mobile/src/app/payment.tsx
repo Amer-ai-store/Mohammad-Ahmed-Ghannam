@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
+import { useRemote } from "../lib/useRemote";
 import { LinearGradient } from "expo-linear-gradient";
 import { Calendar, CreditCard, Info, Lock, Package, Plus, Wallet } from "lucide-react-native";
 import { Shell } from "../components/Shell";
@@ -32,7 +33,9 @@ export default function Payment() {
   useEffect(() => { if (user && !demo) api.get<{ balance: number }>("/wallet").then((r) => setBalance(r.balance)).catch(() => setBalance(null)); }, [user, demo]);
   const coupon = draft.coupon && draft.coupon.cartSignature === cartSignatureOf(cart) ? draft.coupon : undefined;
   const totals = computeTotals(subtotal, coupon?.discount || 0, settings.shippingFee, settings.freeShippingThreshold);
-  const cardAllowed = demo; // no payment gateway is connected: card payments are demo-only
+  const gateway = useRemote<{ card: boolean; sandbox: boolean }>("/payments/methods");
+  const gatewayCard = !demo && !!gateway.data?.card; // real cards go through HyperPay's hosted form
+  const cardAllowed = demo || gatewayCard;
   const options: { id: PaymentChoice; label: string; icon: typeof CreditCard }[] = [
     { id: "card", label: "بطاقة بنكية", icon: CreditCard },
     { id: "cod", label: "الدفع عند الاستلام", icon: Package },
@@ -50,7 +53,7 @@ export default function Payment() {
   function next() {
     setError("");
     if (method === "card" && !cardAllowed) return setError("الدفع بالبطاقة يحتاج ربط بوابة دفع مرخّصة، وهو غير مفعّل بعد. اختر الدفع عند الاستلام أو رصيد المتجر.");
-    if (method === "card" && !cardAdded) return setError("أضف بيانات البطاقة التجريبية أولًا");
+    if (method === "card" && demo && !cardAdded) return setError("أضف بيانات البطاقة التجريبية أولًا");
     if (method === "wallet" && !demo && (!user || balance === null || balance < totals.total)) return setError(!user ? "سجّل الدخول لاستخدام رصيد المتجر" : "رصيد المتجر غير كافٍ لهذا الطلب");
     updateDraft({ payment: method });
     router.push("/checkout");
@@ -76,7 +79,12 @@ export default function Payment() {
         <View style={{ flex: 1, alignItems: "flex-end" }}><Txt weight="bold" style={{ color: t.title }}>اشترِ الآن وادفع لاحقًا (تقسيط)</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>يحتاج تعاقدًا مع مزود تقسيط مرخّص؛ غير مفعّل بعد.</Txt></View>
       </View>
 
-      {method === "card" ? (
+      {method === "card" && gatewayCard ? (
+        <Card style={{ marginTop: 14, gap: 8 }} testID="card-hosted">
+          <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}><Lock size={22} color={t.green} /><Txt weight="bold" style={{ fontSize: 18, color: t.title }}>دفع آمن عبر HyperPay</Txt></View>
+          <Txt style={{ color: t.muted, lineHeight: 24 }}>بعد تأكيد الطلب تُفتح صفحة الدفع الآمنة لإدخال بيانات البطاقة (Visa / Mastercard / مدى). لا يرى متجر لُقطة بيانات بطاقتك ولا يخزنها.{gateway.data?.sandbox ? " — بيئة اختبار" : ""}</Txt>
+        </Card>
+      ) : method === "card" ? (
         <Card style={{ marginTop: 14 }}>
           <Txt weight="bold" style={{ fontSize: 19, color: t.title }}>تفاصيل البطاقة</Txt>
           <LinearGradient colors={["#8E7BC9", "#6E5BB0"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.cardVisual}>

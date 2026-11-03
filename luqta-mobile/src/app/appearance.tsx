@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Check, Monitor, Moon, Sun } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
+import { useLang } from "../lib/i18n";
+import { LANGS } from "../lib/i18nCore";
 import { Palette, SKINS, ThemeMode, useTheme, useThemedStyles, type SkinId } from "../lib/theme";
 
 const choices = [
@@ -14,6 +16,7 @@ const choices = [
 export default function AppearanceScreen() {
   const { colors: t, mode, setMode, isDark, storageError, hydrated, skin, setSkin } = useTheme();
   const s = useThemedStyles(makeStyles);
+  const { lang, setLang } = useLang();
   return (
     <Shell title="مظهر التطبيق" subtitle="اختر المظهر الأنسب لك. يُحفظ اختيارك على هذا الجهاز.">
       <View style={s.options} accessibilityRole="radiogroup" accessibilityLabel="مظهر التطبيق">
@@ -38,6 +41,18 @@ export default function AppearanceScreen() {
             </Pressable>
           );
         })}
+      </View>
+      <View style={[s.preview, { marginTop: 18 }]} accessibilityRole="radiogroup" accessibilityLabel="اللغة" testID="lang-picker">
+        <Txt weight="bold" style={{ fontSize: 18 }}>اللغة</Txt>
+        <View style={{ flexDirection: "row-reverse", gap: 10 }}>
+          {LANGS.map((l) => (
+            <Pressable key={l.id} accessibilityRole="radio" accessibilityState={{ checked: lang === l.id }} accessibilityLabel={l.label} testID={`lang-${l.id}`} onPress={() => setLang(l.id)}
+              style={{ flex: 1, padding: 12, borderRadius: 16, borderWidth: 2, borderColor: lang === l.id ? t.orange : t.line, alignItems: "center" }}>
+              <Txt weight={lang === l.id ? "bold" : "regular"} style={{ textAlign: "center" }}>{l.label}</Txt>
+            </Pressable>
+          ))}
+        </View>
+        <Txt style={{ color: t.muted, fontSize: 13 }}>{lang === "en" ? "English covers navigation and the main screens; other texts stay in Arabic for now." : "الإنجليزية تغطي التنقل والشاشات الرئيسية حاليًا، وبقية النصوص تبقى بالعربية."}</Txt>
       </View>
       <View style={[s.preview, { marginTop: 18 }]} accessibilityRole="radiogroup" accessibilityLabel="ألوان التطبيق" testID="skin-picker">
         <Txt weight="bold" style={{ fontSize: 18 }}>ألوان التطبيق</Txt>

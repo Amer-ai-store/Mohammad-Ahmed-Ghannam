@@ -180,12 +180,25 @@
   function arms(p, l, r, el, er) { p.shoulderL = l; p.shoulderR = r; if (el) p.elbowL = el; if (er) p.elbowR = er; return p; }
   function crouch(p, k) { p.rootY = -0.17 * k; p.thighL = [-0.95 * k, 0, 0]; p.thighR = [-0.95 * k, 0, 0]; p.kneeL = [1.8 * k, 0, 0]; p.kneeR = [1.8 * k, 0, 0]; p.ankleL = [-0.85 * k, 0, 0]; p.ankleR = [-0.85 * k, 0, 0]; p.spine = [0.3 * k, 0, 0]; }
   function sitLegs(p, k) { p.thighL = [-1.57 * k, 0, 0.08 * k]; p.thighR = [-1.57 * k, 0, -0.08 * k]; p.kneeL = [1.57 * k, 0, 0]; p.kneeR = [1.57 * k, 0, 0]; }
+  var GAIT_BONES = ['thighL', 'thighR', 'kneeL', 'kneeR', 'ankleL', 'ankleR', 'shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'spine'];
+  /** Procedural gait: hip/knee/ankle/shoulder cycle; k = 1 walk, ~1.8 run. */
+  function gait(t, k) {
+    var a = amp(), w = t * (k > 1.4 ? 9.5 : 6.2), sw = S(w) * a, p = P();
+    p.thighL = [-0.45 * k * sw, 0, 0]; p.thighR = [0.45 * k * sw, 0, 0];
+    p.kneeL = [Math.max(0, S(w + 1.3)) * 0.9 * k * a, 0, 0]; p.kneeR = [Math.max(0, S(w + 1.3 + Math.PI)) * 0.9 * k * a, 0, 0];
+    p.ankleL = [-0.15 * sw, 0, 0]; p.ankleR = [0.15 * sw, 0, 0];
+    p.shoulderL = [0.4 * k * sw, 0, 0.08]; p.shoulderR = [-0.4 * k * sw, 0, -0.08];
+    p.elbowL = [-0.25 - (k > 1.4 ? 1.1 : 0.1), 0, 0]; p.elbowR = [-0.25 - (k > 1.4 ? 1.1 : 0.1), 0, 0];
+    p.spine = [k > 1.4 ? 0.18 : 0.04, S(w) * 0.05, 0]; p.rootY = Math.abs(S(w)) * 0.03 * k * a;
+    return p;
+  }
   function relaxedArms(p) { return arms(p, [0.04, 0, 0.1], [0.04, 0, -0.1], [-0.12, 0, 0], [-0.12, 0, 0]); }
   // base: which clip drives the body; upper/full: which bones the procedural pose overrides
   var ACTIONS = {
     idle: { clip: 'idle', bones: null, pose: function (t) { var p = P(); if (!clips.idle) { relaxedArms(p); p.spine = [S(t * 2.1) * 0.02, 0, 0]; p.head = [0, S(t * 0.7) * 0.12, 0]; } return p; } },
-    walk: { clip: 'walk', bones: null, pose: function () { return P(); } },
-    run: { clip: 'run', fallback: 'walk', bones: null, pose: function () { return P(); } },
+    // models without walk/run clips get a procedural gait on their own bones
+    walk: { clip: 'walk', bones: null, procBones: GAIT_BONES, pose: function (t) { return gait(t, 1); } },
+    run: { clip: 'run', fallback: 'walk', bones: null, procBones: GAIT_BONES, pose: function (t) { return gait(t, 1.8); } },
     cart: { clip: 'walk', bones: ['shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'wristL', 'wristR', 'spine'], pose: function () {
       var p = P(); arms(p, [-0.62, 0, -0.04], [-0.62, 0, 0.04], [-0.45, 0, 0], [-0.45, 0, 0]); p.wristL = [0.3, 0, 0]; p.wristR = [0.3, 0, 0]; p.spine = [0.14, 0, 0]; return p; } },
     jump: { clip: 'jump', bones: 'all', pose: function (t) {
@@ -293,7 +306,7 @@
       var def = ACTIONS[state.action];
       state.weight = Math.min(1, state.weight + dt / 0.35);
       if (state.useProcedural || def.bones) {
-        var pose = def.pose(t), list = def.bones === 'all' || (!currentClip && state.useProcedural) ? ALL : (def.bones || []);
+        var pose = def.pose(t), list = def.bones === 'all' ? ALL : state.useProcedural && def.procBones ? def.procBones : (!currentClip && state.useProcedural) ? ALL : (def.bones || []);
         var w = state.weight;
         for (var i = 0; i < list.length; i++) {
           var k = list[i], b = bones[k]; if (!b) continue;

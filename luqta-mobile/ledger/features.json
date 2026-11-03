@@ -739,16 +739,19 @@
     },
     {
      "id": "F-G06-08",
-     "title": "إرسال صورة منتج",
+     "title": "إرسال صورة منتج: تعرّف بالذكاء الاصطناعي على الخادم ومطابقة منتجات المتجر",
      "source": {
       "file": "src/app/assistant.tsx",
       "contains": [
-       "pickPhoto",
-       "خدمة الرؤية"
+       "/ai/vision",
+       "pickImageDataUrl"
       ]
      },
-     "status": "partial",
-     "note": "الصورة تُختار؛ التعرف عليها يحتاج خدمة رؤية على الخادم غير مفعّلة"
+     "status": "verified-auto",
+     "test": {
+      "file": "server/features.test.mjs",
+      "name": "F-G14-12 البحث بالصورة"
+     }
     },
     {
      "id": "F-G06-09",
@@ -862,16 +865,20 @@
     },
     {
      "id": "F-G07-08",
-     "title": "البطاقة غير مقبولة في الطلبات الحقيقية ولا تُحفظ أو تُرسل",
+     "title": "الدفع بالبطاقة عبر نموذج HyperPay المستضاف (Visa/Mastercard/مدى) مع تحقق الخادم؛ البطاقة لا تمر بالمتجر",
      "source": {
-      "file": "src/app/payment.tsx",
+      "file": "server/payments.mjs",
       "contains": [
-       "cardAllowed = demo",
-       "لا تُحفظ بيانات البطاقة"
+       "paymentWidgets.js",
+       "isPaidCode",
+       "markPaid"
       ]
      },
-     "status": "blocked-external",
-     "note": "يلزم ربط بوابة دفع مرخّصة"
+     "status": "verified-auto",
+     "test": {
+      "file": "server/payments.test.mjs",
+      "name": "F-G07-08 دفع بالبطاقة"
+     }
     },
     {
      "id": "F-G07-09",
@@ -1169,15 +1176,19 @@
     },
     {
      "id": "F-G09-08",
-     "title": "إشعارات الهاتف (Push)",
+     "title": "إشعارات الهاتف: سجل أجهزة ومرسل Expo Push على الخادم (التسجيل من التطبيق يحتاج وحدة الإشعارات الأصلية)",
      "source": {
-      "file": "src/app/notification-settings.tsx",
+      "file": "server/push.mjs",
       "contains": [
-       "Push"
+       "exp.host/--/api/v2/push/send",
+       "DeviceNotRegistered"
       ]
      },
-     "status": "blocked-external",
-     "note": "يلزم مزود إشعارات (FCM) غير مربوط"
+     "status": "partial",
+     "test": {
+      "file": "server/push.test.mjs",
+      "name": "F-G09-08"
+     }
     }
    ]
   },
@@ -1451,7 +1462,9 @@
        "walk: { clip: 'walk'",
        "new T.AnimationMixer(",
        "thighL",
-       "kneeL"
+       "kneeL",
+       "function gait(",
+       "GAIT_BONES"
       ]
      },
      "evidence": "evidence/avatar/walk.mp4",
@@ -2667,7 +2680,108 @@
      "status": "blocked-external"
     }
    ]
+  },
+  {
+   "id": "G17",
+   "name": "التشغيل والجودة والإطلاق (تنفيذ الاقتراحات)",
+   "features": [
+    {
+     "id": "F-G17-01",
+     "title": "حزمة نشر الخادم: Dockerfile غير جذري + docker-compose مع Caddy/HTTPS + ‎.env.example لكل المتغيرات + DEPLOY.md",
+     "source": {
+      "file": "deploy/Dockerfile",
+      "contains": [
+       "USER luqta",
+       "HEALTHCHECK",
+       "COMMERCE_DB=/data/"
+      ]
+     },
+     "test": {
+      "file": "server/deploy.test.mjs",
+      "name": ".env.example lists every env var the server reads"
+     },
+     "status": "verified-auto",
+     "evidence": "CI job server-image: docker build + تشغيل + تسجيل + إعادة تشغيل مع بقاء البيانات"
+    },
+    {
+     "id": "F-G17-02",
+     "title": "اختبارات واجهة شاملة بالنقر الفعلي: إضافة للسلة، محسّن السلة، الفوز باللعبة، الجولة، إتمام طلب تجريبي، التبديل للإنجليزية",
+     "source": {
+      "file": "tools/ui-flows.mjs",
+      "contains": [
+       "'add-to-cart'",
+       "'memory-game-win'",
+       "'demo-checkout'",
+       "'switch-to-english'",
+       "process.exit(failed ? 1 : 0)"
+      ]
+     },
+     "status": "verified-source",
+     "evidence": "CI screens › UI flows (يفشل البناء إن فشل أي مسار)"
+    },
+    {
+     "id": "F-G17-03",
+     "title": "اختبار على محاكي أندرويد: تثبيت APK الإصدار، فتح الشاشات بروابط عميقة، فحص النص العربي، وعدم وجود انهيار",
+     "source": {
+      "file": "tools/device-smoke.sh",
+      "contains": [
+       "adb install",
+       "uiautomator dump",
+       "luqta:///product/headphones",
+       "AndroidRuntime: Process"
+      ]
+     },
+     "status": "verified-source",
+     "evidence": "CI job device (محاكي x86_64 API 30). الهاتف الحقيقي يبقى D-items"
+    },
+    {
+     "id": "F-G17-04",
+     "title": "اللغة الإنجليزية (جزئي): مزوّد لغة، قاموس، ترجمة تلقائية للنصوص في Txt، اختيار اللغة من المظهر — التنقل والشاشات الرئيسية فقط",
+     "source": {
+      "file": "src/lib/i18nCore.ts",
+      "contains": [
+       "export function translate",
+       "\"Home\"",
+       "\"Basket optimizer\""
+      ]
+     },
+     "test": {
+      "file": "src/lib/i18n.test.mjs",
+      "name": "navigation tabs, smart tools and main screen titles all have English"
+     },
+     "status": "partial",
+     "evidence": "بقية النصوص والاتجاه LTR غير مكتملة"
+    },
+    {
+     "id": "F-G17-05",
+     "title": "التعرف على المنتج من صورة في المحادثة عبر /ai/vision (مفتاح الخادم)",
+     "source": {
+      "file": "src/app/assistant.tsx",
+      "contains": [
+       "/ai/vision",
+       "pickImageDataUrl"
+      ]
+     },
+     "status": "verified-source"
+    },
+    {
+     "id": "F-G17-06",
+     "title": "توقيع الإصدار بمفتاح خاص من أسرار GitHub (يتراجع لمفتاح التطوير إن غابت)",
+     "source": {
+      "file": "tools/apply-release-signing.mjs",
+      "contains": [
+       "luqtaRelease",
+       "LUQTA_KEYSTORE_BASE64"
+      ]
+     },
+     "test": {
+      "file": "server/releaseSigning.test.mjs",
+      "name": "توقيع الإصدار بمفتاح خاص"
+     },
+     "status": "verified-auto"
+    }
+   ]
   }
  ],
- "total": 189
+ "total": 195
 }

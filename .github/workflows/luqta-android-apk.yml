@@ -82,9 +82,19 @@ jobs:
       - run: npm ci
       - name: Expo prebuild (android)
         run: npx expo prebuild --platform android --no-install --clean
+      - name: Release signing (private keystore when secrets exist)
+        env:
+          LUQTA_KEYSTORE_BASE64: ${{ secrets.LUQTA_KEYSTORE_BASE64 }}
+          LUQTA_KEYSTORE_PASSWORD: ${{ secrets.LUQTA_KEYSTORE_PASSWORD }}
+          LUQTA_KEY_ALIAS: ${{ secrets.LUQTA_KEY_ALIAS }}
+          LUQTA_KEY_PASSWORD: ${{ secrets.LUQTA_KEY_PASSWORD }}
+        run: node tools/apply-release-signing.mjs
       - name: Assemble release APK
         working-directory: luqta-mobile/android
         env:
+          LUQTA_KEYSTORE_PASSWORD: ${{ secrets.LUQTA_KEYSTORE_PASSWORD }}
+          LUQTA_KEY_ALIAS: ${{ secrets.LUQTA_KEY_ALIAS }}
+          LUQTA_KEY_PASSWORD: ${{ secrets.LUQTA_KEY_PASSWORD }}
           GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false
         run: |
           chmod +x gradlew
@@ -139,6 +149,9 @@ jobs:
           node -e "import('playwright').then(()=>console.log('playwright ok'))"
       - name: Screenshot every screen
         run: node tools/screens.mjs dist ../evidence/screens
+      - name: UI flows with assertions (add to cart, optimizer, game, tour, demo checkout)
+        if: always()
+        run: node tools/ui-flows.mjs dist ../evidence/flows
       - name: 3D companion joint evidence
         run: node tools/avatar-evidence.mjs ../evidence/avatar tools/fixtures/face-sample.png
       - name: Walk animation video
@@ -151,6 +164,89 @@ jobs:
         with:
           name: luqta-evidence
           path: evidence
+          if-no-files-found: ignore
+          retention-days: 30
+
+  server-image:
+    name: Server Docker image and API smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: luqta-mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Build image
+        run: docker build -f deploy/Dockerfile -t luqta-server:ci .
+      - name: Run container and exercise the API
+        run: |
+          set -e
+          docker run -d --name luqta -p 8787:8787 -e ADMIN_EMAIL=owner@example.test -e ADMIN_PASSWORD=ci-admin-password-123 -e NODE_ENV=production luqta-server:ci
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8787/api/health && break; sleep 1; done
+          echo
+          J='Content-Type: application/json'
+          TOKEN=$(curl -fsS -X POST -H "$J" -d '{"name":"عميل","email":"ci@example.test","password":"ci-user-password-123"}' http://127.0.0.1:8787/api/auth/register | node -pe 'JSON.parse(require("fs").readFileSync(0)).token')
+          curl -fsS http://127.0.0.1:8787/api/settings | head -c 300; echo
+          curl -fsS http://127.0.0.1:8787/api/payments/methods; echo
+          curl -fsS http://127.0.0.1:8787/api/flags | head -c 300; echo
+          curl -fsS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8787/api/auth/me | head -c 300; echo
+          docker exec luqta id -u | grep -vx 0
+          docker restart luqta >/dev/null; sleep 4
+          curl -fsS -X POST -H "$J" -d '{"email":"ci@example.test","password":"ci-user-password-123"}' http://127.0.0.1:8787/api/auth/login | grep -q token && echo "data persisted across restart"
+          docker inspect --format '{{.State.Health.Status}}' luqta
+      - name: Container logs
+        if: always()
+        run: docker logs luqta 2>&1 | tail -40 || true
+
+  device:
+    name: Android emulator smoke test (installs the release APK)
+    needs: [apk]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: luqta-mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: luqta-2.0.0-apk
+          path: luqta-mobile/apk
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          packages: 'platform-tools emulator system-images;android-30;google_apis;x86_64'
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Boot emulator (x86_64 image with ARM translation)
+        run: |
+          echo no | avdmanager create avd -n luqta -k 'system-images;android-30;google_apis;x86_64' -d pixel_5 --force
+          nohup "$ANDROID_HOME/emulator/emulator" -avd luqta -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 4096 -cores 3 > ../emulator.log 2>&1 &
+          adb wait-for-device
+          for i in $(seq 1 120); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ] && break; sleep 3; done
+          adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0; adb shell settings put global animator_duration_scale 0
+          adb shell input keyevent 82 || true
+          adb shell getprop ro.build.version.release
+      - name: Install APK, open screens by deep link, assert text and no crash
+        run: |
+          sudo apt-get install -y imagemagick >/dev/null 2>&1 || true
+          bash tools/device-smoke.sh apk/luqta-2.0.0.apk ../evidence-device
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: luqta-device-evidence
+          path: |
+            evidence-device
+            emulator.log
           if-no-files-found: ignore
           retention-days: 30
 
