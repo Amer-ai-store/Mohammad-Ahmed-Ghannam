@@ -219,6 +219,12 @@ export function install(c, api) {
     const { actor } = membership(req, params.vendorId), old = get('SELECT * FROM products WHERE id=?', params.productId);
     if (!old || parse(old.data, {}).vendorId !== params.vendorId) fail(404, 'المنتج لا يتبع هذا المتجر', 'not_found');
     const data = { ...c.validateProduct({ ...body, id: old.id }, parse(old.data)), vendorId: params.vendorId };
+    // A merchant must not attach a variant to another vendor's (or the main store's) product.
+    // validateProduct only verifies that the parent exists; ownership is checked here.
+    if (data.variantOf) {
+      const parent = get('SELECT data FROM products WHERE id=? AND active=1', data.variantOf);
+      if (!parent || parse(parent.data, {}).vendorId !== params.vendorId) fail(403, 'المنتج الأساسي لا يتبع هذا المتجر', 'forbidden');
+    }
     run('UPDATE products SET data=?,stock=?,active=?,updated_at=? WHERE id=?', json(data), body.stock !== undefined ? integer(body.stock, 'المخزون', 0, 1e7) : old.stock, body.active !== undefined ? body.active ? 1 : 0 : old.active, now(), old.id);
     audit(actor, 'product.update', old.id, { vendorId: params.vendorId });
     api.emit('productsChanged', [old.id]);
