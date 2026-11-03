@@ -11,7 +11,7 @@ import {useRobot} from './robot';
 
 export type Order = CommerceOrder;
 type State = {cart: Record<string,number>; favorites: string[]; compareIds: string[]; recentIds: string[]; saved: Record<string,number>; branchId: string|null};
-export type CheckoutInput = {address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;deliverySlot?:{date:string;window:string}|null;deliveryNotes?:string;gift?:{wrap:boolean;message?:string;recipient?:string}|null;acceptTerms?:boolean;cardToken?:string;items?:Record<string,number>};
+export type CheckoutInput = {address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;deliverySlot?:{date:string;window:string}|null;deliveryNotes?:string;gift?:{wrap:boolean;message?:string;recipient?:string}|null;acceptTerms?:boolean;cardToken?:string;items?:Record<string,number>;buyNowCheckout?:boolean};
 type Store = State & {
   hydrated: boolean; toast: string; products: Product[]; orders: Order[];
   catalogStatus: 'sample'|'loading'|'connected'|'offline'; catalogError: string;
@@ -173,13 +173,14 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     return {...s,compareIds:[...s.compareIds,id]};
   });
   const rememberProduct=useCallback((id:string)=>{if(validId(id))setState(s=>s.recentIds[0]===id?s:{...s,recentIds:[id,...s.recentIds.filter(x=>x!==id)].slice(0,20)});},[]);
-  const submitOrder=async({items,...input}:CheckoutInput)=>{
+  const submitOrder=async({items,buyNowCheckout=false,...input}:CheckoutInput)=>{
     if(!user)throw new Error('سجّل الدخول لإنشاء طلب على الخادم');
-    const lines=items||buyNow||state.cart;
+    if(buyNowCheckout&&!buyNow)throw new Error('طلب الشراء المباشر لم يعد متاحًا');
+    const lines=items||(buyNowCheckout?buyNow:state.cart);
     if(!Object.keys(lines).length)throw new Error('السلة فارغة');
     const response=await api.post<{order:Order}>('/orders',{...input,branchId:state.branchId||undefined,items:Object.entries(lines).map(([productId,quantity])=>({productId,quantity}))});
     setOrders(old=>[response.order,...old.filter(o=>o.id!==response.order.id)]);
-    if(items||buyNow)setBuyNowState(null);else setState(s=>({...s,cart:{}}));
+    if(buyNowCheckout)setBuyNowState(null);else setState(s=>({...s,cart:{}}));
     robot.react('order');void refreshCatalog();return response.order;
   };
   const reorder=(order:Order)=>{const cart=reorderCart(order.items,products);setState(s=>({...s,cart}));notify(Object.keys(cart).length?'أُضيفت المنتجات المتوفرة إلى السلة بأسعارها الحالية':'منتجات هذا الطلب غير متوفرة حاليًا');};
