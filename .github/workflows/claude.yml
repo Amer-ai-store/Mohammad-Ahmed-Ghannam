@@ -12,11 +12,14 @@ on:
     types: [submitted]
 jobs:
   claude:
+    # Optional paid feature: disabled unless explicitly enabled in repository Actions variables.
+    # Never invoked as a required PR review; the free-pr-gate is the default.
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      vars.PAID_CLAUDE_ENABLED == 'true' &&
+      ((github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
