@@ -19,6 +19,7 @@ function load(){
   ctx.globalThis=ctx;
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root,'catalog.js'),'utf8'),ctx,{filename:'catalog.js'});
+  vm.runInContext(fs.readFileSync(path.join(root,'workflow-evidence.js'),'utf8'),ctx,{filename:'workflow-evidence.js'});
   vm.runInContext(fs.readFileSync(path.join(root,'directory-ui.js'),'utf8'),ctx,{filename:'directory-ui.js'});
   return ctx;
 }
@@ -64,9 +65,39 @@ test('static entrypoint loads safe modules before app; no new API or SQL writes'
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   const dir=fs.readFileSync(path.join(root,'directory-ui.js'),'utf8');
-  assert.ok(html.indexOf('./catalog.js')<html.indexOf('./directory-ui.js'));
+  assert.ok(html.indexOf('./catalog.js')<html.indexOf('./workflow-evidence.js'));
+  assert.ok(html.indexOf('./workflow-evidence.js')<html.indexOf('./directory-ui.js'));
   assert.ok(html.indexOf('./directory-ui.js')<html.indexOf('./app.js'));
   assert.ok(app.includes('TrustSoftDirectoryUI.render'));
   assert.ok(!/\b(fetch|XMLHttpRequest)\s*\(/.test(dir));
   assert.ok(!/\b(INSERT|UPDATE|DELETE)\s+(INTO|FROM|dbo\.)/i.test(dir));
+});
+
+test('complete visible catalog includes unmatched tables without inventing 1024 records',()=>{
+  const lib=load().TrustSoftCatalog;
+  const rows=lib.normalizeCatalog([{TABLE_NAME:'Journal_GL',TABLE_SCHEMA:'dbo'},{TABLE_NAME:'Unexpected_Table_XY',TABLE_SCHEMA:'dbo'},{TABLE_NAME:'CheqMovement',TABLE_SCHEMA:'dbo'}]);
+  assert.equal(lib.tablesFor(rows,lib.tabsFor('catalog')[0]).length,3);
+  const excluded=lib.tablesFor(rows,lib.tabsFor('catalog')[1]);
+  assert.equal(excluded.length,1);
+  assert.equal(excluded[0].name,'Unexpected_Table_XY');
+});
+test('document trace includes observed fields only and marks links unverified',()=>{
+  const ctx=load();
+  const rows=ctx.TrustSoftCatalog.normalizeCatalog([{TABLE_SCHEMA:'dbo',TABLE_NAME:'Receipt'},{TABLE_SCHEMA:'dbo',TABLE_NAME:'PurchasePostTrans'}]);
+  const evidence=ctx.TrustSoftWorkflowEvidence.inspect({group:'purchases',catalog:rows});
+  assert.ok(evidence.tableRows.some(row=>row['الجدول']==='Receipt'&&row['المصدر_في_جلسة_API']==='ظاهر'));
+  assert.ok(evidence.candidates.some(row=>row['الحالة'].includes('لم تثبت')));
+  assert.ok(evidence.tableRows.every(row=>row['حالة_الربط'].includes('غير مثبتة')));
+  assert.equal(ctx.TrustSoftWorkflowEvidence.tables.Receipt.fields.includes('PostToAcc'),true);
+});
+test('unclassified data rows never become verified reports without a real source',()=>{
+  const ctx=load(),host=fakeNode('div');
+  ctx.TrustSoftDirectoryUI.render({group:'catalog',host,
+    snapshot:{state:'connected',stale:false,last_success:1783200000,data:{catalog:[{schema_name:'dbo',object_name:'Unexpected_Table_XY'}],relations:[],sections:{}}},
+    tableRenderer:rows=>{const n=fakeNode('table');n.textContent=JSON.stringify(rows);return n;}
+  });
+  const all=flatten(host);
+  assert.ok(all.some(x=>x.textContent.includes('غير مصنفة: 1')));
+  assert.ok(all.some(x=>x.textContent.includes('1024')));
+  assert.ok(all.some(x=>x.textContent.includes('Unexpected_Table_XY')));
 });
