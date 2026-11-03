@@ -1,19 +1,19 @@
 {
   "schema": "jawafa-investigation-reports-v1",
-  "classification": "PUBLIC_STATUS_AND_PRIVATE_EVIDENCE_LINKS_ONLY",
-  "version": "2026-11-03-staging-1",
+  "classification": "PUBLIC_STATUS_ONLY__PRIVATE_LINKS_REDACTED",
+  "version": "2026-11-03-staging-public-safe-2",
   "data_cutoff": "2026-11-02",
   "published_to_production": false,
   "release_gate": "BLOCKED_ISSUE_102",
   "financial_data_origin": "Evidence-backed 2025–2026 historical exports and read-only restored SQL; original document links are access-controlled Google Drive.",
-  "canonical_casebook": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit",
+  "canonical_casebook": null,
   "primary_source_export": {
     "cutoff": "2026-10-31",
     "mode": "HYBRID_FULL_DELTA_NOT_SQL_SNAPSHOT",
     "access": "PRIVATE_DRIVE",
-    "href": "https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view"
+    "href": null
   },
-  "authentication_note": "The public GitHub Pages page does not authenticate viewers. Private Google Drive links require their own access controls. No private invoice lines, cheque numbers, user identities or monetary values are embedded.",
+  "authentication_note": "Historical status only. Private evidence requires independent authenticated access; links and document identifiers are deliberately withheld from this public build.",
   "summary": [
     {
       "id": "gl",
@@ -171,8 +171,8 @@
       "kind": "سجل رئيسي",
       "date": "2026-11-02",
       "category": "all",
-      "href": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit",
-      "access": "PRIVATE_DRIVE",
+      "href": null,
+      "access": "RESTRICTED_NO_PUBLIC_LINK",
       "verified": "DRIVE_METADATA_AND_CONTENT",
       "note": "ملخصات الحالة والتحديثات التراكمية."
     },
@@ -182,8 +182,8 @@
       "kind": "تقرير أدلة",
       "date": "2026-10-30",
       "category": "gl",
-      "href": "https://drive.google.com/file/d/1PaxR4NskDvbOCjalO_M2giqkmLmKzu1U/view",
-      "access": "PRIVATE_DRIVE",
+      "href": null,
+      "access": "RESTRICTED_NO_PUBLIC_LINK",
       "verified": "DRIVE_METADATA",
       "note": "استعادة 28 سند GL و6 سندات ARP؛ لا إثبات خسارة."
     },
@@ -193,8 +193,8 @@
       "kind": "تقرير تدقيق",
       "date": "2026-10-31",
       "category": "bank",
-      "href": "https://drive.google.com/file/d/1io_Hy7wgL9F7mi13oJ1j11lOkYYpNzIF/view",
-      "access": "PRIVATE_DRIVE",
+      "href": null,
+      "access": "RESTRICTED_NO_PUBLIC_LINK",
       "verified": "DRIVE_METADATA",
       "note": "ربط الشيكات وتفسير حقل الفرق النقدي."
     },
@@ -204,8 +204,8 @@
       "kind": "سجل عمليات",
       "date": "2026-10-31",
       "category": "bank",
-      "href": "https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view",
-      "access": "PRIVATE_DRIVE",
+      "href": null,
+      "access": "RESTRICTED_NO_PUBLIC_LINK",
       "verified": "DRIVE_METADATA",
       "note": "تحليل أحداث التطبيق للمستندات التي اختفت روابطها."
     },
@@ -215,8 +215,8 @@
       "kind": "تقرير شامل",
       "date": "2026-11-02",
       "category": "all",
-      "href": "https://drive.google.com/file/d/1CTMSaFFlyTmK2ZeFX_iGA9ogvhh0_oxu/view",
-      "access": "PRIVATE_DRIVE",
+      "href": null,
+      "access": "RESTRICTED_NO_PUBLIC_LINK",
       "verified": "DRIVE_METADATA_AND_CONTENT",
       "note": "الترحيل الجماعي، المشتريات، سندات الذمم، والشيكات."
     },
@@ -226,8 +226,8 @@
       "kind": "تحقيق محاسبي",
       "date": "2026-11-02",
       "category": "returns",
-      "href": "https://docs.google.com/document/d/1fCRTi61nU2xRtgkwvGWOoUBHx81vOnQfr3WYjw0clrY/edit",
-      "access": "PRIVATE_DRIVE",
+      "href": null,
+      "access": "RESTRICTED_NO_PUBLIC_LINK",
       "verified": "DRIVE_METADATA_AND_CONTENT",
       "note": "ربط 90 مستندًا وتأخيرات ترحيلها وملحق F86."
     },
@@ -237,8 +237,8 @@
       "kind": "تحقيق تاريخي",
       "date": "2026-11-02",
       "category": "bank",
-      "href": "https://docs.google.com/document/d/1atigByoeDSjpKd9lJvMIcyPAR3j2NKp1_gTT0ypKf_8/edit",
-      "access": "PRIVATE_DRIVE",
+      "href": null,
+      "access": "RESTRICTED_NO_PUBLIC_LINK",
       "verified": "DRIVE_METADATA_AND_CONTENT",
       "note": "حركات فك الترحيل وقرائن الربط البنكي المستورد."
     },
@@ -248,8 +248,8 @@
       "kind": "مطابقة مستقلة",
       "date": "2026-11-02",
       "category": "gl",
-      "href": "https://docs.google.com/document/d/1-rGbrcV0GYyfvPllfGFnsO7wcqO1fwj3iAFdaq7E720/edit",
-      "access": "PRIVATE_DRIVE",
+      "href": null,
+      "access": "RESTRICTED_NO_PUBLIC_LINK",
       "verified": "DRIVE_METADATA_AND_CONTENT",
       "note": "فحص النسخة المؤرشفة وفواتير المشتريات الست."
     }
@@ -258,19 +258,19 @@
     {
       "id": "ARCHIVE_V5",
       "label": "نسخة التصدير V5 المؤرشفة (ليست Snapshot متزامنة)",
-      "href": "https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view",
+      "href": null,
       "verified": "DRIVE_METADATA"
     },
     {
       "id": "PRIVATE_FOLDER",
       "label": "مجلد الأدلة الخاصة والتقرير النهائي",
-      "href": "https://drive.google.com/drive/folders/1iiu8JpSGKeeCcyCV2JU3z_RyXARxw8DT",
+      "href": null,
       "verified": "DRIVE_FOLDER"
     },
     {
       "id": "F63_RAW",
       "label": "حزمة الأدلة الخام F63",
-      "href": "https://drive.google.com/file/d/19a2iFmkxlJVfdhanaEaSBW-johNYWJng/view",
+      "href": null,
       "verified": "PRIOR_DRIVE_EVIDENCE"
     }
   ],
