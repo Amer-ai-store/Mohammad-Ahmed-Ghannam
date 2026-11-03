@@ -498,6 +498,9 @@ e2e('L118 L119 L120 L121 L122 central sync: export, snapshot, operations with re
   await root().getByText('الفروقات: جديد 1 · تغيّر 1 · مرفوض 1').waitFor();
   assert.equal((await products()).milk.price, 1.15, 'nothing changes before applying');
   await click('تطبيق المقبول');
+  // A server-side update can complete before the dashboard's post-action refresh.
+  // Wait for the import receipt before editing another form, or that refresh can replace the textarea mid-input.
+  await done(/SYNC-\d{8}-\d{3}: استيراد من لوحة القيادة المركزية/);
   await until(async () => (await products()).milk.price === 1.2 && !!(await products())['cc-dates'], 10000, 'applied');
   await fillForm('استيراد ملف من النظام المركزي (JSON)', { source: 'ملف تجريبي', items: JSON.stringify([{ id: 'tahini', name: 'طحينة', retailPrice: 2.4, stockQuantity: 33 }, { id: '', name: 'سطر خاطئ' }]) });
   await submit('استيراد ملف من النظام المركزي (JSON)', 'معاينة واستيراد');
