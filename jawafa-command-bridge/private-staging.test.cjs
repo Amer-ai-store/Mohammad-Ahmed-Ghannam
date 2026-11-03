@@ -14,7 +14,7 @@ test('private dashboard static files allowed only inside supplied view root',asy
   const ok=await fetch(root+'/');
   assert.equal(ok.status,200);assert.equal(await ok.text(),html);
   assert.equal(ok.headers.get('x-frame-options'),'DENY');
-  assert.match(ok.headers.get('cache-control'),'no-store');
+  assert.match(ok.headers.get('cache-control'),/no-store/);
   assert.equal((await fetch(root+'/audit111-ui.mjs')).status,200);
   assert.equal((await fetch(root+'/package.json')).status,404);
   assert.equal((await fetch(root+'/missing.html')).status,404);
