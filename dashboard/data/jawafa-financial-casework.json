@@ -27,29 +27,29 @@
     "financial_workstreams": 11
   },
   "external_links": {
-    "private_evidence_folder": "https://drive.google.com/drive/folders/1dTUcvdI8FI-FjNI5tNqunfuqNFr0zXqb",
-    "first_export_folder": "https://drive.google.com/drive/folders/1BAXkWBKuYvzGdC4pNoT9ZfYBBzTg6sd9",
-    "audit15_folder": "https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL",
-    "private_report": "https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view",
-    "private_detailed_export_report": "https://drive.google.com/file/d/1sSjwVwdXzXbg_FkCdOHtj_NbNOqAdN3d/view",
-    "private_case_json": "https://drive.google.com/file/d/1fqwVkxZ4zYQw6_Nl7OmG01VGDAT-6svS/view",
-    "private_prior_forensics": "https://drive.google.com/file/d/1e7qekefQUbVfXB6otHk1IHRTyT-cvD7l/view",
-    "private_archive_evidence_report": "https://drive.google.com/file/d/1xdNNXn8laZn8o8qy0nQRZAQBb1OIOb-N/view",
-    "private_historical_casebook": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit",
-    "private_date_audit_report": "https://drive.google.com/file/d/1_ebs70MR2zXs8Gx0l7FRLYKIqUdvNBEa/view",
-    "private_long_backdate_finance_report": "https://drive.google.com/file/d/18s2hO9I6tOI7kqR4zck-cBTgdq8qnxLm/view",
-    "private_restored_ledger_report": "https://drive.google.com/file/d/1PaxR4NskDvbOCjalO_M2giqkmLmKzu1U/view",
-    "private_restored_raw_evidence_zip": "https://drive.google.com/file/d/1GUyeYtBp1yILOYj5T5CwJIgmPVpV_e0V/view",
-    "private_all28_matrix": "https://drive.google.com/file/d/1QPK2n8MGQbs59eeg-qZ95W4Qq5R4OUmI/view",
-    "private_latest_cheque_cash_report": "https://drive.google.com/file/d/1io_Hy7wgL9F7mi13oJ1j11lOkYYpNzIF/view",
-    "private_latest_cheque_evidence": "https://drive.google.com/file/d/19a2iFmkxlJVfdhanaEaSBW-johNYWJng/view",
-    "private_latest_export_backup": "https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view",
-    "private_cheque_application_audit": "https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view",
-    "private_cheque_application_events": "https://drive.google.com/file/d/1fY7RFUk3TfycZEikAPnHWIrYU4JgCz6r/view",
-    "private_financial_investigation_F75": "https://drive.google.com/file/d/1CTMSaFFlyTmK2ZeFX_iGA9ogvhh0_oxu/view",
-    "private_returns_and_purchase_audit_F85": "https://docs.google.com/document/d/1fCRTi61nU2xRtgkwvGWOoUBHx81vOnQfr3WYjw0clrY/edit",
-    "private_unposted_cheques_F87": "https://docs.google.com/document/d/1atigByoeDSjpKd9lJvMIcyPAR3j2NKp1_gTT0ypKf_8/edit",
-    "private_independent_audit_F91": "https://docs.google.com/document/d/1-rGbrcV0GYyfvPllfGFnsO7wcqO1fwj3iAFdaq7E720/edit"
+    "private_evidence_folder": null,
+    "first_export_folder": null,
+    "audit15_folder": null,
+    "private_report": null,
+    "private_detailed_export_report": null,
+    "private_case_json": null,
+    "private_prior_forensics": null,
+    "private_archive_evidence_report": null,
+    "private_historical_casebook": null,
+    "private_date_audit_report": null,
+    "private_long_backdate_finance_report": null,
+    "private_restored_ledger_report": null,
+    "private_restored_raw_evidence_zip": null,
+    "private_all28_matrix": null,
+    "private_latest_cheque_cash_report": null,
+    "private_latest_cheque_evidence": null,
+    "private_latest_export_backup": null,
+    "private_cheque_application_audit": null,
+    "private_cheque_application_events": null,
+    "private_financial_investigation_F75": null,
+    "private_returns_and_purchase_audit_F85": null,
+    "private_unposted_cheques_F87": null,
+    "private_independent_audit_F91": null
   },
   "cases": [
     {
@@ -169,7 +169,7 @@
       "drive_md5_match_count": 2,
       "drive_md5_mismatch_count": 0,
       "drive_upload_verified": true,
-      "protected_drive_file": "https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view",
+      "protected_drive_file": null,
       "source_snapshot_transactionally_consistent": false
     },
     "historical_voucher_gaps_recheck": {
@@ -212,7 +212,7 @@
         ],
         "sql_restore_contents_recovered": true,
         "blocker": "Historical header recovery succeeded; awaiting bank statements, authorization evidence, and earlier backups for remaining cases",
-        "casebook_document": "https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit"
+        "casebook_document": null
       },
       "restored_main_gl_headers": 28,
       "restored_arp_journals": 6,
@@ -235,7 +235,7 @@
       "local_crc_test": "PASS",
       "drive_content_md5_comparison": "2_OF_2_MATCH_0_DIFFERENCES",
       "drive_upload_verified": true,
-      "protected_drive_file": "https://drive.google.com/file/d/1z7EkbUAXMEAi-dJIJOpS8WWV3IugEZ4F/view",
+      "protected_drive_file": null,
       "full_transactional_snapshot": false,
       "source_run": "20261030-0100"
     },
@@ -297,11 +297,11 @@
     "automated_archival_or_deletion_mechanism_confirmed": false,
     "bank_statement_current_verification": false,
     "source_scope": "Restored SQL READ_ONLY; full baseline TransactionHistory; Oct 31 V5 CSV; legacy bank-sheet through Aug 23",
-    "private_report": "https://drive.google.com/file/d/1io_Hy7wgL9F7mi13oJ1j11lOkYYpNzIF/view",
-    "private_raw_evidence": "https://drive.google.com/file/d/19a2iFmkxlJVfdhanaEaSBW-johNYWJng/view",
+    "private_report": null,
+    "private_raw_evidence": null,
     "status": "25_OF_28_ACCOUNTING_LINKS_CORROBORATED__BANK_AND_CAUSALITY_NOT_PROVEN",
-    "private_app_event_audit": "https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view",
-    "private_app_event_rows": "https://drive.google.com/file/d/1fY7RFUk3TfycZEikAPnHWIrYU4JgCz6r/view"
+    "private_app_event_audit": null,
+    "private_app_event_rows": null
   },
   "investigation_registry": {
     "schema": "jawafa-investigation-reports-v1",
