@@ -57,3 +57,12 @@
 ## QA
 Run locally: `node --test jawafa-command-bridge/test.cjs dashboard/tests/jawafa-native-integration.test.cjs`.
 The GitHub Actions workflow also checks real headless Chromium navigation, core CI, and source security.
+
+## Security hardening candidate — 2026-11-03 (draft, non-production)
+- An HMAC-signed worker receipt **never** implies independently verified evidence. A `VERIFIED` transition now requires a configured independent artifact verifier; otherwise it returns `503 EVIDENCE_VERIFIER_NOT_CONFIGURED` and leaves the command in `RUNNING`.
+- The independent verifier checks an actual local, non-symlink artifact; SHA-256 bytes; a separate Ed25519 public-key signature; and exact command, worker and source identity fields. Its private signing key must never be shared with agents.
+- Startup may configure both `JAWAFA_QA_ARTIFACT_DIR` and `JAWAFA_QA_PUBLIC_KEY_FILE` in a restricted nonfinancial directory; supplying only one fails startup. No embedded secrets or privileged source-data access.
+- `JAWAFA_OWNER_EMAIL` is an optional server-side **read-only** identity fallback after cryptographic Firebase verification. Owner commands still require a verified `JAWAFA_OWNER_UID`. No email-only authorization or client-side override.
+- Existing authenticated `/api/jawafa/v1/export-status` is preserved and reads the separate loopback monitor; HTTP 200 does **not** mean the export is complete or accepted.
+- Candidate was syntax-checked with Node.js 24.21.0 and 7 isolated security tests passed on JAWAFFASVR. No real owner token E2E acceptance was performed. Main and production services remain unchanged.
+- **Release freeze:** Issue #102 still applies. Do not merge/deploy before approved private HTTPS, owner session, independent agent/QA, least-privilege SQL, current daily backup restore, financial causal analysis, and external E2E/independent security evidence. GATE-15 remains NOT ACCEPTED.

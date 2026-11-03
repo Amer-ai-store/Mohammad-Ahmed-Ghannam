@@ -1,5 +1,5 @@
 'use strict';
-const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.join(__dirname,'..','..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('standalone export monitor and central integration are wired',()=>{
@@ -15,4 +15,38 @@ test('standalone export monitor and central integration are wired',()=>{
   assert.match(integration,/export-status/);
   assert.match(bridge,/\/api\/jawafa\/v1\/export-status/);
   assert.match(bridge,/jawafa\.export\.monitor\.v1/);
+});
+test('100 percent with failures or old export is never shown as healthy',()=>{
+ const page=read('dashboard/jawafa-export-monitor.html');
+ const start=page.indexOf('function exportIntegrityState('),end=page.indexOf('\nfunction paint(s)',start);
+ assert(start>=0&&end>start,'pure integrity classifier must exist');
+ const classify=vm.runInNewContext(page.slice(start,end)+'\nexportIntegrityState');
+ const now=Date.parse('2026-11-03T12:00:00Z');
+ const sample={mode:'COMPLETED',progressPercent:100,processedTables:1024,totalTables:1024,remainingTables:0,failedTables:0,generatedAt:'2026-11-03T12:00:00Z',lastWriteAt:'2026-11-03T11:30:00Z'};
+ assert.equal(classify({...sample,failedTables:1},now).tone,'bad');
+ assert.match(classify({...sample,failedTables:1},now).label,/FAILED_TABLES/);
+ assert.equal(classify({...sample,lastWriteAt:'2026-10-29T20:38:18Z'},now).label,'STALE_EXPORT');
+ assert.equal(classify({...sample,processedTables:1023,remainingTables:1},now).label,'INCOMPLETE');
+ assert.equal(classify({...sample,generatedAt:'2026-11-03T09:00:00Z'},now).label,'STALE_MONITOR');
+ assert.equal(classify(sample,now).label,'COMPLETED (NOT ACCEPTED)');
+ assert.equal(classify(sample,now).tone,'warn');
+ assert.equal(classify({...sample,processedTables:1023,remainingTables:0},now).label,'INVALID_STATUS');
+ assert.equal(classify({...sample,progressPercent:101},now).label,'INVALID_STATUS');
+ assert.equal(classify({...sample,failedTables:null},now).label,'INVALID_STATUS');
+ assert.equal(classify({...sample,totalTables:-1},now).label,'INVALID_STATUS');
+});
+test('on disconnect or logout, stale numbers are cleared and polling stops',()=>{
+ const page=read('dashboard/jawafa-export-monitor.html');
+ assert.match(page,/function clearMetrics\(\)/);
+ assert.match(page,/\}catch\(e\)\{clearMetrics\(\);\$\('mode'\)/);
+ assert.match(page,/if\(!user\)\{clearInterval\(timer\);timer=null;clearMetrics\(\)/);
+ const start=page.indexOf('function clearMetrics('),end=page.indexOf('\nfunction paint(s)',start);
+ assert(start>=0&&end>start);
+ const elements={};
+ const get=id=>elements[id]||(elements[id]={textContent:'old',style:{width:'100%'}});
+ const clear=vm.runInNewContext(page.slice(start,end)+'\nclearMetrics',{$:get});
+ clear();
+ for(const id of ['pct','processed','remaining','workers','failed','summary','run','current','write','bytes','server','db','stamp'])
+  assert.equal(elements[id].textContent,'—');
+ assert.equal(elements.fill.style.width,'0%');
 });
