@@ -170,4 +170,3 @@ export function install(c, api) {
     return { personalized: personalized || recent.length > 0, products: scored.slice(0, limit) };
   });
 }
-
