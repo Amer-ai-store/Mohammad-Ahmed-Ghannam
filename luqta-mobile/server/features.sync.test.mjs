@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture } from './testkit.mjs';
+import { initialLiveState, mutateLiveState } from '../../aas-cc/command-center/server/state.mjs';
 
 const SERVICE_KEY = 'service-key-for-tests-only-0123456789';
 // A stand-in for the AAS Command Center that records every call.
@@ -18,7 +19,7 @@ function commandCenter({ failExport = 0 } = {}) {
   const fetchImpl = async (url, init = {}) => {
     const u = new URL(url), body = init.body ? JSON.parse(init.body) : null;
     calls.push({ method: init.method, path: u.pathname, query: Object.fromEntries(u.searchParams), headers: init.headers, body });
-    if (u.pathname === '/api/v1/app/sync') {
+    if (u.pathname === '/api/v1/app/luqta-sync') {
       if (exportFailures-- > 0) return json(500, { error: 'temporary' });
       if (body.expectedRevision !== 7) return json(409, { error: 'revision', revision: 7 });
       return json(200, { ok: true, revision: 8 });
@@ -45,11 +46,40 @@ test('L118 exporting to the command center maps fields, uses the API key and ret
   assert.equal(JSON.stringify(status).includes('api-key-1234567890'), false, 'keys are never returned');
   const receipt = (await request('POST', '/admin/sync/export', {}, admin.token)).body.receipt;
   assert.equal(receipt.status, 'success'); assert.match(receipt.id, /^SYNC-\d{8}-001$/);
-  const syncs = center.calls.filter((c) => c.path === '/api/v1/app/sync');
+  const syncs = center.calls.filter((c) => c.path === '/api/v1/app/luqta-sync');
   assert.equal(syncs.length, 2, 'retried once after 409'); assert.equal(syncs[1].body.expectedRevision, 7);
   assert.equal(syncs[0].headers['X-AAS-API-Key'], 'api-key-1234567890'); assert.equal(syncs[0].headers['X-AAS-Runner-Key'], undefined);
   const milk = syncs[1].body.products.find((p) => p.id === 'milk');
   assert.deepEqual(milk, { id: 'milk', name: 'حليب طازج كامل الدسم', category: 'dairy', retailPrice: 1.15, stockQuantity: 80 });
+});
+
+test('L118 integration payload passes the real Command Center validator without invented numeric IDs', async (t) => {
+  let current = initialLiveState();
+  const calls = [];
+  const center = { fetchImpl: async (url, init) => {
+    assert.equal(new URL(url).pathname, '/api/v1/app/luqta-sync');
+    assert.equal(init.headers['X-AAS-API-Key'], 'api-key-1234567890');
+    const body = JSON.parse(init.body);
+    calls.push(body);
+    const receivedAt = new Date().toISOString();
+    const verified = mutateLiveState(current, 'recordLuqtaSnapshot', { ...body, receivedAt });
+    current = verified.state; // Real AAS state validator: no permissive stub.
+    return new Response(JSON.stringify({ revision: calls.length, productsAccepted: current.luqtaCommerce.products.length, ordersAccepted: current.luqtaCommerce.orders.length }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  } };
+  const { request, register, order, admin } = await fixture(t, aas(center));
+  const customer = await register();
+  const purchased = await order(customer);
+  const receipt = (await request('POST', '/admin/sync/export', {}, admin.token)).body.receipt;
+  assert.equal(receipt.status, 'success', JSON.stringify(receipt));
+  assert.equal(calls.length, 1);
+  assert.equal(current.luqtaCommerce.schema, 'luqta-commerce-v1');
+  assert.equal(current.luqtaCommerce.products.find(p => p.id === 'mug')?.id, 'mug');
+  assert.equal(current.luqtaCommerce.orders.find(o => o.id === purchased.id)?.items[0].productId, 'mug');
+  assert.equal(current.commerce.products.length, 0, 'Legacy Android records are not overwritten');
+  assert.equal(JSON.stringify(current.luqtaCommerce).includes(customer.token), false, 'Access token is not exported');
+  assert.equal(JSON.stringify(current.luqtaCommerce).includes(customer.user.email), false, 'Email is not exported');
+  const invalid = { ...calls[0], products: [{ id: 'bad/id', name: 'خاطئ', category: 'other', retailPrice: 1, stockQuantity: 1 }] };
+  assert.throws(() => mutateLiveState(current, 'recordLuqtaSnapshot', { ...invalid, receivedAt: new Date().toISOString() }), /معرّف/);
 });
 
 test('L119 the bridge snapshot respects limits and never contains sensitive columns', async (t) => {
