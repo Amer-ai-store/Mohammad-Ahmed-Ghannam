@@ -177,7 +177,7 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     if(!user)throw new Error('سجّل الدخول لإنشاء طلب على الخادم');
     if(buyNowCheckout&&!buyNow)throw new Error('طلب الشراء المباشر لم يعد متاحًا');
     const lines=items||(buyNowCheckout?buyNow:state.cart);
-    if(!Object.keys(lines).length)throw new Error('السلة فارغة');
+    if(!lines||!Object.keys(lines).length)throw new Error('السلة فارغة');
     const response=await api.post<{order:Order}>('/orders',{...input,branchId:state.branchId||undefined,items:Object.entries(lines).map(([productId,quantity])=>({productId,quantity}))});
     setOrders(old=>[response.order,...old.filter(o=>o.id!==response.order.id)]);
     if(buyNowCheckout)setBuyNowState(null);else setState(s=>({...s,cart:{}}));
