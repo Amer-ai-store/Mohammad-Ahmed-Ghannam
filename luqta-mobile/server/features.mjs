@@ -90,6 +90,8 @@ async function geminiJson({ key, model, fetcher, parts, timeoutMs = 25_000 }) {
 const DATA_URL = /^data:(image\/(?:png|jpeg|webp)|audio\/(?:webm|ogg|mp4|mpeg|wav|aac));base64,([A-Za-z0-9+/=]+)$/;
 
 export function installFeatures(ctx) {
+  const { flagOn = () => true } = ctx;
+  const featureOff = (k) => { if (!flagOn(k)) fail(403, 'هذه الميزة متوقفة مؤقتًا من إدارة المتجر', 'feature_disabled'); };
   const { db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, notify, rewardLedger, rewardBalance, product, setting, setSetting, rate, audit, options } = ctx;
   db.exec(`
     CREATE TABLE IF NOT EXISTS price_history(id INTEGER PRIMARY KEY AUTOINCREMENT,product_id TEXT NOT NULL,price REAL NOT NULL,old_price REAL,at TEXT NOT NULL);
@@ -325,6 +327,7 @@ export function installFeatures(ctx) {
       const actor = requireUser(req);
       if (method === 'GET') return { status: 200, body: { lists: all('SELECT l.* FROM lists l JOIN list_members m ON m.list_id=l.id WHERE m.user_id=? ORDER BY l.updated_at DESC', actor.id).map(listView) } };
       if (method === 'POST') {
+        featureOff('lists');
         if (get('SELECT COUNT(*) AS n FROM lists WHERE owner_id=?', actor.id).n >= 30) fail(400, 'الحد الأقصى 30 قائمة');
         const lid = id('lst'), t = now(), family = body.family === true;
         transaction(() => { run('INSERT INTO lists VALUES(?,?,?,?,?,?,?,?)', lid, actor.id, text(body.name, 'اسم القائمة', 1, 60), body.budget == null || body.budget === '' ? null : money(number(body.budget, 'الميزانية', 0, 1e6)), family ? shareCode() : null, family ? 1 : 0, t, t); run('INSERT INTO list_members VALUES(?,?,?,?)', lid, actor.id, 'owner', t); });
@@ -383,6 +386,7 @@ export function installFeatures(ctx) {
       return { status: 200, body: { ...result, profile: rewardsProfile(actor) } };
     }
     if (method === 'POST' && path === '/api/rewards/game') {
+      featureOff('game');
       const actor = requireUser(req), today = ammanDay();
       const moves = integer(body.moves, 'عدد المحاولات', 1, 500), seconds = integer(body.seconds, 'المدة', 1, 3600), pairs = integer(body.pairs ?? 6, 'عدد الأزواج', 6, 6);
       if (moves < pairs || seconds < 8) fail(400, 'نتيجة اللعبة غير منطقية', 'implausible_result');
@@ -399,6 +403,7 @@ export function installFeatures(ctx) {
     if (method === 'PATCH' && (m = /^\/api\/admin\/coupon-visibility\/([\w-]+)$/.exec(path))) { const actor = admin(req, 'catalog:write'); const c = get('SELECT * FROM coupons WHERE id=?', m[1]); if (!c) fail(404, 'الكوبون غير موجود', 'not_found'); run('UPDATE coupons SET public=?,title=? WHERE id=?', body.public ? 1 : 0, body.title == null ? c.title : text(body.title, 'عنوان الكوبون', 2, 80), c.id); audit(actor, 'coupon.public', c.id, { public: !!body.public }); return { status: 200, body: { ok: true } }; }
     // ---- shoppable videos + stories (F-G14-18, F-G14-19) ----
     if (method === 'GET' && path === '/api/media') {
+      if (!flagOn('reels')) return { status: 200, body: { posts: [], disabled: true } };
       const url = new URL(req.url, 'http://x'), kind = url.searchParams.get('kind') === 'story' ? 'story' : 'video', user = optionalUser(req);
       return { status: 200, body: { posts: all('SELECT * FROM media_posts WHERE kind=? AND active=1 AND (expires_at IS NULL OR expires_at>?) ORDER BY created_at DESC LIMIT 50', kind, now()).map((x) => mediaView(x, user?.id)) } };
     }
@@ -459,9 +464,9 @@ export function installFeatures(ctx) {
     }
     if (method === 'DELETE' && (m = /^\/api\/receipts\/([\w-]+)$/.exec(path))) { const actor = requireUser(req); run('DELETE FROM receipts WHERE id=? AND user_id=?', m[1], actor.id); return { status: 200, body: { ok: true } }; }
     // ---- AI (vision search, receipt OCR, nutrition, voice) — server-side key only (F-G14-12/14/15/16) ----
-    if (method === 'GET' && path === '/api/ai/status') return { status: 200, body: { configured: !!aiKey, provider: aiKey ? 'gemini' : null, model: aiKey ? aiModel : null } };
+    if (method === 'GET' && path === '/api/ai/status') return { status: 200, body: { enabled: flagOn('ai'), configured: !!aiKey, provider: aiKey ? 'gemini' : null, model: aiKey ? aiModel : null } };
     if (method === 'POST' && path === '/api/ai/vision') {
-      requireUser(req); rate(req, 'ai-vision', 30); requireAi();
+      featureOff('ai'); requireUser(req); rate(req, 'ai-vision', 30); requireAi();
       const task = ['products', 'receipt', 'nutrition'].includes(body.task) ? body.task : 'products', img = dataUrl(body.image, 'الصورة', 4_000_000);
       const prompts = {
         products: 'Identify the main purchasable product(s) in this photo. Reply JSON {"labels":[short Arabic product names],"keywords":[Arabic and English search keywords],"category":string}.',
@@ -477,7 +482,7 @@ export function installFeatures(ctx) {
       return { status: 200, body: { task, result: out } };
     }
     if (method === 'POST' && path === '/api/ai/transcribe') {
-      requireUser(req); rate(req, 'ai-voice', 40); requireAi();
+      featureOff('ai'); requireUser(req); rate(req, 'ai-voice', 40); requireAi();
       const audio = dataUrl(body.audio, 'التسجيل الصوتي', 2_000_000);
       const out = await geminiJson({ key: aiKey, model: aiModel, fetcher: aiFetch, parts: [{ text: 'Transcribe this short shopping voice query (Arabic or English). Reply JSON {"text":string}.' }, { inline_data: { mime_type: audio.mimeType, data: audio.data } }] });
       return { status: 200, body: { text: typeof out.text === 'string' ? out.text.slice(0, 200) : '' } };
@@ -490,7 +495,7 @@ export function installFeatures(ctx) {
     }
     // ---- merchant portal (F-G14-33) ----
     if (method === 'POST' && path === '/api/merchant/apply') {
-      const actor = requireUser(req); if (merchantOf(actor)) fail(409, 'لديك طلب تاجر مسجل بالفعل');
+      featureOff('merchant'); const actor = requireUser(req); if (merchantOf(actor)) fail(409, 'لديك طلب تاجر مسجل بالفعل');
       run('INSERT INTO merchants VALUES(?,?,?,?,?,?)', actor.id, text(body.storeName, 'اسم المتجر', 2, 80), body.phone ? text(body.phone, 'الهاتف', 7, 20) : null, 'pending', now(), now());
       for (const a of all("SELECT id FROM users WHERE role='admin'")) notify(a.id, 'طلب تاجر جديد', `طلب ${actor.name} الانضمام كتاجر`);
       return { status: 201, body: { merchant: { status: 'pending' } } };

@@ -31,7 +31,7 @@ export default function PriceRadar() {
       <Card>
         <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
           <Search size={22} color={t.purple} />
-          <TextInput testID="radar-search" accessibilityLabel="ابحث عن منتج للمقارنة" value={q} onChangeText={setQ} placeholder="ابحث عن منتج للمقارنة" placeholderTextColor={t.mutedSoft} style={{ flex: 1, minHeight: 46, color: t.ink, textAlign: "right", fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 16 }} />
+          <TextInput testID="radar-search" accessibilityLabel="ابحث عن منتج للمقارنة" value={q} onChangeText={setQ} placeholder="ابحث عن منتج للمقارنة" placeholderTextColor={t.mutedSoft} style={{ flex: 1, minWidth: 0, minHeight: 46, color: t.ink, textAlign: "right", fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 16 }} />
         </View>
         {!product || q ? matches.map((p) => <ProductRow key={p.id} product={p} onPress={() => { setSelected(p.id); setQ(""); }} testID={`radar-pick-${p.id}`} />) : null}
       </Card>

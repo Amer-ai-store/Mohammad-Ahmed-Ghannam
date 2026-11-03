@@ -87,7 +87,7 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   searchInner: { flexDirection: "row-reverse", alignItems: "center", backgroundColor: t.field, borderRadius: 999, minHeight: 54, paddingHorizontal: 6 },
   camera: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
   divider: { width: 1.5, height: 30, backgroundColor: t.line, marginHorizontal: 6 },
-  input: { flex: 1, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 16, color: t.ink, textAlign: "right", writingDirection: "rtl", paddingHorizontal: 8, minHeight: 48 },
+  input: { flex: 1, minWidth: 0, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 16, color: t.ink, textAlign: "right", writingDirection: "rtl", paddingHorizontal: 8, minHeight: 48 },
   mic: { width: 50, height: 50, borderRadius: 25, backgroundColor: t.purple, alignItems: "center", justifyContent: "center" },
   cats: { flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 12 },
   cat: { width: "22.5%", aspectRatio: 1, backgroundColor: t.card, borderRadius: 20, borderWidth: 1, borderColor: t.line, alignItems: "center", justifyContent: "center", gap: 6, shadowColor: t.shadow, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },

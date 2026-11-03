@@ -238,7 +238,7 @@ test('F-G14-14 حفظ الفواتير ومقارنتها بأسعار المت�
 test('F-G14-12/15/16 الذكاء الاصطناعي يعمل فقط بمفتاح على الخادم (بدون مفتاح = 503 واضح)', async (t) => {
   const { request, register } = await fixture(t);
   const u = await register();
-  assert.deepEqual((await request('GET', '/ai/status')).body, { configured: false, provider: null, model: null });
+  assert.deepEqual((await request('GET', '/ai/status')).body, { enabled: true, configured: false, provider: null, model: null });
   const r = await request('POST', '/ai/vision', { task: 'products', image: 'data:image/png;base64,iVBORw0KGgo=' }, u.token);
   assert.equal(r.status, 503); assert.equal(r.body.code, 'ai_not_configured');
 });

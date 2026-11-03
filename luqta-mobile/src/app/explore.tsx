@@ -159,7 +159,7 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   sheetRow: { flexDirection: "row-reverse", alignItems: "center", gap: 12, minHeight: 50, borderBottomWidth: 1, borderColor: t.line },
   search: { flexDirection: "row", alignItems: "center", backgroundColor: t.card, borderRadius: 999, borderWidth: 1, borderColor: t.line, padding: 5, minHeight: 60, marginTop: 4 },
   searchBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: t.purpleSoft, alignItems: "center", justifyContent: "center" },
-  input: { flex: 1, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 16, color: t.ink, textAlign: "right", writingDirection: "rtl", paddingHorizontal: 12, minHeight: 48 },
+  input: { flex: 1, minWidth: 0, fontFamily: "IBMPlexSansArabic_500Medium", fontSize: 16, color: t.ink, textAlign: "right", writingDirection: "rtl", paddingHorizontal: 12, minHeight: 48 },
   tools: { flexDirection: "row", gap: 12, marginTop: 12, width: "76%" },
   tool: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 52, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: t.line, backgroundColor: t.card },
   panel: { backgroundColor: t.card, borderRadius: 20, borderWidth: 1, borderColor: t.line, padding: 14, marginTop: 10, gap: 10 },

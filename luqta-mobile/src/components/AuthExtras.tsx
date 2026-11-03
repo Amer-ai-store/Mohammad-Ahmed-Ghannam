@@ -78,7 +78,7 @@ export function PhoneSignIn({ demo, askName = false, onDone }: { demo: boolean; 
           <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
             <Smartphone size={22} color={t.purple} />
             <TextInput testID="phone-input" accessibilityLabel="رقم الهاتف" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" placeholder="07XXXXXXXX" placeholderTextColor={t.mutedSoft}
-              style={{ flex: 1, minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: t.line, backgroundColor: t.field, paddingHorizontal: 14, fontSize: 18, color: t.ink, textAlign: "left", writingDirection: "ltr", fontFamily: "IBMPlexSansArabic_500Medium" }} />
+              style={{ flex: 1, minWidth: 0, minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: t.line, backgroundColor: t.field, paddingHorizontal: 14, fontSize: 18, color: t.ink, textAlign: "left", writingDirection: "ltr", fontFamily: "IBMPlexSansArabic_500Medium" }} />
           </View>
           {askName ? <Field label="الاسم" placeholder="اسمك (للحسابات الجديدة)" value={name} onChangeText={setName} testID="phone-name" /> : null}
           <CTA title="أرسل رمز التحقق" busy={busy} disabled={phone.replace(/\D/g, "").length < 9} onPress={() => void send()} testID="phone-send" />
