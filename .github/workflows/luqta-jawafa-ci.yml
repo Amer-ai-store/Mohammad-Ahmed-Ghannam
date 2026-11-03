@@ -5,6 +5,8 @@ on:
       - 'luqta-mobile/**'
       - 'dashboard/luqta-*.js'
       - 'dashboard/index.html'
+      - 'dashboard/aas-roster.html'
+      - 'dashboard/tests/aas-roster.test.cjs'
       - '.github/workflows/luqta-jawafa-ci.yml'
   push:
     branches: [main]
@@ -12,6 +14,8 @@ on:
       - 'luqta-mobile/**'
       - 'dashboard/luqta-*.js'
       - 'dashboard/index.html'
+      - 'dashboard/aas-roster.html'
+      - 'dashboard/tests/aas-roster.test.cjs'
       - '.github/workflows/luqta-jawafa-ci.yml'
 permissions:
   contents: read
@@ -37,6 +41,7 @@ jobs:
       - run: npm test
       - run: node --check ../dashboard/luqta-integration.js
       - run: node --check ../dashboard/luqta-api.js
+      - run: node --test ../dashboard/tests/aas-roster.test.cjs
 
   # Drives the exported web app and the central dashboard in Chromium against the real server, then requires
   # passing evidence for all 125 features on every surface they list (server, app, dashboard).
