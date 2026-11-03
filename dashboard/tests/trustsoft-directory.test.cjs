@@ -21,6 +21,7 @@ function load(){
   vm.runInContext(fs.readFileSync(path.join(root,'catalog.js'),'utf8'),ctx,{filename:'catalog.js'});
   vm.runInContext(fs.readFileSync(path.join(root,'workflow-evidence.js'),'utf8'),ctx,{filename:'workflow-evidence.js'});
   vm.runInContext(fs.readFileSync(path.join(root,'directory-ui.js'),'utf8'),ctx,{filename:'directory-ui.js'});
+  vm.runInContext(fs.readFileSync(path.join(root,'operations-ui.js'),'utf8'),ctx,{filename:'operations-ui.js'});
   return ctx;
 }
 function flatten(node){return [node,...(node.children||[]).flatMap(flatten)];}
@@ -116,4 +117,55 @@ test('posting stage visualization applies to sales, purchases, stock movements a
    assert.ok(all.some(x=>x.textContent==='مرحّل'),group);
    assert.ok(all.some(x=>x.textContent.includes('لا تتيح هذه الشاشة ترحيلًا')),group);
  }
+});
+
+test('Audit15 panels reject unsourced and stale financial history',()=>{
+  const ctx=load(),host=fakeNode('div');
+  const sample={schema:'jawafa.audit15-agents.v1',
+    classification:'PRIVATE_EVIDENCE_METADATA_ONLY_NO_BUSINESS_ROWS',
+    host:'JAWAFFASVR',database:'Jawafa_DB',
+    audit15:{tables:Array.from({length:15},(_,i)=>({table:'Test'+i,referenceRows:10,exportRows:10,laterMinusReference:0}))},
+    existingAgents:{agents:[]}};
+  const renderer=rows=>{const node=fakeNode('table');node.textContent=JSON.stringify(rows);return node;};
+  ctx.TrustSoftOperationsUI.render({group:'audit15',host,tableRenderer:renderer,
+    snapshot:{state:'connected',stale:true,data:{audit15_ops:sample}}});
+  let nodes=flatten(host);
+  assert.ok(nodes.some(x=>x.textContent.includes('BLOCKED')));
+  assert.ok(!nodes.some(x=>x.textContent.includes('Test14')));
+  ctx.TrustSoftOperationsUI.render({group:'audit15',host,tableRenderer:renderer,
+    snapshot:{state:'connected',stale:false,data:{audit15_ops:{...sample,classification:'PUBLIC',audit15:{tables:[]}}}}});
+  nodes=flatten(host);
+  assert.ok(nodes.some(x=>x.textContent.includes('BLOCKED')));
+});
+test('genuine authenticated Audit15 metadata can render 15 rows and agent tasks',()=>{
+  const ctx=load(),host=fakeNode('div');
+  const status={schema:'jawafa.audit15-agents.v1',classification:'PRIVATE_EVIDENCE_METADATA_ONLY_NO_BUSINESS_ROWS',
+    host:'JAWAFFASVR',database:'Jawafa_DB',checkedUtc:'2026-11-04T00:00:00Z',
+    audit15:{tables:Array.from({length:15},(_,i)=>({table:'Test'+i,referenceRows:9,exportRows:10,laterMinusReference:1,
+      historicalValueDifferenceCandidates:0,priorAuditLatestMode:'FULL',declaredForeignKeyCount:0})),
+      transferGuardStatus:'TRANSFER_VERIFIED_15_OF_15',verifiedTransferFiles:15,verifiedRoundtrips:15,historicalRootCauseVerified:false},
+    existingAgents:{agents:[{name:'JawafaExportAgent20Min',category:'data_pipeline',
+      schedulerState:'Ready',lastSchedulerResult:0,lastRunLocal:'2026-11-04T02:30:30',aiModelEndpointVerified:false}]},
+    export:{mode:'PARTIAL_REFERENCE_ONLY',processedTables:1023,totalTables:1024,remainingTables:1,failedTables:0,progressPercent:99.9}};
+  const snapshot={state:'connected',stale:false,data:{audit15_ops:status}};
+  const renderer=rows=>{const node=fakeNode('table');node.textContent=JSON.stringify(rows);return node;};
+  assert.ok(ctx.TrustSoftOperationsUI.trusted(snapshot));
+  ctx.TrustSoftOperationsUI.render({group:'audit15',host,snapshot,tableRenderer:renderer});
+  let nodes=flatten(host);
+  assert.ok(nodes.some(x=>x.textContent.includes('Test14')));
+  assert.ok(nodes.some(x=>x.textContent.includes('غير محسوم')));
+  ctx.TrustSoftOperationsUI.render({group:'agents',host,snapshot,tableRenderer:renderer});
+  nodes=flatten(host);
+  assert.ok(nodes.some(x=>x.textContent.includes('JawafaExportAgent20Min')));
+  assert.ok(nodes.some(x=>x.textContent.includes('غير مثبت')));
+  assert.ok(nodes.some(x=>x.textContent.includes('PARTIAL_REFERENCE_ONLY')));
+});
+test('operations UI is passive and available before app startup',()=>{
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const ops=fs.readFileSync(path.join(root,'operations-ui.js'),'utf8');
+  assert.ok(html.indexOf('./operations-ui.js')<html.indexOf('./app.js'));
+  assert.ok(app.includes("selected==='audit15'||selected==='agents'"));
+  assert.ok(!/\b(fetch|XMLHttpRequest|WebSocket)\s*\(/.test(ops));
+  assert.ok(!/\b(INSERT|UPDATE|DELETE)\s+(INTO|FROM|dbo\.)/i.test(ops));
 });
