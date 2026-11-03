@@ -445,7 +445,30 @@ nav.side{gap:.5rem}
 </section></section>
 <section class="view" data-view="jawafa-reports" aria-labelledby="h-jawafa-reports" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-reports">التقارير المالية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-reports">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-reports">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-reports">NOT_CONNECTED</span></div>
-<div class="panel" data-jawafa-pane="jawafa-reports"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<div class="panel" data-jawafa-pane="jawafa-reports"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div>
+<section class="panel" id="jawafa-chat-report-ledger" aria-labelledby="jawafa-chat-report-ledger-title">
+  <div class="panel-head"><div>
+    <span class="eyebrow">JAWAFA · CHATGPT REPORTS · PRIVATE GATEWAY</span>
+    <h2 id="jawafa-chat-report-ledger-title">سجل تقارير ومراجعات هذه المحادثة</h2>
+  </div><span class="pill warn" id="jcr-status" role="status" aria-live="polite">PRIVATE_GATEWAY_REQUIRED</span></div>
+  <p class="small muted">منفذ القراءة المقترح: <code>/api/jawafa/v1/chat-report-ledger</code>، عبر HTTPS خاص وبصلاحية المالك فقط. لا يُستورد محتوى ChatGPT تلقائيًا من المحادثات، ولا تظهر ملفات Google Drive الخاصة في صفحة GitHub Pages العامة. تظل التقارير والشيكات والأدلة محفوظة في مصادرها الخاصة.</p>
+  <div class="toolbar" style="margin-top:12px">
+    <button type="button" id="jcr-refresh">التحقق من الربط الخاص</button>
+    <label class="field">نوع التقرير <select id="jcr-category"><option value="all">الكل</option></select></label>
+    <label class="field">حالة التحقق <select id="jcr-level"><option value="all">الكل</option></select></label>
+    <label class="field">بحث <input type="search" id="jcr-search" placeholder="عنوان أو معرّف دليل" autocomplete="off" maxlength="100"></label>
+  </div>
+  <div class="kpis" style="margin-top:12px">
+    <div class="kpi"><span class="label">العدد في المصدر الموثق</span><strong class="value" id="jcr-count">—</strong></div>
+    <div class="kpi"><span class="label">وقت التحقق المستقل</span><strong class="value small" id="jcr-verified">—</strong></div>
+    <div class="kpi"><span class="label">لقطة المصدر</span><strong class="value small" id="jcr-snapshot">لا يوجد مصدر مصادق عليه</strong></div>
+  </div>
+  <div class="table-wrap" style="margin-top:12px"><table>
+    <thead><tr><th>التقرير/الملخص</th><th>المجموعة</th><th>الحالة</th><th>مستوى الدليل</th><th>تاريخ المصدر</th><th>فتح خاص</th></tr></thead>
+    <tbody id="jcr-items"><tr><td colspan="6">لا توجد تقارير مقبولة من بوابة خاصة.</td></tr></tbody>
+  </table></div>
+  <p class="small muted" style="margin-top:8px">يرفض القسم البيانات غير المصادق عليها أو المنتهية أو روابط التحويل غير الموثوقة. ظهور حالة PRIVATE_VERIFIED يؤكد صحة غلاف القراءة الخاص فقط، ولا يثبت مطابقة كل قيد أو قبول GATE-15. الربط الحي يحتاج خدمة مستقلة وE2E معتمد قبل رفع تجميد النشر #102.</p>
+</section></section>
 <section class="view" data-view="jawafa-errors" aria-labelledby="h-jawafa-errors" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-errors">الأخطاء والإنجاز</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-errors">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-errors">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-errors">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-errors"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div>
@@ -2591,6 +2614,7 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
 <script src="jawafa-integration.js" defer></script>
 <script src="jawafa-periodic-report.js" defer></script>
 <script type="module" src="./audit111-ui.mjs"></script>
+<script type="module" src="./jawafa-chat-reports-ui.mjs"></script>
 
 <script src="aas-integration.js" defer></script>
 <script>
