@@ -16,7 +16,8 @@ import { useMoney } from "../../lib/money";
 import { useApi } from "../../lib/useApi";
 import { api } from "../../lib/api";
 import { useRobot } from "../../lib/robot";
-import type { Product } from "../../data/products";
+import { products as seededProducts, type Product } from "../../data/products";
+import { ASSET_URI, productGalleries } from "../../lib/designAssets";
 
 type Question = { id: string; question: string; askedBy: string; createdAt: string; answers: { id: string; answer: string; official: boolean; by: string }[] };
 
@@ -56,7 +57,10 @@ function ProductContent({ id }: { id: string }) {
   const available = selectedProduct?.stock === undefined ? (requiresVariant ? 0 : 10) : Math.max(0, selectedProduct.stock);
   const remaining = Math.min(99, available - (selectedProduct ? cart[selectedProduct.id] || 0 : 0));
   const liked = favorites.includes(product.id), compared = compareIds.includes(product.id);
-  const gallery = (product.images?.length ? product.images : [typeof product.image === "string" ? product.image : ""]).filter((v, i, all) => all.indexOf(v) === i);
+  // The mockups show more views of some products; add them only while the merchant keeps the catalog's own photos.
+  const seeded = seededProducts.find((item) => item.id === product.id);
+  const extraViews = seeded && JSON.stringify(product.images || []) === JSON.stringify(seeded.images || []) ? (productGalleries[product.id] || []).map((key) => ASSET_URI + key) : [];
+  const gallery = [...(product.images?.length ? product.images : [typeof product.image === "string" ? product.image : ""]), ...extraViews].filter((v, i, all) => all.indexOf(v) === i);
   const hexColors = (product.colors || []).filter((c) => /^#[0-9a-f]{6}$/i.test(c));
   const price = selectedProduct?.price ?? product.price;
   async function share() {

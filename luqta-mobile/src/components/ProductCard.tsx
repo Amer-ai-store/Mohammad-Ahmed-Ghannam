@@ -8,21 +8,8 @@ import { useMoney } from "../lib/money";
 import { useI18n } from "../lib/i18n";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 import { Txt } from "./ui";
+import { ASSET_URI, cutoutImages, productImages } from "../lib/designAssets";
 
-const images: Record<string, ReturnType<typeof require>> = {
-  headphones: require("../../assets/products/headphones.jpg"),
-  speaker: require("../../assets/products/speaker.jpg"),
-  keyboard: require("../../assets/products/keyboard.jpg"),
-  lamp: require("../../assets/products/lamp.jpg"),
-  chair: require("../../assets/products/chair.jpg"),
-  mug: require("../../assets/products/mug.jpg"),
-  sneakers: require("../../assets/products/sneakers.jpg"),
-  bag: require("../../assets/products/bag.jpg"),
-  watch: require("../../assets/products/watch.jpg"),
-  serum: require("../../assets/products/serum.jpg"),
-  fragrance: require("../../assets/products/fragrance.jpg"),
-  diffuser: require("../../assets/products/diffuser.jpg"),
-};
 
 // Photo when the product has one; otherwise an illustrated tile (emoji on the product colour) so groceries still look great.
 export function ProductImage({ product, style, uri }: { product: Product; style?: object; uri?: string }) {
@@ -33,15 +20,26 @@ export function ProductImage({ product, style, uri }: { product: Product; style?
   const [failedSource, setFailedSource] = React.useState("");
   const failed = failedSource === sourceKey;
   const original = sampleProducts.find((item) => item.id === product.id);
+  // "asset:<key>" names a bundled image directly (extra gallery views from the mockups).
+  const assetKey = typeof uri === "string" && uri.startsWith(ASSET_URI) ? uri.slice(ASSET_URI.length) : "";
   // The catalog photo ships inside the app; use that copy (no network needed) whenever the requested image is that photo.
-  const bundled = (!uri || uri === original?.image) && original?.image === product.image ? images[product.id] : undefined;
-  const remote = typeof source === "string" && /^https?:\/\//i.test(source) ? { uri: source } : undefined;
+  const bundled = assetKey ? productImages[assetKey] : (!uri || uri === original?.image) && original?.image === product.image ? productImages[product.id] : undefined;
+  const remote = !assetKey && typeof source === "string" && /^https?:\/\//i.test(source) ? { uri: source } : undefined;
   if (failed || (!bundled && !remote)) {
     const tint = product.colors?.find((c) => /^#[0-9a-f]{6}$/i.test(c)) || t.primary;
     return (
       <View accessibilityRole="image" accessibilityLabel={product.name} style={[{ width: "100%", height: "100%", backgroundColor: `${tint}26`, alignItems: "center", justifyContent: "center" }, style]}>
         {product.emoji ? <Txt style={{ fontSize: 58, textAlign: "center", lineHeight: 70 }}>{product.emoji}</Txt> : <ShoppingBag color={t.muted} size={38} />}
         {product.emoji ? null : <Txt style={{ fontSize: 11, color: t.muted, textAlign: "center" }}>{tr("صورة غير متاحة")}</Txt>}
+      </View>
+    );
+  }
+  if (bundled && cutoutImages.has(assetKey || product.id)) {
+    // Mockup cut-outs: show the whole product with some breathing room, on white in both themes because
+    // their soft floor shadows are white.
+    return (
+      <View style={[{ width: "100%", height: "100%", padding: "8%", backgroundColor: "#FFFFFF" }, style]}>
+        <Image accessibilityLabel={product.name} source={bundled} onError={() => setFailedSource(sourceKey)} style={{ width: "100%", height: "100%", resizeMode: "contain" }} />
       </View>
     );
   }

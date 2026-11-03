@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, TextInput, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, ScrollView, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Camera, Mic, Search, CalendarCheck, ArrowLeft, Sparkles } from "lucide-react-native";
 import { Shell } from "../components/Shell";
@@ -16,6 +16,7 @@ import { useI18n } from "../lib/i18n";
 import { useApi } from "../lib/useApi";
 import { api } from "../lib/api";
 import { categoryName, useCategories } from "../lib/catalog";
+import { categoryArt, FEATURED_CATEGORIES } from "../lib/designAssets";
 import { useRobot } from "../lib/robot";
 import type { Product } from "../data/products";
 
@@ -96,9 +97,9 @@ export default function Home() {
 
       <SectionTitle title="الأقسام" action="كل الأقسام" onPress={() => router.navigate("/explore")} />
       <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
-        {categories.slice(0, 4).map((c) => (
+        {[...FEATURED_CATEGORIES.flatMap((key) => categories.filter((c) => c.id === key)), ...categories.filter((c) => !FEATURED_CATEGORIES.includes(c.id))].slice(0, 4).map((c) => (
           <Pressable key={c.id} testID={`category-${c.id}`} accessibilityRole="button" accessibilityLabel={categoryName(c, lang)} onPress={() => router.navigate({ pathname: "/explore", params: { category: c.id } })} style={{ width: "23%", alignItems: "center", gap: 6 }}>
-            <View style={{ width: "100%", aspectRatio: 1, maxWidth: 86, borderRadius: 24, backgroundColor: `${c.color}22`, alignItems: "center", justifyContent: "center" }}><CategoryIcon name={c.icon} size={28} color={c.color} /></View>
+            <View style={{ width: "100%", aspectRatio: 1, maxWidth: 86, borderRadius: 24, backgroundColor: `${c.color}22`, alignItems: "center", justifyContent: "center" }}>{categoryArt[c.id] ? <Image testID={`category-art-${c.id}`} source={categoryArt[c.id]} accessibilityIgnoresInvertColors resizeMode="contain" style={{ width: "70%", height: "70%" }} /> : <CategoryIcon name={c.icon} size={28} color={c.color} />}</View>
             <Txt weight="bold" numberOfLines={1} style={{ fontSize: 12, textAlign: "center" }}>{categoryName(c, lang)}</Txt>
           </Pressable>
         ))}

@@ -1,5 +1,5 @@
 import React from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Bell, Bot, Compass, Gift, Heart, House, ListChecks, LayoutDashboard, Package, Refrigerator, ShoppingBag, Sparkles, Store, UserRound, Headset, Wallet } from "lucide-react-native";
 import { router, usePathname, type Href } from "expo-router";
@@ -8,6 +8,7 @@ import { useStore } from "../lib/store";
 import { useSession } from "../lib/session";
 import { useI18n } from "../lib/i18n";
 import { Txt } from "./ui";
+import { designAssets } from "../lib/designAssets";
 import { Mascot } from "./Robot";
 import type { RobotMotion } from "../lib/robot";
 
@@ -33,10 +34,7 @@ export function Logo({ small = false }: { small?: boolean }) {
   const { t: tr } = useI18n();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={tr("لُقطة — الرئيسية")} onPress={() => router.navigate("/")} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-      <View style={{ width: small ? 38 : 46, height: small ? 38 : 46, borderRadius: small ? 13 : 16, backgroundColor: t.primary, alignItems: "center", justifyContent: "center" }}>
-        <ShoppingBag color={t.onPrimary} size={small ? 20 : 24} strokeWidth={2.2} />
-        <View style={{ position: "absolute", top: small ? 7 : 8, left: small ? 8 : 9, width: 7, height: 7, borderRadius: 4, backgroundColor: t.orange }} />
-      </View>
+      <Image testID="brand-logo" source={designAssets.logoMark} accessibilityIgnoresInvertColors resizeMode="contain" style={{ width: small ? 38 : 46, height: small ? 38 : 46 }} />
       <View>
         <Txt weight="extra" style={{ fontSize: small ? 22 : 28, lineHeight: small ? 28 : 34 }}>{tr("لُقطة")}</Txt>
         <Txt weight="bold" style={{ fontSize: small ? 10 : 11, color: t.muted, letterSpacing: 0.4 }}>Amer AI Store</Txt>

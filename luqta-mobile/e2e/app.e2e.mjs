@@ -242,6 +242,10 @@ e2e('L013 L017 L069 L079 L081 L027 the home screen shows server categories, camp
   assert.equal(await page.locator('[data-testid="catalog-banner"]').count(), 0);
   const { categories } = await api('GET', '/categories');
   await id(page, `category-${categories[0].id}`).waitFor();
+  // The brand logo and the mockups' four departments on the home row, each drawn with its illustration from the designs.
+  await id(page, 'brand-logo').waitFor();
+  for (const dept of ['fresh', 'electronics', 'fashion', 'home']) await id(page, `category-art-${dept}`).waitFor();
+  await until(() => id(page, 'category-art-fresh').evaluate((el) => [...el.querySelectorAll('img')].some((img) => img.complete && img.naturalWidth > 0)), 10000, 'the basket illustration loaded');
   const { campaigns } = await api('GET', '/campaigns');
   assert.ok(campaigns.length >= 1);
   await id(page, `campaign-${campaigns[0].id}`).waitFor();
@@ -380,6 +384,13 @@ e2e('L018 L019 L020 L026 product gallery with video, sizes with their own stock,
   await toast(page, 'أُضيف المنتج إلى سلتك');
   await go(page, '/cart');
   await id(page, 'cart-line-sneakers-43').waitFor();
+  // The mockups show two more views of the headphones: the gallery adds them after the catalog photo, and they load
+  // from the app itself (the mockup's video thumbnail, with a play icon drawn on it, is not one of them).
+  await go(page, '/product/headphones');
+  const views = id(page, 'gallery').getByRole('button', { name: /^صورة \d+$/ });
+  await until(async () => (await views.count()) === 3, 15000, 'the catalog photo and two mockup views');
+  await views.nth(2).click();
+  await until(() => id(page, 'gallery').evaluate((el) => [...el.querySelectorAll('img')].filter((img) => img.complete && img.naturalWidth > 0).length >= 3), 10000, 'all three views loaded');
 });
 
 e2e('L028 only buyers who received the product can publish a review', async ({ open }) => {
