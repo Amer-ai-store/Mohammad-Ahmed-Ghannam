@@ -27,7 +27,7 @@ function commandCenter() {
     let body = ''; for await (const chunk of req) body += chunk;
     const url = new URL(req.url, 'http://x'); calls.push({ method: req.method, path: url.pathname, body: body ? JSON.parse(body) : null });
     const send = (status, value) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(value)); };
-    if (url.pathname === '/api/v1/app/sync') return send(200, { ok: true, revision: 3 });
+    if (url.pathname === '/api/v1/app/luqta-sync') return send(200, { ok: true, revision: 3 });
     if (url.pathname === '/api/v1/bridge/snapshot' || url.pathname === '/api/v1/bridge/receipts') return send(200, { ok: true });
     if (url.pathname === '/api/v1/bridge/context') return send(200, { operations });
     if (url.pathname === '/api/v1/state') return send(200, { products: [{ id: 'milk', name: 'حليب طازج كامل الدسم', retailPrice: 1.2, stockQuantity: 66, category: 'dairy' }, { id: 'cc-dates', name: 'تمر من لوحة القيادة', retailPrice: 4.75, stockQuantity: 12, category: 'pantry' }, { id: 'bad-row', name: '', retailPrice: -2 }] });
