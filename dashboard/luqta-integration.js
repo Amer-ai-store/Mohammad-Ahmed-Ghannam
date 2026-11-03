@@ -115,9 +115,10 @@
       const result = await work();
       if (!client.connected) { bridgeHealthVerified = false; jawafaSourceVerified = false; draw(); return; }
       const outcome = typeof result === "string" ? result : "اكتملت العملية وتأكد رد الخادم.";
+      // Only confirm after the refreshed section has finished rendering. Reporting success
+      // earlier lets the user (and e2e tests) type into a form that load() then replaces.
+      if (refresh) await load();
       message(outcome);
-      // Reloading the section must not hide the confirmation the merchant is waiting for.
-      if (refresh) { await load(); message(outcome); }
     } catch (error) {
       if (!client.connected) { bridgeHealthVerified = false; jawafaSourceVerified = false; draw(); }
       message(error.message || "تعذر تنفيذ العملية.", true);
