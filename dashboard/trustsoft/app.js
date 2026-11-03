@@ -53,6 +53,15 @@ function table(rows){if(!rows?.length)return el('div','لا توجد نتائج 
 function render(){if(!snapshot)return;
  $('title').textContent=labels[selected];document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',String(b.dataset.section===selected)));
  const s=snapshot,d=s.data,ok=s.state==='connected'&&!s.stale;
+ if(globalThis.TrustSoftInsights && $('insights')){
+  const report=globalThis.TrustSoftInsights.analyze(s);
+  const target=$('insights');target.replaceChildren();
+  target.append(el('p','حالة الدليل: '+report.evidence+' • عدد جداول الفهرس المرئية: '+report.tableCatalogCount+' • صفوف العينات: '+report.sampleRowCount));
+  target.append(el('p','وحدة الحسابات تعرض عينات فقط ولا تعتمد المجاميع المالية أو استنتاجات الذكاء الاصطناعي دون تحقق مستقل.'));
+  if(report.anomalies.length)target.append(table(report.anomalies.map(x=>({ملاحظة:x}))));
+  if(report.sections.length)target.append(table(report.sections.map(x=>({القسم:x.section,صفوف_العينة:x.sampleRows,حالة_المصدر:x.state,النطاق:x.scope}))));
+ }
+
  $('status').textContent=ok?'متصل • استعلام ناجح':'غير متصل / بيانات غير حديثة';$('status').dataset.ok=String(ok);
  $('alert').hidden=ok;$('alert').textContent=(errors[s.error]||s.error||'بانتظار التحقق')+' — لا توجد بيانات حية مؤكدة. أي بيانات سابقة أدناه قديمة.';
  $('updated').textContent='آخر قراءة ناجحة: '+(s.last_success?new Date(s.last_success*1000).toLocaleString('ar'):'لم تحدث');
