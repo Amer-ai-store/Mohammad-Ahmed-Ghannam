@@ -109,7 +109,8 @@ test('L115 L116 audit log and agent keys with scoped jobs', async (t) => {
   const { request, admin } = await fixture(t);
   const key = (await request('POST', '/admin/agent-keys', { name: 'وكيل المخزون', scopes: ['inventory:write'] }, admin.token)).body;
   assert.match(key.token, /^lq_agent_/);
-  assert.equal((await request('GET', '/admin/branches', undefined, key.token)).status, 403, 'new admin areas need a full administrator');
+  assert.equal((await request('GET', '/admin/branches', undefined, key.token)).status, 200, 'inventory-scoped agents may inspect branches');
+  assert.equal((await request('GET', '/admin/audit', undefined, key.token)).status, 403, 'inventory-scoped agents must not read full administrative audit');
   assert.equal((await request('POST', '/admin/inventory/import', { items: [{ id: 'milk', stock: 33 }] }, key.token)).status, 200);
   const job = await request('POST', '/admin/agent-jobs', { title: 'فحص المخزون', description: 'مراجعة الأصناف المنخفضة', type: 'audit' }, admin.token);
   assert.equal(job.status, 201);
