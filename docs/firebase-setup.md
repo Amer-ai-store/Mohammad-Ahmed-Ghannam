@@ -11,7 +11,7 @@
 | Firestore | قاعدة `(default)` في `nam5` |
 | قواعد الأمان | `firestore.rules` منشورة. حلّت محل قواعد «وضع الاختبار» التي انتهت في 14 أغسطس وكانت تمنع الجميع |
 | الدخول المجهول (Anonymous) | مفعّل، وبه يكتب التطبيق |
-| النطاقات المسموح بها | أُضيف `mohammadzxzx1991.github.io` |
+| النطاقات المسموح بها | يجب التحقق من سماح Firebase Authentication للنطاق `amer-ai-store.github.io`؛ الإعداد الفعلي غير مثبت هنا |
 | تطبيق Android | «Amer Store (Android)» للحزمة `com.aistudio.aicommerce.kpqzjx`، وقيمه في `.env.example` |
 | تطبيق الويب | «Amer Live Dashboard»، وإعداداته في `dashboard/firebase-config.js` |
 
@@ -30,11 +30,11 @@ https://console.firebase.google.com/project/ameraistore-1c81d/authentication/pro
 ← **Email/Password** ← **Enable** ← **Save**.
 قبل هذه الخطوة يرفض التطبيق التسجيل والدخول برسالة «الدخول بالبريد وكلمة المرور غير مفعّل في Firebase بعد».
 
-GitHub Pages مفعّل (Source: GitHub Actions)، واللوحة تُنشر تلقائياً من `dashboard/` عبر `.github/workflows/pages.yml`.
+رابط اللوحة المركزية يعمل عبر GitHub Pages، لكن مسار إعادة النشر `pages.yml` متجمد وفق Issue #102 حتى إثبات الاعتماد الأمني والموافقة المستقلة.
 
 ## التجربة
 1. ثبّت أحدث ملف APK من GitHub Actions، وافتح التطبيق مع اتصال بالإنترنت.
-2. افتح https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/#store ← **تسجيل الدخول بـ Google** بحساب `zxzx.mohammad91@gmail.com`.
+2. افتح https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/#store ← **تسجيل الدخول بـ Google** بحساب `zxzx.mohammad91@gmail.com`.
 3. أضف طلباً في التطبيق، فيظهر في اللوحة خلال ثوانٍ.
 
 ## ملاحظات
@@ -50,4 +50,3 @@ GitHub Pages مفعّل (Source: GitHub Actions)، واللوحة تُنشر ت�
 - الدخول برقم الهاتف يعمل عبر البريد المحفوظ في ذلك الحساب.
 - حساب المدير لا يُفتح إلا بكلمة `ADMIN_PASSWORD` من خانة الدخول، ولا يمكن تسجيل بريده كحساب عادي.
 - المستخدمون الذين أنشأتهم النسخ السابقة (دون كلمة مرور) يسجّلون من جديد بالبريد نفسه، فيُربط حسابهم القديم بنقاطه وطلباته.
-
