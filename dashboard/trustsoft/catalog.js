@@ -22,6 +22,7 @@
     ['cfo','وكيل المدير المالي: مقترحات تحتاج اعتمادًا','^$']
   ];
   const spec = Object.freeze({
+    catalog:{label:'دليل جميع الجداول الظاهرة',tabs:[['all','كل الجداول','.*'],['unclassified','جداول تحتاج تصنيفًا','^$']]},
     accounting:{label:'المحاسبة',tabs:accounts},
     purchases:{label:'المشتريات والموردون',tabs:[
       ['documents','فواتير المشتريات وأوامر التوريد','purchase|purch|supplier|vendor|supply|invoice'],
@@ -88,7 +89,16 @@
     });
   }
   function tabsFor(group){return (spec[group]||{tabs:[]}).tabs.map(([id,label,pattern])=>({id,label,pattern:new RegExp(pattern,'i')}));}
-  function tablesFor(catalog,tab){return catalog.filter(row=>tab.pattern.test(row.name));}
+  function tablesFor(catalog,tab){
+    if(tab?.id==='unclassified'){
+      // Keep unclassified records visible rather than silently losing them.
+      const patterns=Object.entries(spec).filter(([group])=>group!=='catalog')
+        .flatMap(([,def])=>def.tabs.map(([,,pattern])=>pattern))
+        .filter(pattern=>pattern!=='^$').map(pattern=>new RegExp(pattern,'i'));
+      return catalog.filter(row=>!patterns.some(re=>re.test(row.name)));
+    }
+    return catalog.filter(row=>Boolean(tab?.pattern?.test(row.name)));
+  }
   function relationshipEvidence(relations,tables){
     if(!Array.isArray(relations)||!tables.length)return [];
     const names=new Set(tables.map(t=>t.name.toLowerCase()));
