@@ -25,9 +25,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            git diff --check "$BASE_SHA" "$HEAD_SHA"
-            git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed-files.txt
-            git diff --unified=0 "$BASE_SHA" "$HEAD_SHA" > pr.patch
+            git diff --check "$BASE_SHA...$HEAD_SHA"
+            git diff --name-only "$BASE_SHA...$HEAD_SHA" > changed-files.txt
+            git diff --unified=0 "$BASE_SHA...$HEAD_SHA" > pr.patch
           else
             git diff --check HEAD~1 HEAD
             git diff --name-only HEAD~1 HEAD > changed-files.txt
