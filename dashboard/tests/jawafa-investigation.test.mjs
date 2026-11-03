@@ -102,3 +102,25 @@ test('failed source request does not invent financial results', async () => {
   assert.match(nodes.get('jf-summary').children[0].textContent, /غير متاحة/);
   assert.equal(nodes.get('jf-report-rows').children.length, 0);
 });
+
+test('failed refresh clears previously loaded reports rather than showing stale evidence', async () => {
+  let offline = false;
+  const nodes = harness(async () => {
+    if (offline) throw Error('offline');
+    return { ok: true, json: async () => structuredClone(manifest) };
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nodes.get('jf-summary').children.length, 8);
+  assert.equal(nodes.get('jf-report-rows').children.length, 8);
+  assert.ok(nodes.get('jf-evidence').children.length > 0);
+  offline = true;
+  await nodes.get('jf-reload').listeners.click();
+  assert.match(nodes.get('jf-load').textContent, /تعذر استيراد/);
+  assert.match(nodes.get('jf-summary').children[0].textContent, /غير متاحة/);
+  assert.equal(nodes.get('jf-report-rows').children.length, 0);
+  assert.equal(nodes.get('jf-report-filters').children.length, 0);
+  assert.equal(nodes.get('jf-evidence').children.length, 0);
+  assert.match(nodes.get('jf-results-count').textContent, /0/);
+  assert.match(nodes.get('jf-release').textContent, /102/);
+  assert.match(nodes.get('jf-source-note').textContent, /نتائج قديمة/);
+});
