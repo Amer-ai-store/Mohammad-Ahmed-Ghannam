@@ -8,7 +8,7 @@ test('P1: vendor cannot attach a variant to store-owned or foreign vendor produc
   const vendor = (await request('POST', '/admin/vendors', { name: 'متجر الفحص', commission: 10 }, admin.token)).body.vendor;
   assert.equal((await request('POST', `/admin/vendors/${vendor.id}/members`, { email: 'seller-pr135@example.test', role: 'owner' }, admin.token)).status, 201);
   assert.equal((await request('POST', `/vendor/${vendor.id}/products`, { id: 'vendor-pr135-item', name: 'قطعة اختبار', price: 2, category: 'home', stock: 5 }, seller.token)).status, 201);
-  const forbidden = await request('PATCH', `/vendor/${vendor.id}/products/vendor-pr135-item`, { variantOf: 'mug', price: 1 }, seller.token);
+  const forbidden = await request('PATCH', `/vendor/${vendor.id}/products/vendor-pr135-item`, { variantOf: 'mug', variantLabel: 'مقاس صغير', price: 1 }, seller.token);
   assert.equal(forbidden.status, 403);
   assert.equal((await request('GET', '/products/mug')).body.product.hasVariants, false);
 });
