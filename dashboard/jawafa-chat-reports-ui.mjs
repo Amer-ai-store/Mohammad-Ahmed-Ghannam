@@ -90,6 +90,7 @@ if(root){
     }catch(err){
       if(myVersion===state.version){
         const code=String(err?.message||"NOT_CONNECTED").replace(/[^A-Z0-9_]/g,"").slice(0,50)||"NOT_CONNECTED";
+        if(code==="PRIVATE_GATEWAY_428"||code==="PRIVATE_GATEWAY_403"||code==="GOOGLE_DOCS_CONSENT_REQUIRED"){googleDocsToken=null;refresh.textContent="إعادة تفويض Google Docs (قراءة فقط)";}
         clear(code);
       }
     }finally{clearTimeout(timer);refresh.disabled=false;}
