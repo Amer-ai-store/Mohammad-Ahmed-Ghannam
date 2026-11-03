@@ -11,7 +11,7 @@ import {useRobot} from './robot';
 
 export type Order = CommerceOrder;
 type State = {cart: Record<string,number>; favorites: string[]; compareIds: string[]; recentIds: string[]; saved: Record<string,number>; branchId: string|null};
-export type CheckoutInput = {address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;deliverySlot?:{date:string;window:string}|null;deliveryNotes?:string;gift?:{wrap:boolean;message?:string;recipient?:string}|null;acceptTerms?:boolean;cardToken?:string;items?:Record<string,number>};
+export type CheckoutInput = {address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;deliverySlot?:{date:string;window:string}|null;deliveryNotes?:string;gift?:{wrap:boolean;message?:string;recipient?:string}|null;acceptTerms?:boolean;cardToken?:string;items?:Record<string,number>;checkoutMode?:'cart'|'buy-now'};
 type Store = State & {
   hydrated: boolean; toast: string; products: Product[]; orders: Order[];
   catalogStatus: 'sample'|'loading'|'connected'|'offline'; catalogError: string;
@@ -173,13 +173,14 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     return {...s,compareIds:[...s.compareIds,id]};
   });
   const rememberProduct=useCallback((id:string)=>{if(validId(id))setState(s=>s.recentIds[0]===id?s:{...s,recentIds:[id,...s.recentIds.filter(x=>x!==id)].slice(0,20)});},[]);
-  const submitOrder=async({items,...input}:CheckoutInput)=>{
+  const submitOrder=async({items,checkoutMode='cart',...input}:CheckoutInput)=>{
     if(!user)throw new Error('سجّل الدخول لإنشاء طلب على الخادم');
-    const lines=items||buyNow||state.cart;
+    const lines=items||(checkoutMode==='buy-now'?buyNow:state.cart)||state.cart;
     if(!Object.keys(lines).length)throw new Error('السلة فارغة');
     const response=await api.post<{order:Order}>('/orders',{...input,branchId:state.branchId||undefined,items:Object.entries(lines).map(([productId,quantity])=>({productId,quantity}))});
     setOrders(old=>[response.order,...old.filter(o=>o.id!==response.order.id)]);
-    if(buyNow)setBuyNowState(null);
+    // Explicit checkout mode matters: a stale buy-now selection must not retain a paid cart.
+    if(checkoutMode==='buy-now')setBuyNowState(null);
     else setState(s=>({...s,cart:Object.fromEntries(Object.entries(s.cart).filter(([productId])=>!Object.prototype.hasOwnProperty.call(lines,productId)))}));
     robot.react('order');void refreshCatalog();return response.order;
   };

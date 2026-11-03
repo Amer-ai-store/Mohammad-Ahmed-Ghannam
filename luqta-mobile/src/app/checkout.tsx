@@ -90,7 +90,7 @@ export default function Checkout() {
   async function confirm() {
     setBusy(true); setError("");
     try {
-      const order = await store.submitOrder({ items: lines, address: addressPayload(draft) as Address, paymentMethod: method, couponCode: params.coupon || undefined, idempotencyKey: idempotency.current, deliverySlot: slot, deliveryNotes: notes.trim() || undefined, gift: giftPayload, acceptTerms: terms, cardToken: cardToken?.token });
+      const order = await store.submitOrder({ items: lines, checkoutMode: params.mode === 'buy-now' && store.buyNow ? 'buy-now' : 'cart', address: addressPayload(draft) as Address, paymentMethod: method, couponCode: params.coupon || undefined, idempotencyKey: idempotency.current, deliverySlot: slot, deliveryNotes: notes.trim() || undefined, gift: giftPayload, acceptTerms: terms, cardToken: cardToken?.token });
       router.replace({ pathname: "/order/[id]", params: { id: order.id, placed: "1" } });
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذر إنشاء الطلب");
