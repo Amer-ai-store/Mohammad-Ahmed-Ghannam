@@ -6,6 +6,7 @@ import { installCommerceExtras, FLAG_DEFAULTS } from './commerceExtras.mjs';
 import { installPayments } from './payments.mjs';
 import { installPush } from './push.mjs';
 import { installOperations, unitPrice } from './operations.mjs';
+import { installMfa } from './mfa.mjs';
 import { prepareJawafaSnapshot } from './jawafaInventory.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
@@ -214,7 +215,8 @@ export async function createCommerceServer(options = {}) {
     fail(401, 'انتهت الجلسة أو رمز الوصول غير صالح', 'unauthorized');
   };
   const requireUser = (req) => { const actor = identity(req); if (actor.kind !== 'user') fail(403, 'هذه العملية تتطلب حساب مستخدم', 'forbidden'); return actor; };
-  const admin = (req, scope = null) => { const actor = identity(req); if (actor.kind === 'user' && actor.role === 'admin' || actor.kind === 'agent' && scope && actor.scopes.includes(scope)) return actor; fail(403, 'ليس لديك الإذن لهذه العملية', 'forbidden'); };
+  let mfaGate = () => false;
+  const admin = (req, scope = null) => { const actor = identity(req); if (actor.kind === 'user' && actor.role === 'admin') { if (mfaGate(actor)) fail(403, 'أدخل رمز التحقق بخطوتين لإكمال عمليات الإدارة', 'mfa_required'); return actor; } if (actor.kind === 'agent' && scope && actor.scopes.includes(scope)) return actor; fail(403, 'ليس لديك الإذن لهذه العملية', 'forbidden'); };
   const ownOrder = (actor, orderId, allowDriver = false) => { const o = get('SELECT * FROM orders WHERE id=?', orderId); if (!o) fail(404, 'الطلب غير موجود', 'not_found'); if (o.user_id !== actor.id && actor.role !== 'admin' && !(allowDriver && o.driver_id === actor.id)) fail(403, 'لا يمكنك الوصول إلى هذا الطلب', 'forbidden'); return o; };
   const rateBuckets = new Map();
   const rate = (req, category, limit = 20, interval = 900_000) => {
@@ -507,6 +509,7 @@ export async function createCommerceServer(options = {}) {
   const extras = installCommerceExtras({ db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, notify, product, setting, rate, audit, flagOn, orderExtras: features.orderExtras, saveOrderExtras: features.saveOrderExtras });
   const push = installPush({ db, get, all, run, now, fail, text, requireUser, rate, options }); pushHook = push.send;
   const payments = installPayments({ db, get, all, run, transaction, id, now, fail, text, requireUser, notify, setting, audit, options });
+  const mfa = installMfa({ db, get, run, now, fail, requireUser, audit, rate, encrypt, decrypt, setting }); mfaGate = mfa.gate;
   const operations = installOperations({ db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, product, setting, audit, importInventory, rate, dbPath, bundleFor: features.bundleFor });
   const authProviders = installAuthProviders({ db, get, all, run, transaction, id, now, fail, text, rate, session, issueRecoveryCode, notify, passwordHash, publicUser, options, identityOptional: (req) => { try { return req.headers.authorization ? identity(req) : null; } catch { return null; } } });
   const server = http.createServer(async (req, res) => {
@@ -588,6 +591,7 @@ export async function createCommerceServer(options = {}) {
             run('DELETE FROM user_identities WHERE user_id=?', actor.id);
             run('DELETE FROM push_devices WHERE user_id=?', actor.id);
             operations.deleteUser(actor.id);
+            mfa.deleteUser(actor.id);
             for (const sql of ['DELETE FROM price_watches WHERE user_id=?', 'DELETE FROM receipts WHERE user_id=?', 'DELETE FROM media_likes WHERE user_id=?', 'DELETE FROM list_items WHERE added_by=? AND list_id NOT IN (SELECT id FROM lists WHERE owner_id<>?)', 'DELETE FROM list_members WHERE user_id=?', 'DELETE FROM lists WHERE owner_id=?']) run(sql, ...(sql.includes('owner_id<>?') ? [actor.id, actor.id] : [actor.id]));
             run('DELETE FROM ticket_replies WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?)', actor.id);
             run('DELETE FROM ticket_photos WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?) OR user_id=?', actor.id, actor.id);
@@ -968,6 +972,7 @@ export async function createCommerceServer(options = {}) {
         } catch (error) { if (error.status) throw error; fail(502, 'فشل الاتصال بفيسبوك أو انتهت المهلة'); } finally { clearTimeout(timer); }
       }
       if (method === 'DELETE' && path === '/api/auth/facebook' || method === 'POST' && path === '/api/auth/facebook/disconnect') { const actor = requireUser(req); run('DELETE FROM facebook_links WHERE user_id=?', actor.id); return send(200, { ok: true }); }
+      { const mfaResult = await mfa.handle(method, path, body, req); if (mfaResult) return send(mfaResult.status, mfaResult.body); }
       { const opsResult = await operations.handle(method, path, body, req, url); if (opsResult) return send(opsResult.status, opsResult.body); }
       { const pushResult = await push.handle(method, path, body, req); if (pushResult) return send(pushResult.status, pushResult.body); }
       { const pay = await payments.handle(method, path, body, req, url); if (pay) { if (pay.redirect) { res.writeHead(302, { Location: pay.redirect, 'Cache-Control': 'no-store' }); res.end(); return; } if (pay.html) { res.writeHead(pay.status, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': pay.csp, 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY' }); res.end(pay.html); return; } return send(pay.status, pay.body); } }

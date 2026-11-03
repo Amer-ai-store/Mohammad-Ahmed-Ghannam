@@ -9,6 +9,7 @@ import { AdminCard, AdminField, AdminNotice, numberInput, useAdminAction } from 
 import { api } from "../../lib/api";
 import { newIdempotencyKey } from "../../lib/checkout";
 import { useTheme } from "../../lib/theme";
+import { MfaSettingsCard } from "./MfaGate";
 
 type Preview = { canCommit: boolean; beforeHash: string; summary: Record<string, number>; duplicates: { line: number; id: string; kind: string }[]; invalid: { line: number; id?: string; reason: string }[]; unitConflicts: { line: number; id: string }[]; largePriceChanges: { id: string; from: number; to: number; changePercent: number }[] };
 type Finding = { code: string; severity: string; entity: string; evidence: Record<string, unknown> };
@@ -43,6 +44,7 @@ export function OperationsPanel() {
   return (
     <>
       <AdminNotice error={action.error || anomalies.error} message={action.message} />
+      <MfaSettingsCard />
       <AdminCard title="استيراد المخزون بخطوتين: معاينة ثم اعتماد">
         <AdminField label="CSV (id,name,price,stock,barcode,measureUnit,measureSize)" value={csv} onChangeText={(v) => { setCsv(v); setPreview(null); }} multiline />
         <Button title="معاينة دون حفظ" busy={action.busy} onPress={() => void action.run(async () => { setPreview(await api.post<Preview>("/ops/import/preview", { csv })); setBatchKey(newIdempotencyKey()); }, "اكتملت المعاينة")} secondary />

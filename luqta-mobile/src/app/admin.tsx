@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { GrowthPanel } from "../components/admin/GrowthPanel";
 import { GovernancePanel } from "../components/admin/GovernancePanel";
 import { OperationsPanel } from "../components/admin/OperationsPanel";
+import { MfaGate } from "../components/admin/MfaGate";
 import { Shell } from "../components/Shell";
 import { Button, Txt } from "../components/ui";
 import { AdminCard, AdminChoices, AdminField, AdminLoading, AdminNotice, AdminRefresh, numberInput, useAdminAction } from "../components/admin/AdminUI";
@@ -66,7 +67,7 @@ export default function AdminScreen() {
   if (!configured) return <Shell title="لوحة القيادة"><AdminCard title="اربط خادم المتجر أولًا"><Details>لوحة الإدارة تقرأ وتكتب في قاعدة بيانات الخادم. أدخل عنوان خادمك واختبر اتصاله.</Details><Button title="إعداد اتصال الخادم" onPress={() => router.push("/connection")} /></AdminCard></Shell>;
   if (!user) return <Shell title="لوحة القيادة"><AdminCard title="تسجيل الدخول مطلوب"><Details>سجّل الدخول بحساب مدير للوصول إلى بيانات المتجر وإدارتها.</Details><Button title="تسجيل الدخول" onPress={() => router.push("/login")} /></AdminCard></Shell>;
   if (user.role !== "admin") return <Shell title="لوحة القيادة"><AdminCard title="هذه المساحة للمديرين"><Details>حسابك لا يملك صلاحية الإدارة. يتحقق الخادم من الدور عند كل عملية.</Details><Button title="العودة إلى حسابي" onPress={() => router.replace("/profile")} secondary /></AdminCard></Shell>;
-  return <AdminDashboard />;
+  return <MfaGate wrap={(node) => <Shell title="لوحة القيادة">{node}</Shell>}><AdminDashboard /></MfaGate>;
 }
 
 function AdminDashboard() {

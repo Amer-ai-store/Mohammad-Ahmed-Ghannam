@@ -38,7 +38,7 @@ function ProductContent({ id }: { id: string }) {
   const [qty, setQty] = useState(1);
   const [showSpecs, setShowSpecs] = useState(false);
   useEffect(() => { if (product?.id) rememberProduct(product.id); }, [product?.id, rememberProduct]);
-  const track = useProductEvents(product?.id);
+  const productEvent = useProductEvents(product?.id);
   if (!product) return (
     <Shell header={<BrandHeader left={<BackSquare />} />} title="المنتج غير متاح" subtitle={catalogStatus === "loading" ? "جارٍ تحميل الكتالوج…" : "قد يكون المنتج مؤرشفًا أو الرابط غير صحيح."}>
       <CTA title="العودة إلى المتجر" onPress={() => router.navigate("/explore")} />
@@ -62,7 +62,7 @@ function ProductContent({ id }: { id: string }) {
   };
   const share = async () => {
     const link = `luqta://product/${encodeURIComponent(product.id)}`;
-    track("share");
+    productEvent("share");
     try { await Share.share({ title: product.name, message: `${product.name} — ${formatPrice(selected?.price ?? product.price, settings.currency)}\n${link}`, url: link }); }
     catch (e) { notify(e instanceof Error ? e.message : "تعذّرت مشاركة المنتج"); }
   };

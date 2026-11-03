@@ -35,7 +35,9 @@ jobs:
           cache-dependency-path: luqta-mobile/package-lock.json
       - run: npm ci
       - name: Typecheck
-        run: npm run typecheck 2>&1 | tee ../typecheck.log
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee ../typecheck.log
       - name: Lint
         if: always()
         run: |
@@ -43,7 +45,9 @@ jobs:
           if grep -qE 'problems? \([1-9][0-9]* errors?' ../lint.log; then echo '::error::ESLint reported errors'; exit 1; fi
       - name: Unit, integration and feature-ledger tests
         if: always()
-        run: npm test 2>&1 | tee ../test.log
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee ../test.log
       - name: Upload verification logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

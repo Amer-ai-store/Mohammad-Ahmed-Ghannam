@@ -1,7 +1,7 @@
 // "مجرة المتجر" (Cosmic Commerce, WP-13/#8): an optional view where store departments orbit
 // like planets. Lightweight 2D (no 3D load), every planet is a labelled button, rotation stops
 // with reduced motion or the simple interface, and a plain list below works for everyone.
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AccessibilityInfo, Animated, Easing, Pressable, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Shell } from "../components/Shell";
@@ -18,7 +18,7 @@ export default function Galaxy() {
   const { products } = useStore();
   const { width } = useWindowDimensions();
   const [reduce, setReduce] = useState(false);
-  const spin = useRef(new Animated.Value(0)).current;
+  const [spin] = useState(() => new Animated.Value(0));
   useEffect(() => { void AccessibilityInfo.isReduceMotionEnabled().then(setReduce).catch(() => {}); }, []);
   const still = reduce || simple;
   useEffect(() => {
