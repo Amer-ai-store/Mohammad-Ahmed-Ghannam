@@ -1166,7 +1166,8 @@ e2e('L118 L119 L120 L121 L122 L113 L104 central sync from the app: refresh now, 
   await until(async () => (await page.locator('[data-testid^="receipt-SYNC-"]').count()) >= 3, 20000, 'three receipts');
   const sent = stack.center.calls.slice(calls);
   const appSync = sent.find((c) => c.path === '/api/v1/app/sync');
-  assert.ok(appSync && appSync.body.products.some((p) => p.id === 'milk' && typeof p.retailPrice === 'number' && typeof p.stockQuantity === 'number'), 'app/sync used retailPrice and stockQuantity');
+  const milk = (await asAdmin('GET', '/admin/products')).products.find((p) => p.id === 'milk');
+  assert.ok(milk && appSync && appSync.body.products.some((p) => p.name === milk.name && Number.isSafeInteger(p.id) && p.id > 0 && typeof p.retailPrice === 'number' && typeof p.stockQuantity === 'number'), 'app/sync used stable numeric AAS IDs, retailPrice and stockQuantity');
   assert.ok(sent.some((c) => c.path === '/api/v1/bridge/snapshot'), 'snapshot sent');
   const snapshot = sent.find((c) => c.path === '/api/v1/bridge/snapshot').body;
   assert.doesNotMatch(JSON.stringify(snapshot), /password|token_hash|"email"/i, 'no sensitive columns in the snapshot');
