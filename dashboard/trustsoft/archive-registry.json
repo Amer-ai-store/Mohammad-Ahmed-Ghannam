@@ -10,10 +10,10 @@
   },
   "storage": {
     "drive": {
-      "rootFolderId": "1HRpt5ZogivEK5H1MKDvLQwd8EyixIuRg",
-      "immutableSnapshotsFolderId": "1AITur3X1sNLq67NuuelGvl7VnKfKGvBJ",
-      "deltasFolderId": "1fUFDDxmeVFhGQ4QaN-sqrA0KU16jmaY8",
-      "evidenceFolderId": "1BAk9VNs8v9J0CYVeaT39NN-3g3wJLs-E"
+      "rootFolderBinding": "PRIVATE_TRUSTSOFT_ARCHIVE_ROOT",
+      "immutableSnapshotsBinding": "PRIVATE_DRIVE_IMMUTABLE_SNAPSHOTS",
+      "deltasBinding": "PRIVATE_DRIVE_INCREMENTAL_DELTAS",
+      "evidenceBinding": "PRIVATE_DRIVE_AUDIT_EVIDENCE"
     },
     "firestore": {
       "connected": false,
