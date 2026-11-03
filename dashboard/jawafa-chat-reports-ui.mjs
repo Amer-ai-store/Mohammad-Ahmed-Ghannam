@@ -7,6 +7,8 @@ if(root){
         category=$("jcr-category"),level=$("jcr-level"),search=$("jcr-search");
   const state={items:[],version:0,asOf:null,count:null};
   let googleDocsToken=null; // In-memory only; never log or persist OAuth grants.
+  let docsOwnerUid=null; // Bind ephemeral grant to the exact authenticated Firebase user.
+  const clearConsent=()=>{googleDocsToken=null;docsOwnerUid=null;};
   const el=(tag,cls,txt)=>{
     const node=document.createElement(tag);
     if(cls)node.className=cls;
@@ -69,7 +71,7 @@ if(root){
         throw Error("HTTPS_REQUIRED");
       const user=authenticatedUser();
       if(!user)throw Error("NOT_AUTHENTICATED");
-      if(!googleDocsToken)throw Error("GOOGLE_DOCS_CONSENT_REQUIRED");
+      if(!googleDocsToken||docsOwnerUid!==user.uid)throw Error("GOOGLE_DOCS_CONSENT_REQUIRED");
       const token=await user.getIdToken();
       if(myVersion!==state.version) return;
       const response=await fetch("/api/jawafa/v1/chat-report-ledger",{
@@ -82,7 +84,7 @@ if(root){
       const body=await response.text();
       if(body.length>131072)throw Error("RESPONSE_TOO_LARGE");
       const ledger=normalizeLedger(JSON.parse(body));
-      if(myVersion!==state.version||!authenticatedUser())return;
+      if(myVersion!==state.version||authenticatedUser()?.uid!==user.uid||docsOwnerUid!==user.uid)return;
       state.items=ledger.reports;state.asOf=ledger.verifiedAt;state.count=ledger.count;
       $("jcr-verified").textContent=ledger.verifiedAt;
       $("jcr-snapshot").textContent="لقطة "+ledger.snapshotId+" · تنتهي "+ledger.expiresAt;
@@ -90,7 +92,7 @@ if(root){
     }catch(err){
       if(myVersion===state.version){
         const code=String(err?.message||"NOT_CONNECTED").replace(/[^A-Z0-9_]/g,"").slice(0,50)||"NOT_CONNECTED";
-        if(code==="PRIVATE_GATEWAY_428"||code==="PRIVATE_GATEWAY_403"||code==="GOOGLE_DOCS_CONSENT_REQUIRED"){googleDocsToken=null;refresh.textContent="إعادة تفويض Google Docs (قراءة فقط)";}
+        if(code==="PRIVATE_GATEWAY_428"||code==="PRIVATE_GATEWAY_403"||code==="GOOGLE_DOCS_CONSENT_REQUIRED"){clearConsent();refresh.textContent="إعادة تفويض Google Docs (قراءة فقط)";}
         clear(code);
       }
     }finally{clearTimeout(timer);refresh.disabled=false;}
@@ -103,6 +105,7 @@ if(root){
     if(location.hostname.endsWith(".github.io")){clear("PRIVATE_GATEWAY_REQUIRED");return;}
     const user=authenticatedUser();
     if(!user){clear("NOT_AUTHENTICATED");return;}
+    const startingUid=user.uid;
     refresh.disabled=true;
     setStatus("GOOGLE_DOCS_CONSENT_REQUIRED","warn");
     try{
@@ -114,23 +117,43 @@ if(root){
       const result=await user.reauthenticateWithPopup(provider);
       const credential=Provider.credentialFromResult(result);
       if(!credential?.accessToken)throw Error("DOCS_READ_SCOPE_NOT_GRANTED");
+      // Popup/redirect may temporarily hide the page on mobile. Check identity and active section again.
+      if(authenticatedUser()?.uid!==startingUid||location.hash!=="#jawafa-reports"||document.hidden)
+        throw Error("SESSION_CHANGED_DURING_CONSENT");
       googleDocsToken=credential.accessToken;
+      docsOwnerUid=startingUid;
       await load();
     }catch(error){
-      googleDocsToken=null;
+      clearConsent();
       const code=String(error?.code||error?.message||"GOOGLE_CONSENT_FAILED")
         .replace(/[^A-Za-z0-9_-]/g,"_").slice(0,45);
       clear(code);
     }finally{refresh.disabled=false;}
   }
   refresh.textContent="ربط تقارير Google Docs (قراءة فقط)";
-  refresh.addEventListener("click",()=>{if(googleDocsToken)load();else authorizeOwnerDocs()});
+  refresh.addEventListener("click",()=>{if(googleDocsToken&&docsOwnerUid===authenticatedUser()?.uid)load();else authorizeOwnerDocs()});
   window.addEventListener("hashchange",()=>{
     if(location.hash==="#jawafa-reports")load();
-    else {googleDocsToken=null;if(state.items.length)clear("SESSION_CLEARED");}
+    else {clearConsent();clear("SESSION_CLEARED");}
   });
-  document.addEventListener("visibilitychange",()=>{if(document.hidden){googleDocsToken=null;clear("SESSION_CLEARED");}});
-  try{window.firebase?.auth?.().onAuthStateChanged(u=>{if(!u||!u.emailVerified){googleDocsToken=null;clear("NOT_AUTHENTICATED");}});}catch{}
+  document.addEventListener("visibilitychange",()=>{if(document.hidden){clearConsent();clear("SESSION_CLEARED");}});
+  // Firebase compat scripts load asynchronously elsewhere in the dashboard; attach once available.
+  function watchAuth(){
+    try{
+      const auth=window.firebase?.auth?.();
+      if(!auth||typeof auth.onAuthStateChanged!=="function")return false;
+      auth.onAuthStateChanged(u=>{
+        if(!u||!u.emailVerified|| (docsOwnerUid!==null&&docsOwnerUid!==u.uid)){
+          clearConsent();clear("NOT_AUTHENTICATED");
+        }
+      });
+      return true;
+    }catch{return false;}
+  }
+  if(!watchAuth()){
+    const poll=setInterval(()=>{if(watchAuth())clearInterval(poll);},500);
+    setTimeout(()=>clearInterval(poll),30000);
+  }
   clear("PRIVATE_GATEWAY_REQUIRED");
   if(location.hash==="#jawafa-reports")load();
 }
