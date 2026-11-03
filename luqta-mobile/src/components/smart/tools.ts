@@ -1,5 +1,5 @@
 // Catalogue of the G14 smart tools (features merged from the أسواق جوافة / Aura app).
-import { Apple, Bell, Camera, Compass, FileText, Film, Flame, Gamepad2, Leaf, Mic, Palette, PiggyBank, Radar, ShieldCheck, ShoppingBasket, Store, Ticket, TrendingUp, Trophy, Users, Building2 } from "lucide-react-native";
+import { Apple, Bell, Camera, Compass, FileText, Film, Flame, Gamepad2, Leaf, ListChecks, Mic, Palette, PiggyBank, Radar, ShieldCheck, ShoppingBasket, Store, Ticket, TrendingUp, Trophy, Users, Building2 } from "lucide-react-native";
 import type { Tool } from "./Bits";
 
 export const SMART_GROUPS: { title: string; tools: Tool[] }[] = [
@@ -16,6 +16,7 @@ export const SMART_GROUPS: { title: string; tools: Tool[] }[] = [
     { key: "receipts", title: "قارئ الفواتير", detail: "حوّل فاتورتك لقائمة وقارن الأسعار", icon: FileText, href: "/receipts" },
     { key: "nutrition", title: "ماسح السعرات", detail: "القيم الغذائية للمنتج وسلتك", icon: Apple, href: "/nutrition" },
     { key: "voice", title: "البحث الصوتي", detail: "قل ما تريد وسنبحث عنه", icon: Mic, href: "/voice" },
+    { key: "list-to-cart", title: "قائمة إلى سلة", detail: "اكتب قائمتك ونطابقها مع منتجات حقيقية", icon: ListChecks, href: "/list-to-cart" },
   ] },
   { title: "العائلة والمكافآت", tools: [
     { key: "lists", title: "القوائم ووضع العائلة", detail: "قوائم مشتركة بميزانية ورمز دعوة", icon: Users, href: "/lists" },

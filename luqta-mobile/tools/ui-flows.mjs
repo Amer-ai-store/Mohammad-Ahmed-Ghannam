@@ -83,6 +83,16 @@ const flows = {
     check(!!seen, 'tour completion not remembered');
     return { ctx, page, note: `tour dismissed, remembered at ${seen}` };
   },
+  async 'list-to-cart'() {
+    const { ctx, page } = await open('/list-to-cart');
+    await byId(page, 'intent-text').fill('2 حليب\nموز\nكافيار ذهبي');
+    await byId(page, 'intent-go').click();
+    await byId(page, 'intent-result').waitFor({ timeout: 8000 });
+    await page.getByText('غير موجود في المتجر').first().waitFor({ timeout: 3000 });
+    await byId(page, 'intent-add').click();
+    await page.waitForFunction((k) => { const c = (JSON.parse(localStorage.getItem(k) || '{}').cart || {}); return c.milk === 2 && c.banana >= 1 && Object.keys(c).length === 2; }, STORE, { timeout: 8000 });
+    return { ctx, page, note: `matched milk×2 + banana, unknown item flagged and not added; cart=${JSON.stringify((await stored(page)).cart)}` };
+  },
   async 'switch-to-english'() {
     const { ctx, page } = await open('/appearance');
     await byId(page, 'lang-en').click();
@@ -106,8 +116,7 @@ const flows = {
     await page.waitForURL(/\/checkout/, { timeout: 8000 });
     const terms = byId(page, 'terms');
     await terms.waitFor({ timeout: 10000 });
-    const box = await terms.boundingBox();
-    await page.mouse.click(box.x + box.width - 16, box.y + box.height / 2); // the square, not the terms link
+    await terms.locator('div').first().click(); // the square itself, not the «terms» link inside the label
     await page.waitForFunction(() => document.querySelector('[data-testid="terms"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 5000 });
     await page.waitForFunction(() => document.querySelector('[data-testid="confirm-order"]')?.getAttribute('aria-disabled') !== 'true', null, { timeout: 15000 });
     await byId(page, 'confirm-order').click();
@@ -131,6 +140,10 @@ for (const [name, run] of Object.entries(flows)) {
     if (process.env.CI) console.log(`LUQTA_SHOT flow-${name} ${jpg.toString('base64')}`);
   } catch (e) {
     result = { name, ok: false, error: String(e.message || e).slice(0, 400) };
+    const pages = browser.contexts().flatMap((c) => c.pages());
+    const last = pages.at(-1);
+    if (last && process.env.CI) { try { const jpg = await last.screenshot({ type: 'jpeg', quality: 50 }); console.log(`LUQTA_SHOT flow-FAIL-${name} ${jpg.toString('base64')}`); console.log(`url at failure: ${last.url()}`); } catch { /* ignore */ } }
+    for (const c of browser.contexts()) await c.close().catch(() => {});
   }
   if (ctx) await ctx.close();
   report.push(result);

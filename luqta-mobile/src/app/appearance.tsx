@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Check, Monitor, Moon, Sun } from "lucide-react-native";
 import { Shell } from "../components/Shell";
+import { Toggle } from "../components/design/kit";
 import { Txt } from "../components/ui";
 import { useLang } from "../lib/i18n";
 import { LANGS } from "../lib/i18nCore";
@@ -14,7 +15,7 @@ const choices = [
 ] as const;
 
 export default function AppearanceScreen() {
-  const { colors: t, mode, setMode, isDark, storageError, hydrated, skin, setSkin } = useTheme();
+  const { colors: t, mode, setMode, isDark, storageError, hydrated, skin, setSkin, simple, setSimple } = useTheme();
   const s = useThemedStyles(makeStyles);
   const { lang, setLang } = useLang();
   return (
@@ -41,6 +42,13 @@ export default function AppearanceScreen() {
             </Pressable>
           );
         })}
+      </View>
+      <View style={[s.preview, { marginTop: 18 }]} testID="simple-mode">
+        <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" }}>
+          <Txt weight="bold" style={{ fontSize: 18 }}>الواجهة البسيطة</Txt>
+          <Toggle value={simple} onChange={setSimple} label="الواجهة البسيطة" />
+        </View>
+        <Txt style={{ color: t.muted, lineHeight: 22 }}>خط أكبر، وشخصية ثنائية الأبعاد خفيفة بدل المجسم ثلاثي الأبعاد. مناسبة للأجهزة الأبطأ ولمن يفضّل واجهة هادئة.</Txt>
       </View>
       <View style={[s.preview, { marginTop: 18 }]} accessibilityRole="radiogroup" accessibilityLabel="اللغة" testID="lang-picker">
         <Txt weight="bold" style={{ fontSize: 18 }}>اللغة</Txt>

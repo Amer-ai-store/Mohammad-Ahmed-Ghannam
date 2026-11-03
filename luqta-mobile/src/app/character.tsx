@@ -90,6 +90,11 @@ export default function CharacterScreen() {
               <Toggle value={draft.reduceMotion} onChange={(v) => set({ reduceMotion: v })} label="تقليل الحركة" />
             </View>
             <View style={s.divider} />
+            <View style={s.rowBetween} testID="hologram-row">
+              <View style={{ flex: 1 }}><Txt weight="extra" style={s.h}>مظهر الهولوجرام</Txt><Txt style={s.sub}>شخصية شفافة بتوهج فضائي (يتوقف الوميض مع تقليل الحركة)</Txt></View>
+              <Toggle value={draft.hologram} onChange={(v) => set({ hologram: v })} label="مظهر الهولوجرام" />
+            </View>
+            <View style={s.divider} />
             <View style={s.rowBetween}>
               <View style={{ flex: 1 }}><Txt weight="extra" style={s.h}>لون الزي الأساسي</Txt><Txt style={s.sub}>اختر لون البنطال أو الزي الرئيسي</Txt></View>
             </View>

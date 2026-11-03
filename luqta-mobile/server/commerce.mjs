@@ -5,6 +5,7 @@ import { installAuthProviders } from './authProviders.mjs';
 import { installCommerceExtras, FLAG_DEFAULTS } from './commerceExtras.mjs';
 import { installPayments } from './payments.mjs';
 import { installPush } from './push.mjs';
+import { installOperations, unitPrice } from './operations.mjs';
 import { prepareJawafaSnapshot } from './jawafaInventory.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
@@ -194,7 +195,7 @@ export async function createCommerceServer(options = {}) {
     return { ...data, id: p.id, price: variants.length ? Math.min(...variants.map((item) => parse(item.data).price)) : data.price,
       stock: variants.length ? variants.reduce((sum, item) => sum + item.stock, 0) : p.stock,
       basePrice: data.price, baseStock: p.stock, hasVariants: variants.length > 0,
-      active: !!p.active, rating: aggregate.count ? money(aggregate.rating) : 0, reviews: aggregate.count, updatedAt: p.updated_at };
+      active: !!p.active, rating: aggregate.count ? money(aggregate.rating) : 0, reviews: aggregate.count, updatedAt: p.updated_at, unitPrice: unitPrice(data.price, data.measureUnit, data.measureSize) };
   };
   const order = (o) => ({ id: o.id, userId: o.user_id, date: o.created_at, createdAt: o.created_at, updatedAt: o.updated_at, status: o.status, items: parse(o.items, []), address: parse(o.address, {}), subtotal: o.subtotal, discount: o.discount, shipping: o.shipping, total: o.total, currency: o.currency, paymentMethod: o.payment_method, paymentStatus: o.payment_status, driverId: o.driver_id, events: all('SELECT status,note,created_at AS at FROM order_events WHERE order_id=? ORDER BY created_at,id', o.id), extras: features.orderExtras(o.id) });
   const coupon = (c) => ({ public: !!c.public, title: c.title ?? null, id: c.id, code: c.code, type: c.type, value: c.value, minSubtotal: c.min_subtotal, maxUses: c.max_uses, uses: c.uses, expiresAt: c.expires_at, active: !!c.active });
@@ -233,7 +234,9 @@ export async function createCommerceServer(options = {}) {
       if (!row) fail(409, 'أحد المنتجات لم يعد متاحًا', 'product_unavailable');
       if (activeVariants(productId).length) fail(409, 'اختر المقاس أو اللون قبل إضافة هذا المنتج', 'variant_required');
       if (row.stock < quantity) fail(409, `الكمية المطلوبة غير متاحة للمنتج ${parse(row.data).name}`, 'out_of_stock');
-      const p = parse(row.data); subtotal = money(subtotal + p.price * quantity);
+      const p = parse(row.data);
+      if (operations.isExpired(p)) fail(409, `انتهت صلاحية المنتج ${p.name} ولا يمكن بيعه`, 'expired');
+      subtotal = money(subtotal + p.price * quantity);
       return { productId, name: p.variantLabel ? `${p.name} — ${p.variantLabel}` : p.name, price: p.price, quantity };
     });
     return { lines, subtotal };
@@ -359,7 +362,9 @@ export async function createCommerceServer(options = {}) {
       const productId = text(line.productId, 'معرّف المنتج', 1, 100), quantity = integer(line.quantity, 'الكمية', 1, 1000);
       const row = get('SELECT * FROM products WHERE id=?', productId);
       if (!row || !row.active) { issues.push({ productId, code: 'product_unavailable' }); return { productId, quantity, available: 0, ok: false }; }
-      const p = parse(row.data), available = branchId && p.branchStock ? Math.min(row.stock, p.branchStock[branchId] ?? 0) : row.stock;
+      const p = parse(row.data);
+      if (operations.isExpired(p)) { issues.push({ productId, code: 'expired' }); return { productId, name: p.name, price: p.price, quantity, available: 0, ok: false }; }
+      const available = branchId && p.branchStock ? Math.min(row.stock, p.branchStock[branchId] ?? 0) : row.stock;
       const expected = line.price === undefined ? undefined : Number(line.price);
       if (expected !== undefined && money(expected) !== p.price) issues.push({ productId, code: 'price_changed', from: money(expected), to: p.price });
       if (available < quantity) issues.push({ productId, code: 'insufficient_stock', available });
@@ -394,6 +399,7 @@ export async function createCommerceServer(options = {}) {
       if (!parent || parse(parent.data, {}).variantOf) fail(400, 'المنتج الأب يجب أن يكون صنفًا منشورًا ومستقلًا');
       p.variantLabel = text(p.variantLabel, 'وصف المقاس أو اللون', 2, 80);
     } else { delete p.variantOf; delete p.variantLabel; }
+    if (p.measureUnit == null || p.measureUnit === '') { delete p.measureUnit; delete p.measureSize; } else { if (!['kg', 'g', 'l', 'ml', 'piece'].includes(p.measureUnit)) fail(400, 'وحدة القياس غير صالحة (kg, g, l, ml, piece)'); p.measureSize = number(Number(p.measureSize), 'حجم العبوة', 0.001, 100000); }
     if (p.barcode != null && p.barcode !== '') p.barcode = text(String(p.barcode), 'الباركود', 4, 64).replace(/\s+/g, ''); else delete p.barcode;
     if (p.images != null) {
       if (!Array.isArray(p.images) || p.images.length > 8 || p.images.some((u) => typeof u !== 'string' || !/^https:\/\//.test(u) || u.length > 2000)) fail(400, 'صور المنتج يجب أن تكون حتى 8 روابط HTTPS');
@@ -501,6 +507,7 @@ export async function createCommerceServer(options = {}) {
   const extras = installCommerceExtras({ db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, notify, product, setting, rate, audit, flagOn, orderExtras: features.orderExtras, saveOrderExtras: features.saveOrderExtras });
   const push = installPush({ db, get, all, run, now, fail, text, requireUser, rate, options }); pushHook = push.send;
   const payments = installPayments({ db, get, all, run, transaction, id, now, fail, text, requireUser, notify, setting, audit, options });
+  const operations = installOperations({ db, get, all, run, transaction, id, now, money, fail, text, number, integer, json, parse, requireUser, admin, identity, product, setting, audit, importInventory, rate, dbPath, bundleFor: features.bundleFor });
   const authProviders = installAuthProviders({ db, get, all, run, transaction, id, now, fail, text, rate, session, issueRecoveryCode, notify, passwordHash, publicUser, options, identityOptional: (req) => { try { return req.headers.authorization ? identity(req) : null; } catch { return null; } } });
   const server = http.createServer(async (req, res) => {
     const send = (status, value) => { if (res.headersSent) return; res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(json(value)); };
@@ -580,6 +587,7 @@ export async function createCommerceServer(options = {}) {
             run('DELETE FROM facebook_links WHERE user_id=?', actor.id);
             run('DELETE FROM user_identities WHERE user_id=?', actor.id);
             run('DELETE FROM push_devices WHERE user_id=?', actor.id);
+            operations.deleteUser(actor.id);
             for (const sql of ['DELETE FROM price_watches WHERE user_id=?', 'DELETE FROM receipts WHERE user_id=?', 'DELETE FROM media_likes WHERE user_id=?', 'DELETE FROM list_items WHERE added_by=? AND list_id NOT IN (SELECT id FROM lists WHERE owner_id<>?)', 'DELETE FROM list_members WHERE user_id=?', 'DELETE FROM lists WHERE owner_id=?']) run(sql, ...(sql.includes('owner_id<>?') ? [actor.id, actor.id] : [actor.id]));
             run('DELETE FROM ticket_replies WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?)', actor.id);
             run('DELETE FROM ticket_photos WHERE ticket_id IN (SELECT id FROM tickets WHERE user_id=?) OR user_id=?', actor.id, actor.id);
@@ -960,6 +968,7 @@ export async function createCommerceServer(options = {}) {
         } catch (error) { if (error.status) throw error; fail(502, 'فشل الاتصال بفيسبوك أو انتهت المهلة'); } finally { clearTimeout(timer); }
       }
       if (method === 'DELETE' && path === '/api/auth/facebook' || method === 'POST' && path === '/api/auth/facebook/disconnect') { const actor = requireUser(req); run('DELETE FROM facebook_links WHERE user_id=?', actor.id); return send(200, { ok: true }); }
+      { const opsResult = await operations.handle(method, path, body, req, url); if (opsResult) return send(opsResult.status, opsResult.body); }
       { const pushResult = await push.handle(method, path, body, req); if (pushResult) return send(pushResult.status, pushResult.body); }
       { const pay = await payments.handle(method, path, body, req, url); if (pay) { if (pay.redirect) { res.writeHead(302, { Location: pay.redirect, 'Cache-Control': 'no-store' }); res.end(); return; } if (pay.html) { res.writeHead(pay.status, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': pay.csp, 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY' }); res.end(pay.html); return; } return send(pay.status, pay.body); } }
       { const authResult = await authProviders.handle(method, path, body, req, url); if (authResult) { if (authResult.redirect) { res.writeHead(302, { Location: authResult.redirect, 'Cache-Control': 'no-store' }); res.end(); return; } return send(authResult.status, authResult.body); } }

@@ -14,7 +14,7 @@ export const AVATAR_ACTIONS: AvatarAction[] = [
 
 export type AvatarProfile = {
   skin?: string; hair?: string; outfit?: string; pants?: string; boots?: string;
-  beard?: boolean; faceDataUrl?: string;
+  beard?: boolean; faceDataUrl?: string; hologram?: boolean;
 };
 
 const LINE_SEPARATORS = new RegExp("[\\u2028\\u2029]", "g");

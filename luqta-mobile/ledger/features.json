@@ -2781,7 +2781,321 @@
      "status": "verified-auto"
     }
    ]
+  },
+  {
+   "id": "G18",
+   "name": "التقرير الرئيسي v4 — حزم العمل القابلة للبناء",
+   "features": [
+    {
+     "id": "F-G18-01",
+     "title": "WP-04 استيراد المخزون بخطوتين: معاينة دون حفظ (تكرار معرّف/باركود، صفوف غير صالحة، تعارض وحدات، تغير أسعار كبير) ثم اعتماد بمفتاح دفعة لا يتكرر مع حماية من تغيّر البيانات وبصمات قبل/بعد",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "function preview(",
+       "stale_preview",
+       "import_batches",
+       "afterHash"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "WP-04 import preview reports duplicates/invalid rows"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-02",
+     "title": "#4 جواز السعر: سعر الكيلو/اللتر، مصدر السعر ووقت آخر تحديث، نطاق 90 يومًا — في الخادم وصفحة المنتج",
+     "source": {
+      "file": "src/components/smart/PricePassport.tsx",
+      "contains": [
+       "/passport",
+       "جواز السعر"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "price passport with unit price"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-03",
+     "title": "#5 مدقق صدق الخصومات: «السعر قبل الخصم» موثّق فقط إن بيع به فعلًا خلال 30 يومًا",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "export function offerTruth",
+       "/api/ops/offer-audit"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "G18 pure rules"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-04",
+     "title": "#13 إنقاذ المنتجات قرب الصلاحية: توصيات تخفيض بتأكيد صريح، ومنع بيع المنتهي في السلة والطلب",
+     "source": {
+      "file": "server/commerce.mjs",
+      "contains": [
+       "operations.isExpired(p)",
+       "'expired'"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "expired items blocked"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-05",
+     "title": "#14 ذكاء المخزون: منخفض المخزون وكمية إعادة الطلب واقتراح تحويل بين الفروع دون مخزون سالب",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "function stockInsights(",
+       "transfers.push"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "stock insights, offer lab with margin guard, anomaly leads"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-06",
+     "title": "WP-19 مختبر العروض: محاكاة هامش وكميات بنطاق عدم يقين وحد أدنى للهامش؛ التكلفة سرية للمدير",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "export function simulateOffer",
+       "below_min_margin",
+       "product_costs"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "stock insights, offer lab with margin guard, anomaly leads"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-07",
+     "title": "WP-20 كاشف الفروقات: مطابقة الطلبات والمدفوعات والكوبونات والمحافظ والمخزون والصلاحية — خيوط تحقق لا اتهامات",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "function anomalies(",
+       "paid_without_gateway_record",
+       "ليست اتهامًا"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "stock insights, offer lab with margin guard, anomaly leads"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-08",
+     "title": "#18 جواز أدلة الطلب: سلسلة بصمات SHA-256 لكل حدث + لقطة الأسعار والدفع، للعميل صاحب الطلب والمدير",
+     "source": {
+      "file": "src/components/smart/EvidenceCard.tsx",
+      "contains": [
+       "/evidence",
+       "سجل الأدلة"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "hash-chained order evidence"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-09",
+     "title": "WP-12 نسخ احتياطي (VACUUM INTO + بصمة) وتمرين استعادة يتحقق من السلامة والأعداد",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "VACUUM INTO",
+       "function restoreDrill(",
+       "integrity_check"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "backup + restore drill"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-10",
+     "title": "NX-20/WP-15 موافقات صريحة قابلة للسحب (ذاكرة المنزل، التخصيص، التسويق) في شاشة الخصوصية، مطفأة افتراضيًا",
+     "source": {
+      "file": "src/components/smart/ConsentsCard.tsx",
+      "contains": [
+       "/me/consents",
+       "household_memory"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "consent-gated household memory"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-11",
+     "title": "NX-02 سلة المنزل المتوقعة من دورات الشراء (بموافقة؛ مراجعة قبل الإضافة؛ لا شراء تلقائي)",
+     "source": {
+      "file": "src/components/smart/HouseholdCard.tsx",
+      "contains": [
+       "/me/predicted-basket",
+       "لا شراء تلقائي"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "consent-gated household memory"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-12",
+     "title": "NX-04 تقدير ميزانية الشهر بنطاق من سجل الأسعار (تقدير لا ضمان)",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "function forecast(",
+       "kind: 'forecast'"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "consent-gated household memory"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-13",
+     "title": "WP-13/NX-05 مترجم نية التسوق «قائمة إلى سلة»: لهجة، كميات ووحدات، ميزانية، مطابقة SKU حقيقي، غير الموجود لا يُخترع",
+     "source": {
+      "file": "src/app/list-to-cart.tsx",
+      "contains": [
+       "/intent/parse",
+       "compileIntent",
+       "intent-add"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "intent compiler, bounded negotiation and agent-commerce feed"
+     },
+     "status": "verified-auto",
+     "evidence": "CI ui-flows › list-to-cart + src/lib/intent.test.mjs"
+    },
+    {
+     "id": "F-G18-14",
+     "title": "WP-22 تفاوض مقيد: يعرض فقط عروض محرك القواعد (حزم، كوبونات منشورة) ويرفض أي خصم خارجها",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "function negotiate(",
+       "لا أستطيع إنشاء خصم"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "intent compiler, bounded negotiation and agent-commerce feed"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-15",
+     "title": "WP-24/NX-19 جاهزية التجارة عبر الوكلاء: موجز كتالوج schema.org + وصف OpenAPI (دون ادعاء اعتماد UCP/ACP)",
+     "source": {
+      "file": "server/operations.mjs",
+      "contains": [
+       "/api/agent-commerce/feed",
+       "/api/agent-commerce/openapi.json",
+       "not certified"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "intent compiler, bounded negotiation and agent-commerce feed"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G18-16",
+     "title": "NX-16/WP-25 الواجهة البسيطة: خط أكبر وشخصية ثنائية الأبعاد خفيفة",
+     "source": {
+      "file": "src/lib/theme.tsx",
+      "contains": [
+       "simple: boolean",
+       "luqta-simple-v1"
+      ]
+     },
+     "status": "verified-source"
+    },
+    {
+     "id": "F-G18-17",
+     "title": "WP-16 مظهر هولوجرام اختياري للشخصية (شفافية وتوهج سماوي؛ بلا وميض مع تقليل الحركة)",
+     "source": {
+      "file": "web-engines/avatar.js",
+      "contains": [
+       "state.holo",
+       "#67E8F9"
+      ]
+     },
+     "status": "verified-source",
+     "evidence": "تصوير محلي holo-on/holo-off"
+    },
+    {
+     "id": "F-G18-18",
+     "title": "الهوية الفضائية: لون «فضائي» اختياري (سماوي داكن/بنفسجي بتباين مقروء) — المجرة ثلاثية الأبعاد والمقدمة الفضائية لم تُبنَ",
+     "source": {
+      "file": "src/lib/theme.tsx",
+      "contains": [
+       "cosmic: { label: \"فضائي\""
+      ]
+     },
+     "status": "partial"
+    },
+    {
+     "id": "F-G18-19",
+     "title": "لوحة الإدارة «العمليات والأدلة» تجمع كل ما سبق بأزرار صريحة",
+     "source": {
+      "file": "src/components/admin/OperationsPanel.tsx",
+      "contains": [
+       "/ops/import/preview",
+       "/ops/anomalies",
+       "/ops/backups"
+      ]
+     },
+     "status": "verified-source"
+    },
+    {
+     "id": "F-G18-20",
+     "title": "بنود تتطلب أطرافًا خارجية: ربط POS/ERP حقيقي (Trust)، خرائط Routes وETA حي، AR، التوأم الرقمي بالرؤية، UCP/ACP رسمي، جسر AAS-CC/AW بإيصالات",
+     "source": {
+      "file": "ledger/ROLLBACK_AND_BLOCKERS.md",
+      "contains": [
+       "التقرير الرئيسي v4"
+      ]
+     },
+     "status": "blocked-external"
+    }
+   ]
   }
  ],
- "total": 195
+ "total": 215
 }

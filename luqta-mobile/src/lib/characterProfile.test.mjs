@@ -20,5 +20,5 @@ test("F-G11-07 stored profile is sanitised: only small JPEG/PNG data URLs, hex c
   const ok = sanitizeCharacter({ faceDataUrl: "data:image/jpeg;base64,AAAA", skin: "#112233", scale: 0.5, beard: false });
   assert.equal(ok.faceDataUrl, "data:image/jpeg;base64,AAAA");
   assert.equal(ok.beard, false);
-  assert.deepEqual(Object.keys(toAvatarProfile(ok)).sort(), ["beard", "faceDataUrl", "hair", "outfit", "pants", "skin"]);
+  assert.deepEqual(Object.keys(toAvatarProfile(ok)).sort(), ["beard", "faceDataUrl", "hair", "hologram", "outfit", "pants", "skin"]);
 });

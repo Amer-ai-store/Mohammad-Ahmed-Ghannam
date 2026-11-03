@@ -323,6 +323,7 @@
     turn.rotation.y = state.yaw;
     if (cart.visible) cart.userData.wheels.forEach(function (wh) { wh.rotation.x += dt * 6; });
     if (pillow.visible) pillow.position.set(-0.62, 0.08, 0);
+    if (state.holo && !reduceMotion) { var fl = 0.7 + Math.sin(t * 7.3) * 0.04 + (Math.sin(t * 31) > 0.97 ? -0.12 : 0); materials.forEach(function (m) { m.opacity = fl; }); }
     if (zzz[0].visible) zzz.forEach(function (z, i) { var c = ((t * 0.45 + i / 3) % 1); z.position.set(0.15 + c * 0.35, 0.55 + c * 0.7, 0.2); z.material.opacity = 1 - c; });
     shadow.scale.set(1 - rootPose.y * 1.2, 1, 1 - rootPose.y * 1.2);
     renderer.render(scene, camera);
@@ -344,6 +345,15 @@
       // neutral placeholder mannequin in the brand palette: soft lavender shell, deep purple joints
       if (!applied && /Beta_HighLimbs|Beta_Surface|asdf1/i.test(name)) { m.color.set(pr.outfit && pr.outfit !== '#141414' ? pr.outfit : '#ECE5FC'); if (m.roughness != null) m.roughness = 0.45; }
       if (!applied && /Beta_Joints/i.test(name)) { m.color.set(pr.pants && !/^#(c4161b|1f2937)$/i.test(pr.pants) ? pr.pants : '#6E4AA6'); if (m.metalness != null) m.metalness = 0.15; }
+    });
+    // optional hologram look (WP-16): translucent cyan glow; flicker is skipped with reduced motion
+    state.holo = pr.hologram === true;
+    materials.forEach(function (m) {
+      if (m.userData.holoBase === undefined) m.userData.holoBase = { transparent: m.transparent, opacity: m.opacity, emissive: m.emissive ? m.emissive.clone() : null, ei: m.emissiveIntensity };
+      var b = m.userData.holoBase;
+      if (state.holo) { m.transparent = true; m.opacity = 0.74; if (m.color) m.color.lerp(new T.Color('#67E8F9'), 0.55); if (m.emissive) { m.emissive.set('#0891B2'); m.emissiveIntensity = 0.55; } }
+      else { m.transparent = b.transparent; m.opacity = b.opacity; if (m.emissive && b.emissive) { m.emissive.copy(b.emissive); m.emissiveIntensity = b.ei; } }
+      m.needsUpdate = true;
     });
     var faceMat = materials.filter(function (m) { return /face/i.test(m.name || ''); })[0];
     if (pr.faceDataUrl && /^data:image\/(png|jpeg|webp);base64,/.test(pr.faceDataUrl)) {

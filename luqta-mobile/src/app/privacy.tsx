@@ -8,6 +8,7 @@ import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
 import { BackPill, BrandHeader, Card, InfoNote, SmallButton, Toggle } from "../components/design/kit";
 import { useCharacter } from "../lib/character";
+import { ConsentsCard } from "../components/smart/ConsentsCard";
 import { useSession } from "../lib/session";
 import { useStore } from "../lib/store";
 import { useTheme } from "../lib/theme";
@@ -31,6 +32,7 @@ export default function Privacy() {
           <SmallButton title="حذف الشخصية بالكامل" tone="outline" disabled={!!busy} onPress={() => void run("char", reset, "حُذفت الشخصية وإعداداتها")} />
         </View>
       </Card>
+      <ConsentsCard />
       <Card style={{ gap: 10, marginTop: 12 }} testID="analytics-optout">
         <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" }}><Txt weight="bold" style={{ color: t.title, fontSize: 17 }}>مشاركة إحصاءات الاستخدام</Txt><Toggle value={!optOut} onChange={(v) => { setOptOut(!v); void setAnalyticsOptOut(!v); }} label="مشاركة إحصاءات الاستخدام" /></View>
         <Txt style={{ color: t.muted, lineHeight: 22 }}>عدّادات يومية مجهولة فقط (مثل عدد مرات فتح المنتجات) دون اسمك أو جهازك أو موقعك، لتحسين المتجر.</Txt>

@@ -42,6 +42,10 @@ export type Product = {
   nutrition?: { calories?: number; protein?: number; carbs?: number; fat?: number; sugar?: number; fiber?: number; sodium?: number; per?: string };
   offerEndsAt?: string;
   expiresAt?: string;
+  /** G18: measured pack (kg/g/l/ml/piece) and server-computed price per base unit */
+  measureUnit?: "kg" | "g" | "l" | "ml" | "piece";
+  measureSize?: number;
+  unitPrice?: { value: number; per: "kg" | "l" | "piece" } | null;
   merchantId?: string;
   basePrice?: number;
   baseStock?: number;

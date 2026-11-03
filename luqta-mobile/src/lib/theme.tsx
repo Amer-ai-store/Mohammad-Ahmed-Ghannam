@@ -86,6 +86,7 @@ export const SKINS = {
   sakura: { label: "ساكورا", orange: "#E86A92", purple: "#8E4A6B" },
   slate: { label: "رمادي هادئ", orange: "#3D5A80", purple: "#293241" },
   neon: { label: "نيون", orange: "#00A8E8", purple: "#4B2BB3" },
+  cosmic: { label: "فضائي", orange: "#0E7490", purple: "#6D28D9" },
 } as const;
 export type SkinId = keyof typeof SKINS;
 const SKIN_KEY = "luqta-skin-v1";
@@ -100,6 +101,9 @@ type ThemeValue = {
   storageError: boolean;
   setMode: (mode: ThemeMode) => void;
   setAccentColor: (color: string | null) => void;
+  /** NX-16 simple / accessible mode: larger text, no 3D companion */
+  simple: boolean;
+  setSimple: (v: boolean) => void;
 };
 const Context = createContext<ThemeValue>({
   colors: theme,
@@ -111,6 +115,8 @@ const Context = createContext<ThemeValue>({
   setAccentColor: () => {},
   skin: "design",
   setSkin: () => {},
+  simple: false,
+  setSimple: () => {},
 });
 const STORAGE_KEY = "luqta-appearance-v1";
 
@@ -121,6 +127,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [skin, setSkinState] = useState<SkinId>("design");
   useEffect(() => { AsyncStorage.getItem(SKIN_KEY).then((v) => { if (v && v in SKINS) setSkinState(v as SkinId); }).catch(() => {}); }, []);
   const setSkin = useCallback((next: SkinId) => { if (!(next in SKINS)) return; setSkinState(next); void AsyncStorage.setItem(SKIN_KEY, next).catch(() => {}); }, []);
+  const [simple, setSimpleState] = useState(false);
+  useEffect(() => { AsyncStorage.getItem("luqta-simple-v1").then((v) => { if (v === "1") setSimpleState(true); }).catch(() => {}); }, []);
+  const setSimple = useCallback((v: boolean) => { setSimpleState(v); void AsyncStorage.setItem("luqta-simple-v1", v ? "1" : "0").catch(() => {}); }, []);
   const [hydrated, setHydrated] = useState(false);
   const [storageError, setStorageError] = useState(false);
   useEffect(() => {
@@ -168,12 +177,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setAccentColor,
       skin,
       setSkin,
+      simple,
+      setSimple,
       setMode: (next) => {
         if (next === "light" || next === "dark" || next === "system")
           setPreference(next);
       },
     }),
-    [colors, mode, isDark, hydrated, storageError, skin, setSkin],
+    [colors, mode, isDark, hydrated, storageError, skin, setSkin, simple, setSimple],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

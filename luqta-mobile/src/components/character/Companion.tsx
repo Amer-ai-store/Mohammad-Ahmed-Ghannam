@@ -8,6 +8,7 @@ import { avatarHtml, type AvatarAction } from "./characterHtml";
 import { AvatarSurface, type SurfaceHandle } from "./AvatarSurface";
 import { posePosters } from "../../lib/designAssets";
 import { toAvatarProfile, useCharacter } from "../../lib/character";
+import { useTheme } from "../../lib/theme";
 
 export type CompanionHandle = {
   play: (action: AvatarAction) => void;
@@ -88,7 +89,8 @@ export const Companion = forwardRef<CompanionHandle, Props>(function Companion({
   };
 
   const translateX = slide.interpolate({ inputRange: [0, 1], outputRange: [0, enterFrom === "right" ? 70 : -70] });
-  const use3d = profile.enabled3d && !failed;
+  const { simple } = useTheme();
+  const use3d = profile.enabled3d && !failed && !simple; // simple mode → lightweight 2D companion
   return (
     <View pointerEvents="none" style={{ width: w, height: h }} testID={testID} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {use3d && focused ? (

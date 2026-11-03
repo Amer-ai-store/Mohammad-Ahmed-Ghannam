@@ -19,7 +19,7 @@ export function Txt({
   children,
   ...props
 }: TextProps & { weight?: "regular" | "medium" | "bold" | "extra" }) {
-  const { colors: t } = useTheme();
+  const { colors: t, simple } = useTheme();
   const { lang, tr } = useLang();
   // Plain string children are looked up in the language dictionary (Arabic fallback).
   const content = lang !== "ar" && typeof children === "string" ? tr(children) : children;
@@ -41,6 +41,7 @@ export function Txt({
           fontSize: 15,
         },
         style,
+        simple ? { fontSize: Math.round(((StyleSheet.flatten(style)?.fontSize as number | undefined) ?? 15) * 1.15) } : null,
       ]}
     >{content}</Text>
   );

@@ -9,6 +9,8 @@ import { AccountGate } from "../components/AccountKit";
 import { Card, ErrorBlock, InfoNote, LoadingBlock, SectionHeader, SmallButton } from "../components/design/kit";
 import { Bars } from "../components/smart/Charts";
 import { Stat, useMoney } from "../components/smart/Bits";
+import { HouseholdCard } from "../components/smart/HouseholdCard";
+import { useSession } from "../lib/session";
 import { categoryLabel } from "../data/products";
 import { useRemote } from "../lib/useRemote";
 import type { Insights } from "../lib/smart";
@@ -22,6 +24,7 @@ function Body() {
   const { colors: t } = useTheme();
   const money = useMoney();
   const { data, loading, error, reload } = useRemote<Insights>("/me/insights", { auth: true });
+  const { configured, user } = useSession();
   if (loading && !data) return <LoadingBlock />;
   if (!data) return <ErrorBlock message={error || "تعذّر التحميل"} onRetry={reload} />;
   return (
@@ -38,6 +41,7 @@ function Body() {
         {data.tips.map((tip) => <Txt key={tip} style={{ color: t.ink, lineHeight: 25, marginBottom: 6 }}>• {tip}</Txt>)}
         <SmallButton title="فعّل تنبيهات الأسعار" onPress={() => router.push("/watchlist")} />
       </Card>
+      {configured && user ? <HouseholdCard /> : null}
       <Card style={{ backgroundColor: t.successSoft }}>
         <SectionHeader title="أثرك الأخضر" icon={Leaf} />
         <Txt style={{ color: t.ink }}>{data.green.ecoOrders} طلب بتوصيل مجمّع ≈ {data.green.co2SavedKg} كغ CO₂ أقل.</Txt>

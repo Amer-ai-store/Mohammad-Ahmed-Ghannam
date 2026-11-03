@@ -34,7 +34,7 @@ export const EN: Record<string, string> = {
   "الإشعارات": "Notifications", "الخصوصية والأجهزة": "Privacy and devices", "بياناتي وعناويني": "My details and addresses", "تصدير بياناتي": "Export my data",
   "اتصال الخادم": "Server connection", "لوحة الإدارة والقيادة": "Admin and command center", "لوحة السائق": "Driver dashboard", "شخصيتي وحركتها": "My character and motion",
   "مظهر التطبيق": "App appearance", "اختر المظهر الأنسب لك. يُحفظ اختيارك على هذا الجهاز.": "Choose the look you like. Saved on this device.",
-  "الوضع النهاري": "Light mode", "الوضع الليلي": "Dark mode", "حسب إعداد الجهاز": "Follow device setting", "اللغة": "Language",
+  "الوضع النهاري": "Light mode", "الوضع الليلي": "Dark mode", "حسب إعداد الجهاز": "Follow device setting", "اللغة": "Language", "الواجهة البسيطة": "Simple interface", "ألوان التطبيق": "App colors",
   "ألوان فاتحة طوال الوقت": "Always light colors", "ألوان داكنة طوال الوقت": "Always dark colors", "يتغير تلقائيًا مع مظهر جهازك": "Changes with your device theme",
   // smart tools
   "أدوات لُقطة الذكية": "Luqta smart tools", "كل أدوات التوفير والاكتشاف في مكان واحد": "All saving and discovery tools in one place",
@@ -44,7 +44,7 @@ export const EN: Record<string, string> = {
   "العائلة والمكافآت": "Family and rewards", "القوائم ووضع العائلة": "Lists and family mode", "المستويات والشارات": "Levels and badges",
   "العب واربح": "Play and win", "التسوق الأخضر": "Green shopping", "اكتشف وأبدع": "Discover and create", "فيديوهات التسوق": "Shopping videos",
   "المتاجر": "Stores", "الرائج الآن": "Trending now", "الاستوديو الإبداعي": "Creative studio", "بوابة التاجر": "Merchant portal",
-  "جولة تعريفية": "Guided tour", "الأذونات": "Permissions",
+  "جولة تعريفية": "Guided tour", "قائمة إلى سلة": "List to cart", "الأذونات": "Permissions",
   "طابق الأزواج الستة بأقل عدد محاولات": "Match the six pairs in as few moves as possible", "جديدة": "New game",
   "الأوفر": "Cheapest", "فرع واحد": "One branch", "الأسرع": "Fastest", "استبدال": "Swap",
   // character

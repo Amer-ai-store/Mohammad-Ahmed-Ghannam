@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { EvidenceCard } from "../../components/smart/EvidenceCard";
 import { Check, MapPin, Package, RotateCcw } from "lucide-react-native";
 import { Shell } from "../../components/Shell";
 import { Button, Txt } from "../../components/ui";
@@ -158,8 +159,9 @@ export default function OrderScreen() {
                 <Button title="إغلاق نموذج الإرجاع" secondary disabled={Boolean(busy)} onPress={() => setReturnForm(false)} />
               </> : !returnSubmitted ? <Button title="إنشاء طلب إرجاع" secondary disabled={Boolean(busy)} onPress={() => setReturnForm(true)} /> : null}
               <Button title="متابعة طلبات الإرجاع" secondary onPress={() => router.push("/returns")} />
-              <Txt style={s.small}>عند قبول الإرجاع يُسجل المبلغ المستحق في محفظة المتجر الداخلية. لا توجد بوابة بطاقات أو تحويل بنكي مفعّلة في هذه النسخة.</Txt>
+              <Txt style={s.small}>عند قبول الإرجاع يُسجل المبلغ المستحق في محفظة المتجر الداخلية، أو يُعاد للبطاقة عبر بوابة الدفع إذا دفعت بالبطاقة.</Txt>
             </View> : null}
+            <EvidenceCard orderId={order.id} />
           </>}
         </>}
       </View>

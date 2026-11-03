@@ -13,6 +13,7 @@ import { formatPrice, type ProductSpec } from "../../data/products";
 import { useStore } from "../../lib/store";
 import { track } from "../../lib/analytics";
 import { PriceInsight } from "../../components/smart/PriceInsight";
+import { PricePassport } from "../../components/smart/PricePassport";
 import { NutritionCard } from "../../components/smart/NutritionCard";
 import { FlashBadges, TogetherSection, useProductEvents } from "../../components/smart/ProductExtras";
 import { Palette, useTheme, useThemedStyles } from "../../lib/theme";
@@ -171,6 +172,7 @@ function ProductContent({ id }: { id: string }) {
 
       <CTA title={variants.length && !selected ? "اختر الخيار" : remaining < 1 ? "غير متوفر" : "أضف إلى السلة"} icon={ShoppingCart} testID="product-add" disabled={remaining < 1 || (variants.length > 0 && !selected)} onPress={add} style={{ marginTop: 16 }} />
       <PriceInsight product={product} />
+      <PricePassport product={product} />
       <NutritionCard nutrition={product.nutrition} />
       <TogetherSection product={product} />
       <View style={{ marginTop: 16 }}><ProductReviews productId={product.id} /></View>

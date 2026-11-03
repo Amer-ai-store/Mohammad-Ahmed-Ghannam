@@ -97,6 +97,7 @@ export default function CartScreen() {
                 <View style={{ flexDirection: "row-reverse", gap: 8, flexWrap: "wrap" }}>
                   <SmallButton title="حسّن سلتي" icon={Sparkles} onPress={() => router.push("/basket-optimizer")} testID="open-optimizer" />
                   <SmallButton title="محفظة الكوبونات" icon={Ticket} tone="soft" onPress={() => router.push("/coupons")} />
+                  {!demo ? <SmallButton title="أفضل عرض معتمد" tone="outline" testID="negotiate" onPress={() => { api.post<{ message: string; bestAvailable: { kind: string; code?: string; discount: number; addToQualify?: number } | null }>("/offers/negotiate", { items: items.map((p) => ({ productId: p.id, quantity: cart[p.id] })) }).then((r) => { const b = r.bestAvailable; notify(!b ? "لا توجد عروض معتمدة لسلتك الآن" : b.kind === "coupon" ? `استخدم الكوبون ${b.code} لتوفير ${formatPrice(b.discount, settings.currency)}` : b.kind === "bundle" ? `حزمة توفير تنطبق: ${formatPrice(b.discount, settings.currency)}` : `أضف ${formatPrice(b.addToQualify || 0, settings.currency)} للتوصيل المجاني`); }).catch((e: unknown) => notify(e instanceof Error ? e.message : "تعذّر جلب العروض")); }} /> : null}
                 </View>
               </Card>
             );
