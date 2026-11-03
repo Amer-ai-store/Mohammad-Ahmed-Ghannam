@@ -68,8 +68,14 @@ test('report manifest is source-linked, status-only and not published', () => {
   assert.equal(main.source_as_of, '2026-11-02');
   assert.equal(main.latest_export.run, '20261031-0100'); // Older archived export is not falsely labeled 2 Nov.
   assert.equal(main.investigation_registry.page_deployed_to_production, false);
-  assert.match(freeze, /Production Pages deployment frozen \(Issue #102\)/);
-  assert.doesNotMatch(freeze, /uses:\s*actions\/deploy-pages/);
+  // Scoped static release has a nondeploy PR preflight, protected main-only deploy and live readback.
+  assert.match(freeze, /Owner-authorized static-only release/);
+  assert.match(freeze, /PRIVATE_DRIVE_LINK_IN_PUBLIC_ARTIFACT/);
+  assert.match(freeze, /pull_request:/);
+  assert.match(freeze, /needs: verify-public-artifact/);
+  assert.match(freeze, /name: github-pages/);
+  assert.match(freeze, /verify-live:/);
+  assert.match(freeze, /actions\/deploy-pages@/);
   assert.doesNotMatch(js, /innerHTML|document\.write/);
 });
 
