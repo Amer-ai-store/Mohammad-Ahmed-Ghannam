@@ -136,6 +136,20 @@ export const api = {
     if (!result.ok || result.service !== "luqta-commerce") throw new ApiError("هذا العنوان لا يشغّل خادم لُقطة التجاري المتوافق.");
     return result;
   },
+  // Raw text downloads (CSV exports and sync logs) with the same session token.
+  text: async (path: string): Promise<string> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    try {
+      const response = await fetch(`${endpoint}/api${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "omit", signal: controller.signal });
+      const body = await response.text();
+      if (!response.ok) { let message = body; try { message = (JSON.parse(body) as { error?: string }).error || body; } catch { /* plain text error */ } throw new ApiError(message, response.status); }
+      return body;
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError("تعذر تنزيل الملف من خادم المتجر.", 0, "NETWORK");
+    } finally { clearTimeout(timer); }
+  },
   get: <T,>(path: string) => request<T>(path, "GET"),
   post: <T,>(path: string, body?: unknown) => request<T>(path, "POST", body),
   put: <T,>(path: string, body?: unknown) => request<T>(path, "PUT", body),
