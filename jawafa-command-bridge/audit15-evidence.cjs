@@ -3,7 +3,7 @@
 // operations report. This module never connects to SQL or performs filesystem writes.
 const fs=require('node:fs');
 const path=require('node:path');
-const INTEGER=n=>Number.isSafeInteger(Number(n))&&Number(n)>=0;
+const INTEGER=n=>(typeof n==='number'||(typeof n==='string'&&n.trim()!==''))&&Number.isSafeInteger(Number(n))&&Number(n)>=0;
 function readAudit15Ops(filename){
   if(typeof filename!=='string'||!path.isAbsolute(filename))
     throw Object.assign(Error('AUDIT15_SOURCE_NOT_CONFIGURED'),{status:503});
