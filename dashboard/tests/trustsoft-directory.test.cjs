@@ -7,7 +7,7 @@ const vm=require('node:vm');
 const root=path.join(__dirname,'..','trustsoft');
 function fakeNode(tag){
   return {tagName:String(tag).toUpperCase(),textContent:'',children:[],attrs:{},listeners:{},
-    className:'',value:'',
+    className:'',value:'',dataset:{},
     setAttribute(k,v){this.attrs[k]=String(v);},
     addEventListener(k,cb){this.listeners[k]=cb;},
     append(...items){this.children.push(...items);},
