@@ -28,7 +28,7 @@ export function AdminChoices<T extends string>({ label, value, choices, onChange
   const { colors: c } = useTheme();
   return <View style={{ gap: 8 }}><Txt style={{ color: c.muted, fontSize: 13 }}>{label}</Txt>
     <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 7 }}>{choices.map(item =>
-      <Pressable key={item.value} accessibilityRole="button" accessibilityState={{ selected: value === item.value }} accessibilityLabel={`${label}: ${item.label}`}
+      <Pressable key={item.value} accessibilityRole="button" aria-selected={value === item.value} accessibilityLabel={`${label}: ${item.label}`}
         onPress={() => onChange(item.value)} style={{ backgroundColor: value === item.value ? c.orange : c.background, borderColor: c.line, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 10, minHeight: 44, justifyContent: "center", borderRadius: 10 }}>
         <Txt weight="medium" style={{ color: value === item.value ? "white" : c.ink, fontSize: 13 }}>{item.label}</Txt>
       </Pressable>)}</View>

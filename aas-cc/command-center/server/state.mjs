@@ -115,6 +115,46 @@ function commerceRecord(input) {
     products, orders, receivedAt: timestamp(input.receivedAt, true),
   };
 }
+/** A separate Luqta record preserves opaque product IDs and real order lines.
+ * Android snapshots remain in commerce and cannot overwrite these records.
+ * Unknown fields (including addresses or access tokens) are never persisted.
+ */
+function luqtaCommerceRecord(input) {
+  if (input == null) return null; // Existing D1 snapshots predate this integration.
+  if (!object(input) || input.schema !== 'luqta-commerce-v1' || !object(input.store))
+    fail('عقد مزامنة لُقطة غير صالح.');
+  const store = {
+    name: text(input.store.name, 'اسم متجر لُقطة', 160),
+    currency: text(input.store.currency, 'عملة المتجر', 3),
+  };
+  if (!/^[A-Z]{3}$/.test(store.currency)) fail('عملة لُقطة غير صالحة.');
+  const products = list(input.products, 'منتجات لُقطة', 1000).map(p => {
+    if (!object(p)) fail('منتج لُقطة غير صالح.');
+    return { id: identifier(p.id), name: text(p.name, 'اسم المنتج', 160),
+      category: text(p.category, 'قسم المنتج', 160),
+      retailPrice: nonnegativeNumber(p.retailPrice, 'سعر التجزئة'),
+      stockQuantity: androidInteger(p.stockQuantity, 'كمية المنتج') };
+  });
+  unique(products, 'منتجات لُقطة');
+  const orders = list(input.orders, 'طلبات لُقطة', 500).map(o => {
+    if (!object(o)) fail('طلب لُقطة غير صالح.');
+    const items = list(o.items, 'بنود طلب لُقطة', 100).map(line => {
+      if (!object(line)) fail('بند الطلب غير صالح.');
+      return { productId: identifier(line.productId), quantity: androidInteger(line.quantity, 'الكمية', 1),
+        price: nonnegativeNumber(line.price, 'سعر بند الطلب') };
+    });
+    if (!items.length) fail('لا يمكن مزامنة طلب بلا بنود.');
+    return { id: identifier(o.id), status: text(o.status, 'حالة الطلب', 80),
+      total: nonnegativeNumber(o.total, 'إجمالي الطلب'),
+      currency: text(o.currency, 'عملة الطلب', 3), createdAt: timestamp(o.createdAt), items };
+  });
+  unique(orders, 'طلبات لُقطة');
+  if (orders.some(o => !/^[A-Z]{3}$/.test(o.currency) || o.currency !== store.currency))
+    fail('عملة الطلب لا تطابق عملة المتجر.');
+  return { schema: 'luqta-commerce-v1', sourceId: identifier(input.sourceId),
+    store, products, orders, observedAt: timestamp(input.observedAt),
+    receivedAt: timestamp(input.receivedAt, true) };
+}
 function settings(input, base = { storeName: 'Amer AI Store', ownerName: 'Amer', language: 'ar', timezone: 'Asia/Amman', notifications: true, reviewHighImpact: true }) {
   if (!object(input)) fail('إعدادات المشروع غير صالحة.');
   const result = { ...base };
@@ -468,7 +508,7 @@ export function initialLiveState() {
       { id: 'ws-intelligence', name: 'البيانات والاستراتيجية', description: 'المؤشرات والتقارير وتوثيق القرارات.', agentIds: ['agent-analytics', 'agent-orchestrator'], status: 'paused', color: '#b882ef', notes: [] },
       platformWorkspace(),
     ],
-    tasks: [], approvals: [], activity: [], servers: [], runs: [], workflows: [], commerce: emptyCommerce(), settings: settings({}),
+    tasks: [], approvals: [], activity: [], servers: [], runs: [], workflows: [], commerce: emptyCommerce(), luqtaCommerce: null, settings: settings({}),
   };
 }
 
@@ -534,7 +574,7 @@ export function normalizeLiveState(input) {
   const workflows = list(input.workflows ?? [], 'سير التنفيذ', 50).map(workflowRecord);
   unique(workflows, 'سير التنفيذ');
   if (list(input.runs, 'التشغيلات').length) fail('لا يمكن إنشاء سجل تشغيل آلي قبل توصيل خدمة تنفيذ فعلية.');
-  return { schemaVersion: LIVE_SCHEMA_VERSION, demoMode: false, coordinationVersion: COORDINATION_VERSION, agents, workspaces, tasks, approvals, activity, servers, runs: [], workflows, commerce: commerceRecord(input.commerce ?? emptyCommerce()), settings: settings(input.settings) };
+  return { schemaVersion: LIVE_SCHEMA_VERSION, demoMode: false, coordinationVersion: COORDINATION_VERSION, agents, workspaces, tasks, approvals, activity, servers, runs: [], workflows, commerce: commerceRecord(input.commerce ?? emptyCommerce()), luqtaCommerce: luqtaCommerceRecord(input.luqtaCommerce), settings: settings(input.settings) };
 }
 
 function log(state, title, description, type) {
@@ -724,6 +764,13 @@ export function mutateLiveState(input, operation, payload = {}) {
       log(next, 'فحص اتصال الخادم', `الخادم «${result.name}»: ${result.status === 'online' ? 'نجح فحص الاتصال' : 'تعذر الاتصال'}.`, 'server');
       break;
     }
+    case 'recordLuqtaSnapshot': {
+      // Caller must be authenticated as a service by the Worker (never a public action).
+      next.luqtaCommerce = luqtaCommerceRecord({ ...payload, receivedAt: timestamp(payload.receivedAt) });
+      result = next.luqtaCommerce;
+      log(next, 'مزامنة متجر لُقطة', `استُلمت ${result.products.length} منتجات و${result.orders.length} طلبات من المصدر ${result.sourceId}.`, 'app-sync');
+      break;
+    }
     case 'recordAppSnapshot': {
       next.commerce = commerceRecord({
         deviceId: identifier(payload.deviceId), appVersion: text(payload.appVersion, 'إصدار التطبيق', 80),
@@ -741,6 +788,7 @@ export function mutateLiveState(input, operation, payload = {}) {
       next = normalizeLiveState({ ...imported, workflows: copy(next.workflows) });
       next.activity = copy(input.activity);
       next.commerce = commerceRecord(input.commerce ?? emptyCommerce());
+      next.luqtaCommerce = luqtaCommerceRecord(input.luqtaCommerce);
       for (const server of next.servers) Object.assign(server, { status: 'unverified', lastCheckedAt: null, lastHttpStatus: null, latencyMs: null, lastError: null });
       log(next, 'استيراد بيانات المشروع', `استُوردت ${next.tasks.length} مهام و${next.workspaces.length} مساحات. سجل النشاط السابق محفوظ، واتصالات الخوادم تحتاج إلى فحص جديد.`, 'system');
       result = next;
@@ -752,6 +800,7 @@ export function mutateLiveState(input, operation, payload = {}) {
       next.servers = previous.servers;
       next.activity = previous.activity;
       next.commerce = previous.commerce;
+      next.luqtaCommerce = previous.luqtaCommerce;
       next.workflows = previous.workflows;
       log(next, 'إعادة ضبط سجلات المشروع', 'أُعيدت ملفات الوكلاء والمساحات إلى تعريفاتها الأولى، وأُزيلت المهام والملاحظات والموافقات. إعدادات الخوادم وبيانات التطبيق وسير التنفيذ وسجل النشاط محفوظة.', 'system');
       result = next;

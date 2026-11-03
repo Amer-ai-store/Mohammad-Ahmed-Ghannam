@@ -81,6 +81,28 @@ test('real Worker API persists state in D1, rejects stale writes and enforces au
     }
   });
 
+  await t.test('Luqta sync requires service credentials, preserves string IDs and does not overwrite Android state',async()=>{
+    const payload={schema:'luqta-commerce-v1',sourceId:'luqta-server',store:{name:'لُقطة',currency:'JOD'},
+      products:[{id:'milk',name:'حليب',category:'dairy',retailPrice:1.2,stockQuantity:8}],
+      orders:[{id:'LQ_test_1',status:'pending',total:2.4,currency:'JOD',createdAt:new Date().toISOString(),
+        items:[{productId:'milk',quantity:2,price:1.2}]}],observedAt:new Date().toISOString()};
+    const visitor=await request('/app/luqta-sync',{method:'POST',data:payload});
+    assert.equal(visitor.response.status,401);
+    const accepted=await request('/app/luqta-sync',{method:'POST',data:payload,headers:{'X-AAS-API-Key':'isolated-test-service-token'}});
+    assert.equal(accepted.response.status,200,JSON.stringify(accepted.body));
+    assert.deepEqual([accepted.body.productsAccepted,accepted.body.ordersAccepted],[1,1]);
+    current=(await request('/state')).body;
+    assert.equal(current.state.luqtaCommerce.products[0].id,'milk');
+    assert.equal(current.state.luqtaCommerce.orders[0].items[0].productId,'milk');
+    assert.equal(current.state.commerce.products.length,0,'Android data remains independent');
+    const invalid=await request('/app/luqta-sync',{method:'POST',
+      data:{...payload,products:[{...payload.products[0],id:'../forbidden'}]},
+      headers:{'X-AAS-API-Key':'isolated-test-service-token'}});
+    assert.notEqual(invalid.response.status,200);
+    const after=(await request('/state')).body;
+    assert.equal(after.revision,current.revision,'Invalid payload must not write D1');
+  });
+
   await t.test('revision conflicts preserve the winning write',async()=>{
     const revision=current.revision;
     const won=await action('updateSettings',{storeName:'متجر API الفعلي'},revision);
