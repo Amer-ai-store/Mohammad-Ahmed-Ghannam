@@ -176,3 +176,20 @@ test('WP-13/WP-22/WP-24 intent compiler, bounded negotiation and agent-commerce 
   const spec = await request('GET', '/agent-commerce/openapi.json');
   assert.equal(spec.body.openapi, '3.1.0'); assert.ok(spec.body.paths['/api/intent/parse']);
 });
+
+test('WP-06 delivery service zones: fee by distance tier, outside area refused, zone shown in options', async (t) => {
+  const { request, admin, user } = await fixture(t);
+  const zones = await request('PATCH', '/admin/settings', { freeShippingThreshold: 500, deliveryZones: [{ name: 'قريب', maxKm: 3, fee: 1 }, { name: 'متوسط', maxKm: 8, fee: 3.5 }] }, admin.token);
+  assert.equal(zones.status, 200, JSON.stringify(zones.body));
+  assert.equal((await request('PATCH', '/admin/settings', { deliveryZones: [{ maxKm: 3, fee: 1 }, { maxKm: 3, fee: 2 }] }, admin.token)).status, 400);
+  const near = { latitude: 31.9800, longitude: 35.9557 }, mid = { latitude: 32.0150, longitude: 35.9557 }, far = { latitude: 32.3, longitude: 35.9557 };
+  const opt = async (p) => (await request('POST', '/delivery/options', { items: [{ productId: 'mug', quantity: 1 }], ...p })).body.standard;
+  assert.equal((await opt(near)).zone.zone, 'قريب'); assert.equal((await opt(near)).fee, 1);
+  assert.equal((await opt(mid)).fee, 3.5);
+  assert.equal((await opt(far)).available, false);
+  const order = async (p, key) => request('POST', '/orders', { items: [{ productId: 'mug', quantity: 1 }], address: { ...address, ...p }, paymentMethod: 'cod', idempotencyKey: key }, user.token);
+  const o1 = await order(mid, 'zone-order-mid-1');
+  assert.equal(o1.status, 201, JSON.stringify(o1.body)); assert.equal(o1.body.order.shipping, 3.5);
+  assert.equal((await order(far, 'zone-order-far-1')).body.code, 'outside_service_area');
+  assert.equal((await order({}, 'zone-order-none-1')).status, 201, 'addresses without a map point keep the standard fee');
+});

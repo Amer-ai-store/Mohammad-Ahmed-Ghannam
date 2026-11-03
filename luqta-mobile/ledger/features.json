@@ -3061,11 +3061,13 @@
     },
     {
      "id": "F-G18-18",
-     "title": "الهوية الفضائية: لون «فضائي» اختياري (سماوي داكن/بنفسجي بتباين مقروء) — المجرة ثلاثية الأبعاد والمقدمة الفضائية لم تُبنَ",
+     "title": "الهوية الفضائية: لون «فضائي» اختياري + «مجرة المتجر» (الأقسام كمدارات ثنائية الأبعاد خفيفة تتوقف مع تقليل الحركة) — المقدمة الفضائية والمجرة ثلاثية الأبعاد لم تُبنَ",
      "source": {
-      "file": "src/lib/theme.tsx",
+      "file": "src/app/galaxy.tsx",
       "contains": [
-       "cosmic: { label: \"فضائي\""
+       "مجرة المتجر",
+       "isReduceMotionEnabled",
+       "planet-"
       ]
      },
      "status": "partial"
@@ -3093,9 +3095,26 @@
       ]
      },
      "status": "blocked-external"
+    },
+    {
+     "id": "F-G18-21",
+     "title": "WP-06 مناطق التوصيل: رسوم حسب المسافة من أقرب فرع، رفض واضح للعنوان خارج المنطقة، محرر في لوحة الإدارة",
+     "source": {
+      "file": "server/commerceExtras.mjs",
+      "contains": [
+       "function zoneFor(",
+       "outside_service_area",
+       "deliveryZones"
+      ]
+     },
+     "test": {
+      "file": "server/operations.test.mjs",
+      "name": "WP-06 delivery service zones"
+     },
+     "status": "verified-auto"
     }
    ]
   }
  ],
- "total": 215
+ "total": 216
 }

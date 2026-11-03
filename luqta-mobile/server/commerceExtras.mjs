@@ -32,6 +32,16 @@ export function installCommerceExtras(ctx) {
   try { db.exec('ALTER TABLE coupons ADD COLUMN user_id TEXT'); } catch { /* exists */ }
   const day = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
   const stampCfg = () => ({ enabled: true, stamps: 5, rewardType: 'percent', rewardValue: 10, minSubtotal: 0, validDays: 30, ...(setting('stampCard', {}) || {}) });
+  /** WP-06 service zones: distance tiers from the nearest located branch → standard fee; beyond the last tier = outside service area. */
+  const zonesCfg = () => (setting('deliveryZones', []) || []).slice().sort((a, b) => a.maxKm - b.maxKm);
+  function zoneFor(latitude, longitude) {
+    const zones = zonesCfg(); if (!zones.length) return null;
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return { needsLocation: true };
+    const located = branchesList().filter((b) => Number.isFinite(b.latitude) && Number.isFinite(b.longitude)); if (!located.length) return null;
+    const near = located.map((b) => ({ b, km: haversineKm({ latitude, longitude }, b) })).sort((a, b) => a.km - b.km)[0];
+    const zone = zones.find((z) => near.km <= z.maxKm);
+    return zone ? { inService: true, zone: zone.name, fee: money(zone.fee), distanceKm: Math.round(near.km * 10) / 10, branchId: near.b.id } : { inService: false, distanceKm: Math.round(near.km * 10) / 10, maxKm: zones.at(-1).maxKm };
+  }
   const expressCfg = () => ({ fee: 2, maxKm: 6, baseMinutes: 25, perKmMinutes: 4, ...(setting('express', {}) || {}) });
   const flags = () => ({ ...FLAG_DEFAULTS, ...(setting('flags', {}) || {}) });
   const requireFlag = (k) => { if (!flagOn(k)) fail(403, 'هذه الميزة متوقفة مؤقتًا من إدارة المتجر', 'feature_disabled'); };
@@ -57,7 +67,9 @@ export function installCommerceExtras(ctx) {
       else express = { available: true, fee: money(cfg.fee), etaMinutes: Math.round(cfg.baseMinutes + cfg.perKmMinutes * near.km), branch: { id: near.b.id, name: near.b.name }, distanceKm: Math.round(near.km * 10) / 10 };
     }
     const pickup = flagOn('pickup') ? branchesList().map((b) => ({ branchId: b.id, name: b.name, city: b.city || '', available: branchHas(b, lines), readyInMinutes: 30, ...(hasPoint && Number.isFinite(b.latitude) ? { distanceKm: Math.round(haversineKm({ latitude, longitude }, b) * 10) / 10 } : {}) })) : [];
-    return { subtotal, standard: { fee: subtotal >= threshold ? 0 : standardFee, eta: 'خلال الفترة المختارة' }, express, pickup, tips: TIP_CHOICES };
+    const zone = zoneFor(latitude, longitude);
+    const zoneFee = zone && zone.inService ? zone.fee : standardFee;
+    return { subtotal, standard: { fee: subtotal >= threshold ? 0 : zoneFee, eta: 'خلال الفترة المختارة', ...(zone ? { zone } : {}), ...(zone && zone.inService === false ? { available: false, reason: `العنوان خارج منطقة التوصيل (${zone.distanceKm} كم، الحد ${zone.maxKm} كم)` } : {}) }, express, pickup, tips: TIP_CHOICES };
   }
 
   /** Called inside order creation: returns shipping, tip and extras to persist. */
@@ -68,10 +80,15 @@ export function installCommerceExtras(ctx) {
     const instructions = body.instructions ? text(body.instructions, 'تعليمات التوصيل', 1, 300) : null;
     const extras = { mode, tip: mode === 'pickup' ? 0 : tip, instructions, contactless: body.contactless === true && mode !== 'pickup' };
     let shipping = baseShipping;
+    if (mode !== 'pickup') {
+      const zone = zoneFor(address.latitude, address.longitude);
+      if (zone && zone.inService === false) fail(409, `العنوان خارج منطقة التوصيل (${zone.distanceKm} كم)`, 'outside_service_area');
+      if (zone && zone.inService && baseShipping > 0) { shipping = zone.fee; Object.assign(extras, { zone: zone.zone, distanceKm: zone.distanceKm }); }
+    }
     if (mode === 'express') {
       const opt = deliveryOptions({ items: lines, latitude: address.latitude, longitude: address.longitude }).express;
       if (!opt.available) fail(409, opt.reason || 'التوصيل السريع غير متاح لهذا العنوان', 'express_unavailable');
-      shipping = money(baseShipping + opt.fee); Object.assign(extras, { etaMinutes: opt.etaMinutes, branchId: opt.branch.id });
+      shipping = money(shipping + opt.fee); Object.assign(extras, { etaMinutes: opt.etaMinutes, branchId: opt.branch.id });
     } else if (mode === 'pickup') {
       requireFlag('pickup');
       const b = branchesList().find((x) => x.id === body.pickupBranchId); if (!b) fail(400, 'اختر فرع الاستلام', 'unknown_branch');
@@ -111,6 +128,11 @@ export function installCommerceExtras(ctx) {
       updates.flags = f;
     }
     if (body.stampCard !== undefined) { const s = body.stampCard || {}; updates.stampCard = { enabled: s.enabled !== false, stamps: integer(s.stamps ?? 5, 'عدد الأختام', 2, 20), rewardType: s.rewardType === 'fixed' ? 'fixed' : 'percent', rewardValue: number(s.rewardValue ?? 10, 'قيمة المكافأة', 0.1, s.rewardType === 'fixed' ? 1000 : 50), minSubtotal: number(s.minSubtotal ?? 0, 'الحد الأدنى للطلب', 0, 1e5), validDays: integer(s.validDays ?? 30, 'مدة الصلاحية', 1, 365) }; }
+    if (body.deliveryZones !== undefined) {
+      if (!Array.isArray(body.deliveryZones) || body.deliveryZones.length > 10) fail(400, 'مناطق التوصيل يجب أن تكون قائمة حتى 10 مناطق');
+      updates.deliveryZones = body.deliveryZones.map((z, i) => ({ name: text(z.name || `منطقة ${i + 1}`, 'اسم المنطقة', 1, 60), maxKm: number(z.maxKm, 'نصف قطر المنطقة', 0.5, 200), fee: number(z.fee, 'رسوم المنطقة', 0, 100) })).sort((a, b) => a.maxKm - b.maxKm);
+      if (new Set(updates.deliveryZones.map((z) => z.maxKm)).size !== updates.deliveryZones.length) fail(400, 'لا تكرر نصف القطر نفسه لمنطقتين');
+    }
     if (body.express !== undefined) { const e = body.express || {}; updates.express = { fee: number(e.fee ?? 2, 'رسوم التوصيل السريع', 0, 100), maxKm: number(e.maxKm ?? 6, 'أقصى مسافة', 0.5, 50), baseMinutes: integer(e.baseMinutes ?? 25, 'الزمن الأساسي', 5, 240), perKmMinutes: number(e.perKmMinutes ?? 4, 'دقائق لكل كم', 0, 60) }; }
   };
 

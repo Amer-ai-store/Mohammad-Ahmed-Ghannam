@@ -141,7 +141,7 @@ export async function createCommerceServer(options = {}) {
   const setSetting = (key, value) => run('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, json(value));
   const defaults = { storeName: 'لُقطة', currency: process.env.STORE_CURRENCY || 'JOD', country: process.env.STORE_COUNTRY || 'JO', shippingFee: 2.5, freeShippingThreshold: 30, returnsDays: 14, branches: [{ id: 'hashmi', name: 'فرع الهاشمي', city: 'عمان', latitude: 31.9739, longitude: 35.9557 }], storefront: { accentColor: '#FE585C', heroTitle: 'لُقطات تستحق أن تكون لك', heroSubtitle: 'اكتشف منتجات تُشبه ذوقك', showAssistant: true }, character: { modelUrl: null }, bundles: [], ...options.config };
   for (const [key, value] of Object.entries(defaults)) if (!get('SELECT key FROM settings WHERE key=?', key)) setSetting(key, value);
-  const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays', 'storefront', 'branches', 'character', 'bundles', 'collections', 'flags', 'stampCard', 'express'].map((key) => [key, setting(key)]));
+  const publicSettings = () => Object.fromEntries(['storeName', 'currency', 'country', 'shippingFee', 'freeShippingThreshold', 'returnsDays', 'storefront', 'branches', 'character', 'bundles', 'collections', 'flags', 'stampCard', 'express', 'deliveryZones'].map((key) => [key, setting(key)]));
   let encryptionKey;
   const secretPath = options.secretPath || (dbPath === ':memory:' ? null : resolve(dirname(dbPath), 'encryption.key'));
   if (secretPath) {

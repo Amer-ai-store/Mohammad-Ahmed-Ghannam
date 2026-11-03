@@ -1,5 +1,5 @@
 // Catalogue of the G14 smart tools (features merged from the أسواق جوافة / Aura app).
-import { Apple, Bell, Camera, Compass, FileText, Film, Flame, Gamepad2, Leaf, ListChecks, Mic, Palette, PiggyBank, Radar, ShieldCheck, ShoppingBasket, Store, Ticket, TrendingUp, Trophy, Users, Building2 } from "lucide-react-native";
+import { Apple, Bell, Camera, Compass, FileText, Film, Flame, Gamepad2, Leaf, ListChecks, Mic, Orbit, Palette, PiggyBank, Radar, ShieldCheck, ShoppingBasket, Store, Ticket, TrendingUp, Trophy, Users, Building2 } from "lucide-react-native";
 import type { Tool } from "./Bits";
 
 export const SMART_GROUPS: { title: string; tools: Tool[] }[] = [
@@ -27,6 +27,7 @@ export const SMART_GROUPS: { title: string; tools: Tool[] }[] = [
   { title: "اكتشف وأبدع", tools: [
     { key: "reels", title: "فيديوهات التسوق", detail: "مقاطع قصيرة تشتري منها مباشرة", icon: Film, href: "/reels" },
     { key: "vendors", title: "المتاجر", detail: "لُقطة والتجار المعتمدون", icon: Building2, href: "/vendors" },
+    { key: "galaxy", title: "مجرة المتجر", detail: "الأقسام كمدارات فضائية تفاعلية", icon: Orbit, href: "/galaxy" },
     { key: "trending", title: "الرائج الآن", detail: "الأكثر مشاهدة وطلبًا هذا الأسبوع", icon: Flame, href: "/trending" },
     { key: "studio", title: "الاستوديو الإبداعي", detail: "ضع المنتج في مشهد حياتي وشاركه", icon: Palette, href: "/studio" },
     { key: "merchant", title: "بوابة التاجر", detail: "بع منتجاتك عبر لُقطة", icon: Store, href: "/merchant" },

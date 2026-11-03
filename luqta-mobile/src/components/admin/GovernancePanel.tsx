@@ -8,7 +8,7 @@ import { Toggle } from "../design/kit";
 import { api } from "../../lib/api";
 import { useTheme } from "../../lib/theme";
 
-type Settings = { flags?: Record<string, boolean>; collections?: { id: string; title: string; subtitle: string | null; productIds: string[]; active: boolean }[]; stampCard?: { enabled: boolean; stamps: number; rewardType: string; rewardValue: number; minSubtotal: number; validDays: number }; express?: { fee: number; maxKm: number; baseMinutes: number; perKmMinutes: number } };
+type Settings = { flags?: Record<string, boolean>; collections?: { id: string; title: string; subtitle: string | null; productIds: string[]; active: boolean }[]; stampCard?: { enabled: boolean; stamps: number; rewardType: string; rewardValue: number; minSubtotal: number; validDays: number }; express?: { fee: number; maxKm: number; baseMinutes: number; perKmMinutes: number }; deliveryZones?: { name: string; maxKm: number; fee: number }[] };
 type Analytics = { totals: Record<string, number>; funnel: { step: string; count: number; rate?: number }[] };
 type Feedback = { count: number; average: number; tags: Record<string, number>; recent: { orderId: string; rating: number; tags: string[]; comment: string | null }[] };
 const STEP: Record<string, string> = { view_product: "مشاهدة منتج", add_to_cart: "إضافة للسلة", begin_checkout: "بدء الدفع", order_placed: "طلب مؤكد" };
@@ -36,6 +36,8 @@ export function GovernancePanel() {
   const collections = settings.data.settings.collections || [];
   const branchRes = useLoad<{ branches: { id: string; name: string; city?: string; latitude?: number; longitude?: number }[] }>("/admin/branches", { branches: [] });
   const [branchText, setBranchText] = useState<string | null>(null);
+  const [zonesText, setZonesText] = useState<string | null>(null);
+  const zonesValue = zonesText ?? (settings.data.settings.deliveryZones || []).map((z) => [z.name, z.maxKm, z.fee].join(", ")).join("\n");
   const branchValue = branchText ?? branchRes.data.branches.map((b) => [b.id, b.name, b.city || "", b.latitude ?? "", b.longitude ?? ""].join(", ")).join("\n");
   const line = { flexDirection: "row-reverse" as const, alignItems: "center" as const, gap: 8, paddingVertical: 6, borderTopWidth: 1, borderColor: c.line };
   return (
@@ -89,6 +91,11 @@ export function GovernancePanel() {
         <AdminField label="رسوم التوصيل السريع" numeric value={express.fee} onChangeText={(v) => setExpressDraft({ ...express, fee: v })} />
         <AdminField label="أقصى مسافة (كم)" numeric value={express.maxKm} onChangeText={(v) => setExpressDraft({ ...express, maxKm: v })} />
         <Button title="حفظ" secondary onPress={() => void action.run(() => api.patch("/admin/settings", { express: { fee: numberInput(express.fee, "الرسوم"), maxKm: numberInput(express.maxKm, "المسافة") } }), "حُفظ التوصيل السريع", settings.reload)} />
+      </AdminCard>
+      <AdminCard title="مناطق التوصيل ورسومها">
+        <Txt style={{ color: c.muted, lineHeight: 22 }}>سطر لكل منطقة: الاسم, نصف القطر من أقرب فرع (كم), الرسوم. العنوان المحدد على الخريطة خارج آخر منطقة يُرفض بوضوح. اتركها فارغة لرسوم موحدة.</Txt>
+        <AdminField label="المناطق" multiline value={zonesValue} onChangeText={setZonesText} placeholder={"قريب, 3, 1\nمتوسط, 8, 2.5"} />
+        <Button title="حفظ المناطق" secondary onPress={() => void action.run(() => api.patch("/admin/settings", { deliveryZones: zonesValue.split(/\n/).map((l) => l.split(/[,،]/).map((x) => x.trim())).filter((r) => r[0] && r[1]).map(([name, km, fee]) => ({ name, maxKm: numberInput(km, "نصف القطر"), fee: numberInput(fee || "0", "الرسوم") })) }), "حُفظت مناطق التوصيل", settings.reload)} />
       </AdminCard>
     </>
   );

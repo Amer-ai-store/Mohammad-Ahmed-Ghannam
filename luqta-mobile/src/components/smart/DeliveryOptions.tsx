@@ -12,7 +12,7 @@ import { useSession } from "../../lib/session";
 import { useStore } from "../../lib/store";
 import { useTheme } from "../../lib/theme";
 
-type Options = { standard: { fee: number; eta: string }; express: { available: boolean; reason?: string; fee?: number; etaMinutes?: number; branch?: { id: string; name: string }; distanceKm?: number }; pickup: { branchId: string; name: string; city: string; available: boolean; readyInMinutes: number; distanceKm?: number }[]; tips: number[] };
+type Options = { standard: { fee: number; eta: string; available?: boolean; reason?: string; zone?: { inService?: boolean; zone?: string; distanceKm?: number; needsLocation?: boolean } }; express: { available: boolean; reason?: string; fee?: number; etaMinutes?: number; branch?: { id: string; name: string }; distanceKm?: number }; pickup: { branchId: string; name: string; city: string; available: boolean; readyInMinutes: number; distanceKm?: number }[]; tips: number[] };
 
 export function DeliveryOptions({ latitude, longitude }: { latitude?: number; longitude?: number }) {
   const { colors: t } = useTheme();
@@ -37,7 +37,9 @@ export function DeliveryOptions({ latitude, longitude }: { latitude?: number; lo
     <Card style={{ marginTop: 12, gap: 10 }} testID="delivery-options">
       <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}><Truck size={24} color={t.orange} /><Txt weight="bold" style={{ fontSize: 18, color: t.title }}>طريقة الاستلام</Txt></View>
       <Segmented value={mode} onChange={pick} options={modes} testID="delivery-mode" />
-      {mode === "standard" ? <Txt style={{ color: t.muted }}>رسوم التوصيل {money(shown.standard.fee)} · {shown.standard.eta}</Txt> : null}
+      {mode === "standard" ? (shown.standard.available === false
+        ? <Txt style={{ color: t.danger }} testID="outside-zone">{shown.standard.reason}</Txt>
+        : <Txt style={{ color: t.muted }}>رسوم التوصيل {money(shown.standard.fee)}{shown.standard.zone?.zone ? ` (منطقة ${shown.standard.zone.zone}، ${shown.standard.zone.distanceKm} كم)` : shown.standard.zone?.needsLocation ? " — حدّد موقعك لحساب رسوم منطقتك" : ""} · {shown.standard.eta}</Txt>) : null}
       {mode === "express" ? (shown.express.available ? (
         <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <Chip label={`خلال ~${shown.express.etaMinutes} دقيقة`} tone="success" icon={Zap} />

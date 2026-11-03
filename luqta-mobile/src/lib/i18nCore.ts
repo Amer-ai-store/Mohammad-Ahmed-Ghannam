@@ -44,7 +44,7 @@ export const EN: Record<string, string> = {
   "العائلة والمكافآت": "Family and rewards", "القوائم ووضع العائلة": "Lists and family mode", "المستويات والشارات": "Levels and badges",
   "العب واربح": "Play and win", "التسوق الأخضر": "Green shopping", "اكتشف وأبدع": "Discover and create", "فيديوهات التسوق": "Shopping videos",
   "المتاجر": "Stores", "الرائج الآن": "Trending now", "الاستوديو الإبداعي": "Creative studio", "بوابة التاجر": "Merchant portal",
-  "جولة تعريفية": "Guided tour", "قائمة إلى سلة": "List to cart", "الأذونات": "Permissions",
+  "جولة تعريفية": "Guided tour", "قائمة إلى سلة": "List to cart", "مجرة المتجر": "Store galaxy", "الأذونات": "Permissions",
   "طابق الأزواج الستة بأقل عدد محاولات": "Match the six pairs in as few moves as possible", "جديدة": "New game",
   "الأوفر": "Cheapest", "فرع واحد": "One branch", "الأسرع": "Fastest", "استبدال": "Swap",
   // character
