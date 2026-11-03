@@ -2,9 +2,6 @@ package com.example.data
 
 import android.content.Context
 import android.util.Log
-import com.example.BuildConfig
-import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -23,35 +20,16 @@ import kotlinx.coroutines.launch
 object FirestoreSync {
     private const val TAG = "FirestoreSync"
     private const val APP_NAME = "amer-live-store"
-    private const val PLACEHOLDER_PREFIX = "MY_FIREBASE_"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     @Volatile private var started = false
 
-    fun isConfigured(): Boolean =
-        listOf(BuildConfig.FIREBASE_API_KEY, BuildConfig.FIREBASE_APP_ID, BuildConfig.FIREBASE_PROJECT_ID)
-            .all { it.isNotBlank() && !it.startsWith(PLACEHOLDER_PREFIX) }
-
     @Synchronized
     fun start(context: Context, db: AppDatabase) {
         if (started) return
-        if (!isConfigured()) {
-            Log.i(TAG, "Firebase keys are not set; live store sync is off.")
-            return
-        }
-        val app = try {
-            FirebaseApp.getApps(context).firstOrNull { it.name == APP_NAME }
-                ?: FirebaseApp.initializeApp(
-                    context.applicationContext,
-                    FirebaseOptions.Builder()
-                        .setApiKey(BuildConfig.FIREBASE_API_KEY)
-                        .setApplicationId(BuildConfig.FIREBASE_APP_ID)
-                        .setProjectId(BuildConfig.FIREBASE_PROJECT_ID)
-                        .build(),
-                    APP_NAME
-                )
-        } catch (e: Exception) {
-            Log.e(TAG, "Firebase initialization failed; live store sync is off.", e)
+        val app = FirebaseSetup.app(context, APP_NAME)
+        if (app == null) {
+            Log.i(TAG, "Firebase keys are not set or setup failed; live store sync is off.")
             return
         }
         started = true

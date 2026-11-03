@@ -17,6 +17,12 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     suspend fun getUserByEmail(email: String): UserEntity?
 
+    @Query("SELECT * FROM users WHERE email != '' AND LOWER(email) = LOWER(:email) ORDER BY id LIMIT 1")
+    suspend fun getUserByEmailIgnoreCase(email: String): UserEntity?
+
+    @Query("SELECT * FROM users WHERE phoneNumber != '' AND phoneNumber = :phone ORDER BY id LIMIT 1")
+    suspend fun getUserByPhone(phone: String): UserEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: UserEntity): Long
 
@@ -46,6 +52,10 @@ interface ProductDao {
 
     @Query("DELETE FROM products WHERE id = :id")
     suspend fun deleteProduct(id: Int)
+
+    /** Takes [quantity] units out of stock; returns 0 (and changes nothing) when there are not enough left. */
+    @Query("UPDATE products SET stockQuantity = stockQuantity - :quantity, salesHistory = salesHistory + :quantity WHERE id = :id AND stockQuantity >= :quantity")
+    suspend fun reserveStock(id: Int, quantity: Int): Int
 }
 
 @Dao
@@ -101,6 +111,9 @@ interface CartItemDao {
     @Update
     suspend fun updateCartItem(item: CartItemEntity)
 
+    @Query("SELECT * FROM cart_items WHERE userId = :userId ORDER BY id DESC")
+    suspend fun getCartItemsOnce(userId: Int): List<CartItemEntity>
+
     @Query("SELECT * FROM cart_items WHERE userId = :userId AND productId = :productId AND orderType = :orderType LIMIT 1")
     suspend fun getCartItemSpecific(userId: Int, productId: Int, orderType: String): CartItemEntity?
 
@@ -121,6 +134,10 @@ interface BankCardDao {
 
     @Query("DELETE FROM bank_cards WHERE cardNumber = :cardNumber AND userId = :userId")
     suspend fun deleteBankCard(cardNumber: String, userId: Int)
+
+    /** CVVs must never be kept after a card is linked; clears any saved by older app versions. */
+    @Query("UPDATE bank_cards SET cvv = '' WHERE cvv != ''")
+    suspend fun clearStoredCvvs()
 }
 
 @Dao
@@ -174,6 +191,25 @@ interface StoredOrganicItemDao {
     suspend fun clearStoredItems(userId: Int)
 }
 
+@Dao
+interface CredentialDao {
+    @Query("SELECT * FROM local_credentials WHERE email = :email LIMIT 1")
+    suspend fun getCredential(email: String): CredentialEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCredential(credential: CredentialEntity)
+}
+
+/** v10 adds local_credentials. A real migration, so existing users, orders and carts survive the update. */
+val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `local_credentials` (`email` TEXT NOT NULL, `passwordHash` TEXT NOT NULL, " +
+                "`salt` TEXT NOT NULL, `algorithm` TEXT NOT NULL, `iterations` INTEGER NOT NULL, PRIMARY KEY(`email`))"
+        )
+    }
+}
+
 @Database(
     entities = [
         UserEntity::class,
@@ -185,9 +221,10 @@ interface StoredOrganicItemDao {
         BankCardEntity::class,
         SearchQueryEntity::class,
         FamilyShoppingListEntity::class,
-        StoredOrganicItemEntity::class
+        StoredOrganicItemEntity::class,
+        CredentialEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -201,6 +238,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun searchQueryDao(): SearchQueryDao
     abstract fun familyShoppingListDao(): FamilyShoppingListDao
     abstract fun storedOrganicItemDao(): StoredOrganicItemDao
+    abstract fun credentialDao(): CredentialDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
@@ -208,6 +246,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getInstance(context: android.content.Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "aicommerce.db")
+                    .addMigrations(MIGRATION_9_10)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { instance = it }

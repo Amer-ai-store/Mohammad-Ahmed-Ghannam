@@ -177,6 +177,22 @@ async function api(request, env) {
     if(!env.AAS_API_TOKEN||!env.AAS_PRIVATE_SITE_BEARER||!env.AAS_PUBLIC_ORIGIN)throw new HttpError(503,'connection_config_missing','إعدادات اتصال التطبيق غير مكتملة على الخادم.');
     return json({baseUrl:env.AAS_PUBLIC_ORIGIN.replace(/\/$/,'')+'/',apiToken:env.AAS_API_TOKEN,siteAccessToken:env.AAS_PRIVATE_SITE_BEARER,automaticSync:false},200,{'Content-Disposition':'attachment; filename="aas-app-connection.json"'});
   }
+  // Luqta uses opaque string product IDs and multi-line orders; the legacy Android
+  // app/sync endpoint accepts a different schema. Keep stores isolated, service-only.
+  if(request.method==='POST'&&parts[0]==='app'&&parts[1]==='luqta-sync'){
+    if(!auth.service)throw new HttpError(401,'application_credential_required','مزامنة لُقطة تتطلب حساب خدمة مصادقًا.');
+    const input=await body(request);
+    if(input.schema!=='luqta-commerce-v1')throw new HttpError(422,'invalid_luqta_schema','إصدار عقد مزامنة لُقطة غير مدعوم.');
+    let current=record;
+    for(let attempt=0;attempt<3;attempt++){
+      const receivedAt=new Date().toISOString();
+      const change=mutateLiveState(current.state,'recordLuqtaSnapshot',{...input,receivedAt});
+      const saved=await repo.compareAndSet(current.revision,change.state);
+      if(saved)return json({revision:saved.revision,receivedAt,productsAccepted:saved.state.luqtaCommerce.products.length,ordersAccepted:saved.state.luqtaCommerce.orders.length});
+      current=await repo.load();
+    }
+    throw new HttpError(409,'sync_conflict','تغيّرت البيانات أثناء مزامنة لُقطة. أعد المحاولة.');
+  }
   if(request.method==='POST'&&parts[0]==='app'&&parts[1]==='sync'){
     if(!auth.service)throw new HttpError(401,'application_credential_required','مزامنة التطبيق تتطلب بيانات مصادقة الخدمة، وليست تحديثًا يدويًا من اللوحة.');
     const input=await body(request);

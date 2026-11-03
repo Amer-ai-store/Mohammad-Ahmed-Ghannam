@@ -8,74 +8,89 @@ import React, {
 import { Platform, useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Palette sampled from the Amer AI Store | لُقطة reference designs (purple/coral).
+// Design tokens from the لُقطة × Amer AI Store mockups: lavender surfaces, deep-purple ink, coral calls to action.
+// `orange` keeps its historical name across screens and holds the coral accent.
 export const theme = {
-  background: "#F6F2FE",
-  backgroundDeep: "#EDE7FB",
+  background: "#F5F2FF",
   paper: "#FFFFFF",
+  ink: "#241B4B",
+  muted: "#6E6890",
+  orange: "#FF6B4A",
+  orangeSoft: "#FFEDE8",
+  line: "#E6E0F7",
+  green: "#1F9D6B",
+  secondary: "#EEE9FF",
+  success: "#1F9D6B",
+  danger: "#D93B54",
+  onAccent: "#FFFFFF",
+  imageBackground: "#F1ECFF",
+  toast: "#241B4B",
+  onToast: "#FFFFFF",
+  primary: "#5B3FD6",
+  primarySoft: "#E9E3FF",
+  onPrimary: "#FFFFFF",
+  warning: "#E69A17",
+  warningSoft: "#FFF4DD",
+  successSoft: "#E3F6EE",
+  shadow: "#3B2A8A",
+  // Extra tokens from main's palette (assets and 3D engines work); not used by the screens yet.
+  backgroundDeep: "#EDE7FB",
   card: "#FCFBFE",
-  ink: "#1F0A47",
   title: "#130050",
-  muted: "#826BA2",
   mutedSoft: "#9891B0",
-  orange: "#FE585C",
-  orangeSoft: "#FCEBF2",
   chip: "#FADDE5",
   purple: "#6E4AA6",
   purpleSoft: "#ECE5FC",
   field: "#F5F1FE",
-  line: "#E9E2F7",
-  green: "#08844F",
-  successSoft: "#DEF0E8",
   info: "#146CF8",
   infoSoft: "#E0EBFD",
   warn: "#BC7B2A",
   warnSoft: "#FEF4D5",
   discount: "#0AA470",
-  secondary: "#F3EFFC",
-  success: "#08844F",
-  danger: "#E5363D",
-  onAccent: "#FFFFFF",
-  imageBackground: "#FFFFFF",
-  toast: "#1F0A47",
-  onToast: "#FFFFFF",
-  shadow: "#5B3FA8",
 };
 
 export type Palette = typeof theme;
 export type ThemeMode = "light" | "dark" | "system";
 export const darkTheme: Palette = {
-  background: "#140D26",
+  background: "#100C22",
+  paper: "#1C1636",
+  ink: "#F4F1FF",
+  muted: "#B4ADD6",
+  orange: "#FF8A6E",
+  orangeSoft: "#3B2128",
+  line: "#342B5E",
+  green: "#5FD3A1",
+  secondary: "#272051",
+  success: "#5FD3A1",
+  danger: "#FF8597",
+  onAccent: "#2A0F08",
+  imageBackground: "#251E47",
+  toast: "#ECE8FF",
+  onToast: "#1A1433",
+  primary: "#A893FF",
+  primarySoft: "#2B2257",
+  onPrimary: "#160F33",
+  warning: "#FFC35C",
+  warningSoft: "#3A2E14",
+  successSoft: "#143528",
+  // Extra tokens from main's palette.
   backgroundDeep: "#0F0A1E",
-  paper: "#1E1636",
   card: "#221A3D",
-  ink: "#F2EDFF",
   title: "#FFFFFF",
-  muted: "#B9A9DA",
   mutedSoft: "#9C90BB",
-  orange: "#FF6E71",
-  orangeSoft: "#3A1F35",
   chip: "#4A2236",
   purple: "#A68BE0",
   purpleSoft: "#2E2450",
   field: "#2A2147",
-  line: "#3A2F5C",
-  green: "#6FD3A6",
-  successSoft: "#173A2C",
   info: "#7FB0FF",
   infoSoft: "#1B2A4A",
   warn: "#F0C27A",
   warnSoft: "#3D3018",
   discount: "#6FD3A6",
-  secondary: "#2A2147",
-  success: "#6FD3A6",
-  danger: "#FF8D92",
-  onAccent: "#FFFFFF",
-  imageBackground: "#FFFFFF",
-  toast: "#F2EDFF",
-  onToast: "#140D26",
   shadow: "#000000",
 };
+// Stores created before the redesign saved this rust colour as their accent; it now means "use the design accent".
+const LEGACY_ACCENT = "#B94721";
 
 type ThemeValue = {
   colors: Palette;
@@ -127,7 +142,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .catch(() => setStorageError(true));
   }, [mode, hydrated]);
   const isDark = mode === "dark" || (mode === "system" && systemMode === "dark");
-  const colors = useMemo<Palette>(() => ({ ...(isDark ? darkTheme : theme), ...(accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? { orange: accentColor } : {}) }), [isDark, accentColor]);
+  const colors = useMemo<Palette>(() => ({ ...(isDark ? darkTheme : theme), ...(accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) && accentColor.toUpperCase() !== LEGACY_ACCENT ? { orange: accentColor } : {}) }), [isDark, accentColor]);
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";

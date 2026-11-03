@@ -1,124 +1,70 @@
-import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
-import { Package, RefreshCw } from "lucide-react-native";
+import React, { useMemo, useState } from "react";
+import { View } from "react-native";
+import { router } from "expo-router";
+import { FileText, MapPin, Package, RotateCcw, Undo2 } from "lucide-react-native";
 import { Shell } from "../components/Shell";
-import { Button, Txt } from "../components/ui";
-import { formatPrice } from "../data/products";
-import { orderLabels } from "../lib/commerce-types";
-import { useSession } from "../lib/session";
+import { OrderSteps } from "../components/OrderSteps";
+import { Badge, Button, Card, EmptyState, Row, Tabs, Txt } from "../components/ui";
 import { useStore } from "../lib/store";
-import { Palette, useTheme, useThemedStyles } from "../lib/theme";
+import { useSession } from "../lib/session";
+import { useTheme } from "../lib/theme";
+import { useI18n } from "../lib/i18n";
+import { useMoney } from "../lib/money";
+import { useApi } from "../lib/useApi";
+import { orderLabels } from "../lib/commerce-types";
 
-export default function OrdersScreen() {
-  const { user, configured, hydrated, baseUrl } = useSession();
-  const { orders, refreshOrders, reorder } = useStore();
+type Return = { id: string; orderId: string; status: string; reason: string; refund: number | null; items: { name: string; quantity: number }[] | null; createdAt: string };
+const ACTIVE = ["pending", "confirmed", "preparing", "out_for_delivery"];
+const RETURN_LABELS: Record<string, string> = { requested: "قيد المراجعة", approved: "مقبول — رُدّ المبلغ", rejected: "مرفوض" };
+
+export default function Orders() {
   const { colors: t } = useTheme();
-  const s = useThemedStyles(styles);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [loadedFor, setLoadedFor] = useState("");
-  const version = useRef(0);
-  const identity = `${baseUrl}:${user?.id || ""}`;
-  const load = useCallback(async () => {
-    const current = ++version.current;
-    if (!configured || !user) return;
-    setLoading(true);
-    setError("");
-    try {
-      await refreshOrders();
-      if (current === version.current) setLoadedFor(`${baseUrl}:${user.id}`);
-    } catch (failure) {
-      if (current === version.current)
-        setError(failure instanceof Error ? failure.message : "تعذّر تحميل الطلبات");
-    } finally {
-      if (current === version.current) setLoading(false);
-    }
-  }, [configured, user, baseUrl, refreshOrders]);
-  useFocusEffect(useCallback(() => {
-    void load();
-    return () => { version.current++; };
-  }, [load]));
-
+  const { t: tr, lang } = useI18n();
+  const money = useMoney();
+  const { user } = useSession();
+  const { orders, reorder } = useStore();
+  const [tab, setTab] = useState<"current" | "previous" | "returns">("current");
+  const returns = useApi<{ returns: Return[] }>("/me/returns", { needsUser: true });
+  const current = useMemo(() => orders.filter((o) => ACTIVE.includes(o.status)), [orders]);
+  const previous = useMemo(() => orders.filter((o) => !ACTIVE.includes(o.status)), [orders]);
+  if (!user) return <Shell title="طلباتي"><EmptyState title="سجّل الدخول لعرض طلباتك" detail="طلباتك محفوظة في حسابك على خادم المتجر." action="تسجيل الدخول" href="/login" /></Shell>;
+  const list = tab === "current" ? current : previous;
+  const date = (value: string) => new Date(value).toLocaleDateString(lang === "ar" ? "ar-JO" : "en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   return (
-    <Shell title="طلباتي" subtitle="طلبات حسابك المحفوظة على خادم المتجر وحالتها الحالية.">
-      <View style={s.page}>
-        {!hydrated ? <ActivityIndicator color={t.orange} /> : !configured ? (
-          <View style={s.card}>
-            <Txt weight="bold" style={s.title}>اربط خادم المتجر أولًا</Txt>
-            <Txt style={s.muted}>سجل الطلبات مرتبط بالحساب وقاعدة البيانات. لا تُنشأ طلبات محلية على هذه الصفحة.</Txt>
-            <Button title="إعداد اتصال الخادم" onPress={() => router.push("/connection")} />
-          </View>
-        ) : !user ? (
-          <View style={s.card}>
-            <Txt weight="bold" style={s.title}>سجّل الدخول لعرض طلباتك</Txt>
-            <Button title="تسجيل الدخول" onPress={() => router.push("/login")} />
-          </View>
-        ) : (
-          <>
-            <View style={s.actions}>
-              <Button title="تحديث الطلبات" onPress={() => { void load(); }} secondary busy={loading} />
-              <Button title="طلبات الإرجاع" onPress={() => router.push("/returns")} secondary />
-            </View>
-            {error ? <View style={s.error}><Txt accessibilityRole="alert" style={{ color: t.danger }}>{error}</Txt></View> : null}
-            {loadedFor !== identity ? (
-              loading ? <ActivityIndicator accessibilityLabel="جارٍ تحميل الطلبات" color={t.orange} style={{ padding: 30 }} /> : null
-            ) : orders.length === 0 ? (
-              <View style={s.empty}>
-                <Package color={t.muted} size={38} />
-                <Txt weight="bold" style={s.title}>لا توجد طلبات في حسابك بعد</Txt>
-                <Txt style={s.muted}>عند تأكيد طلب من السلة سيظهر هنا برقم محفوظ على الخادم.</Txt>
-                <Button title="تصفح المنتجات" onPress={() => router.push("/explore")} />
-              </View>
-            ) : orders.map((order) => (
-              <View key={order.id} style={s.card}>
-                <Pressable accessibilityRole="button" accessibilityLabel={`تفاصيل الطلب ${order.id}`} onPress={() => router.push(`/order/${encodeURIComponent(order.id)}`)} style={s.heading}>
-                  <View style={s.icon}><Package color={t.orange} size={23} /></View>
-                  <View style={{ flex: 1, gap: 6 }}>
-                    <Txt weight="bold" selectable>{order.id}</Txt>
-                    <Txt style={s.small}>{new Date(order.date).toLocaleString("ar")}</Txt>
-                  </View>
-                  <View style={s.badge}><Txt weight="bold" style={{ color: t.green, fontSize: 12 }}>{orderLabels[order.status] || order.status}</Txt></View>
-                </Pressable>
-                {order.items.map((item, index) => (
-                  <View key={`${item.productId}-${index}`} style={s.row}>
-                    <Txt style={{ flex: 1 }}>{item.name}</Txt>
-                    <Txt style={s.small}>× {item.quantity}</Txt>
-                  </View>
-                ))}
-                <View style={s.total}>
-                  <Txt style={s.muted}>إجمالي الطلب</Txt>
-                  <Txt weight="extra" style={{ color: t.orange, fontSize: 22 }}>{formatPrice(order.total, order.currency)}</Txt>
-                </View>
-                <View style={s.actions}>
-                  <Button title="تفاصيل الطلب" onPress={() => router.push(`/order/${encodeURIComponent(order.id)}`)} style={{ flex: 1 }} />
-                  <Pressable accessibilityRole="button" accessibilityLabel={`إعادة شراء الطلب ${order.id}`} style={s.reorder} onPress={() => { reorder(order); router.push("/cart"); }}>
-                    <RefreshCw color={t.ink} size={17} />
-                    <Txt weight="bold">إعادة الشراء</Txt>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
-          </>
+    <Shell title="طلباتي" subtitle="تابع طلباتك وأعد طلب ما تحب بنقرة" testID="orders">
+      <Tabs testID="order-tabs" value={tab} onChange={setTab} tabs={[{ id: "current", label: "الحالية", count: current.length }, { id: "previous", label: "السابقة", count: previous.length }, { id: "returns", label: "المرتجعات", count: returns.data?.returns.length }]} />
+      <View style={{ gap: 12, marginTop: 14 }}>
+        {tab !== "returns" ? (list.length ? list.map((o) => (
+          <Card key={o.id} style={{ gap: 10 }} testID={`order-${o.id}`}>
+            <Row style={{ justifyContent: "space-between" }}>
+              <Row gap={8}><Package size={18} color={t.primary} /><Txt weight="bold">{o.id}</Txt></Row>
+              <Badge label={orderLabels[o.status] || o.status} tone={o.status === "delivered" ? "success" : o.status === "cancelled" ? "danger" : "accent"} />
+            </Row>
+            <Txt style={{ color: t.muted, fontSize: 12 }}>{date(o.createdAt || o.date)} · {tr("{n} منتجات", { n: o.items.reduce((s, i) => s + i.quantity, 0) })}</Txt>
+            <Txt numberOfLines={2} style={{ fontSize: 13 }}>{o.items.map((i) => `${i.name} × ${i.quantity}`).join("، ")}</Txt>
+            {ACTIVE.includes(o.status) ? <OrderSteps status={o.status} /> : null}
+            <Row style={{ justifyContent: "space-between" }}>
+              <Txt weight="extra" style={{ color: t.orange, fontSize: 17 }}>{money.format(o.total, o.currency)}</Txt>
+              <Button title={tr("التفاصيل")} secondary onPress={() => router.push(`/order/${o.id}`)} style={{ minHeight: 40, paddingVertical: 6 }} />
+            </Row>
+            <Row wrap>
+              {ACTIVE.includes(o.status) ? <Button title={tr("تتبع")} testID={`track-${o.id}`} icon={<MapPin size={16} color={t.onAccent} />} onPress={() => router.push(`/tracking/${o.id}`)} style={{ flex: 1, minHeight: 44, paddingVertical: 8 }} /> : null}
+              {o.status === "delivered" ? <Button title={tr("إرجاع")} testID={`return-${o.id}`} secondary icon={<Undo2 size={16} color={t.ink} />} onPress={() => router.push({ pathname: "/returns", params: { orderId: o.id } })} style={{ flex: 1, minHeight: 44, paddingVertical: 8 }} /> : null}
+              <Button title={tr("إعادة الطلب")} testID={`reorder-${o.id}`} secondary icon={<RotateCcw size={16} color={t.ink} />} onPress={() => { reorder(o); router.push("/cart"); }} style={{ flex: 1, minHeight: 44, paddingVertical: 8 }} />
+              <Button title={tr("الفاتورة")} testID={`invoice-${o.id}`} secondary icon={<FileText size={16} color={t.ink} />} onPress={() => router.push(`/invoice/${o.id}`)} style={{ flex: 1, minHeight: 44, paddingVertical: 8 }} />
+            </Row>
+          </Card>
+        )) : <EmptyState title={tab === "current" ? "لا توجد طلبات حالية" : "لا توجد طلبات سابقة"} detail="عندما تطلب ستظهر طلباتك هنا مع تتبع مباشر." />) : (
+          returns.data?.returns.length ? returns.data.returns.map((r) => (
+            <Card key={r.id} style={{ gap: 6 }} testID={`return-card-${r.id}`}>
+              <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{r.orderId}</Txt><Badge label={RETURN_LABELS[r.status] || r.status} tone={r.status === "approved" ? "success" : r.status === "rejected" ? "danger" : "warning"} /></Row>
+              <Txt style={{ color: t.muted, fontSize: 13 }}>{r.reason}</Txt>
+              {r.items ? <Txt style={{ fontSize: 13 }}>{r.items.map((i) => `${i.name} × ${i.quantity}`).join("، ")}</Txt> : null}
+              {r.refund !== null ? <Txt weight="bold" style={{ color: t.success }}>{tr("المبلغ المسترد إلى المحفظة: {m}", { m: money.format(r.refund) })}</Txt> : null}
+            </Card>
+          )) : <EmptyState title="لا توجد مرتجعات" detail="يمكنك إرجاع منتجات طلب مستلم خلال مهلة الإرجاع." action="" />
         )}
       </View>
     </Shell>
   );
 }
-
-const styles = (t: Palette) => StyleSheet.create({
-  page: { width: "100%", maxWidth: 850, alignSelf: "center", gap: 18 },
-  card: { padding: 22, borderRadius: 20, backgroundColor: t.paper, borderWidth: 1, borderColor: t.line, gap: 17 },
-  title: { fontSize: 21 },
-  muted: { color: t.muted, lineHeight: 25 },
-  small: { color: t.muted, fontSize: 12, lineHeight: 20 },
-  heading: { flexDirection: "row-reverse", alignItems: "center", gap: 12, flexWrap: "wrap", minHeight: 50 },
-  icon: { backgroundColor: t.orangeSoft, padding: 12, borderRadius: 13 },
-  badge: { backgroundColor: t.secondary, borderRadius: 10, padding: 9 },
-  row: { flexDirection: "row-reverse", alignItems: "center", gap: 10 },
-  total: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderColor: t.line, paddingTop: 15 },
-  actions: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 12 },
-  reorder: { backgroundColor: t.secondary, borderRadius: 14, paddingHorizontal: 15, minHeight: 51, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 7 },
-  empty: { padding: 30, alignItems: "center", gap: 19 },
-  error: { borderWidth: 1, borderColor: t.danger, backgroundColor: t.paper, padding: 15, borderRadius: 12 },
-});
