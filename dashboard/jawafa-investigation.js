@@ -14,17 +14,8 @@
     if(className) node.className=className;
     return node;
   }
-  function validLink(url){
-    try {const t=new URL(String(url));return t.protocol==="https:"&&["drive.google.com","docs.google.com"].includes(t.hostname);}
-    catch{return false;}
-  }
-  function safeLink(url,label){
-    if(!validLink(url))return el("span","المرجع غير متاح");
-    const a=el("a",label,"jf-link");
-    a.href=url;a.target="_blank";a.rel="noopener noreferrer";
-    a.setAttribute("aria-label",label+"، يفتح في Google Drive الخاص");
-    return a;
-  }
+  // No privileged document links in a public view.
+  function privateReference(label){return el("span",label+" — مرجع خاص (لا رابط عام)","jf-label");}
   function empty(target,message){target.replaceChildren(el("p",message,"jf-desc"));}
   function summary(items){
     const node=get("jf-summary");if(!node)return;node.replaceChildren();
@@ -52,11 +43,11 @@
       const tr=el("tr"), title=el("td"),info=el("td"),links=el("td");
       title.append(el("span",x.id,"jf-evid"),el("div",x.title));
       info.append(el("div",x.kind||""),el("small",x.note||"","jf-label"));
-      links.append(safeLink(x.href,"فتح التقرير"));
-      tr.append(title,info,el("td",x.date||"—"),el("td","مرجع محفوظ في Drive الخاص"),links);
+      links.append(privateReference("فتح التقرير يتطلب وصولًا خاصًا"));
+      tr.append(title,info,el("td",x.date||"—"),el("td","مرجع خاص — الرابط غير منشور"),links);
       node.append(tr);
     }
-    set("jf-results-count","المعروض: "+rows.length+" من "+source.reports.length+" تقريرًا موثق الرابط");
+    set("jf-results-count","المعروض: "+rows.length+" من "+source.reports.length+" تقريرًا مفهرسًا بلا روابط عامة");
   }
   function drawFilters(){
     const node=get("jf-report-filters");if(!node)return;node.replaceChildren();
@@ -73,7 +64,7 @@
   }
   function evidence(items,pending){
     const node=get("jf-evidence");if(!node)return;node.replaceChildren();
-    for(const x of items)node.append(safeLink(x.href,x.label));
+    for(const x of items)node.append(privateReference(x.label));
     for(const x of pending)node.append(el("span",x.id+": غير مثبت على Drive","jf-label"));
   }
   async function reload(){
@@ -86,11 +77,11 @@
       if(!response.ok)throw new Error("HTTP "+response.status);
       const data=await response.json();
       if(data.schema!=="jawafa-investigation-reports-v1"||
-        data.classification!=="PUBLIC_STATUS_AND_PRIVATE_EVIDENCE_LINKS_ONLY"||
+        data.classification!=="PUBLIC_STATUS_ONLY__PRIVATE_LINKS_REDACTED"||
         !Array.isArray(data.reports)||!Array.isArray(data.summary)||
         !Array.isArray(data.investigations)||!Array.isArray(data.private_evidence))
         throw new Error("مخطط فهرس التحقيق غير معتمد");
-      if(data.reports.some(x=>!validLink(x.href)))throw new Error("رابط مصدر غير موثوق");
+      if(data.reports.some(x=>x.href!==null)||data.private_evidence.some(x=>x.href!==null))throw new Error("ظهر رابط خاص داخل فهرس عام");
       source=data;
       summary(data.summary);tracks(data.investigations);drawFilters();drawReports();
       evidence(data.private_evidence,data.pending_artifacts||[]);
