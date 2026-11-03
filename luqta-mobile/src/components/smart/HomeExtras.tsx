@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
-import { CalendarCheck, ChevronLeft, Timer } from "lucide-react-native";
+import { CalendarCheck, ChevronLeft, Star, Timer } from "lucide-react-native";
 import { Txt } from "../ui";
 import { Card, SectionHeader } from "../design/kit";
 import { MiniProductCard } from "../ProductCard";
@@ -15,6 +15,9 @@ import { useStore } from "../../lib/store";
 import { useRemote } from "../../lib/useRemote";
 import type { Campaign, MediaPost, RewardsProfile } from "../../lib/smart";
 import { useTheme } from "../../lib/theme";
+import { TOOL_FLAGS, useFlags } from "../../lib/flags";
+import { api } from "../../lib/api";
+import type { Product } from "../../data/products";
 
 export function StoriesRow() {
   const { colors: t } = useTheme();
@@ -78,7 +81,8 @@ export function FlashSale() {
 
 export function SmartStrip() {
   const { colors: t } = useTheme();
-  const tools = SMART_GROUPS.flatMap((g) => g.tools).filter((x) => ["basket-optimizer", "lens", "market-pulse", "lists", "game", "reels"].includes(x.key));
+  const flags = useFlags();
+  const tools = SMART_GROUPS.flatMap((g) => g.tools).filter((x) => ["basket-optimizer", "lens", "market-pulse", "vendors", "lists", "game", "reels"].includes(x.key) && (!TOOL_FLAGS[x.key] || flags[TOOL_FLAGS[x.key]]));
   return (
     <View style={{ marginTop: 16 }} testID="home-smart">
       <SectionHeader title="أدوات لُقطة الذكية" action="كل الأدوات" onPress={() => router.push("/smart-tools")} />
@@ -125,7 +129,58 @@ export function CheckinNudge() {
   );
 }
 
+export function CollectionRows() {
+  const { products } = useStore();
+  const { data } = useRemote<{ collections: { id: string; title: string; subtitle: string | null; products: Product[] }[] }>("/collections");
+  if (!data?.collections.length) return null;
+  return (
+    <>
+      {data.collections.slice(0, 4).map((c) => (
+        <View key={c.id} style={{ marginTop: 16 }} testID={`collection-${c.id}`}>
+          <SectionHeader title={c.title} action="عرض الكل" onPress={() => router.push(`/collection/${c.id}`)} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, flexDirection: "row-reverse" }}>
+            {c.products.slice(0, 10).map((p) => <MiniProductCard key={p.id} product={products.find((x) => x.id === p.id) || p} width={140} />)}
+          </ScrollView>
+        </View>
+      ))}
+    </>
+  );
+}
+
+/** "قيّم طلبك" — latest delivered order without feedback (G16). */
+export function FeedbackPrompt() {
+  const { colors: t } = useTheme();
+  const { user } = useSession();
+  const { data, setData } = useRemote<{ order: { id: string; total: number; items: number } | null }>(user ? "/orders/feedback/pending" : null, { auth: true });
+  const [rating, setRating] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const tags = ["سريع", "مغلّف جيدًا", "سائق لطيف", "منتجات طازجة", "تأخر", "صنف ناقص"];
+  const [picked, setPicked] = useState<string[]>([]);
+  if (!user || !data?.order) return null;
+  const order = data.order;
+  async function send() {
+    setBusy(true);
+    try { await api.post(`/orders/${order.id}/feedback`, { rating, tags: picked }); setData({ order: null }); } catch { /* keep the card */ } finally { setBusy(false); }
+  }
+  return (
+    <Card style={{ marginTop: 16, gap: 8 }} testID="feedback-prompt">
+      <Txt weight="bold" style={{ color: t.title, fontSize: 17 }}>كيف كان طلبك {order.id}؟</Txt>
+      <View style={{ flexDirection: "row-reverse", gap: 6 }}>
+        {[1, 2, 3, 4, 5].map((n) => <Pressable key={n} accessibilityRole="button" accessibilityLabel={`${n} من 5`} onPress={() => setRating(n)} hitSlop={6}><Star size={30} color={t.orange} fill={n <= rating ? t.orange : "none"} /></Pressable>)}
+      </View>
+      {rating ? (
+        <>
+          <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 }}>
+            {tags.map((tag) => { const on = picked.includes(tag); return <Pressable key={tag} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => setPicked(on ? picked.filter((x) => x !== tag) : [...picked, tag])} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: on ? t.orange : t.field }}><Txt style={{ color: on ? t.onAccent : t.ink, fontSize: 13 }}>{tag}</Txt></Pressable>; })}
+          </View>
+          <Pressable accessibilityRole="button" disabled={busy} onPress={() => void send()} style={{ alignSelf: "flex-start", backgroundColor: t.orange, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10, opacity: busy ? 0.6 : 1 }}><Txt weight="bold" style={{ color: t.onAccent }}>إرسال التقييم</Txt></Pressable>
+        </>
+      ) : null}
+    </Card>
+  );
+}
+
 export function HomeExtras() {
-  return (<><CheckinNudge /><StoriesRow /><CampaignStrip /><FlashSale /><SmartStrip /><PromoVideo /></>);
+  return (<><FeedbackPrompt /><CheckinNudge /><StoriesRow /><CampaignStrip /><FlashSale /><CollectionRows /><SmartStrip /><PromoVideo /></>);
 }
 

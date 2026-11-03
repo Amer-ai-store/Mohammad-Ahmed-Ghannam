@@ -33,6 +33,7 @@ const routes = [
   ['16-smart-tools', '/smart-tools'], ['17-market-pulse', '/market-pulse'], ['18-price-radar', '/price-radar?id=headphones'], ['19-basket-optimizer', '/basket-optimizer'],
   ['20-game', '/game'], ['21-coupons', '/coupons'], ['22-trending', '/trending'], ['23-studio', '/studio'], ['24-lens', '/lens'], ['25-nutrition', '/nutrition'],
   ['26-green', '/green'], ['27-login', '/login'], ['28-appearance', '/appearance'], ['29-tour', '/?tour=1'], ['30-receipts', '/receipts'],
+  ['31-vendors', '/vendors'], ['32-rewards', '/rewards'], ['33-privacy', '/privacy'], ['34-merchant', '/merchant'],
 ];
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
 const report = [];

@@ -2439,7 +2439,235 @@
      "status": "needs-device"
     }
    ]
+  },
+  {
+   "id": "G16",
+   "name": "تكافؤ تطبيقات التوصيل (requirements + gap backlog، تنفيذ مستقل)",
+   "features": [
+    {
+     "id": "F-G16-01",
+     "title": "البحث: اقتراحات فورية وعمليات بحث شائعة مجهولة وبحث حديث على الجهاز",
+     "source": {
+      "file": "src/components/smart/SearchSuggestions.tsx",
+      "contains": [
+       "/search/suggest",
+       "rememberSearch"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-01"
+     }
+    },
+    {
+     "id": "F-G16-02",
+     "title": "اكتشاف المتاجر (المتجر الرسمي + التجار المعتمدون) وصفحة المتجر",
+     "source": {
+      "file": "src/app/vendors.tsx",
+      "contains": [
+       "/vendors",
+       "BadgeCheck"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-02"
+     }
+    },
+    {
+     "id": "F-G16-03",
+     "title": "مجموعات منتجات منسّقة من الإدارة على الرئيسية",
+     "source": {
+      "file": "src/components/smart/HomeExtras.tsx",
+      "contains": [
+       "CollectionRows",
+       "/collections"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-03"
+     }
+    },
+    {
+     "id": "F-G16-04",
+     "title": "الولاء: بطاقة أختام تُصدر قسيمة شخصية مقيّدة بصاحبها",
+     "source": {
+      "file": "server/commerceExtras.mjs",
+      "contains": [
+       "STAMP-",
+       "stamp_awards"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-04"
+     }
+    },
+    {
+     "id": "F-G16-05",
+     "title": "التجارة السريعة: أقرب فرع متوفر، مسافة، زمن ورسوم من الخادم",
+     "source": {
+      "file": "server/commerceExtras.mjs",
+      "contains": [
+       "haversineKm",
+       "express_unavailable"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-05"
+     }
+    },
+    {
+     "id": "F-G16-06",
+     "title": "الاستلام من الفرع بدون رسوم أو سائق",
+     "source": {
+      "file": "server/commerceExtras.mjs",
+      "contains": [
+       "mode === 'pickup'",
+       "canSkipToDelivered"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-06"
+     }
+    },
+    {
+     "id": "F-G16-07",
+     "title": "تعليمات التوصيل والتوصيل بدون تلامس وإكرامية السائق (تظهر للسائق)",
+     "source": {
+      "file": "src/components/smart/DeliveryOptions.tsx",
+      "contains": [
+       "delivery-instructions",
+       "contactless",
+       "إكرامية السائق"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-05"
+     }
+    },
+    {
+     "id": "F-G16-08",
+     "title": "تقييم الطلب بعد التسليم مع وسوم وتنبيه الإدارة بالمنخفض",
+     "source": {
+      "file": "src/components/smart/HomeExtras.tsx",
+      "contains": [
+       "FeedbackPrompt",
+       "/feedback"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-07"
+     }
+    },
+    {
+     "id": "F-G16-09",
+     "title": "حوكمة مفاتيح الميزات: إيقاف فوري مدقق ومفروض على الخادم والتطبيق",
+     "source": {
+      "file": "server/commerceExtras.mjs",
+      "contains": [
+       "FLAG_DEFAULTS",
+       "feature_disabled"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-08"
+     }
+    },
+    {
+     "id": "F-G16-10",
+     "title": "الوصولية والعربية: دور لكل عنصر قابل للضغط واسم لكل حقل وعناوين عربية",
+     "source": {
+      "file": "server/accessibility.test.mjs",
+      "contains": [
+       "accessibilityRole",
+       "accessibilityLabel"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/accessibility.test.mjs",
+      "name": "F-G16-10"
+     }
+    },
+    {
+     "id": "F-G16-11",
+     "title": "تحليلات مجمّعة مجهولة مع إلغاء الاشتراك وقمع تحويل للإدارة",
+     "source": {
+      "file": "server/commerceExtras.mjs",
+      "contains": [
+       "analytics_daily",
+       "funnel"
+      ]
+     },
+     "status": "verified-auto",
+     "test": {
+      "file": "server/commerceExtras.test.mjs",
+      "name": "F-G16-09"
+     }
+    },
+    {
+     "id": "F-G16-12",
+     "title": "شريط السلة الثابت (عدد + مجموع)",
+     "source": {
+      "file": "src/components/smart/MiniCartBar.tsx",
+      "contains": [
+       "mini-cart",
+       "عرض السلة"
+      ]
+     },
+     "status": "verified-source"
+    },
+    {
+     "id": "F-G16-13",
+     "title": "اشترِ الآن وادفع لاحقًا — يحتاج مزود تقسيط مرخّص (معروض معطّلًا)",
+     "source": {
+      "file": "src/app/payment.tsx",
+      "contains": [
+       "pay-bnpl"
+      ]
+     },
+     "status": "blocked-external"
+    },
+    {
+     "id": "F-G16-14",
+     "title": "إشعارات الهاتف Push — تحتاج وحدة أصلية وFCM",
+     "source": {
+      "file": "ledger/ROLLBACK_AND_BLOCKERS.md",
+      "contains": [
+       "Firebase Cloud Messaging"
+      ]
+     },
+     "status": "blocked-external"
+    },
+    {
+     "id": "F-G16-15",
+     "title": "الحجز/تناول الطعام خارج المنزل (Dineout) — خارج نطاق متجر التجزئة؛ البديل: الاستلام من الفرع",
+     "source": {
+      "file": "ledger/ROLLBACK_AND_BLOCKERS.md",
+      "contains": [
+       "Dineout"
+      ]
+     },
+     "status": "blocked-external"
+    }
+   ]
   }
  ],
- "total": 174
+ "total": 189
 }

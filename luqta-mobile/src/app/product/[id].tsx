@@ -11,6 +11,7 @@ import { BackSquare, BrandHeader, Card, Chip, CTA, QtyStepper, SmallButton } fro
 import { Companion } from "../../components/character/Companion";
 import { formatPrice, type ProductSpec } from "../../data/products";
 import { useStore } from "../../lib/store";
+import { track } from "../../lib/analytics";
 import { PriceInsight } from "../../components/smart/PriceInsight";
 import { NutritionCard } from "../../components/smart/NutritionCard";
 import { FlashBadges, TogetherSection, useProductEvents } from "../../components/smart/ProductExtras";
@@ -55,6 +56,7 @@ function ProductContent({ id }: { id: string }) {
     if (remaining < 1) { notify(branchStock < 1 ? "غير متوفر في الفرع المختار" : "الكمية المتاحة موجودة في سلتك"); return; }
     const chosen = Math.min(qty, remaining);
     setQuantity(selected.id, (cart[selected.id] || 0) + chosen);
+    track("add_to_cart");
     notify(chosen === qty ? "أُضيف المنتج إلى سلتك" : `أُضيفت ${chosen} قطع حسب الكمية المتاحة`);
   };
   const share = async () => {

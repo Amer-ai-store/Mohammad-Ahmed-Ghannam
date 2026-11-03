@@ -65,7 +65,7 @@ export function PriceInsight({ product, showRadarLink = true }: { product: Produ
       </View>
       <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable accessibilityRole="button" accessibilityLabel="إغلاق" onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(19,0,80,0.35)", justifyContent: "flex-end" }}>
-          <Pressable onPress={() => {}} style={{ backgroundColor: t.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 12 }}>
+          <Pressable accessibilityRole="none" onPress={() => {}} style={{ backgroundColor: t.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 12 }}>
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}><BellRing size={26} color={t.orange} /><Txt weight="extra" style={{ fontSize: 20, color: t.title }}>تنبيه عند انخفاض السعر</Txt></View>
             <Txt style={{ color: t.muted }}>السعر الحالي {money(product.price)}. سنرسل لك إشعارًا عندما يصبح السعر أقل من أو يساوي:</Txt>
             <TextInput testID="watch-target" accessibilityLabel="السعر المستهدف" value={target} onChangeText={setTarget} keyboardType="decimal-pad" style={{ minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: t.line, backgroundColor: t.field, paddingHorizontal: 14, fontSize: 20, color: t.ink, textAlign: "center", fontFamily: "IBMPlexSansArabic_600SemiBold" }} />

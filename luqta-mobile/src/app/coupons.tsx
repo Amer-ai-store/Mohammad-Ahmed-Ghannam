@@ -12,15 +12,19 @@ import { useRemote } from "../lib/useRemote";
 import { DEMO_COUPON } from "../lib/checkout";
 import type { PublicCoupon } from "../lib/smart";
 import { useTheme } from "../lib/theme";
+import { useSession } from "../lib/session";
 
 export default function CouponWallet() {
   const { colors: t } = useTheme();
   const money = useMoney();
   const { notify, updateDraft } = useStore();
   const { data, loading, error, demo, reload } = useRemote<{ coupons: PublicCoupon[] }>("/coupons/public", { demo: () => ({ coupons: [{ code: DEMO_COUPON.code, title: "كوبون تجريبي", type: "fixed", value: DEMO_COUPON.discount, minSubtotal: 0, expiresAt: null }] }) });
+  const { user } = useSession();
+  const mine = useRemote<{ vouchers: PublicCoupon[] }>(user ? "/loyalty/stamps" : null, { auth: true });
   function use(c: PublicCoupon) { updateDraft({ pendingCouponCode: c.code }); notify(`انسخ الرمز ${c.code} — سيُعبأ في السلة`); router.navigate("/cart"); }
   return (
     <Shell title="محفظة الكوبونات" subtitle="كوبونات المتجر المتاحة لك الآن" side={<DemoChip show={demo} />}>
+      {mine.data?.vouchers.length ? <View style={{ gap: 8, marginBottom: 12 }} testID="my-vouchers"><Txt weight="bold" style={{ color: t.title, fontSize: 18 }}>قسائمي الخاصة</Txt>{mine.data.vouchers.map((v) => <Card key={v.code} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, backgroundColor: t.successSoft }}><Ticket size={28} color={t.green} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt weight="bold" style={{ color: t.title }}>{v.type === "percent" ? `${v.value}%` : money(v.value)} — {v.title || "قسيمة"}</Txt><Chip label={v.code} tone="neutral" /></View><SmallButton title="استخدم" onPress={() => use(v)} /></Card>)}</View> : null}
       {loading && !data ? <LoadingBlock /> : !data ? <ErrorBlock message={error || "تعذّر التحميل"} onRetry={reload} /> : !data.coupons.length ? <InfoNote text="لا توجد كوبونات عامة حاليًا. تابع العروض والتسجيل اليومي لكسب النقاط." /> : (
         <View style={{ gap: 10 }} testID="coupon-list">
           {data.coupons.map((c) => (

@@ -11,7 +11,7 @@ import { api } from "../lib/api";
 import { useSession } from "../lib/session";
 import { useTheme } from "../lib/theme";
 
-type DriverOrder = { id: string; status: string; total: number; currency: string; createdAt?: string; address: Partial<MapPoint> & { name?: string; phone?: string; city?: string; street?: string }; tracking?: { location?: DriverPosition } };
+type DriverOrder = { id: string; status: string; total: number; currency: string; createdAt?: string; address: Partial<MapPoint> & { name?: string; phone?: string; city?: string; street?: string }; tracking?: { location?: DriverPosition }; extras?: { mode?: string; etaMinutes?: number; contactless?: boolean; instructions?: string | null; tip?: number } | null };
 type DriverPosition = MapPoint & { accuracy?: number | null; updatedAt: string };
 const statusLabels: Record<string, string> = { pending: "بانتظار التأكيد", confirmed: "مؤكد", preparing: "قيد التجهيز", out_for_delivery: "قيد التوصيل", delivered: "تم التسليم", cancelled: "ملغي" };
 const emptyOrders: DriverOrder[] = [];
@@ -127,6 +127,10 @@ export default function DriverScreen() {
       {selected ? <View style={[s.card, { backgroundColor: t.paper, borderColor: t.line }]}>
         <View style={s.row}><MapPin color={t.orange} size={22} /><Txt weight="bold" style={{ flex: 1, fontSize: 20 }}>تفاصيل التوصيلة المختارة</Txt></View>
         <Txt weight="bold">{selected.address.name}</Txt><Txt>{[selected.address.street, selected.address.city].filter(Boolean).join("، ")}</Txt>{selected.address.phone ? <Txt selectable style={{ textAlign: "right", writingDirection: "ltr" }}>{selected.address.phone}</Txt> : null}
+        {selected.extras?.mode === "express" ? <Txt weight="bold" style={{ color: t.orange }}>⚡ توصيل سريع{selected.extras.etaMinutes ? ` — خلال ${selected.extras.etaMinutes} دقيقة` : ""}</Txt> : null}
+        {selected.extras?.contactless ? <Txt weight="bold" style={{ color: t.green }}>بدون تلامس — اترك الطلب عند الباب</Txt> : null}
+        {selected.extras?.instructions ? <Txt testID="driver-instructions" style={{ color: t.ink, backgroundColor: t.orangeSoft, padding: 10, borderRadius: 10 }}>تعليمات العميل: {selected.extras.instructions}</Txt> : null}
+        {selected.extras?.tip ? <Txt style={{ color: t.green }}>إكرامية لك: {selected.extras.tip}</Txt> : null}
         <Button title="فتح اتجاهات القيادة" secondary onPress={() => void openDirections()} />
         <Txt style={{ color: t.muted, lineHeight: 25 }}>تعمل مشاركة الموقع أثناء بقاء التطبيق مفتوحًا في المقدمة فقط. تُرسل الإحداثيات إلى خادم المتجر ليشاهدها صاحب الطلب. تتوقف عند مغادرة التطبيق أو تغيير التوصيلة أو تسجيل الخروج.</Txt>
         {sharing ? <><View style={s.row}><Radio color={t.green} size={19} /><Txt weight="bold" style={{ color: t.green, flex: 1 }}>مشاركة الموقع مفعّلة لهذه التوصيلة</Txt></View><Button title="إيقاف مشاركة موقعي" secondary onPress={() => stop("أوقفت مشاركة الموقع. يبقى آخر موقع منشور مع وقت إرساله.")} /></> : <Button title="السماح بالموقع وبدء المشاركة" disabled={!canShare} busy={starting} onPress={() => void start()} />}

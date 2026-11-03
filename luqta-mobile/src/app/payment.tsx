@@ -71,6 +71,10 @@ export default function Payment() {
           );
         })}
       </View>
+      <View testID="pay-bnpl" accessibilityLabel="اشترِ الآن وادفع لاحقًا: غير متاح بعد" style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, marginTop: 10, padding: 12, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", borderColor: t.line, opacity: 0.75 }}>
+        <Calendar size={24} color={t.muted} />
+        <View style={{ flex: 1, alignItems: "flex-end" }}><Txt weight="bold" style={{ color: t.title }}>اشترِ الآن وادفع لاحقًا (تقسيط)</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>يحتاج تعاقدًا مع مزود تقسيط مرخّص؛ غير مفعّل بعد.</Txt></View>
+      </View>
 
       {method === "card" ? (
         <Card style={{ marginTop: 14 }}>

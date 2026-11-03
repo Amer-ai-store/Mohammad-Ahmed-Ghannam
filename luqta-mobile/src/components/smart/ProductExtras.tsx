@@ -7,6 +7,7 @@ import { Txt } from "../ui";
 import { Card, Chip, SectionHeader } from "../design/kit";
 import { MiniProductCard } from "../ProductCard";
 import { api } from "../../lib/api";
+import { track } from "../../lib/analytics";
 import { useSession } from "../../lib/session";
 import { useStore } from "../../lib/store";
 import { countdown, freshness } from "../../lib/smart";
@@ -34,8 +35,8 @@ export function FlashBadges({ product }: { product: Product }) {
 
 export function useProductEvents(productId?: string) {
   const { configured } = useSession();
-  useEffect(() => { if (configured && productId) void api.post(`/products/${productId}/event`, { kind: "view" }).catch(() => {}); }, [configured, productId]);
-  return (kind: "share") => { if (configured && productId) void api.post(`/products/${productId}/event`, { kind }).catch(() => {}); };
+  useEffect(() => { if (configured && productId) { void api.post(`/products/${productId}/event`, { kind: "view" }).catch(() => {}); track("view_product"); } }, [configured, productId]);
+  return (kind: "share") => { if (configured && productId) { void api.post(`/products/${productId}/event`, { kind }).catch(() => {}); track("share"); } };
 }
 
 export function TogetherSection({ product }: { product: Product }) {

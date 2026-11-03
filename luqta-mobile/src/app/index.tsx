@@ -10,6 +10,7 @@ import { ProductCard } from "../components/ProductCard";
 import { Companion } from "../components/character/Companion";
 import { designAssets } from "../lib/designAssets";
 import { HomeExtras } from "../components/smart/HomeExtras";
+import { MiniCartBar } from "../components/smart/MiniCartBar";
 import { TourOverlay, useTourState } from "../components/smart/TourOverlay";
 import { useStore } from "../lib/store";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
@@ -38,7 +39,7 @@ export default function Home() {
   }, [products]);
   const ask = () => router.push({ pathname: "/assistant", params: query.trim() ? { q: query.trim() } : {} });
   return (
-    <Shell title="شو بدك اليوم؟" subtitle="تسوق بالمحادثة، أنا أجهّز لك الأفضل">
+    <Shell title="شو بدك اليوم؟" subtitle="تسوق بالمحادثة، أنا أجهّز لك الأفضل" footer={<MiniCartBar />}>
       <View style={s.searchCard}>
         <View style={s.searchInner}>
           <Pressable accessibilityRole="button" accessibilityLabel="ابحث بصورة المنتج" testID="home-camera" onPress={() => router.push({ pathname: "/assistant", params: { mode: "photo" } })} style={s.camera}>

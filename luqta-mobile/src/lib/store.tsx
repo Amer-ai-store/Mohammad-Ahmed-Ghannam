@@ -17,7 +17,7 @@ type Store = State & {
   wishlistSynced: boolean; refreshCatalog:()=>Promise<void>; refreshOrders:()=>Promise<void>; refreshWishlist:()=>Promise<void>;
   addToCart:(id:string)=>void; setQuantity:(id:string,quantity:number)=>void;
   toggleFavorite:(id:string)=>void; toggleCompare:(id:string)=>void; rememberProduct:(id:string)=>void;
-  submitOrder:(input:{address:Address;paymentMethod:'cod'|'wallet';couponCode?:string;idempotencyKey:string;expectedSubtotal?:number;deliverySlot?:string;eco?:boolean})=>Promise<Order>;
+  submitOrder:(input:{address:Address;paymentMethod:'cod'|'wallet';couponCode?:string;idempotencyKey:string;expectedSubtotal?:number;deliverySlot?:string;eco?:boolean;deliveryMode?:string;pickupBranchId?:string;instructions?:string;contactless?:boolean;tip?:number})=>Promise<Order>;
   reorder:(order:Order)=>void; notify:(message:string)=>void; clearCart:()=>void;
   branches: Branch[]; branchId: string; setBranch:(id:string)=>void;
   draft: CheckoutDraft; updateDraft:(patch:Partial<CheckoutDraft>)=>void;
@@ -181,7 +181,7 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     return order;
   };
   const cancelDemoOrder=(id:string)=>setState(s=>({...s,demoOrders:(s.demoOrders||[]).map(o=>o.id===id&&['pending','confirmed','preparing'].includes(o.status)?{...o,status:'cancelled' as const,events:[...(o.events||[]),{status:'cancelled',createdAt:new Date().toISOString(),note:'أُلغي الطلب التجريبي'}]}:o)}));
-  const submitOrder=async(input:{address:Address;paymentMethod:'cod'|'wallet';couponCode?:string;idempotencyKey:string;expectedSubtotal?:number;deliverySlot?:string;eco?:boolean})=>{
+  const submitOrder=async(input:{address:Address;paymentMethod:'cod'|'wallet';couponCode?:string;idempotencyKey:string;expectedSubtotal?:number;deliverySlot?:string;eco?:boolean;deliveryMode?:string;pickupBranchId?:string;instructions?:string;contactless?:boolean;tip?:number})=>{
     if(!user)throw new Error('سجّل الدخول لإنشاء طلب على الخادم');
     if(!Object.keys(state.cart).length)throw new Error('السلة فارغة');
     const response=await api.post<{order:Order}>('/orders',{...input,branchId:branchId||undefined,items:Object.entries(state.cart).map(([productId,quantity])=>({productId,quantity}))});

@@ -8,6 +8,7 @@ import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
 import { BrandHeader, Card, Checkbox, CTA, Field, FieldRow, HeaderPill, SmallButton } from "../components/design/kit";
 import { CO2_PER_TRIP_KG } from "../lib/smart";
+import { DeliveryOptions } from "../components/smart/DeliveryOptions";
 import { MapArt } from "../components/design/MapArt";
 import { Companion } from "../components/character/Companion";
 import { useStore } from "../lib/store";
@@ -79,6 +80,7 @@ export default function Delivery() {
         const r = form.id ? await api.patch<{ address: Address }>(`/addresses/${form.id}`, address) : await api.post<{ address: Address }>("/addresses", { ...address, isDefault: !saved.length });
         address.id = r.address.id;
       }
+      if (draft.deliveryMode === "pickup" && !draft.pickupBranchId) { setBusy(false); return setError("اختر فرع الاستلام"); }
       updateDraft({ address, slot });
       router.push("/payment");
     } catch (e) { setError(e instanceof Error ? e.message : "تعذّر حفظ العنوان"); }
@@ -126,17 +128,18 @@ export default function Delivery() {
           })}
         </View>
       </Card>
-      <Card style={{ marginTop: 12 }} testID="eco-delivery">
+      <DeliveryOptions latitude={form.latitude} longitude={form.longitude} />
+      {(draft.deliveryMode || "standard") === "standard" ? <Card style={{ marginTop: 12 }} testID="eco-delivery">
         <View style={s.cardTitle}><Leaf size={24} color={t.green} /><Txt weight="bold" style={s.cardTitleText}>توصيل مجمّع صديق للبيئة</Txt></View>
         <Checkbox checked={!!draft.eco} onChange={(v) => updateDraft({ eco: v })} testID="eco-check" label={<Txt style={{ color: t.ink, flex: 1, lineHeight: 22 }}>نجمع طلبك مع طلبات منطقتك خلال الفترة المختارة (≈ {CO2_PER_TRIP_KG} كغ CO₂ أقل) واحصل على 10 نقاط بعد التسليم.</Txt>} />
-      </Card>
+      </Card> : null}
       {error ? <Txt accessibilityRole="alert" style={{ color: t.danger, marginTop: 10 }}>{error}</Txt> : null}
       <CTA title="حفظ العنوان والموعد" testID="delivery-save" busy={busy} onPress={() => void save()} style={{ marginTop: 14 }} />
       <Pressable accessibilityRole="button" accessibilityLabel="إضافة عنوان آخر" onPress={() => setForm({ name: user?.name || "", phone: "", city: "عمان", district: "الهاشمي", street: "", building: "", details: "" })} style={s.addAnother}>
         <Txt weight="medium" style={{ fontSize: 16, color: t.ink }}>إضافة عنوان آخر</Txt><Plus size={22} color={t.ink} />
       </Pressable>
       <Modal visible={picker !== "none"} transparent animationType="fade" onRequestClose={() => setPicker("none")}>
-        <Pressable style={s.backdrop} onPress={() => setPicker("none")}>
+        <Pressable accessibilityRole="button" accessibilityLabel="إغلاق" style={s.backdrop} onPress={() => setPicker("none")}>
           <View style={s.sheet}>
             <Txt weight="extra" style={{ fontSize: 20, color: t.title, marginBottom: 8 }}>{picker === "city" ? "اختر المدينة" : "اختر الحي"}</Txt>
             {options.map((o) => (

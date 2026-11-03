@@ -5,6 +5,8 @@ import { useLocalSearchParams } from "expo-router";
 import { ArrowUpDown, Check, ChevronDown, ChevronLeft, MapPin, Search, ShoppingBasket, SlidersHorizontal, X } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { SmartStrip } from "../components/smart/HomeExtras";
+import { MiniCartBar } from "../components/smart/MiniCartBar";
+import { SearchSuggestions, rememberSearch } from "../components/smart/SearchSuggestions";
 import { Txt } from "../components/ui";
 import { BrandHeader, Chip, SectionHeader, SmallButton, Toggle } from "../components/design/kit";
 import { MiniProductCard } from "../components/ProductCard";
@@ -43,8 +45,8 @@ function BranchPill() {
         <MapPin size={22} color={t.ink} fill={t.ink} />
       </Pressable>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={s.backdrop} onPress={() => setOpen(false)} accessibilityLabel="إغلاق">
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable accessibilityRole="button" style={s.backdrop} onPress={() => setOpen(false)} accessibilityLabel="إغلاق">
+          <Pressable accessibilityRole="none" style={s.sheet} onPress={() => {}}>
             <Txt weight="extra" style={{ fontSize: 20, color: t.title, marginBottom: 10 }}>اختر الفرع</Txt>
             {branches.map((b) => (
               <Pressable key={b.id} accessibilityRole="radio" accessibilityState={{ checked: b.id === current?.id }} onPress={() => { setBranch(b.id); setOpen(false); }} style={s.sheetRow}>
@@ -79,13 +81,14 @@ function ExploreContent({ initialQuery, initialCategory }: { initialQuery: strin
   const catLabel = categories.find((c) => c.id === category)?.label || "كل المنتجات";
   const filtersOn = maxPrice !== undefined || stockOnly;
   return (
-    <Shell header={<BrandHeader left={<BranchPill />} />} title="اكتشف عالمك" subtitle="كل ما تحتاجه في مكان واحد" titleAlign="right"
+    <Shell footer={<MiniCartBar />} header={<BrandHeader left={<BranchPill />} />} title="اكتشف عالمك" subtitle="كل ما تحتاجه في مكان واحد" titleAlign="right"
       side={<Companion action="cart" base={150} aspect={0.75} enterFrom="right" />}>
       <View style={s.search}>
         <Pressable accessibilityRole="button" accessibilityLabel="تنفيذ البحث" style={s.searchBtn} onPress={() => setShowAll(true)}><Search size={24} color={t.ink} /></Pressable>
-        <TextInput testID="explore-search" accessibilityLabel="ابحث عن منتجات أو علامات تجارية" value={query} onChangeText={setQuery} placeholder="ابحث عن منتجات أو علامات تجارية..." placeholderTextColor={t.muted} returnKeyType="search" style={s.input} />
+        <TextInput testID="explore-search" accessibilityLabel="ابحث عن منتجات أو علامات تجارية" value={query} onChangeText={setQuery} placeholder="ابحث عن منتجات أو علامات تجارية..." placeholderTextColor={t.muted} returnKeyType="search" onSubmitEditing={() => void rememberSearch(query)} style={s.input} />
         {query ? <Pressable accessibilityRole="button" accessibilityLabel="مسح البحث" onPress={() => setQuery("")} style={{ padding: 10 }}><X size={18} color={t.muted} /></Pressable> : null}
       </View>
+      <SearchSuggestions query={query} onPick={(v) => { setQuery(v); void rememberSearch(v); }} />
       <View style={s.tools}>
         <Pressable accessibilityRole="button" accessibilityLabel="ترتيب" testID="explore-sort" accessibilityState={{ expanded: panel === "sort" }} onPress={() => setPanel(panel === "sort" ? "none" : "sort")} style={[s.tool, sort !== "featured" && { borderColor: t.orange }]}>
           <ChevronDown size={18} color={t.ink} /><Txt weight="medium" style={{ fontSize: 16, color: t.ink }}>ترتيب</Txt><ArrowUpDown size={24} color={t.ink} />

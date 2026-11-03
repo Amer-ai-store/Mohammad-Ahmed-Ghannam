@@ -1,6 +1,7 @@
 // "مراجعة الطلب" — server re-checks price & stock (branch aware) before the customer
 // can confirm. Nothing is ordered without the explicit confirm button + terms checkbox.
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { track } from "../lib/analytics";
 import { Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft, Clock, CreditCard, MapPin, RefreshCw, ShoppingCart } from "lucide-react-native";
@@ -61,10 +62,15 @@ export default function Checkout() {
   }, [signature, branchId, catalogStatus]);
   useEffect(() => { const timer = setTimeout(() => { void runCheck(); }, 0); return () => clearTimeout(timer); }, [runCheck]);
   useEffect(() => { idempotency.current = newIdempotencyKey(); }, [signature, draft.address, draft.payment]);
+  useEffect(() => { track("begin_checkout"); }, []);
 
   const base = check ? check.subtotal : store.subtotal;
   const bundleDiscount = check?.bundleDiscount || 0;
-  const totals = computeTotals(base, (coupon?.discount || 0) + bundleDiscount, settings.shippingFee, settings.freeShippingThreshold);
+  const baseTotals = computeTotals(base, (coupon?.discount || 0) + bundleDiscount, settings.shippingFee, settings.freeShippingThreshold);
+  const mode = draft.deliveryMode || "standard";
+  const tip = mode === "pickup" ? 0 : draft.tip || 0;
+  const shippingShown = mode === "pickup" ? 0 : Math.round((baseTotals.shipping + (mode === "express" ? draft.expressFee || 0 : 0)) * 1000) / 1000;
+  const totals = { ...baseTotals, shipping: shippingShown, total: Math.round((baseTotals.subtotal - baseTotals.discount + shippingShown + tip) * 1000) / 1000 };
   const slot = deliverySlots.find((d) => d.id === draft.slot) || deliverySlots[1];
   const paymentLabel = draft.payment === "card" ? "بطاقة ائتمان / خصم" : draft.payment === "wallet" ? "رصيد المتجر" : "الدفع عند الاستلام";
   const paymentSupported = draft.payment !== "card" || demo;
@@ -82,7 +88,7 @@ export default function Checkout() {
     }
     setBusy(true);
     try {
-      const order = await submitOrder({ address: draft.address, paymentMethod: draft.payment === "wallet" ? "wallet" : "cod", couponCode: coupon?.code, idempotencyKey: idempotency.current, expectedSubtotal: check?.subtotal, deliverySlot: draft.slot, eco: draft.eco === true });
+      const order = await submitOrder({ address: draft.address, paymentMethod: draft.payment === "wallet" ? "wallet" : "cod", couponCode: coupon?.code, idempotencyKey: idempotency.current, expectedSubtotal: check?.subtotal, deliverySlot: draft.slot, eco: draft.eco === true, deliveryMode: mode, pickupBranchId: mode === "pickup" ? draft.pickupBranchId : undefined, instructions: draft.instructions?.trim() || undefined, contactless: draft.contactless === true, tip });
       router.replace(`/tracking/${order.id}`);
     } catch (e) {
       if (e instanceof ApiError && (e.code === "price_changed" || e.code === "out_of_stock" || e.code === "product_unavailable")) { setTerms(false); void runCheck(); }
@@ -137,7 +143,9 @@ export default function Checkout() {
         {coupon?.discount ? <View style={s.line}><Txt style={s.label}>الخصم ({coupon.code})</Txt><Txt style={[s.value, { color: t.discount }]}>- {formatPrice(Math.min(coupon.discount, totals.discount), settings.currency)}</Txt></View> : null}
         {bundleDiscount && check?.bundle ? <View style={s.line} testID="bundle-line"><Txt style={s.label}>حزمة «{check.bundle.name}» ({check.bundle.percent}%)</Txt><Txt style={[s.value, { color: t.discount }]}>- {formatPrice(bundleDiscount, settings.currency)}</Txt></View> : null}
         {draft.eco ? <View style={s.line}><Txt style={s.label}>توصيل مجمّع صديق للبيئة</Txt><Txt style={[s.value, { color: t.green }]}>+10 نقاط</Txt></View> : null}
-        <View style={s.line}><Txt style={s.label}>رسوم التوصيل</Txt><Txt style={s.value}>{formatPrice(totals.shipping, settings.currency)}</Txt></View>
+        <View style={s.line}><Txt style={s.label}>{mode === "pickup" ? "استلام من الفرع" : mode === "express" ? "توصيل سريع" : "رسوم التوصيل"}</Txt><Txt style={s.value}>{formatPrice(totals.shipping, settings.currency)}</Txt></View>
+        {tip ? <View style={s.line} testID="tip-line"><Txt style={s.label}>إكرامية السائق</Txt><Txt style={s.value}>{formatPrice(tip, settings.currency)}</Txt></View> : null}
+        {draft.instructions?.trim() || draft.contactless ? <Txt style={{ color: t.muted, fontSize: 12 }}>{draft.contactless ? "بدون تلامس · " : ""}{draft.instructions?.trim() || ""}</Txt> : null}
         <View style={s.total}><Txt weight="bold" style={{ fontSize: 19, color: t.title }}>المجموع</Txt><Txt weight="extra" style={{ fontSize: 26, color: t.orange }}>{formatPrice(totals.total, settings.currency)}</Txt></View>
         <Txt style={{ color: t.muted, fontSize: 13, marginTop: 6, textAlign: "left" }}>{demo ? "مثال شامل الرسوم" : check?.source === "server" ? "تحقق الخادم من السعر والمخزون" : ""}</Txt>
       </Card>

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { router } from "expo-router";
-import { Award, CalendarCheck, Gamepad2, Medal, Ticket, Trophy } from "lucide-react-native";
+import { Award, CalendarCheck, Gamepad2, Medal, Stamp, Ticket, Trophy } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Txt } from "../components/ui";
 import { AccountGate } from "../components/AccountKit";
@@ -13,6 +13,8 @@ import { api } from "../lib/api";
 import { useStore } from "../lib/store";
 import { useRemote } from "../lib/useRemote";
 import type { RewardsProfile } from "../lib/smart";
+
+type StampCard = { enabled: boolean; stamps: number; required: number; completed: number; reward: { type: "percent" | "fixed"; value: number }; minSubtotal: number; vouchers: { code: string; title: string | null; type: string; value: number; expiresAt: string | null }[] };
 import { useTheme } from "../lib/theme";
 
 export default function RewardsScreen() {
@@ -22,6 +24,7 @@ function Body() {
   const { colors: t } = useTheme();
   const { notify } = useStore();
   const { data, setData, loading, error, reload } = useRemote<RewardsProfile>("/rewards/profile", { auth: true });
+  const stamps = useRemote<StampCard>("/loyalty/stamps", { auth: true });
   const [busy, setBusy] = useState(false);
   async function checkin() {
     setBusy(true);
@@ -53,6 +56,16 @@ function Body() {
         <CTA title={data.checkedInToday ? `سجّلت اليوم — عد غدًا (+${data.nextCheckinPoints})` : `سجّل حضورك اليوم (+${data.nextCheckinPoints} نقطة)`} disabled={data.checkedInToday} busy={busy} onPress={() => void checkin()} testID="checkin" />
         <Txt style={{ color: t.muted, fontSize: 12, marginTop: 6 }}>5 نقاط يوميًا +2 لكل يوم متتالٍ (حتى 20).</Txt>
       </Card>
+      {stamps.data?.enabled ? (
+        <Card testID="stamp-card">
+          <SectionHeader title="بطاقة الأختام" icon={Stamp} />
+          <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 }}>
+            {Array.from({ length: stamps.data.required }, (_, i) => <View key={i} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderStyle: i < stamps.data!.stamps ? "solid" : "dashed", borderColor: t.orange, backgroundColor: i < stamps.data!.stamps ? t.orange : "transparent", alignItems: "center", justifyContent: "center" }}><Stamp size={20} color={i < stamps.data!.stamps ? t.onAccent : t.orange} /></View>)}
+          </View>
+          <Txt style={{ color: t.muted, marginTop: 8, fontSize: 13 }}>ختم لكل طلب مُسلّم{stamps.data.minSubtotal ? ` فوق ${stamps.data.minSubtotal}` : ""} — عند اكتمال {stamps.data.required} أختام تحصل على قسيمة {stamps.data.reward.type === "percent" ? `${stamps.data.reward.value}%` : stamps.data.reward.value} خاصة بك.</Txt>
+          {stamps.data.vouchers.map((v) => <View key={v.code} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginTop: 8 }}><Chip label={v.code} tone="success" /><Txt style={{ color: t.muted, fontSize: 12 }}>{v.expiresAt ? `حتى ${new Date(v.expiresAt).toLocaleDateString("ar")}` : ""}</Txt></View>)}
+        </Card>
+      ) : null}
       <Card>
         <SectionHeader title="الشارات" icon={Award} />
         <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 }}>

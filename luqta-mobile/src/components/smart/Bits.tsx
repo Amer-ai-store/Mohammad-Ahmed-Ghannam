@@ -7,6 +7,7 @@ import { Chip, IconCircle, type IconType } from "../design/kit";
 import { ProductImage } from "../ProductCard";
 import { formatPrice, type Product } from "../../data/products";
 import { useStore } from "../../lib/store";
+import { track } from "../../lib/analytics";
 import { Palette, useTheme, useThemedStyles } from "../../lib/theme";
 
 export function useMoney() {
@@ -25,7 +26,7 @@ export function ToolGrid({ tools }: { tools: Tool[] }) {
   return (
     <View style={s.grid}>
       {tools.map((tool) => (
-        <Pressable key={tool.key} testID={`tool-${tool.key}`} accessibilityRole="button" accessibilityLabel={`${tool.title}: ${tool.detail}`} onPress={() => router.push(tool.href)} style={({ pressed }) => [s.tile, pressed && { opacity: 0.85 }]}>
+        <Pressable key={tool.key} testID={`tool-${tool.key}`} accessibilityRole="button" accessibilityLabel={`${tool.title}: ${tool.detail}`} onPress={() => { track("open_tool"); router.push(tool.href); }} style={({ pressed }) => [s.tile, pressed && { opacity: 0.85 }]}>
           <IconCircle icon={tool.icon} tint={tool.tint || t.orange} bg={t.orangeSoft} size={46} />
           <Txt weight="bold" numberOfLines={1} style={{ fontSize: 15, color: t.title, marginTop: 8, textAlign: "right" }}>{tool.title}</Txt>
           <Txt numberOfLines={2} style={{ fontSize: 12, color: t.muted, textAlign: "right", lineHeight: 18 }}>{tool.detail}</Txt>
