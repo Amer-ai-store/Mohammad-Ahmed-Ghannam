@@ -89,6 +89,27 @@
     if(group==='purchases'||group==='sales'||group==='inventory'){
       body.append(note('أي انتقال من مستند حركة إلى قيد محاسبي يحتاج دليلًا من جدول المصدر وجدول الترحيل وسجل الحركة. لا يعتبر نجاح الطباعة أو الإدخال ترحيلًا محاسبيًا.'));
     }
+    // Column observations do not attest row matches or actual posting status.
+    const evidence=globalThis.TrustSoftWorkflowEvidence?.inspect({group,catalog});
+    if(evidence?.tableRows?.length){
+      const evidenceSection=element('section',undefined,'workflow-evidence');
+      evidenceSection.append(element('h3','خريطة المستندات وحقول الربط — تحقق وصفي فقط'));
+      evidenceSection.append(note('رُصدت أسماء الحقول في 4 نوفمبر 2026 عبر جسر محلي. لا تُعرض قيم مالية أو بيانات اعتماد. إثبات ظهور الجدول يخص فهرس API الحالي فقط.'));
+      evidenceSection.append(tableRenderer(evidence.tableRows));
+      if(evidence.candidates.length){
+        evidenceSection.append(element('h4','علاقات مرشحة تحتاج إثبات المفاتيح والتطابق'));
+        evidenceSection.append(tableRenderer(evidence.candidates));
+      }
+      evidenceSection.append(note('لا يُستنتج الترحيل أو التدقيق من مجرد أسماء الحقول، ولا تتاح أي أوامر تعديل أو عكس من هذه الشاشة.'));
+      body.append(evidenceSection);
+    }
+    if(group==='catalog'){
+      const classified=new Set(Object.keys(core.spec).filter(key=>key!=='catalog').flatMap(key=>
+        core.tabsFor(key).flatMap(tab=>core.tablesFor(catalog,tab).map(t=>t.schema+'.'+t.name))));
+      source.append(tag('مصنفة أوليًا: '+classified.size));
+      source.append(tag('غير مصنفة: '+Math.max(0,catalog.length-classified.size)));
+      source.append(note('العدد من استجابة API الحالية فقط؛ لا يثبت عرض 1024 جدولًا على الخادم حتى إجراء مطابقة مستقلة.'));
+    }
     const matches=core.tablesFor(catalog,current);
     const searchBar=element('div',undefined,'directory-search');
     const input=element('input');input.type='search';input.setAttribute('aria-label','ابحث في الجداول المرتبطة');input.placeholder='بحث باسم الجدول أو المخطط';input.value=searchTexts.get(group)||'';
