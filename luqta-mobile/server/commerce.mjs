@@ -233,7 +233,7 @@ export async function createCommerceServer(options = {}) {
       if (activeVariants(productId).length) fail(409, 'اختر المقاس أو اللون قبل إضافة هذا المنتج', 'variant_required');
       if (row.stock < quantity) fail(409, `الكمية المطلوبة غير متاحة للمنتج ${parse(row.data).name}`, 'out_of_stock');
       if (options.branchId) ext.checkBranchStock(options.branchId, productId, quantity);
-      const p = parse(row.data), price = ext ? ext.unitPrice(row, p) : p.price; subtotal = money(subtotal + price * quantity);
+      const p = parse(row.data), price = ext ? ext.unitPrice(row, p, quantity) : p.price; subtotal = money(subtotal + price * quantity);
       return { productId, name: p.variantLabel ? `${p.name} — ${p.variantLabel}` : p.name, price, quantity };
     });
     return { lines, subtotal };
