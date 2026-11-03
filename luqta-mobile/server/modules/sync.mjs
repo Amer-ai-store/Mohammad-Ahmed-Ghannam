@@ -18,7 +18,8 @@ const WRITABLE = { name: 'products', columns: ['id', 'name', 'price', 'stock', '
 // Use the same stable mapping as src/lib/commandCenter.ts; never expose local string IDs as numeric AAS IDs.
 const productNumber = (id) => {
   let hash = 2166136261;
-  for (const char of String(id)) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+  const raw = String(id);
+  for (let index = 0; index < raw.length; index++) hash = Math.imul(hash ^ raw.charCodeAt(index), 16777619);
   return ((hash >>> 0) % 2147483647) + 1;
 };
 const digest = (value) => createHash('sha256').update(String(value)).digest();
@@ -57,9 +58,9 @@ export function install(c, api) {
   `);
   const config = () => {
     const saved = setting('aasSync', {}) || {}, o = options.aas || {};
-    return { baseUrl: o.baseUrl || process.env.AAS_BASE_URL || saved.baseUrl || '', apiKey: o.apiKey || process.env.AAS_API_KEY || (saved.apiKey ? decrypt(saved.apiKey) : ''), runnerKey: o.runnerKey || process.env.AAS_RUNNER_KEY || (saved.runnerKey ? decrypt(saved.runnerKey) : ''), bridgeId: o.bridgeId || process.env.AAS_BRIDGE_ID || saved.bridgeId || '', serviceKey: o.serviceKey || process.env.INTERNAL_SERVICE_KEY || '', fetch: o.fetchImpl || fetch, source: o.baseUrl ? 'options' : process.env.AAS_BASE_URL ? 'env' : saved.baseUrl ? 'settings' : 'none' };
+    return { baseUrl: o.baseUrl || process.env.AAS_BASE_URL || saved.baseUrl || '', apiKey: o.apiKey || process.env.AAS_API_KEY || (saved.apiKey ? decrypt(saved.apiKey) : ''), runnerKey: o.runnerKey || process.env.AAS_RUNNER_KEY || (saved.runnerKey ? decrypt(saved.runnerKey) : ''), siteAccessToken: o.siteAccessToken || process.env.AAS_SITE_ACCESS_TOKEN || '', bridgeId: o.bridgeId || process.env.AAS_BRIDGE_ID || saved.bridgeId || '', serviceKey: o.serviceKey || process.env.INTERNAL_SERVICE_KEY || '', fetch: o.fetchImpl || fetch, source: o.baseUrl ? 'options' : process.env.AAS_BASE_URL ? 'env' : saved.baseUrl ? 'settings' : 'none' };
   };
-  const publicConfig = () => { const cfg = config(); return { baseUrl: cfg.baseUrl, apiKeyConfigured: !!cfg.apiKey, runnerKeyConfigured: !!cfg.runnerKey, bridgeId: cfg.bridgeId, serviceKeyConfigured: !!cfg.serviceKey, source: cfg.source }; };
+  const publicConfig = () => { const cfg = config(); return { baseUrl: cfg.baseUrl, apiKeyConfigured: !!cfg.apiKey, runnerKeyConfigured: !!cfg.runnerKey, siteAccessTokenConfigured: !!cfg.siteAccessToken, bridgeId: cfg.bridgeId, serviceKeyConfigured: !!cfg.serviceKey, source: cfg.source }; };
   const requireConfig = (cfg, needs) => {
     if (!cfg.baseUrl) fail(409, 'أعدّ عنوان لوحة القيادة المركزية أولًا (AAS_BASE_URL)', 'not_configured');
     if (needs === 'api' && !cfg.apiKey) fail(409, 'مفتاح X-AAS-API-Key غير معدّ', 'not_configured');
@@ -70,7 +71,7 @@ export function install(c, api) {
     for (const [k, v] of Object.entries(query || {})) url.searchParams.set(k, v);
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15_000);
     try {
-      const response = await cfg.fetch(url, { method, redirect: 'error', signal: controller.signal, headers: { 'Content-Type': 'application/json', ...(key === 'api' ? { 'X-AAS-API-Key': cfg.apiKey } : { 'X-AAS-Runner-Key': cfg.runnerKey }) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+      const response = await cfg.fetch(url, { method, redirect: 'error', signal: controller.signal, headers: { 'Content-Type': 'application/json', ...(key === 'api' ? { 'X-AAS-API-Key': cfg.apiKey } : { 'X-AAS-Runner-Key': cfg.runnerKey }), ...(cfg.siteAccessToken ? { 'OAI-Sites-Authorization': `Bearer ${cfg.siteAccessToken}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
       let data = null; try { data = await response.json(); } catch { data = null; }
       if (!response.ok) { const error = new Error(`رفضت لوحة القيادة الطلب (${response.status})`); error.upstreamStatus = response.status; error.upstream = data; throw error; }
       return data;
