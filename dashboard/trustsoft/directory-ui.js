@@ -69,7 +69,7 @@
     host.append(tabsWrap);
     const body=element('section',undefined,'directory-detail');
     body.append(element('h3',current?.label||def.label));
-    if(group==='accounting'){
+    if(['accounting','purchases','sales','inventory','checks'].includes(group)){
       const steps=element('div',undefined,'posting-workflow');
       for(const step of core.documentStages){
         const c=element('div',undefined,'posting-stage');
