@@ -302,6 +302,15 @@ export function install(c, api) {
   const returnWithDetails = (r) => { const d = get('SELECT * FROM return_details WHERE return_id=?', r.id); return { id: r.id, orderId: r.order_id, reason: r.reason, status: r.status, note: r.note, createdAt: r.created_at, updatedAt: r.updated_at, items: d ? parse(d.items, []) : null, photoId: d?.photo_id || null, refund: d ? d.refund : get('SELECT total FROM orders WHERE id=?', r.order_id)?.total ?? null }; };
   api.route('GET', '/me/returns', ({ req }) => ({ returns: all('SELECT * FROM returns WHERE user_id=? ORDER BY created_at DESC', requireUser(req).id).map(returnWithDetails) }));
   api.route('GET', '/admin/return-details/:returnId', ({ req, params }) => { admin(req); const r = get('SELECT * FROM returns WHERE id=?', params.returnId); if (!r) fail(404, 'طلب الإرجاع غير موجود', 'not_found'); return { returnRequest: returnWithDetails(r) }; });
-  api.on('deleteUser', (userId) => { run('DELETE FROM payment_tokens WHERE user_id=?', userId); run("UPDATE order_ratings SET comment='' WHERE user_id=?", userId); });
+  api.on('deleteUser', (userId) => {
+    // Retain transaction metadata and gift-wrap fees, but not delivery instructions or recipient PII.
+    for (const row of all('SELECT x.order_id,x.data FROM order_extras x JOIN orders o ON o.id=x.order_id WHERE o.user_id=?', userId)) {
+      const data = parse(row.data, {});
+      const gift = data.gift ? { wrap: !!data.gift.wrap, fee: data.gift.fee ?? 0 } : null;
+      run('UPDATE order_extras SET data=? WHERE order_id=?', json({ ...data, deliveryNotes: '', gift }), row.order_id);
+    }
+    run('DELETE FROM payment_tokens WHERE user_id=?', userId);
+    run("UPDATE order_ratings SET comment='' WHERE user_id=?", userId);
+  });
   api.use('registerExport')('orderRatings', (userId) => all('SELECT order_id AS orderId,rating,driver_rating AS driverRating,comment FROM order_ratings WHERE user_id=?', userId));
 }

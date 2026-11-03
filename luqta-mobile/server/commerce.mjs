@@ -233,7 +233,7 @@ export async function createCommerceServer(options = {}) {
       if (activeVariants(productId).length) fail(409, 'اختر المقاس أو اللون قبل إضافة هذا المنتج', 'variant_required');
       if (row.stock < quantity) fail(409, `الكمية المطلوبة غير متاحة للمنتج ${parse(row.data).name}`, 'out_of_stock');
       if (options.branchId) ext.checkBranchStock(options.branchId, productId, quantity);
-      const p = parse(row.data), price = ext ? ext.unitPrice(row, p) : p.price; subtotal = money(subtotal + price * quantity);
+      const p = parse(row.data), price = ext ? ext.unitPrice(row, p, quantity) : p.price; subtotal = money(subtotal + price * quantity);
       return { productId, name: p.variantLabel ? `${p.name} — ${p.variantLabel}` : p.name, price, quantity };
     });
     return { lines, subtotal };
@@ -723,7 +723,10 @@ export async function createCommerceServer(options = {}) {
             transaction(() => {
               if (body.status === 'approved') {
                 const o = get('SELECT * FROM orders WHERE id=?', r.order_id), plan = ext.returnPlan(r, o);
-                for (const line of plan ? plan.lines : parse(o.items)) run('UPDATE products SET stock=stock+?,updated_at=? WHERE id=?', line.quantity, now(), line.productId);
+                const returnedLines = plan ? plan.lines : parse(o.items);
+                for (const line of returnedLines) run('UPDATE products SET stock=stock+?,updated_at=? WHERE id=?', line.quantity, now(), line.productId);
+                const branchId = parse(get('SELECT data FROM order_extras WHERE order_id=?', o.id)?.data, {}).branchId;
+                if (branchId) ext.moveBranchStock(branchId, returnedLines, 1);
                 let refund = plan ? plan.refund : o.total;
                 const earned = get("SELECT points FROM reward_ledger WHERE order_id=? AND type='earned'", o.id);
                 const reversed = earned ? plan ? Math.min(earned.points, Math.round(earned.points * plan.refund / Math.max(o.total, 0.001))) : earned.points : 0;

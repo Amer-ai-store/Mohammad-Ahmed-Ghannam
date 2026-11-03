@@ -179,7 +179,8 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     if(!Object.keys(lines).length)throw new Error('السلة فارغة');
     const response=await api.post<{order:Order}>('/orders',{...input,branchId:state.branchId||undefined,items:Object.entries(lines).map(([productId,quantity])=>({productId,quantity}))});
     setOrders(old=>[response.order,...old.filter(o=>o.id!==response.order.id)]);
-    if(items||buyNow)setBuyNowState(null);else setState(s=>({...s,cart:{}}));
+    if(buyNow)setBuyNowState(null);
+    else setState(s=>({...s,cart:Object.fromEntries(Object.entries(s.cart).filter(([productId])=>!Object.prototype.hasOwnProperty.call(lines,productId)))}));
     robot.react('order');void refreshCatalog();return response.order;
   };
   const reorder=(order:Order)=>{const cart=reorderCart(order.items,products);setState(s=>({...s,cart}));notify(Object.keys(cart).length?'أُضيفت المنتجات المتوفرة إلى السلة بأسعارها الحالية':'منتجات هذا الطلب غير متوفرة حاليًا');};

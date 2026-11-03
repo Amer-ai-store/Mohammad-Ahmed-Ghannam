@@ -14,7 +14,14 @@ export const name = 'sync';
 const SENSITIVE = /(password|token|secret|email|phone|card|credential|address|idempotency|hash)/i;
 const SNAPSHOT_TABLES = ['categories', 'branches', 'branch_stock', 'orders', 'order_events', 'delivery_zones', 'flash_deals', 'campaigns', 'reviews', 'coupons'];
 const LIMITS = { schemaTables: 100, sampleTables: 20, rows: 500, bytes: 220_000 };
-const WRITABLE = { name: 'products', columns: ['name', 'price', 'stock', 'category'], primaryKey: ['id'] };
+const WRITABLE = { name: 'products', columns: ['id', 'name', 'price', 'stock', 'category'], primaryKey: ['id'] };
+// Use the same stable mapping as src/lib/commandCenter.ts; never expose local string IDs as numeric AAS IDs.
+const productNumber = (id) => {
+  let hash = 2166136261;
+  const raw = String(id);
+  for (let index = 0; index < raw.length; index++) hash = Math.imul(hash ^ raw.charCodeAt(index), 16777619);
+  return ((hash >>> 0) % 2147483647) + 1;
+};
 const digest = (value) => createHash('sha256').update(String(value)).digest();
 
 export function buildSnapshot({ all, get, product }) {
@@ -51,9 +58,9 @@ export function install(c, api) {
   `);
   const config = () => {
     const saved = setting('aasSync', {}) || {}, o = options.aas || {};
-    return { baseUrl: o.baseUrl || process.env.AAS_BASE_URL || saved.baseUrl || '', apiKey: o.apiKey || process.env.AAS_API_KEY || (saved.apiKey ? decrypt(saved.apiKey) : ''), runnerKey: o.runnerKey || process.env.AAS_RUNNER_KEY || (saved.runnerKey ? decrypt(saved.runnerKey) : ''), bridgeId: o.bridgeId || process.env.AAS_BRIDGE_ID || saved.bridgeId || '', serviceKey: o.serviceKey || process.env.INTERNAL_SERVICE_KEY || '', fetch: o.fetchImpl || fetch, source: o.baseUrl ? 'options' : process.env.AAS_BASE_URL ? 'env' : saved.baseUrl ? 'settings' : 'none' };
+    return { baseUrl: o.baseUrl || process.env.AAS_BASE_URL || saved.baseUrl || '', apiKey: o.apiKey || process.env.AAS_API_KEY || (saved.apiKey ? decrypt(saved.apiKey) : ''), runnerKey: o.runnerKey || process.env.AAS_RUNNER_KEY || (saved.runnerKey ? decrypt(saved.runnerKey) : ''), siteAccessToken: o.siteAccessToken || process.env.AAS_SITE_ACCESS_TOKEN || '', bridgeId: o.bridgeId || process.env.AAS_BRIDGE_ID || saved.bridgeId || '', serviceKey: o.serviceKey || process.env.INTERNAL_SERVICE_KEY || '', fetch: o.fetchImpl || fetch, source: o.baseUrl ? 'options' : process.env.AAS_BASE_URL ? 'env' : saved.baseUrl ? 'settings' : 'none' };
   };
-  const publicConfig = () => { const cfg = config(); return { baseUrl: cfg.baseUrl, apiKeyConfigured: !!cfg.apiKey, runnerKeyConfigured: !!cfg.runnerKey, bridgeId: cfg.bridgeId, serviceKeyConfigured: !!cfg.serviceKey, source: cfg.source }; };
+  const publicConfig = () => { const cfg = config(); return { baseUrl: cfg.baseUrl, apiKeyConfigured: !!cfg.apiKey, runnerKeyConfigured: !!cfg.runnerKey, siteAccessTokenConfigured: !!cfg.siteAccessToken, bridgeId: cfg.bridgeId, serviceKeyConfigured: !!cfg.serviceKey, source: cfg.source }; };
   const requireConfig = (cfg, needs) => {
     if (!cfg.baseUrl) fail(409, 'أعدّ عنوان لوحة القيادة المركزية أولًا (AAS_BASE_URL)', 'not_configured');
     if (needs === 'api' && !cfg.apiKey) fail(409, 'مفتاح X-AAS-API-Key غير معدّ', 'not_configured');
@@ -64,7 +71,7 @@ export function install(c, api) {
     for (const [k, v] of Object.entries(query || {})) url.searchParams.set(k, v);
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15_000);
     try {
-      const response = await cfg.fetch(url, { method, redirect: 'error', signal: controller.signal, headers: { 'Content-Type': 'application/json', ...(key === 'api' ? { 'X-AAS-API-Key': cfg.apiKey } : { 'X-AAS-Runner-Key': cfg.runnerKey }) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+      const response = await cfg.fetch(url, { method, redirect: 'error', signal: controller.signal, headers: { 'Content-Type': 'application/json', ...(key === 'api' ? { 'X-AAS-API-Key': cfg.apiKey } : { 'X-AAS-Runner-Key': cfg.runnerKey }), ...(cfg.siteAccessToken ? { 'OAI-Sites-Authorization': `Bearer ${cfg.siteAccessToken}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
       let data = null; try { data = await response.json(); } catch { data = null; }
       if (!response.ok) { const error = new Error(`رفضت لوحة القيادة الطلب (${response.status})`); error.upstreamStatus = response.status; error.upstream = data; throw error; }
       return data;
@@ -96,11 +103,52 @@ export function install(c, api) {
   // ---- operations ----
   const exportToCenter = async (actor, retryOf = null) => {
     const cfg = config(); requireConfig(cfg, 'api');
-    const products = all('SELECT * FROM products WHERE active=1 ORDER BY id').map(c.product).filter((p) => !p.hasVariants).map((p) => ({ id: String(p.id), name: p.name, category: p.category, retailPrice: p.basePrice ?? p.price, stockQuantity: p.baseStock ?? p.stock ?? 0 }));
-    const orders = all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 500').map((o) => ({ id: o.id, status: o.status, total: o.total, currency: o.currency, items: parse(o.items, []).map((l) => ({ productId: l.productId, quantity: l.quantity, price: l.price })), createdAt: o.created_at }));
     try {
-      const response = await writeWithRetry((expectedRevision) => call(cfg, 'POST', '/app/sync', { key: 'api', body: { products, orders, store: { name: setting('storeName'), currency: setting('currency') }, observedAt: now(), ...(expectedRevision !== undefined ? { expectedRevision } : {}) } }));
-      return record(actor, 'export', { status: 'success', imported: products.length, summary: `صُدّر ${products.length} صنف و${orders.length} طلب إلى لوحة القيادة`, log: [{ at: now(), level: 'info', message: 'POST /api/v1/app/sync', products: products.length, orders: orders.length, revision: response?.revision ?? null }], retryOf });
+      const storeName = setting('storeName') || 'لُقطة';
+      const sourceProducts = all('SELECT * FROM products ORDER BY id').map(c.product);
+      // Refuse collisions even for archived IDs: old order lines must keep their stable numeric references.
+      const usedIds = new Set();
+      for (const source of sourceProducts) {
+        const numericId = productNumber(source.id);
+        if (usedIds.has(numericId)) throw new Error('تعارض معرفات المنتجات في لوحة القيادة؛ أُلغيت المزامنة حفاظًا على سلامة البيانات');
+        usedIds.add(numericId);
+      }
+      const exportedProducts = sourceProducts.filter((p) => p.active && !p.hasVariants);
+      if (exportedProducts.length > 1000) throw new Error('تجاوز عدد المنتجات حد لوحة القيادة (1000)');
+      let wholesaleUnknown = 0;
+      const products = exportedProducts.map((p) => {
+        const base = p.basePrice ?? p.price, stock = p.baseStock ?? p.stock ?? 0;
+        if (!Number.isFinite(base) || base < 0 || !Number.isInteger(stock) || stock < 0) throw new Error('بيانات سعر أو مخزون منتج غير صالحة للمزامنة');
+        const knownWholesale = typeof p.wholesalePrice === 'number' && Number.isFinite(p.wholesalePrice) && p.wholesalePrice >= 0;
+        if (!knownWholesale) wholesaleUnknown++;
+        const merchant = p.vendorId ? get('SELECT name FROM vendors WHERE id=?', p.vendorId)?.name : null;
+        return { id: productNumber(p.id), name: p.name.slice(0, 160),
+          category: (p.category || 'عام').slice(0, 160), retailPrice: base,
+          // The current AAS schema mandates a number; 0 here is an UNKNOWN placeholder, NOT observed procurement cost.
+          wholesalePrice: knownWholesale ? p.wholesalePrice : 0,
+          imageUrl: typeof p.image === 'string' && p.image.startsWith('https://') ? p.image : '',
+          stockQuantity: stock, merchantName: String(merchant || storeName).slice(0, 160) };
+      });
+      const orders = all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 500').flatMap((o) =>
+        parse(o.items, []).map((line, index) => {
+          const candidateId = `${o.id}_${index + 1}`;
+          const lineId = /^[A-Za-z0-9_-]{1,100}$/.test(candidateId) ? candidateId : `line_${productNumber(candidateId)}`;
+          if (!Number.isInteger(line.quantity) || line.quantity < 1 || !Number.isFinite(line.price) || line.price < 0) throw new Error('بيانات أحد أسطر الطلبات غير صالحة');
+          return { id: lineId, productId: productNumber(line.productId), productName: String(line.name || 'منتج').slice(0, 160),
+            quantity: line.quantity, totalPrice: money(line.price * line.quantity), status: String(o.status).slice(0, 80), createdAt: o.created_at };
+        }));
+      if (orders.length > 1000 || new Set(orders.map((o) => o.id)).size !== orders.length) throw new Error('تجاوزت أسطر الطلبات الحد أو تعارضت معرّفاتها؛ أُلغيت المزامنة');
+      const payload = { deviceId: cfg.bridgeId || 'luqta-store', appVersion: process.env.AAS_APP_VERSION || 'luqta-mobile-1.2.0',
+        products, orders, receivedAt: now() };
+      if (!/^[A-Za-z0-9_-]{1,100}$/.test(payload.deviceId) || !payload.appVersion || payload.appVersion.length > 80) throw new Error('إعداد معرّف مصدر المزامنة أو إصدار التطبيق غير صالح');
+      if (Buffer.byteLength(JSON.stringify(payload)) > 1_500_000) throw new Error('لقطة المزامنة أكبر من حد الاستقبال');
+      const response = await writeWithRetry((expectedRevision) => call(cfg, 'POST', '/app/sync', { key: 'api', body: { ...payload, ...(expectedRevision !== undefined ? { expectedRevision } : {}) } }));
+      if (!Number.isInteger(response?.revision) || response?.productsAccepted !== products.length || response?.ordersAccepted !== orders.length || typeof response?.receivedAt !== 'string') {
+        throw new Error('إيصال المركز لا يثبت قبول جميع المنتجات والطلبات؛ لم تُعتمد المزامنة');
+      }
+      return record(actor, 'export', { status: 'success', imported: products.length, summary: `قُبل ${products.length} صنف و${orders.length} سطر طلب من لوحة القيادة`,
+        log: [{ at: now(), level: 'info', message: 'POST /api/v1/app/sync', products: products.length, orderLines: orders.length,
+          wholesaleUnknown, revision: response.revision }], retryOf });
     } catch (error) { return failure(actor, 'export', error, null, retryOf); }
   };
   const sendSnapshot = async (actor, retryOf = null) => {
@@ -162,7 +210,16 @@ export function install(c, api) {
       return saved;
     } catch (error) { return failure(actor, 'runner', error, null, retryOf); }
   };
-  const fromCenter = (item) => ({ ...item, id: item?.id, price: item?.price ?? item?.retailPrice, stock: item?.stock ?? item?.stockQuantity });
+  const fromCenter = (item) => {
+    // AAS uses numeric IDs. Resolve only those known to this store; never create silent duplicates or overwrite foreign products.
+    let localId = item?.id;
+    if (typeof localId === 'number') {
+      const matches = all('SELECT id FROM products').filter((row) => productNumber(row.id) === localId);
+      if (matches.length !== 1) fail(409, 'معرّف المنتج المركزي غير معروف محليًا؛ يلزم اعتماد ربط صريح قبل الاستيراد', 'unknown_product_mapping');
+      localId = matches[0].id;
+    }
+    return { ...item, id: localId, price: item?.price ?? item?.retailPrice, stock: item?.stock ?? item?.stockQuantity };
+  };
   const importItems = (actor, items, source, retryOf = null) => {
     if (!Array.isArray(items) || !items.length || items.length > 2000) fail(400, 'قائمة الاستيراد يجب أن تحتوي على 1 إلى 2000 صنف');
     const normalized = items.map(fromCenter), preview = api.use('previewImport')({ items: normalized, mode: 'replace' });
@@ -171,7 +228,7 @@ export function install(c, api) {
     if (valid.length) imported = c.importInventory({ items: valid, mode: 'replace' }, actor).imported;
     return record(actor, 'import', { status: !invalid.length ? 'success' : imported ? 'partial' : 'failed', imported, rejected: invalid.length, summary: `استيراد من ${source}: قُبل ${imported} ورُفض ${invalid.length}`, log: preview.rows.map((r) => ({ row: r.row, id: r.id, status: r.status, ...(r.error ? { error: r.error } : {}), ...(r.changes && Object.keys(r.changes).length ? { changes: r.changes } : {}) })), payload: invalid.length ? { source, items: items.filter((_, i) => preview.rows[i].status === 'invalid') } : null, retryOf });
   };
-  const pullState = async () => { const cfg = config(); requireConfig(cfg, 'api'); const state = await call(cfg, 'GET', '/state', { key: 'api' }); const items = state?.products || state?.state?.products || []; if (!Array.isArray(items)) fail(502, 'حالة لوحة القيادة لا تحتوي قائمة منتجات', 'upstream_error'); return items; };
+  const pullState = async () => { const cfg = config(); requireConfig(cfg, 'api'); const state = await call(cfg, 'GET', '/state', { key: 'api' }); const items = state?.state?.commerce?.products ?? state?.products ?? state?.state?.products; if (!Array.isArray(items)) fail(502, 'حالة لوحة القيادة لا تحتوي قائمة منتجات صالحة', 'upstream_error'); return items; };
 
   // ---- admin routes (dashboard and app) ----
   api.route('GET', '/admin/sync/status', ({ req }) => { admin(req); const last = get('SELECT * FROM sync_receipts ORDER BY created_at DESC,rowid DESC LIMIT 1'); return { config: publicConfig(), lastReceipt: last ? receiptItem(last) : null, receipts: get('SELECT COUNT(*) AS n FROM sync_receipts').n, writableTables: [WRITABLE], limits: LIMITS }; });

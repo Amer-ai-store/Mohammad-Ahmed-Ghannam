@@ -88,7 +88,13 @@ export function install(c, api) {
 
   // ---- flash deals ----
   const activeDeal = (productId) => get('SELECT * FROM flash_deals WHERE product_id=? AND active=1 AND starts_at<=? AND ends_at>? AND (quantity_limit IS NULL OR sold<quantity_limit) ORDER BY price LIMIT 1', productId, now(), now());
-  api.provide('unitPrice', (row, data) => { const deal = activeDeal(row.id); return deal ? Math.min(deal.price, data.price) : data.price; });
+  api.provide('unitPrice', (row, data, requestedQuantity = 1) => {
+    const deal = activeDeal(row.id);
+    if (deal && deal.price < data.price && deal.quantity_limit !== null && requestedQuantity > deal.quantity_limit - deal.sold) {
+      fail(409, 'الكمية المطلوبة تتجاوز الكمية المتبقية من العرض الخاطف', 'flash_deal_limit_exceeded');
+    }
+    return deal ? Math.min(deal.price, data.price) : data.price;
+  });
   api.decorate((item) => {
     if (item.hasVariants) return item;
     const deal = activeDeal(item.id); if (!deal || deal.price >= item.price) return item;
