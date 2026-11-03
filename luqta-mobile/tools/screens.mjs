@@ -33,7 +33,7 @@ const routes = [
   ['16-smart-tools', '/smart-tools'], ['17-market-pulse', '/market-pulse'], ['18-price-radar', '/price-radar?id=headphones'], ['19-basket-optimizer', '/basket-optimizer'],
   ['20-game', '/game'], ['21-coupons', '/coupons'], ['22-trending', '/trending'], ['23-studio', '/studio'], ['24-lens', '/lens'], ['25-nutrition', '/nutrition'],
   ['26-green', '/green'], ['27-login', '/login'], ['28-appearance', '/appearance'], ['29-tour', '/?tour=1'], ['30-receipts', '/receipts'],
-  ['31-vendors', '/vendors'], ['32-rewards', '/rewards'], ['33-privacy', '/privacy'], ['34-merchant', '/merchant'], ['35-list-to-cart', '/list-to-cart'], ['36-galaxy', '/galaxy'],
+  ['31-vendors', '/vendors'], ['32-rewards', '/rewards'], ['33-privacy', '/privacy'], ['34-merchant', '/merchant'], ['35-list-to-cart', '/list-to-cart'], ['36-galaxy', '/galaxy'], ['37-account-details', '/account-details'], ['38-addresses', '/addresses'], ['39-admin', '/admin'], ['40-auth', '/auth'], ['41-collection', '/collection/featured'], ['42-command-center', '/command-center'], ['43-compare', '/compare'], ['44-connection', '/connection'], ['45-delete-account', '/delete-account'], ['46-driver', '/driver'], ['47-export', '/export'], ['48-favorites', '/favorites'], ['49-insights', '/insights'], ['50-lists', '/lists'], ['51-list-detail', '/lists/demo'], ['52-live', '/live/LQ-DEMO-001'], ['53-notification-settings', '/notification-settings'], ['54-notifications', '/notifications'], ['55-offers', '/offers'], ['56-order', '/order/LQ-DEMO-001'], ['57-pay', '/pay/LQ-DEMO-001'], ['58-permissions', '/permissions'], ['59-recover-account', '/recover-account'], ['60-reels', '/reels'], ['61-register', '/register'], ['62-returns', '/returns'], ['63-social', '/social'], ['64-terms', '/terms'], ['65-vendor', '/vendor/luqta'], ['66-voice', '/voice'], ['67-wallet', '/wallet'], ['68-watchlist', '/watchlist'],
 ];
 const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
 const report = [];
@@ -59,3 +59,6 @@ await browser.close();
 server.close();
 await writeFile(join(out, 'screens-report.json'), JSON.stringify(report, null, 1));
 console.log(report.map((r) => `${r.name}: ${r.errors.length} errors`).join('\n'));
+const crashed = report.filter((r) => r.errors.some((e) => /^pageerror|^navigation/.test(e)));
+if (crashed.length) { console.error(`::error::${crashed.length} screen(s) crashed: ${crashed.map((r) => r.name).join(', ')}`); for (const r of crashed) console.error(r.name, r.errors.join(' | ').slice(0, 500)); process.exit(1); }
+console.log(`screens: ${report.length} rendered, crashes: 0, console errors: ${report.reduce((n, r) => n + r.errors.length, 0)}`);

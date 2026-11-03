@@ -93,6 +93,51 @@ const flows = {
     await page.waitForFunction((k) => { const c = (JSON.parse(localStorage.getItem(k) || '{}').cart || {}); return c.milk === 2 && c.banana >= 1 && Object.keys(c).length === 2; }, STORE, { timeout: 8000 });
     return { ctx, page, note: `matched milk×2 + banana, unknown item flagged and not added; cart=${JSON.stringify((await stored(page)).cart)}` };
   },
+  async 'explore-search'() {
+    const { ctx, page } = await open('/explore');
+    await byId(page, 'explore-search').fill('سماعات');
+    await byId(page, 'product-card-headphones').waitFor({ timeout: 8000 });
+    check(!(await byId(page, 'product-card-rice').isVisible().catch(() => false)), 'unrelated product still shown');
+    await byId(page, 'explore-search').fill('zzzz-لا-يوجد');
+    await page.getByText('لا توجد منتجات مطابقة').first().waitFor({ timeout: 5000 });
+    return { ctx, page, note: 'search narrows to headphones; nonsense query shows the empty state' };
+  },
+  async 'product-favorite-3d'() {
+    const { ctx, page } = await open('/product/headphones');
+    await page.locator('[aria-label="حفظ في المفضلة"]').first().click();
+    await page.waitForFunction((k) => (JSON.parse(localStorage.getItem(k) || '{}').favorites || []).includes('headphones'), STORE, { timeout: 5000 });
+    await byId(page, 'open-3d').click();
+    await page.waitForURL(/\/view3d\/headphones/, { timeout: 8000 });
+    return { ctx, page, note: 'favorite persisted; 3D viewer opened' };
+  },
+  async 'cart-quantity-remove'() {
+    const { ctx, page } = await open('/cart', { cart: { rice: 1, milk: 2 } });
+    await byId(page, 'cart-row-rice').waitFor({ timeout: 8000 });
+    await page.locator('[aria-label^="زيادة كمية"]').first().click();
+    await page.waitForFunction((k) => Object.values(JSON.parse(localStorage.getItem(k) || '{}').cart || {}).reduce((a, b) => a + b, 0) === 4, STORE, { timeout: 5000 });
+    await byId(page, 'cart-remove-milk').click();
+    await page.waitForFunction((k) => !(JSON.parse(localStorage.getItem(k) || '{}').cart || {}).milk, STORE, { timeout: 5000 });
+    await byId(page, 'coupon-input').fill('LUQTA1');
+    await byId(page, 'coupon-apply').click();
+    await page.getByText('LUQTA1').first().waitFor({ timeout: 5000 });
+    return { ctx, page, note: `quantity +1, milk removed, demo coupon applied; cart=${JSON.stringify((await stored(page)).cart)}` };
+  },
+  async 'assistant-budget-basket'() {
+    const { ctx, page } = await open('/assistant');
+    await byId(page, 'chat-input').fill('جهز لي سلة بـ 20 دينار');
+    await byId(page, 'chat-send').click();
+    await byId(page, 'basket-suggestions').waitFor({ timeout: 10000 });
+    await byId(page, 'review-basket').click();
+    await page.waitForFunction((k) => Object.keys(JSON.parse(localStorage.getItem(k) || '{}').cart || {}).length > 0, STORE, { timeout: 8000 });
+    const cart = (await stored(page)).cart;
+    return { ctx, page, note: `budget basket suggested and added after review; cart=${JSON.stringify(cart)}` };
+  },
+  async 'dark-mode'() {
+    const { ctx, page } = await open('/appearance');
+    await page.locator('[aria-label="الوضع الليلي"]').first().click();
+    await page.waitForFunction(() => localStorage.getItem('luqta-appearance-v1') === 'dark', null, { timeout: 5000 });
+    return { ctx, page, note: 'dark mode chosen and persisted' };
+  },
   async 'switch-to-english'() {
     const { ctx, page } = await open('/appearance');
     await byId(page, 'lang-en').click();
@@ -121,6 +166,8 @@ const flows = {
     await page.waitForFunction(() => document.querySelector('[data-testid="confirm-order"]')?.getAttribute('aria-disabled') !== 'true', null, { timeout: 15000 });
     await byId(page, 'confirm-order').click();
     await page.waitForURL(/\/tracking\//, { timeout: 10000 });
+    await byId(page, 'order-steps').waitFor({ timeout: 8000 });
+    await byId(page, 'order-info').waitFor({ timeout: 3000 });
     const s = await stored(page);
     check((s.demoOrders || []).length === 1, 'demo order not stored');
     return { ctx, page, note: `order ${s.demoOrders[0].id} total ${s.demoOrders[0].total}, url ${new URL(page.url()).pathname}` };
