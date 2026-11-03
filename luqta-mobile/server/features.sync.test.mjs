@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture } from './testkit.mjs';
+import { initialLiveState, mutateLiveState } from '../../aas-cc/command-center/server/state.mjs';
 
 const SERVICE_KEY = 'service-key-for-tests-only-0123456789';
 // A stand-in for the AAS Command Center that records every call.
-function commandCenter({ failExport = 0 } = {}) {
+function commandCenter({ failExport = 0, badReceipt = false, realState = false } = {}) {
   const calls = [];
   let exportFailures = failExport;
+  let lastExport = null;
   const operations = [
     { id: 'op1', action: 'update', table: 'products', key: { id: 'milk' }, values: { price: 1.2, stock: 90 } },
     { id: 'op2', action: 'insert', table: 'products', values: { id: 'aas-honey', name: 'عسل جبلي', price: 8, stock: 5, category: 'pantry' } },
@@ -21,11 +23,20 @@ function commandCenter({ failExport = 0 } = {}) {
     if (u.pathname === '/api/v1/app/sync') {
       if (exportFailures-- > 0) return json(500, { error: 'temporary' });
       if (body.expectedRevision !== 7) return json(409, { error: 'revision', revision: 7 });
-      return json(200, { ok: true, revision: 8 });
+      // Validate the actual AAS contract, not just the mock route path.
+      try {
+        const validated = mutateLiveState(initialLiveState(), 'recordAppSnapshot', body);
+        lastExport = validated.result;
+        return json(200, { revision: 8, receivedAt: validated.result.receivedAt,
+          productsAccepted: validated.result.products.length - (badReceipt ? 1 : 0), ordersAccepted: validated.result.orders.length });
+      } catch (error) {
+        return json(422, { error: { code: 'validation_error', message: error.message } });
+      }
     }
     if (u.pathname === '/api/v1/bridge/snapshot') return json(200, { ok: true });
     if (u.pathname === '/api/v1/bridge/context') return json(200, { operations });
     if (u.pathname === '/api/v1/bridge/receipts') return json(200, { ok: true });
+    if (u.pathname === '/api/v1/state' && realState) return json(200, { revision: 8, state: { commerce: lastExport || { products: [], orders: [] } } });
     if (u.pathname === '/api/v1/state') return json(200, { revision: 8, products: [
       { id: 'milk', name: 'حليب طازج كامل الدسم', retailPrice: 1.3, stockQuantity: 70, category: 'dairy' },
       { id: 'aas-dates', name: 'تمر مجدول', retailPrice: 5, stockQuantity: 10, category: 'pantry' },
@@ -39,17 +50,68 @@ const aas = (center, extra = {}) => ({ aas: { baseUrl: 'https://command-center.e
 
 test('L118 exporting to the command center maps fields, uses the API key and retries revision conflicts', async (t) => {
   const center = commandCenter();
-  const { request, admin } = await fixture(t, aas(center));
+  const { request, admin } = await fixture(t, aas(center, { siteAccessToken: 'gateway-token-for-tests-only' }));
   const status = (await request('GET', '/admin/sync/status', undefined, admin.token)).body;
   assert.deepEqual([status.config.apiKeyConfigured, status.config.runnerKeyConfigured, status.config.bridgeId], [true, true, 'bridge_luqta']);
   assert.equal(JSON.stringify(status).includes('api-key-1234567890'), false, 'keys are never returned');
+  assert.equal(status.config.siteAccessTokenConfigured, true);
+  assert.equal(JSON.stringify(status).includes('gateway-token-for-tests-only'), false, 'gateway token is private');
   const receipt = (await request('POST', '/admin/sync/export', {}, admin.token)).body.receipt;
   assert.equal(receipt.status, 'success'); assert.match(receipt.id, /^SYNC-\d{8}-001$/);
   const syncs = center.calls.filter((c) => c.path === '/api/v1/app/sync');
   assert.equal(syncs.length, 2, 'retried once after 409'); assert.equal(syncs[1].body.expectedRevision, 7);
   assert.equal(syncs[0].headers['X-AAS-API-Key'], 'api-key-1234567890'); assert.equal(syncs[0].headers['X-AAS-Runner-Key'], undefined);
-  const milk = syncs[1].body.products.find((p) => p.id === 'milk');
-  assert.deepEqual(milk, { id: 'milk', name: 'حليب طازج كامل الدسم', category: 'dairy', retailPrice: 1.15, stockQuantity: 80 });
+  assert.equal(syncs[0].headers['OAI-Sites-Authorization'], 'Bearer gateway-token-for-tests-only');
+  const body = syncs[1].body;
+  assert.equal(body.deviceId, 'bridge_luqta');
+  assert.equal(typeof body.appVersion, 'string');
+  assert.ok(Number.isFinite(Date.parse(body.receivedAt)));
+  const milk = body.products.find((p) => p.name === 'حليب طازج كامل الدسم');
+  assert.ok(Number.isSafeInteger(milk.id) && milk.id > 0);
+  assert.deepEqual({ category: milk.category, retailPrice: milk.retailPrice, stockQuantity: milk.stockQuantity,
+    wholesalePrice: milk.wholesalePrice, merchantName: milk.merchantName },
+  { category: 'dairy', retailPrice: 1.15, stockQuantity: 80, wholesalePrice: 0, merchantName: 'لُقطة' });
+  const checked = mutateLiveState(initialLiveState(), 'recordAppSnapshot', body).state.commerce;
+  assert.equal(checked.products.length, body.products.length);
+  assert.equal(checked.orders.length, body.orders.length);
+});
+
+
+test('L118 AAS accepts exported order lines with stable numeric product IDs and no customer PII', async (t) => {
+  const center = commandCenter();
+  const { request, register, admin, order } = await fixture(t, aas(center));
+  const customer = await register('زبون', 'aas-export-privacy');
+  await order(customer, [{ productId: 'milk', quantity: 2 }, { productId: 'bread', quantity: 1 }]);
+  const result = (await request('POST', '/admin/sync/export', {}, admin.token)).body.receipt;
+  assert.equal(result.status, 'success', JSON.stringify(result));
+  const payload = center.calls.filter((item) => item.path === '/api/v1/app/sync').at(-1).body;
+  const checked = mutateLiveState(initialLiveState(), 'recordAppSnapshot', payload).state.commerce;
+  assert.equal(checked.orders.length, 2);
+  assert.ok(checked.orders.every((line) => Number.isSafeInteger(line.productId)));
+  assert.equal(checked.orders[0].quantity, 2);
+  assert.equal(checked.orders[0].totalPrice, 2.3);
+  assert.ok(checked.products.some((item) => item.id === checked.orders[0].productId));
+  assert.equal(JSON.stringify(payload).includes('aas-export-privacy'), false, 'no customer email or identity sent');
+  assert.equal(JSON.stringify(payload).includes('+962'), false, 'no phone or address sent');
+});
+
+
+test('L118 rejects incomplete AAS receipts rather than reporting a false successful export', async (t) => {
+  const center = commandCenter({ badReceipt: true });
+  const { request, admin } = await fixture(t, aas(center));
+  const receipt = (await request('POST', '/admin/sync/export', {}, admin.token)).body.receipt;
+  assert.equal(receipt.status, 'failed');
+  assert.match(receipt.summary, /إيصال المركز/);
+});
+
+test('L121 resolves actual AAS numeric catalog IDs for preview without inserting duplicates', async (t) => {
+  const center = commandCenter({ realState: true });
+  const { request, admin } = await fixture(t, aas(center));
+  assert.equal((await request('POST', '/admin/sync/export', {}, admin.token)).body.receipt.status, 'success');
+  const preview = await request('POST', '/admin/sync/pull', {}, admin.token);
+  assert.equal(preview.status, 200);
+  assert.equal(preview.body.applied, false);
+  assert.equal(preview.body.preview.summary.new, 0);
 });
 
 test('L119 the bridge snapshot respects limits and never contains sensitive columns', async (t) => {
@@ -68,7 +130,7 @@ test('L119 the bridge snapshot respects limits and never contains sensitive colu
   assert.equal(sent.body.snapshot.schema.find((s) => s.name === 'orders').columns.some((c) => c.name === 'address'), false);
   const rows = sent.body.snapshot.tables.reduce((n, table) => n + table.rows.length, 0);
   assert.ok(rows <= 500); assert.ok(Buffer.byteLength(text) <= 220_000); assert.ok(sent.body.snapshot.schema.length <= 100); assert.ok(sent.body.snapshot.tables.length <= 20);
-  assert.deepEqual(sent.body.snapshot.writableTables, [{ name: 'products', columns: ['name', 'price', 'stock', 'category'], primaryKey: ['id'] }]);
+  assert.deepEqual(sent.body.snapshot.writableTables, [{ name: 'products', columns: ['id', 'name', 'price', 'stock', 'category'], primaryKey: ['id'] }]);
 });
 
 test('L120 pending operations are applied with backups, unsafe ones rejected, and each gets a receipt', async (t) => {
