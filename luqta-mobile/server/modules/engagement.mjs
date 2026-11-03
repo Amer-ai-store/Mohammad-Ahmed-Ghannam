@@ -94,7 +94,15 @@ export function install(c, api) {
     const deal = activeDeal(item.id); if (!deal || deal.price >= item.price) return item;
     return { ...item, price: deal.price, oldPrice: Math.max(item.oldPrice ?? 0, item.price), flash: { id: deal.id, endsAt: deal.ends_at, remaining: deal.quantity_limit === null ? null : deal.quantity_limit - deal.sold, limit: deal.quantity_limit } };
   });
-  api.on('orderPlaced', (orderId, lines) => { for (const line of lines) { const deal = activeDeal(line.productId); if (deal && deal.price === line.price) run('UPDATE flash_deals SET sold=sold+? WHERE id=?', line.quantity, deal.id); } });
+  api.on('orderPlaced', (orderId, lines) => {
+    // This event runs inside the checkout transaction: reject rather than oversell a limited deal.
+    for (const line of lines) {
+      const deal = get('SELECT * FROM flash_deals WHERE product_id=? AND active=1 AND starts_at<=? AND ends_at>? AND price=? ORDER BY price LIMIT 1', line.productId, now(), now(), line.price);
+      if (!deal) continue;
+      const updated = run('UPDATE flash_deals SET sold=sold+? WHERE id=? AND (quantity_limit IS NULL OR sold+?<=quantity_limit)', line.quantity, deal.id, line.quantity);
+      if (!updated.changes) fail(409, 'انتهت الكمية المتاحة بالسعر الترويجي', 'flash_deal_sold_out');
+    }
+  });
   const dealItem = (d) => { const row = get('SELECT * FROM products WHERE id=?', d.product_id), p = row ? c.product(row) : null; return { id: d.id, productId: d.product_id, product: p, price: d.price, originalPrice: p?.basePrice ?? null, startsAt: d.starts_at, endsAt: d.ends_at, limit: d.quantity_limit, sold: d.sold, remaining: d.quantity_limit === null ? null : Math.max(0, d.quantity_limit - d.sold), active: !!d.active }; };
   api.route('GET', '/flash-deals', () => ({ serverTime: now(), deals: all('SELECT * FROM flash_deals WHERE active=1 AND starts_at<=? AND ends_at>? AND (quantity_limit IS NULL OR sold<quantity_limit) ORDER BY ends_at', now(), now()).map(dealItem).filter((d) => d.product?.active) }));
   api.route('GET', '/admin/flash-deals', ({ req }) => { admin(req, 'catalog:write'); return { deals: all('SELECT * FROM flash_deals ORDER BY created_at DESC LIMIT 200').map(dealItem) }; });
