@@ -11,7 +11,7 @@
     "through": "2026-08-23",
     "status": "historical_only"
   },
-  "source_as_of": "2026-10-31",
+  "source_as_of": "2026-11-02",
   "source_types": [
     "historical CASHFLOW recovery report from another project",
     "legacy bank reconciliation reports",
@@ -45,74 +45,78 @@
     "private_latest_cheque_evidence": "https://drive.google.com/file/d/19a2iFmkxlJVfdhanaEaSBW-johNYWJng/view",
     "private_latest_export_backup": "https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view",
     "private_cheque_application_audit": "https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view",
-    "private_cheque_application_events": "https://drive.google.com/file/d/1fY7RFUk3TfycZEikAPnHWIrYU4JgCz6r/view"
+    "private_cheque_application_events": "https://drive.google.com/file/d/1fY7RFUk3TfycZEikAPnHWIrYU4JgCz6r/view",
+    "private_financial_investigation_F75": "https://drive.google.com/file/d/1CTMSaFFlyTmK2ZeFX_iGA9ogvhh0_oxu/view",
+    "private_returns_and_purchase_audit_F85": "https://docs.google.com/document/d/1fCRTi61nU2xRtgkwvGWOoUBHx81vOnQfr3WYjw0clrY/edit",
+    "private_unposted_cheques_F87": "https://docs.google.com/document/d/1atigByoeDSjpKd9lJvMIcyPAR3j2NKp1_gTT0ypKf_8/edit",
+    "private_independent_audit_F91": "https://docs.google.com/document/d/1-rGbrcV0GYyfvPllfGFnsO7wcqO1fwj3iAFdaq7E720/edit"
   },
   "cases": [
     {
       "id": "CF-01",
       "title": "التدفق النقدي والسيولة",
       "status": "historical_reconstruction",
-      "progress": "تم استرجاع المرجع السابق؛ المطابقة الشاملة حتى اليوم لم تنته"
+      "progress": "تقارير السيولة والكاش فلو السابقة مفهرسة؛ لم تُستكمل مطابقة البنك وإيداعات الصندوق أو اعتماد تقرير نقص السيولة. التقرير F75 مرجع إضافي."
     },
     {
       "id": "CF-02",
       "title": "العهدة والسحوبات",
       "status": "definitions_conflict",
-      "progress": "قواعد فصل العهدة والسحب واضحة؛ إجماليات النسخ السابقة تحتاج مطابقة مفاتيح"
+      "progress": "فروقات العهدة تحتاج مستند الجرد والإيداع؛ اختبار RealCash/NetInCash يثبت معادلة الفرق ولا يثبت عجزًا. F63/F75."
     },
     {
       "id": "BANK-03",
       "title": "حركة البنك والتسوية",
       "status": "internal_continuity_verified",
-      "progress": "تسلسل أرصدة الفترات القديمة متطابق داخليًا؛ مطابقة قيود النظام لم تُقبل"
+      "progress": "ظهرت 6 روابط لشيكات تاريخية مرتبطة بحركات فك ترحيل في ملحق الشكوى؛ المقارنة مع ملف البنك المستورد وليست كشفًا بنكيًا أصليًا. F87/F91."
     },
     {
       "id": "INTERCO-04",
       "title": "الأسواق والمطعم والمخبز",
       "status": "reconciliation_open",
-      "progress": "تقارير المقابلة بين الكيانات متاحة؛ شيكات غير مطابقة تحتاج مستندات"
+      "progress": "تجميع التحقيقات بين الأسواق والمطعم والمخبز مفهرس في السجل الموحد؛ المطابقات البنكية والدفاتر بين الجهات لم تُقبل بصورة نهائية."
     },
     {
       "id": "CHEQ-05",
       "title": "الشيكات الواردة والصادرة",
       "status": "exceptions_open",
-      "progress": "استُعيد 28 سند شيكات من النسخ التاريخية؛ 21 تطابقًا بالنظام الحديث و3 بالأرشيف وسند مجمّع من 3 شيكات؛ بقيت 3 غير محسومة. ستة مستندات أصلية غائبة مع بقاء حركاتها. لا اعتماد للصرف البنكي دون كشف المصدر."
+      "progress": "من 28 سند شيكات مستعادًا: 25 ارتباطًا محاسبيًا و3 مفتوحة؛ 6 مستندات تاريخية غائبة مع بقاء الحركة، وحركات فك ترحيل تستدعي تسوية البنك. F63/F66/F87/F91."
     },
     {
       "id": "GL-06",
       "title": "السندات المحذوفة وفك الترحيل",
       "status": "forensic_investigation",
-      "progress": "استعادة 28/54 سند قيد شيك و6/9 سند ARP من SQL READ_ONLY، وتوازن 28/28. فُقدت علاقات 6 مستندات شيكات وبقيت حركاتها؛ سبب الإلغاء/الأرشفة لم يُحسم."
+      "progress": "استعادة تاريخية جزئية: 28/54 GL و6/9 ARP؛ 21 رقم قيد من ملحق الشكوى غير موجودة في تصدير 31 أكتوبر، والتحقق من القيود البديلة مفتوح. F53/F87/F91."
     },
     {
       "id": "CASH-07",
       "title": "الكاش والعجز والإقفالات",
       "status": "exceptions_open",
-      "progress": "فحص 5,528 سجلًا يؤكد معادلة فرق الصندوق 5,528/5,528؛ الإقفال الأخير أضاف 3 سجلات وعدّل سجلًا، ولا يجوز اعتبار الفرق السالب عجزًا دون جرد وإيداع."
+      "progress": "لا يجوز اعتبار حقل Deffirence السالب خسارة تلقائيًا. يوجد اختبار معادلة موثق في 5,528 سجلًا بتاريخ 31 أكتوبر، وتبقى إيداعات العهدة والتحصيل الفعلي مفتوحة. F63/F75."
     },
     {
       "id": "PROC-08",
       "title": "تدقيق المشتريات والمردودات",
       "status": "audit_coverage_open",
-      "progress": "20 رقم فاتورة مفقود بين تواريخ 2025–2026، أربعة لها سجلات حركات مستقرة بين النسختين؛ 19 فاتورة أخرى تغيرت حقولها بين لقطتين. أسباب الاعتماد لم تُحسم."
+      "progress": "90 مردود مشتريات متطابقة مع المخزون والضريبة، و3 فواتير تغير Verified دون حدث تدقيق مطابق في الأكواد المفحوصة؛ إعادة بناء فاتورة تغيرت قيمتها مستمرة. F75/F85/F91."
     },
     {
       "id": "POS-09",
       "title": "المبيعات والكاشات الثلاثة",
       "status": "needs_transaction_linkage",
-      "progress": "ربط الإضافة والحذف والمردودات مع نقاط البيع وتوقيت النقل مفتوح"
+      "progress": "تحقيق اختلاف أصناف الكاشير وربط نقطة البيع بالمخزون لا يزال غير محسوم من مصادر التصدير الحالية؛ لا إثبات تغيير فواتير بواسطة SQL."
     },
     {
       "id": "STOCK-10",
       "title": "المخزون والطلب",
       "status": "needs_current_stock",
-      "progress": "النمذجة على حركة المبيعات والرصيد الحالي لم تعتمد بعد"
+      "progress": "ربط 90/90 مردودًا بالمخزون (248 سطر أصناف و127 تفصيل ضريبة)، مع تأخر تاريخ الترحيل؛ حساب الرصيد الحالي وحاجة الأصناف ومطابقة المبيعات لم يثبت اكتمالها. F85."
     },
     {
       "id": "QUALITY-11",
       "title": "جودة بيانات الكاش فلو المشتقة",
       "status": "data_quality_hold",
-      "progress": "بعض مبالغ الجداول المشتقة ظهرت في صورة تواريخ؛ يتطلب إعادة استخلاص قبل الحساب"
+      "progress": "تقرير فحص تصدير 2 نوفمبر ودفعة الترحيل المحاسبية مفهرسان؛ استمرار التجميد GATE-15 وIssue #102 حتى إثباتات قبول مستقلة."
     }
   ],
   "safeguards": [
@@ -121,7 +125,7 @@
     "All source accounting data are read-only; historical conflicts remain open until independent evidence.",
     "Latest V5 export zipped and uploaded to private Drive, verified by CRC and matching MD5; not a full transactional snapshot."
   ],
-  "status": "OCT31_EXPORT_ARCHIVE_VERIFIED__25_OF_28_CHEQUE_ERP_LINKS__PRIMARY_BANK_AND_GATES_OPEN",
+  "status": "NOV02_FORENSIC_REPORTS_INDEXED_IN_STAGING__PRODUCTION_FROZEN_ISSUE_102__INDEPENDENT_ACCEPTANCE_OPEN",
   "latest_export": {
     "run": "20261031-0100",
     "host": "JAWAFFASVR",
@@ -244,6 +248,20 @@
       "cash_difference_formula_matches": 5528,
       "closed_sessions_with_zero_real_cash_and_negative_difference": 3714,
       "cash_shortage_proven": false
+    },
+    "analysis_data_cutoff": "2026-11-02",
+    "archive_state_note": "Last verified cloud archive: 2026-10-31. Later 2026-11-02 CSV analyzed; separate offsite immutable backup acceptance not established.",
+    "nov2_financial_delta_status": {
+      "source_export": "20261102-0100",
+      "full_and_delta_analysis": "SOURCE_READ_ONLY",
+      "posted_accounts_journals_count": 157,
+      "posted_purchase_returns_count": 90,
+      "purchase_return_gl_stock_tax_matching_count": 90,
+      "purchase_return_details_line_count": 248,
+      "purchase_return_tax_line_count": 127,
+      "previous_period_posting_approval_proven": false,
+      "verified_invoice_state_audit_gap_count": 3,
+      "bank_statement_primary_verified": false
     }
   },
   "date_and_purchase_audit": {
@@ -284,5 +302,27 @@
     "status": "25_OF_28_ACCOUNTING_LINKS_CORROBORATED__BANK_AND_CAUSALITY_NOT_PROVEN",
     "private_app_event_audit": "https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view",
     "private_app_event_rows": "https://drive.google.com/file/d/1fY7RFUk3TfycZEikAPnHWIrYU4JgCz6r/view"
+  },
+  "investigation_registry": {
+    "schema": "jawafa-investigation-reports-v1",
+    "source_path": "data/jawafa-investigation-reports.json",
+    "related_project": "Jawafa financial investigation and TrustSoft forensic casework",
+    "report_links_validated_on_drive": 8,
+    "cited_main_reports": [
+      "F53",
+      "F63",
+      "F66",
+      "F75",
+      "F85",
+      "F87",
+      "F91",
+      "CASEBOOK"
+    ],
+    "latest_independent_case_reference": "F91",
+    "evidence_data_cutoff": "2026-11-02",
+    "linked_in_unified_native_dashboard": true,
+    "page_deployed_to_production": false,
+    "deployment_freeze_issue": 102,
+    "report_catalog_only_no_live_db_feed": true
   }
 }
