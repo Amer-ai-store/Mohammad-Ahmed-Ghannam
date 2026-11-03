@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./command-home.css">
 <link rel="stylesheet" href="./live-execution.css">
+<link rel="stylesheet" href="./jawafa-investigation.css">
 <style>
 /* Layout: an operations console — fixed right sidebar of sections (chips on phones), one section visible at a time, summary first then detail. Dark-first like the ChatGPT original. */
 :root{
@@ -261,6 +262,39 @@ nav.side{gap:.5rem}
 
       <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
+<section class="panel" id="jf-investigation" aria-labelledby="jf-title">
+ <div class="jf-head">
+  <div>
+   <span class="jf-kicker">JAWAFA · FORENSIC EVIDENCE CENTER · READ ONLY</span>
+   <h2 id="jf-title">مركز التحقيق المالي — التقارير والأدلة المرتبطة</h2>
+   <p class="jf-desc">سندات الأستاذ والشيكات والمشتريات والمردودات والمخزون والكاش في شاشة واحدة، مع حالة قبول كل نتيجة ومراجعها على Drive الخاص. البيانات الظاهرة هنا مؤشرات حالة وليست مستندات مالية مفتوحة للجمهور.</p>
+  </div>
+  <span class="jf-status" id="jf-release">النشر الإنتاجي مجمّد — Issue #102</span>
+ </div>
+ <div class="jf-actions">
+  <a class="jf-link" href="https://docs.google.com/document/d/1R5BNgmgmTT78JzEVQfcLoJR3TKj-r4vqMhya1elsRlU/edit" target="_blank" rel="noopener noreferrer">السجل المالي الموحد في Drive</a>
+  <a class="jf-link" href="https://docs.google.com/document/d/1-rGbrcV0GYyfvPllfGFnsO7wcqO1fwj3iAFdaq7E720/edit" target="_blank" rel="noopener noreferrer">آخر تحقيق مستقل F91</a>
+  <a class="jf-link" href="https://docs.google.com/document/d/1fCRTi61nU2xRtgkwvGWOoUBHx81vOnQfr3WYjw0clrY/edit" target="_blank" rel="noopener noreferrer">المردودات والضريبة F85</a>
+  <button id="jf-reload" type="button">تحديث فهرس الأدلة</button>
+ </div>
+ <p class="jf-label" id="jf-load" aria-live="polite">جاري تحميل بيانات التحقيق المتحقق منها…</p>
+ <div id="jf-summary" class="jf-grid" aria-label="أهم نتائج التحقيق"><div class="jf-card">يجري تحميل المؤشرات</div></div>
+ <h3 class="jf-subheading">حالة التحقيقات ومسارات العمل</h3>
+ <div class="jf-track" id="jf-tracks" aria-label="مسارات التحقيق">بانتظار فهرس الأدلة...</div>
+ <div class="jf-head" style="margin-top:20px">
+   <div><h3 class="jf-subheading" style="margin:0">مكتبة تقارير التحقيق</h3><p class="jf-desc">الروابط تشير إلى ملفات Drive بصلاحياتها الأصلية؛ لا تُنشر تفاصيلها على GitHub Pages.</p></div>
+   <span id="jf-results-count" class="jf-label">بانتظار الفهرس</span>
+ </div>
+ <div id="jf-report-filters" class="jf-filter" role="group" aria-label="تصفية تقارير التحقيق"></div>
+ <div class="jf-table-scroll"><table aria-label="فهرس تقارير التحقيق">
+  <thead><tr><th>معرّف الدليل / التقرير</th><th>المجال والنتيجة</th><th>تاريخ المرجع</th><th>حالة المصدر</th><th>فتح</th></tr></thead>
+  <tbody id="jf-report-rows"><tr><td colspan="5">البيانات قيد القراءة من فهرس المصادر.</td></tr></tbody>
+ </table></div>
+ <h3 class="jf-subheading">المصادر والأرشيف الخاص</h3>
+ <div class="jf-actions" id="jf-evidence"></div>
+ <div class="jf-warning"><strong>حدود القبول:</strong> لا توجد خسارة مالية أو صرف مزدوج أو صلاحية مستخدم مثبتة دون كشف البنك الأصلي، والمستندات التجارية وسجل الصلاحيات. فهرس الأدلة ليس اتصال SQL حيًا. النشر الإنتاجي يتطلب فك التجميد وموافقة مستقلة وفق Issue #102.</div>
+ <p class="jf-foot" id="jf-source-note">التقرير متصل بفهرس ملفات ثابت ومراجَع؛ لا تنقل هذه الشاشة بيانات قاعدة الإنتاج.</p>
+</section>
 <section class="panel" id="jfc-crossproject" aria-label="نتائج التحقيق المالي عبر المشاريع" style="border:1px solid #365d51;background:linear-gradient(160deg,#162b23,#0e1d1a);margin:0 0 16px;padding:18px">
  <div class="panel-head"><div><span class="eyebrow">JAWAFA · CROSS-PROJECT FINANCIAL FORENSICS</span><h2>التحقيق الموحد: السيولة، العهدة، الشيكات، المطعم والمخبز</h2></div><span class="pill warn" id="jfc-state" role="status">تحميل النتائج...</span></div>
  <p class="muted small">أرقام الدفعة الأولى وحالة كل تحقيق مستمدة من مصادر متعددة. لا تنشر هذه اللوحة العامة مبالغ العهدة أو معلومات البنوك الحساسة. النتائج التفصيلية في Drive الخاص.</p>
@@ -2605,6 +2639,7 @@ reload();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()});
 })();
 </script>
+<script src="jawafa-investigation.js" defer></script>
 <script src="command-home.js" defer></script>
 <script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>
