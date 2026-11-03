@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:reports": "node --test tests/private-report-gateway.test.mjs tests/jawafa-chat-reports.test.mjs"
+    "test:reports": "node --check jawafa-chat-reports-ui.mjs && node --check api/jawafa/v1/chat-report-ledger.js && node --test tests/private-report-gateway.test.mjs tests/jawafa-chat-reports.test.mjs"
   }
 }
