@@ -166,3 +166,22 @@ test('L074 L075 smart summary and in-stock substitutes for a sold-out product', 
   assert.equal(subs.outOfStock, true); assert.ok(subs.substitutes.length >= 2);
   assert.ok(subs.substitutes.every((p) => p.category === 'fresh' && p.stock > 0 && p.id !== 'apple'));
 });
+
+
+test('partial return restores only matching branch stock', async (t) => {
+  const { request, register, admin, order, deliver } = await fixture(t);
+  const customer = await register();
+  const branch = 'br_irbid';
+  const getStock = async () => (await request('GET', `/branches/${branch}/stock`)).body.stock.find((x) => x.productId === 'milk').quantity;
+  const before = await getStock();
+  const placed = await order(customer, [{ productId: 'milk', quantity: 2 }], { branchId: branch });
+  assert.equal(await getStock(), before - 2);
+  await deliver(customer, placed.id);
+  const returned = await request('POST', `/orders/${placed.id}/return-request`,
+    { reason: 'صنف غير مناسب', items: [{ productId: 'milk', quantity: 1 }] }, customer.token);
+  assert.equal(returned.status, 201, JSON.stringify(returned.body));
+  const id = returned.body.returnRequest.id;
+  const approved = await request('PATCH', `/admin/returns/${id}`, { status: 'approved' }, admin.token);
+  assert.equal(approved.status, 200, JSON.stringify(approved.body));
+  assert.equal(await getStock(), before - 1);
+});
