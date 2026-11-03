@@ -118,3 +118,23 @@ test('L011 merchant accounts manage only their own products, orders and payouts'
   await request('PATCH', `/admin/vendors/${vendor.id}`, { status: 'suspended' }, admin.token);
   assert.equal((await request('GET', `/vendor/${vendor.id}/products`, undefined, merchant.token)).status, 403);
 });
+
+
+test('merchant cannot point a variant at another vendor or main-store product', async (t) => {
+  const { request, register, admin } = await fixture(t);
+  const merchant = await register('تاجر الاختبار', 'merchant-security');
+  const vendorResponse = await request('POST', '/admin/vendors', { name: 'متجر مستقل' }, admin.token);
+  assert.equal(vendorResponse.status, 201, JSON.stringify(vendorResponse.body));
+  const vendorId = vendorResponse.body.vendor.id;
+  const member = await request('POST', `/admin/vendors/${vendorId}/members`, { email: merchant.user.email, role: 'owner' }, admin.token);
+  assert.equal(member.status, 201, JSON.stringify(member.body));
+  const own = await request('POST', `/vendor/${vendorId}/products`, { id: 'merchant-independent', name: 'منتج تاجر مستقل', category: 'general', price: 12, stock: 2 }, merchant.token);
+  assert.equal(own.status, 201, JSON.stringify(own.body));
+  const original = (await request('GET', '/products/mug')).body.product;
+  const injection = await request('PATCH', `/vendor/${vendorId}/products/merchant-independent`,
+    { variantOf: 'mug', variantLabel: 'خصم غير مصرح', price: 0.001 }, merchant.token);
+  assert.equal(injection.status, 403, JSON.stringify(injection.body));
+  const after = (await request('GET', '/products/mug')).body.product;
+  assert.equal(after.price, original.price);
+  assert.equal(after.stock, original.stock);
+});
