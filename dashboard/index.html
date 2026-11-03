@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./command-home.css">
 <link rel="stylesheet" href="./live-execution.css">
+<link rel="stylesheet" href="./jawafa-investigation.css">
 <style>
 /* Layout: an operations console — fixed right sidebar of sections (chips on phones), one section visible at a time, summary first then detail. Dark-first like the ChatGPT original. */
 :root{
@@ -261,6 +262,39 @@ nav.side{gap:.5rem}
 
       <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
+<section class="panel" id="jf-investigation" aria-labelledby="jf-title">
+ <div class="jf-head">
+  <div>
+   <span class="jf-kicker">JAWAFA · FORENSIC EVIDENCE CENTER · READ ONLY</span>
+   <h2 id="jf-title">مركز التحقيق المالي — التقارير والأدلة المرتبطة</h2>
+   <p class="jf-desc">سندات الأستاذ والشيكات والمشتريات والمردودات والمخزون والكاش في شاشة واحدة، مع حالة قبول كل نتيجة ومراجعها على Drive الخاص. البيانات الظاهرة هنا مؤشرات حالة وليست مستندات مالية مفتوحة للجمهور.</p>
+  </div>
+  <span class="jf-status" id="jf-release">النشر الإنتاجي مجمّد — Issue #102</span>
+ </div>
+ <div class="jf-actions">
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">السجل المالي الموحد في Drive — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">آخر تحقيق مستقل F91 — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">المردودات والضريبة F85 — مرجع خاص</span>
+  <button id="jf-reload" type="button">تحديث فهرس الأدلة</button>
+ </div>
+ <p class="jf-label" id="jf-load" aria-live="polite">جاري تحميل بيانات التحقيق المتحقق منها…</p>
+ <div id="jf-summary" class="jf-grid" aria-label="أهم نتائج التحقيق"><div class="jf-card">يجري تحميل المؤشرات</div></div>
+ <h3 class="jf-subheading">حالة التحقيقات ومسارات العمل</h3>
+ <div class="jf-track" id="jf-tracks" aria-label="مسارات التحقيق">بانتظار فهرس الأدلة...</div>
+ <div class="jf-head" style="margin-top:20px">
+   <div><h3 class="jf-subheading" style="margin:0">مكتبة تقارير التحقيق</h3><p class="jf-desc">الروابط تشير إلى ملفات Drive بصلاحياتها الأصلية؛ لا تُنشر تفاصيلها على GitHub Pages.</p></div>
+   <span id="jf-results-count" class="jf-label">بانتظار الفهرس</span>
+ </div>
+ <div id="jf-report-filters" class="jf-filter" role="group" aria-label="تصفية تقارير التحقيق"></div>
+ <div class="jf-table-scroll"><table aria-label="فهرس تقارير التحقيق">
+  <thead><tr><th>معرّف الدليل / التقرير</th><th>المجال والنتيجة</th><th>تاريخ المرجع</th><th>حالة المصدر</th><th>فتح</th></tr></thead>
+  <tbody id="jf-report-rows"><tr><td colspan="5">البيانات قيد القراءة من فهرس المصادر.</td></tr></tbody>
+ </table></div>
+ <h3 class="jf-subheading">المصادر والأرشيف الخاص</h3>
+ <div class="jf-actions" id="jf-evidence"></div>
+ <div class="jf-warning"><strong>حدود القبول:</strong> لا توجد خسارة مالية أو صرف مزدوج أو صلاحية مستخدم مثبتة دون كشف البنك الأصلي، والمستندات التجارية وسجل الصلاحيات. فهرس الأدلة ليس اتصال SQL حيًا. النشر الإنتاجي يتطلب فك التجميد وموافقة مستقلة وفق Issue #102.</div>
+ <p class="jf-foot" id="jf-source-note">التقرير متصل بفهرس ملفات ثابت ومراجَع؛ لا تنقل هذه الشاشة بيانات قاعدة الإنتاج.</p>
+</section>
 <section class="panel" id="jfc-crossproject" aria-label="نتائج التحقيق المالي عبر المشاريع" style="border:1px solid #365d51;background:linear-gradient(160deg,#162b23,#0e1d1a);margin:0 0 16px;padding:18px">
  <div class="panel-head"><div><span class="eyebrow">JAWAFA · CROSS-PROJECT FINANCIAL FORENSICS</span><h2>التحقيق الموحد: السيولة، العهدة، الشيكات، المطعم والمخبز</h2></div><span class="pill warn" id="jfc-state" role="status">تحميل النتائج...</span></div>
  <p class="muted small">أرقام الدفعة الأولى وحالة كل تحقيق مستمدة من مصادر متعددة. لا تنشر هذه اللوحة العامة مبالغ العهدة أو معلومات البنوك الحساسة. النتائج التفصيلية في Drive الخاص.</p>
@@ -275,15 +309,15 @@ nav.side{gap:.5rem}
  <p class="muted small" id="jfc-cash-updated">فحص معادلة الكاش قيد القراءة من المصدر</p>
  <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:580px"><thead><tr><th style="padding:10px;text-align:right">المسار</th><th style="padding:10px;text-align:right">الحالة</th><th style="padding:10px;text-align:right">النتيجة المثبتة والمتبقي</th></tr></thead><tbody id="jfc-rows"><tr><td colspan="3" style="padding:12px">بانتظار مصدر البيانات الموثق</td></tr></tbody></table></div>
  <div class="toolbar" style="margin-top:12px">
-  <a class="btn" href="https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view" target="_blank" rel="noopener noreferrer">فتح التقرير التفصيلي المعتمد في Drive الخاص</a>
-  <a class="btn" href="https://drive.google.com/file/d/1sSjwVwdXzXbg_FkCdOHtj_NbNOqAdN3d/view" target="_blank" rel="noopener noreferrer">تقرير آخر تصدير والتحقيق التفصيلي</a>
-  <a class="btn" href="https://drive.google.com/file/d/1PaxR4NskDvbOCjalO_M2giqkmLmKzu1U/view" target="_blank" rel="noopener noreferrer">تقرير استرداد السندات والأصول التاريخية</a>
-  <a class="btn" href="https://drive.google.com/file/d/1io_Hy7wgL9F7mi13oJ1j11lOkYYpNzIF/view" target="_blank" rel="noopener noreferrer">تقرير 31 أكتوبر للشيكات والكاش</a>
-  <a class="btn" href="https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view" target="_blank" rel="noopener noreferrer">ملحق تحليل وظائف ترحيل الشيكات</a>
-  <a class="btn" href="https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view" target="_blank" rel="noopener noreferrer">نسخة التصدير الأحدث المؤكدة على Drive</a>
-  <a class="btn" href="https://drive.google.com/file/d/1GUyeYtBp1yILOYj5T5CwJIgmPVpV_e0V/view" target="_blank" rel="noopener noreferrer">حزمة الأدلة الخام الخاصة (ZIP)</a>
-  <a class="btn" href="https://drive.google.com/file/d/1z7EkbUAXMEAi-dJIJOpS8WWV3IugEZ4F/view" target="_blank" rel="noopener noreferrer">نسخة التصدير v5 على Drive الخاص</a>
-  <a class="btn" href="https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL" target="_blank" rel="noopener noreferrer">إثبات نقل الجداول الـ15</a>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">فتح التقرير التفصيلي المعتمد في Drive الخاص — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">تقرير آخر تصدير والتحقيق التفصيلي — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">تقرير استرداد السندات والأصول التاريخية — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">تقرير 31 أكتوبر للشيكات والكاش — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">ملحق تحليل وظائف ترحيل الشيكات — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">نسخة التصدير الأحدث المؤكدة على Drive — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">حزمة الأدلة الخام الخاصة (ZIP) — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">نسخة التصدير v5 على Drive الخاص — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">إثبات نقل الجداول الـ15 — مرجع خاص</span>
   <a class="btn" href="#jawafa-tasks">متابعة المهام</a>
  </div>
  <p id="jfc-note" class="muted small" style="margin-top:10px">بيانات تاريخية وليست اتصالاً حيًا بكشف البنك أو SQL.</p>
@@ -443,8 +477,8 @@ nav.side{gap:.5rem}
   <h3>الإصلاحات التي تم التحقق منها</h3>
   <p class="small">تصحيح 11 علامة إنجاز غير مثبتة في Issue #57. ثم تحقق مستقل من 515 ملف v5: تطابقت جميع بصمات SHA-256 والأحجام، وانتهى العمال الثلاثة. بقي ملف v4 دون manifest نهائي، وظهر فرق صفين بين فهرس التصدير وCSV في جدول واحد؛ السبب غير مثبت. اتحاد أسماء v4/v5 يغطي 1,024 اسمًا فقط، ولا يثبت اكتمال البيانات أو قبول GATE-15. الساعة غير متزامنة، ومراجعات الوصول الأمني والتسليم مفتوحة.</p>
   <div class="toolbar">
-    <a class="btn" href="https://docs.google.com/document/d/1iXcukurqJRDPflVlf1ifdCKqvvDf_wupxLbY_OUOLzk/edit" target="_blank" rel="noopener noreferrer">التقرير الكامل: الأعطال والأولويات (صلاحية خاصة)</a>
-    <a class="btn" href="https://docs.google.com/document/d/1NGg_i1ZzQ0rj6XSLr4yEbx3bJXC06wtR4B62gB8bRTY/edit" target="_blank" rel="noopener noreferrer">التقرير الكامل: الإصلاحات والأدلة (صلاحية خاصة)</a>
+    <span class="muted small" title="المرجع متاح من خلال نظام خاص">التقرير الكامل: الأعطال والأولويات (صلاحية خاصة) — مرجع خاص</span>
+    <span class="muted small" title="المرجع متاح من خلال نظام خاص">التقرير الكامل: الإصلاحات والأدلة (صلاحية خاصة) — مرجع خاص</span>
     <a class="btn" href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57" target="_blank" rel="noopener noreferrer">سجل القبول على GitHub</a>
   </div>
   <p class="small muted">هذه الواجهة العامة لا تحتوي على تفاصيل الحسابات، عناوين الخوادم الداخلية، بيانات الشيكات، الأدلة الخام، أو أسرار الاتصال. لا تعديل على Jawafa_DB.</p>
@@ -777,7 +811,7 @@ nav.side{gap:.5rem}
           <h3>الاتصال بجوجل درايف — مصدر بيانات بديل للخادم</h3>
           <p class="small muted">استخدم Google OAuth بحساب مخوّل وبصلاحية قراءة فقط. مفتاح API وحده لا يتيح الوصول إلى ملفات Drive الخاصة؛ يُحفظ رمز OAuth في خدمة خلفية محمية، وليس في هذه الصفحة.</p>
           <div class="toolbar">
-            <a class="btn" href="https://drive.google.com/drive/folders/1X9MuorGVaaAwolc25_MG4kgKQGPiWard" target="_blank" rel="noopener noreferrer">فتح مجلد Jawafa_DB_Exports</a>
+            <span class="muted small" title="المرجع متاح من خلال نظام خاص">فتح مجلد Jawafa_DB_Exports — مرجع خاص</span>
             <button type="button" id="jawafa-drive-check">فحص اتصال وكيل Drive</button>
             <button type="button" id="jawafa-drive-import" disabled>استيراد وتنظيم الجداول — بعد التحقق</button>
           </div>
@@ -2605,6 +2639,7 @@ reload();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()});
 })();
 </script>
+<script src="jawafa-investigation.js" defer></script>
 <script src="command-home.js" defer></script>
 <script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>

@@ -45,12 +45,16 @@ jobs:
           set -euo pipefail
           CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)
           if [ -z "$CHROME" ]; then exit 1; fi
-          timeout 40s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --dump-dom "file://$GITHUB_WORKSPACE/dashboard/index.html#jawafa-checks" > /tmp/jawafa-native-dom.html
+          # Use an isolated Chromium profile, bounded virtual time and a real DOM assertion.
+          # A slow runner must not turn a 40s startup delay into a false code regression.
+          export DBUS_SESSION_BUS_ADDRESS=
+          CHROME_FLAGS=(--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --no-first-run --no-default-browser-check --disable-background-networking --disable-extensions --virtual-time-budget=8000)
+          timeout 90s "$CHROME" "${CHROME_FLAGS[@]}" --user-data-dir="$(mktemp -d)" --dump-dom "file://$GITHUB_WORKSPACE/dashboard/index.html#jawafa-checks" > /tmp/jawafa-native-dom.html
           grep -Fq 'data-view="jawafa-checks"' /tmp/jawafa-native-dom.html
           grep -Fq 'data-view="jawafa-monitor"' /tmp/jawafa-native-dom.html
           grep -Fq 'data-view="jawafa-export"' /tmp/jawafa-native-dom.html
           if grep -Fq 'iframe src="./jawafa-gate15.html"' /tmp/jawafa-native-dom.html; then exit 1; fi
-          timeout 40s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,844 --force-device-scale-factor=2 --dump-dom "file://$GITHUB_WORKSPACE/dashboard/index.html#jawafa-people" > /tmp/jawafa-mobile-dom.html
+          timeout 90s "$CHROME" "${CHROME_FLAGS[@]}" --user-data-dir="$(mktemp -d)" --window-size=390,844 --force-device-scale-factor=2 --dump-dom "file://$GITHUB_WORKSPACE/dashboard/index.html#jawafa-people" > /tmp/jawafa-mobile-dom.html
           grep -Fq 'data-view="jawafa-people"' /tmp/jawafa-mobile-dom.html
           grep -Fq 'id="chip-nav"' /tmp/jawafa-mobile-dom.html
           grep -Fq 'id="side-nav"' /tmp/jawafa-mobile-dom.html
