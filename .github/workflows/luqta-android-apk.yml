@@ -48,6 +48,14 @@ jobs:
         run: |
           set -o pipefail
           npm test 2>&1 | tee ../test.log
+      - name: Secret scan (fails on any committed credential)
+        if: always()
+        run: node tools/secret-scan.mjs
+      - name: Dependency vulnerability audit (production deps; fails on critical)
+        if: always()
+        run: |
+          npm audit --omit=dev --json > ../npm-audit.json || true
+          node -e "const a=require('../npm-audit.json');const v=(a.metadata&&a.metadata.vulnerabilities)||{};console.log('npm audit (prod):',JSON.stringify(v));if((v.critical||0)>0){console.log('::error::critical vulnerabilities in production dependencies');process.exit(1)}"
       - name: Upload verification logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -57,6 +65,7 @@ jobs:
             typecheck.log
             lint.log
             test.log
+            npm-audit.json
           if-no-files-found: ignore
           retention-days: 14
 
@@ -253,6 +262,27 @@ jobs:
             emulator.log
           if-no-files-found: ignore
           retention-days: 30
+
+  release-gate:
+    name: Release gate status (issue #102 acceptance)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - name: Read the release-freeze issue (report only; publishing stays frozen)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=$(gh api "repos/${GITHUB_REPOSITORY}/issues/102" --jq .state 2>/dev/null || echo unknown)
+          labels=$(gh api "repos/${GITHUB_REPOSITORY}/issues/102" --jq '[.labels[].name]|join(",")' 2>/dev/null || echo "")
+          echo "issue #102 state=${state} labels=${labels}"
+          if [ "$state" = "closed" ] && echo "$labels" | grep -q "release-accepted"; then
+            echo "RELEASE_GATE=open — the owner may now enable the publish job"
+          else
+            echo "RELEASE_GATE=closed — publish remains disabled (SECURITY FREEZE #102)"
+          fi
 
   publish:
     name: Publish APK and evidence (branch + pre-release)

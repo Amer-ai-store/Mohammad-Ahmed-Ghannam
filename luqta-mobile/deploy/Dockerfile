@@ -8,5 +8,5 @@ RUN addgroup -S luqta && adduser -S luqta -G luqta && mkdir -p /data && chown lu
 USER luqta
 VOLUME ["/data"]
 EXPOSE 8787
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD wget -qO- http://127.0.0.1:8787/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD wget -qO- http://127.0.0.1:8787/api/ready || exit 1
 CMD ["node", "--no-warnings", "server/commerce.mjs"]

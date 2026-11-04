@@ -31,3 +31,10 @@
 أنشئ مفتاحًا مرة واحدة واحفظه بأمان:
 `keytool -genkeypair -v -keystore luqta-release.keystore -alias luqta -keyalg RSA -keysize 2048 -validity 10000`
 ثم أضف في GitHub ← Settings ← Secrets: `LUQTA_KEYSTORE_BASE64` (= `base64 -w0 luqta-release.keystore`) و`LUQTA_KEYSTORE_PASSWORD` و`LUQTA_KEY_ALIAS` و`LUQTA_KEY_PASSWORD`. سيوقّع البناء تلقائيًا بالمفتاح الخاص.
+
+## الجاهزية والتراجع
+- فحص الجاهزية `GET /api/ready` (و`/api/health`) يستعلم قاعدة البيانات فعليًا ويُرجع 503 إن لم تستجب؛ Docker يستخدمه في HEALTHCHECK.
+- وسم كل صورة برقم الإصدار: `docker build -f deploy/Dockerfile -t luqta-server:<commit> .` واحتفظ بالصورة السابقة.
+- التراجع: `docker compose ... down` ثم شغّل الصورة السابقة بالمجلد نفسه `luqta-data` (البيانات لا تُمس).
+- قبل أي ترقية: من لوحة الإدارة ← «العمليات والأدلة» ← «إنشاء نسخة احتياطية» ثم «تمرين استعادة».
+- النشر العام مجمّد حتى قبول #102؛ مهمة CI «Release gate» تعرض حالة القبول ولا تفتح النشر بنفسها.

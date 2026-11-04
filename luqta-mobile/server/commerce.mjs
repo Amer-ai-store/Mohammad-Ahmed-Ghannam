@@ -541,7 +541,13 @@ export async function createCommerceServer(options = {}) {
       }
       const body = await readBody(req), p = path.slice(4).split('/').filter(Boolean);
       let match;
-      if (method === 'GET' && path === '/api/health') return send(200, { ok: true, service: 'luqta-commerce', currency: setting('currency'), facebookConfigured, database: 'connected' });
+      if (method === 'GET' && (path === '/api/health' || path === '/api/ready')) {
+        // real readiness probe: the database must answer a query and the catalog must be readable
+        let database = 'error', products = null;
+        try { if (get('SELECT 1 AS ok').ok === 1) { database = 'connected'; products = get('SELECT COUNT(*) AS n FROM products').n; } } catch { database = 'error'; }
+        const ready = database === 'connected';
+        return send(ready ? 200 : 503, { ok: ready, service: 'luqta-commerce', currency: ready ? setting('currency') : null, facebookConfigured, database, products, uptimeSeconds: Math.round(process.uptime()) });
+      }
       if (method === 'GET' && path === '/api/settings') return send(200, { settings: publicSettings() });
       if (method === 'POST' && path === '/api/auth/register') {
         rate(req, 'register', 15); if (body.role && body.role !== 'customer') fail(403, 'لا يمكن إنشاء صلاحيات إدارية من التسجيل العام', 'forbidden');

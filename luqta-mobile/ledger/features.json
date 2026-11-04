@@ -3131,7 +3131,112 @@
      "status": "verified-auto"
     }
    ]
+  },
+  {
+   "id": "G19",
+   "name": "تقرير حالة AAS — بنود قابلة للتطبيق على لُقطة",
+   "features": [
+    {
+     "id": "F-G19-01",
+     "title": "فحص جاهزية حقيقي: /api/ready و/api/health يستعلمان القاعدة ويُرجعان 503 عند العطل؛ HEALTHCHECK في Docker",
+     "source": {
+      "file": "server/commerce.mjs",
+      "contains": [
+       "path === '/api/ready'",
+       "SELECT 1 AS ok"
+      ]
+     },
+     "test": {
+      "file": "server/authorization.test.mjs",
+      "name": "readiness probe reflects the database for real"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G19-02",
+     "title": "صلاحيات بمبدأ الأدنى (مكافئ RLS): ملكية الصفوف، أدوار، مفاتيح وكلاء محددة النطاق وقابلة للإلغاء",
+     "source": {
+      "file": "server/authorization.test.mjs",
+      "contains": [
+       "RLS-equivalent",
+       "wrong scope refused",
+       "revoked key stops working"
+      ]
+     },
+     "test": {
+      "file": "server/authorization.test.mjs",
+      "name": "RLS-equivalent ownership"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G19-03",
+     "title": "سيناريو E2E: وكيل (AAS-AW) يعدّل حالة الطلب ← العميل يرى التغيير فورًا؛ زمن الاستجابة < 2 ث؛ لا تسريب لتفاصيل الأخطاء",
+     "source": {
+      "file": "server/authorization.test.mjs",
+      "contains": [
+       "agent change is immediately what the customer sees",
+       "slow critical calls"
+      ]
+     },
+     "test": {
+      "file": "server/authorization.test.mjs",
+      "name": "agent→customer sync"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G19-04",
+     "title": "فحص الأسرار في CI وفي الاختبارات (لا مفاتيح في المصدر)",
+     "source": {
+      "file": "tools/secret-scan.mjs",
+      "contains": [
+       "Google API key",
+       "assigned secret"
+      ]
+     },
+     "test": {
+      "file": "server/secretScan.test.mjs",
+      "name": "no credentials committed"
+     },
+     "status": "verified-auto"
+    },
+    {
+     "id": "F-G19-05",
+     "title": "تدقيق ثغرات الاعتماديات (npm audit لاعتماديات الإنتاج؛ يفشل عند الحرج)",
+     "source": {
+      "file": "../.github/workflows/luqta-android-apk.yml",
+      "contains": [
+       "npm audit --omit=dev"
+      ]
+     },
+     "status": "verified-source"
+    },
+    {
+     "id": "F-G19-06",
+     "title": "بوابة الإصدار: مهمة تقرأ حالة #102 وتعرضها دون فتح النشر",
+     "source": {
+      "file": "../.github/workflows/luqta-android-apk.yml",
+      "contains": [
+       "release-gate:",
+       "issues/102"
+      ]
+     },
+     "status": "verified-source"
+    },
+    {
+     "id": "F-G19-07",
+     "title": "إصلاح Railway/Vercel/Supabase لمنظومة AAS-CC/AW",
+     "source": {
+      "file": "ledger/ROLLBACK_AND_BLOCKERS.md",
+      "contains": [
+       "تقرير حالة AAS"
+      ]
+     },
+     "status": "blocked-external"
+    }
+   ]
   }
  ],
- "total": 217
+ "total": 224
 }

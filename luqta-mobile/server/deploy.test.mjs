@@ -17,7 +17,7 @@ test('Docker image copies all server modules and catalog, runs as non-root with 
   const docker = readFileSync(resolve(root, 'deploy/Dockerfile'), 'utf8');
   assert.match(docker, /COPY server\/\*\.mjs server\/catalog\.json/);
   assert.match(docker, /USER luqta/); assert.match(docker, /COMMERCE_DB=\/data\//); assert.match(docker, /HOST=0\.0\.0\.0/);
-  assert.match(docker, /HEALTHCHECK .*\/api\/health/);
+  assert.match(docker, /HEALTHCHECK .*\/api\/ready/);
   assert.ok(sources.length >= 8 && sources.every((f) => allModules.includes(f)));
   for (const f of sources) for (const m of readFileSync(resolve(here, f), 'utf8').matchAll(/from '\.\.\/([^']+)'/g)) assert.fail(`${f} imports ${m[1]} outside server/`);
 });
