@@ -11,7 +11,8 @@
    scope:String(value?.scope||'غير معتمد')
   }));
   const catalog=Array.isArray(data?.catalog)?data.catalog:[];
-  const ok=snapshot?.state==='connected' && snapshot?.stale===false && (catalog.length>0||sections.length>0);
+  const authenticatedRows=rows.some(r=>r.sampleRows>0 && ['sample','ready','verified'].includes(r.state));
+  const ok=snapshot?.state==='connected' && snapshot?.stale===false && (catalog.length>0||authenticatedRows);
   const stale=!ok;
   const anomalies=[];
   if(!data)anomalies.push('لم يصل أي سجل مصدر مصادق عليه');

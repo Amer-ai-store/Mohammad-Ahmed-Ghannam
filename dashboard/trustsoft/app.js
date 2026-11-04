@@ -58,9 +58,17 @@ for(const [key,label] of Object.entries(labels)){if(dedicatedControl&&key!=='con
 function table(rows){if(!rows?.length)return el('div','لا توجد نتائج مثبتة لهذا العرض.');const wrap=document.createElement('div'),t=document.createElement('table'),head=document.createElement('thead'),body=document.createElement('tbody'),keys=[...new Set(rows.flatMap(Object.keys))],tr=document.createElement('tr');keys.forEach(k=>tr.append(el('th',k)));head.append(tr);rows.forEach(row=>{const r=document.createElement('tr');keys.forEach(k=>r.append(el('td',typeof row[k]==='object'?JSON.stringify(row[k]):String(row[k]??'—'))));body.append(r);});t.append(head,body);wrap.className='table-scroll';wrap.append(t);return wrap;}
 function render(){if(!snapshot)return;
  $('title').textContent=labels[selected];document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',String(b.dataset.section===selected)));
- const s=snapshot,d=s.data,ok=s.state==='connected'&&!s.stale;
- if(globalThis.TrustSoftInsights && $('insights')){
-  const report=globalThis.TrustSoftInsights.analyze(s);
+ const s=snapshot,raw=s.data;
+ const d=raw&&typeof raw==='object'?{
+  ...raw,
+  catalog:Array.isArray(raw.catalog)?raw.catalog.filter(x=>x&&typeof x==='object'):[],
+  relations:Array.isArray(raw.relations)?raw.relations:[],
+  sections:raw.sections&&typeof raw.sections==='object'&&!Array.isArray(raw.sections)?raw.sections:{},
+  investigation:{findings:Array.isArray(raw.investigation?.findings)?raw.investigation.findings:[]}
+ }:null;
+ const report=globalThis.TrustSoftInsights?.analyze(s);
+ const ok=s.state==='connected'&&!s.stale&&Boolean(d)&&report?.evidence==='AUTHENTICATED_SAMPLE_ONLY';
+ if(report && $('insights')){
   const target=$('insights');target.replaceChildren();
   target.append(el('p','حالة الدليل: '+report.evidence+' • عدد جداول الفهرس المرئية: '+report.tableCatalogCount+' • صفوف العينات: '+report.sampleRowCount));
   target.append(el('p','وحدة الحسابات تعرض عينات فقط ولا تعتمد المجاميع المالية أو استنتاجات الذكاء الاصطناعي دون تحقق مستقل.'));
@@ -75,13 +83,19 @@ function render(){if(!snapshot)return;
  $('control-panel').hidden=selected!=='control';$('data-panel').hidden=selected==='control';if(selected==='control'){$('cards').hidden=!controlState;$('alert').hidden=true;$('status').textContent='قناة الإدارة • جارٍ التحقق';refreshControl();return renderEvents();}$('cards').hidden=false;
  $('panel-title').textContent=labels[selected];$('scope').textContent='';$('content').replaceChildren();
  if(!d){$('content').append(el('div','لم يتم جلب بيانات من TrustSoft. لا تُعرض بيانات تجريبية.'));return renderEvents();}
- if(selected==='overview'){$('content').append(table(Object.entries(d.sections).map(([k,v])=>({القسم:labels[k]||k,الحالة:v.state,صفوف_العينة:v.rows.length}))));}
+ if(selected==='overview'){$('content').append(table(Object.entries(d.sections).map(([k,v])=>({القسم:labels[k]||k,الحالة:v?.state||'unverified',صفوف_العينة:Array.isArray(v?.rows)?v.rows.length:0}))));}
  else if(selected==='schema'){$('scope').textContent=(d.schema_state==='sample'?'عينة محدودة من المخطط؛ ':d.schema_state==='not_discovered'?'لم يُكتشف المخطط بعد؛ ':'')+'المخطط المرئي للحساب فقط؛ غياب علاقة معلنة لا يثبت غياب علاقة أعمال.';$('content').append(table(d.catalog),el('h3','العلاقات المعلنة'),table(d.relations));}
  else if(selected==='investigation'){$('scope').textContent='نطاق عينة فقط. فحص السندات المفقودة غير منفذ حتى إثبات اكتمال التسلسل والإلغاءات.';$('content').append(table(d.investigation.findings));}
  else{const section=d.sections[selected];$('scope').textContent=section?.state==='sample'?'عينة بحد أقصى 200 صف • '+section.scope:'لم يُعتمد ربط هذا القسم بجداول TrustSoft بعد.';$('content').append(table(section?.rows));}
  renderEvents();
 }
-function renderEvents(){$('events').replaceChildren(table((snapshot.events||[]).slice().reverse().map(e=>({الحدث:e.type,الوقت:new Date(e.utc_epoch*1000).toISOString()}))));}
+function renderEvents(){
+ const events=Array.isArray(snapshot?.events)?snapshot.events:[];
+ $('events').replaceChildren(table(events.slice().reverse().map(e=>({
+  الحدث:e?.type||'غير معروف',
+  الوقت:Number.isFinite(e?.utc_epoch)?new Date(e.utc_epoch*1000).toISOString():'غير معروف'
+ }))));
+}
 async function refresh(){
  if(localFile||busy)return false;busy=true;clearTimeout(timer);$('refresh').disabled=true;
  try{

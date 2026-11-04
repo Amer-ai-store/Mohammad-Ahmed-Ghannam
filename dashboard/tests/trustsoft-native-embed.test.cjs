@@ -47,6 +47,7 @@ test("analytic rule engine flags missing or stale data and recognizes bounded sa
  const no=calc(null);assert.equal(no.evidence,"UNVERIFIED_OR_STALE");
  assert.equal(calc({state:"connected",stale:false}).evidence,"UNVERIFIED_OR_STALE");
  assert.equal(calc({state:"connected",stale:false,data:{catalog:[],sections:{}}}).evidence,"UNVERIFIED_OR_STALE");
+ assert.equal(calc({state:"connected",stale:false,data:{catalog:[],sections:{checks:{state:"unverified",rows:[]}}}}).evidence,"UNVERIFIED_OR_STALE");
  const ready=calc({state:"connected",stale:false,data:{catalog:[{}],sections:{checks:{state:"sample",rows:[{},{}]}}}});
  assert.equal(ready.evidence,"AUTHENTICATED_SAMPLE_ONLY");
  assert.equal(ready.sampleRowCount,2);assert.equal(ready.tableCatalogCount,1);
@@ -62,4 +63,44 @@ test("native TrustSoft supports explicit viewer and owner roles",()=>{
  assert.match(client, /portalAdmin:\x27false\x27,defaultSection:\x27overview\x27/);
  assert.match(client, /roleSelect\.value=\x27viewer\x27/);
  assert.match(client, /loginTokenLabel\.textContent/);
+});
+
+test("runtime routes viewer and owner logins separately; incomplete snapshots never claim live SQL",async()=>{
+ const items=new Map(),calls=[];
+ function node(){return {dataset:{},hidden:false,disabled:false,checked:false,value:'',textContent:'',append(){},replaceChildren(){},setAttribute(){},addEventListener(){}};}
+ const doc={
+  body:{dataset:{apiOrigin:'https://trustsoft-control.zxzx-mohammad91.workers.dev',portalAdmin:'false',defaultSection:'overview'}},
+  getElementById(id){if(!items.has(id))items.set(id,node());return items.get(id);},
+  querySelectorAll(){return [];},createElement(){return node();},addEventListener(){}
+ };
+ doc.getElementById('login-role').value='viewer';
+ const sandbox={document:doc,location:{origin:'https://amer-ai-store.github.io',protocol:'https:'},
+  addEventListener(){},setTimeout,clearTimeout,
+  async fetch(url,opts={}){
+   const p=new URL(url).pathname;
+   calls.push({path:p,authorization:opts.headers?.Authorization||''});
+   let body={error:'unauthorized'},code=401;
+   if(p==='/api/login'||p==='/api/admin/login'){body={session:'s'.repeat(36)};code=200;}
+   if(p==='/api/snapshot'&&opts.headers?.Authorization){
+    code=200;body={state:'connected',stale:false,data:{sections:{checks:{state:'unverified',rows:[]}}},events:[]};
+   }
+   return {status:code,ok:code<400,json:async()=>body};
+  }
+ };
+ sandbox.globalThis=sandbox;
+ vm.runInNewContext(analytics,sandbox);
+ vm.runInNewContext(client,sandbox);
+ await new Promise(setImmediate);
+ doc.getElementById('token').value='viewer-test-key';
+ await doc.getElementById('login').onsubmit({preventDefault(){}});
+ assert.ok(calls.some(x=>x.path==='/api/login'),'viewer must use read-only login');
+ assert.ok(!calls.some(x=>x.path==='/api/admin/login'),'viewer must not escalate');
+ assert.equal(doc.getElementById('workspace').hidden,false,'authenticated snapshot should mount');
+ assert.equal(doc.getElementById('status').dataset.ok,'false','incomplete SQL sample is not verified');
+ doc.getElementById('login-role').value='admin';
+ doc.getElementById('token').value='owner-test-key';
+ await doc.getElementById('login').onsubmit({preventDefault(){}});
+ assert.ok(calls.some(x=>x.path==='/api/admin/login'),'owner must use distinct admin route');
+ doc.getElementById('portal-exit').onclick();
+ assert.equal(doc.getElementById('workspace').hidden,true,'logout clears workspace');
 });
