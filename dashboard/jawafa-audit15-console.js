@@ -87,7 +87,10 @@
         الجدول:r.table,المرجع_الأقدم:r.referenceRows,استخراج_لاحق:r.laterComparisonRows,
         المفاتيح_المشتركة:r.sharedKeys,المضافة:r.addedKeys,
         مفقودة_في_الاستخراج_اللاحق:r.missingKeysFromLater,
-        سجلات_مشتركة_متغيرة:r.changedSharedRecords,سبب_التغيير:'غير مثبت'
+        سجلات_مشتركة_متغيرة:r.changedSharedRecords,
+        أولوية_التحقيق:r.triagePriority||'تحتاج مراجعة',
+        الحقول_المختلفة:(r.changedFieldCounts||[]).map(f=>f.name+': '+f.occurrences).join('، '),
+        سبب_التغيير:'غير مثبت'
       }));
       const t=el('table'),thead=el('thead'),tr=el('tr'),tbody=el('tbody'),keys=Object.keys(keyedRows[0]);
       keys.forEach(k=>tr.append(el('th',k)));thead.append(tr);t.append(thead);
