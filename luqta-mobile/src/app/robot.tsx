@@ -7,11 +7,18 @@ import { Robot } from "../components/Robot";
 import { Button, Card, Chip, Field, Notice, Row, Tabs, Toggle, Txt } from "../components/ui";
 import { useTheme } from "../lib/theme";
 import { useI18n } from "../lib/i18n";
-import { ROBOT_COLORS, useRobot, type RobotAccessory, type RobotMotion, type RobotOutfit, type RobotPrefs } from "../lib/robot";
+import { BOOTS_COLORS, HAIR_COLORS, PANTS_COLORS, ROBOT_COLORS, SKIN_TONES, useRobot, type RobotAccessory, type RobotMotion, type RobotPrefs } from "../lib/robot";
 
 const MOTIONS: [RobotPrefs["motion"], string, typeof Hand][] = [["walk", "امشِ", Footprints], ["jump", "اقفز", MoveUp], ["come", "تعال هنا", UserRound], ["stop", "توقف", Square], ["wave", "لوّح", Hand], ["dance", "ارقص", Sparkles]];
-const OUTFITS: [RobotOutfit, string][] = [["none", "بدون"], ["scarf", "وشاح"], ["cape", "عباءة بطل"], ["bowtie", "ربطة عنق"], ["hoodie", "هودي"]];
-const ACCESSORIES: [RobotAccessory, string][] = [["none", "بدون"], ["cap", "قبعة"], ["crown", "تاج"], ["glasses", "نظارات"], ["headphones", "سماعات"], ["flower", "وردة"]];
+const ACCESSORIES: [RobotAccessory, string][] = [["none", "بدون"], ["glasses", "نظارات"], ["cap", "قبعة"], ["headphones", "سماعات"]];
+
+// A row of colour swatches; each is a button named by its colour so it can be chosen without seeing it.
+function Swatches({ id, colors, value, onChange }: { id: string; colors: string[]; value: string; onChange: (c: string) => void }) {
+  const { colors: t } = useTheme();
+  return (
+    <Row wrap>{colors.map((c) => <Pressable key={c} testID={`${id}-${c.slice(1)}`} accessibilityRole="button" accessibilityLabel={c} aria-selected={value === c} onPress={() => onChange(c)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c, borderWidth: value === c ? 4 : 2, borderColor: value === c ? t.primary : t.line }} />)}</Row>
+  );
+}
 
 export function SizeSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const { colors: t } = useTheme();
@@ -51,9 +58,9 @@ export default function RobotScreen() {
     catch (e) { setMessage(e instanceof Error ? e.message : "حُفظت على هذا الجهاز؛ تعذرت المزامنة"); } finally { setBusy(false); }
   }
   return (
-    <Shell title="تخصيص شخصيتي" subtitle="اختر حركته وملابسه ولونه وصوته" back testID="robot-screen">
+    <Shell title="تخصيص شخصيتي" subtitle="اختر حركته وملابسه وشكله وصوته" back testID="robot-screen">
       <Card tone="soft" style={{ alignItems: "center", paddingVertical: 20 }} testID="robot-preview">
-        <Robot size={170 * draft.size} motion={preview} color={draft.color} outfit={draft.outfit} accessory={draft.accessory} reduceMotion={draft.reduceMotion} bubble="top" message={draft.name} />
+        <Robot size={170 * draft.size} motion={preview} look={draft} reduceMotion={draft.reduceMotion} bubble="top" message={draft.name} mode="3d" />
       </Card>
       <View style={{ marginTop: 12 }}><Tabs testID="robot-tabs" value={tab} onChange={setTab} tabs={[{ id: "motion", label: "حركة" }, { id: "clothes", label: "ملابس" }, { id: "look", label: "مظهر" }, { id: "voice", label: "صوت" }]} /></View>
       {tab === "motion" ? (
@@ -73,18 +80,26 @@ export default function RobotScreen() {
       ) : null}
       {tab === "clothes" ? (
         <Card style={{ marginTop: 12, gap: 10 }}>
-          <Txt weight="bold">{tr("الملابس")}</Txt>
-          <Row wrap>{OUTFITS.map(([id, label]) => <Chip key={id} testID={`outfit-${id}`} label={label} active={draft.outfit === id} onPress={() => set("outfit", id)} />)}</Row>
+          <Txt weight="bold">{tr("لون السترة")}</Txt>
+          <Swatches id="color" colors={ROBOT_COLORS} value={draft.color} onChange={(c) => set("color", c)} />
+          <Txt weight="bold">{tr("لون البنطال")}</Txt>
+          <Swatches id="pants" colors={PANTS_COLORS} value={draft.pants} onChange={(c) => set("pants", c)} />
+          <Txt weight="bold">{tr("لون الحذاء")}</Txt>
+          <Swatches id="boots" colors={BOOTS_COLORS} value={draft.boots} onChange={(c) => set("boots", c)} />
           <Txt weight="bold">{tr("الإكسسوارات")}</Txt>
           <Row wrap>{ACCESSORIES.map(([id, label]) => <Chip key={id} testID={`accessory-${id}`} label={label} active={draft.accessory === id} onPress={() => set("accessory", id)} />)}</Row>
         </Card>
       ) : null}
       {tab === "look" ? (
         <Card style={{ marginTop: 12, gap: 10 }}>
-          <Txt weight="bold">{tr("اللون")}</Txt>
-          <Row wrap>{ROBOT_COLORS.map((c) => <Pressable key={c} testID={`color-${c.slice(1)}`} accessibilityRole="button" accessibilityLabel={c} aria-selected={draft.color === c} onPress={() => set("color", c)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c, borderWidth: 4, borderColor: draft.color === c ? t.ink : t.paper }} />)}</Row>
+          <Txt weight="bold">{tr("لون البشرة")}</Txt>
+          <Swatches id="skin" colors={SKIN_TONES} value={draft.skin} onChange={(c) => set("skin", c)} />
+          <Txt weight="bold">{tr("لون الشعر")}</Txt>
+          <Swatches id="hair" colors={HAIR_COLORS} value={draft.hair} onChange={(c) => set("hair", c)} />
+          <Toggle testID="beard" label="لحية" detail="لحية وشارب بلون الشعر" value={draft.beard} onChange={(v) => set("beard", v)} />
+          <Toggle testID="use3d" label="عرض ثلاثي الأبعاد" detail="أوقفه لعرض صور ثابتة توفّر البطارية" value={draft.use3d} onChange={(v) => set("use3d", v)} />
           <Field label="اسم الشخصية" testID="robot-name" value={draft.name} onChangeText={(v) => set("name", v.slice(0, 20))} />
-          <Button title={tr("صورتك على شاشة الروبوت")} secondary onPress={() => router.push("/robot-create")} />
+          <Button title={tr("ضع صورة وجهك على الشخصية")} secondary onPress={() => router.push("/robot-create")} />
         </Card>
       ) : null}
       {tab === "voice" ? (

@@ -53,6 +53,13 @@ const disabled = async (locator) => (await locator.getAttribute('aria-disabled')
 const products = async () => Object.fromEntries((await api('GET', '/products')).products.map((p) => [p.id, p]));
 const shownIds = async (page) => (await page.locator('[data-testid^="product-card-"]').evaluateAll((els) => els.filter((e) => e.checkVisibility()).map((e) => e.getAttribute('data-testid').slice('product-card-'.length))));
 const transforms = (page, scope) => page.locator(scope).filter({ visible: true }).first().locator('*').evaluateAll((els) => els.map((e) => e.style.transform || '').join('|'));
+// The companion is a 3D character running in a sandboxed frame; tests read its engine directly (joint angles, probe).
+const engineFrame = async (page, scope) => {
+  await page.locator(`${scope} [data-mode="3d"]`).filter({ visible: true }).first().waitFor({ timeout: 20000 });
+  return (await page.locator(`${scope} iframe`).filter({ visible: true }).first().elementHandle()).contentFrame();
+};
+const joints = (frame) => frame.evaluate(() => JSON.stringify(window.LuqtaAvatar.skeleton.bones.map((b) => [b.rotation.x, b.rotation.y, b.rotation.z].map((v) => v.toFixed(4)))));
+const probe = (frame) => frame.evaluate(() => { window.LuqtaAvatar.command({ type: 'probe', id: 'e2e' }); return window.__luqtaLast; });
 const pickFile = async (page, testId, file) => {
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), tap(page, testId)]);
   await chooser.setFiles(file);
@@ -235,7 +242,7 @@ e2e('L011 a merchant account sees its sales and adds a product from the vendor s
 // =====================================================================================================
 // Catalog and search
 // =====================================================================================================
-e2e('L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed', async ({ open }) => {
+e2e('L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed', async ({ open }) => {
   const user = await stack.register('سارة');
   const page = await open(user, '/');
   await id(page, 'home').waitFor();
@@ -251,10 +258,11 @@ e2e('L013 L017 L069 L079 L081 L027 the home screen shows server categories, camp
   assert.ok(campaigns.length >= 1);
   await id(page, `campaign-${campaigns[0].id}`).waitFor();
   await see(page, campaigns[0].title);
-  // L081: the mascot is moving (its animated layers change between two samples).
-  const a = await transforms(page, '[data-testid="mascot"]');
+  // L081: the companion is the mockups' 3D character, and it moves (its joint angles change between two samples).
+  const homeCharacter = await engineFrame(page, '[data-testid="mascot"]');
+  const a = await joints(homeCharacter);
   await page.waitForTimeout(700);
-  assert.notEqual(a, await transforms(page, '[data-testid="mascot"]'), 'robot animates');
+  assert.notEqual(a, await joints(homeCharacter), 'the character animates');
   // L079: onboarding interests drive the recommendations.
   await id(page, 'onboarding').waitFor();
   await tap(page, 'interest-dairy');
@@ -525,15 +533,15 @@ e2e('L033 L034 L078 a family list shared with a code, filled from pasted receipt
   await see(page, 'الابن');
 });
 
-e2e('L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the robot reacting', async ({ open }) => {
+e2e('L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the character reacting', async ({ open }) => {
   const user = await stack.register('صاحب السلة');
   const page = await open(user, '/');
   await page.locator('[data-testid^="add-"]').first().waitFor();
   const first = (await page.locator('[data-testid^="product-card-"]').first().getAttribute('data-testid')).slice('product-card-'.length);
   await tap(page, `add-${first}`);
-  // L086: the robot on the home screen jumps and says it added the product.
+  // L086: the character on the home screen pushes a shopping cart and says it added the product.
   await see(page, 'أضفتها للسلة! 🎉');
-  await until(async () => /يقفز/.test((await page.locator('[data-testid="mascot"] [aria-label]').first().getAttribute('aria-label')) || ''), 5000, 'robot jumps');
+  await until(async () => /يدفع عربة التسوق/.test((await page.locator('[data-testid="mascot"] [aria-label]').first().getAttribute('aria-label')) || ''), 5000, 'the character pushes a cart');
   await go(page, '/explore');
   await tap(page, 'add-milk');
   await go(page, '/cart');
@@ -868,7 +876,7 @@ e2e('L067 L068 the offers screen: flash deals with a live countdown and discount
 // =====================================================================================================
 // Smart assistant
 // =====================================================================================================
-e2e('L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the robot speaking', async ({ open }) => {
+e2e('L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the character speaking', async ({ open }) => {
   const user = await stack.register('متسوق بالمحادثة');
   const page = await open(user, '/assistant');
   const [response] = await Promise.all([page.waitForResponse((r) => r.url().endsWith('/api/ai/chat')), tap(page, 'starter-جهز لي سلة بـ ٢٠ دينار')]);
@@ -971,53 +979,59 @@ e2e('L100 the help centre searches the FAQ and records helpful answers', async (
 // The robot
 // =====================================================================================================
 e2e('L082 L083 L084 L085 commands, size, reduced motion, colours, outfits, accessories and voice are saved to the account', async ({ open }) => {
-  const user = await stack.register('مصمم الروبوت');
+  const user = await stack.register('مصمم الشخصية');
   const page = await open(user, '/robot');
   const preview = '[data-testid="robot-preview"]';
   const label = () => page.locator(`${preview} [aria-label]`).first().getAttribute('aria-label');
   for (const [motion, words] of [['walk', 'يمشي'], ['jump', 'يقفز'], ['come', 'يقترب منك'], ['stop', 'متوقف']]) {
     await tap(page, `motion-${motion}`);
-    await until(async () => (await label()).includes(words), 5000, `robot ${motion}`);
+    await until(async () => (await label()).includes(words), 5000, `character ${motion}`);
   }
   await tap(page, 'motion-dance');
-  const box = await page.locator(`${preview} svg`).first().boundingBox();
+  const character = page.locator(`${preview} [data-mode]`).first();
+  const box = await character.boundingBox();
   await tap(page, 'size-up');
   await tap(page, 'size-up');
   assert.equal(await textOf(page, 'size-value'), '120%');
-  await until(async () => (await page.locator(`${preview} svg`).first().boundingBox()).height > box.height * 1.1, 5000, 'robot grows');
-  const moving = await transforms(page, preview);
+  await until(async () => (await character.boundingBox()).height > box.height * 1.1, 5000, 'character grows');
+  const engine = await engineFrame(page, preview);
+  const moving = await joints(engine);
   await page.waitForTimeout(600);
-  assert.notEqual(moving, await transforms(page, preview), 'animated before reduce motion');
+  assert.notEqual(moving, await joints(engine), 'animated before reduce motion');
   await tap(page, 'reduce-motion');
-  await page.waitForTimeout(300);
-  const still = await transforms(page, preview);
-  await page.waitForTimeout(700);
-  assert.equal(still, await transforms(page, preview), 'no animation with reduced motion');
+  await page.waitForTimeout(1500);
+  const still = await joints(engine);
+  await page.waitForTimeout(800);
+  assert.equal(still, await joints(engine), 'no animation with reduced motion');
   await tab(page, 'ملابس').click();
   const plain = await page.locator(preview).innerHTML();
-  await tap(page, 'outfit-cape');
-  await tap(page, 'accessory-crown');
-  assert.notEqual(plain, await page.locator(preview).innerHTML(), 'outfit and accessory drawn');
-  await tab(page, 'مظهر').click();
+  await tap(page, 'accessory-glasses');
+  await tap(page, 'pants-1F2A44');
   await tap(page, 'color-22B07D');
-  await until(async () => (await page.locator(preview).innerHTML()).toLowerCase().includes('22b07d'), 5000, 'new colour drawn');
+  assert.notEqual(plain, await page.locator(preview).innerHTML(), 'clothes and accessory applied');
+  await until(async () => (await page.locator(preview).innerHTML()).toLowerCase().includes('22b07d'), 5000, 'new colour applied');
+  await until(async () => (await probe(engine))?.accessory === 'glasses', 5000, 'the 3D character wears the glasses');
+  await tab(page, 'مظهر').click();
+  await tap(page, 'skin-8D5524');
+  await tap(page, 'beard');
   await fill(page, 'robot-name', 'روبي');
   await tap(page, 'save-robot');
   await see(page, 'حفظت شخصيتك');
   const { robot } = (await api('GET', '/me/preferences', undefined, user.token)).preferences;
-  assert.deepEqual({ outfit: robot.outfit, accessory: robot.accessory, color: robot.color, size: robot.size, reduceMotion: robot.reduceMotion, name: robot.name, motion: robot.motion }, { outfit: 'cape', accessory: 'crown', color: '#22B07D', size: 1.2, reduceMotion: true, name: 'روبي', motion: 'dance' });
+  assert.deepEqual({ accessory: robot.accessory, color: robot.color, pants: robot.pants, skin: robot.skin, beard: robot.beard, size: robot.size, reduceMotion: robot.reduceMotion, name: robot.name, motion: robot.motion },
+    { accessory: 'glasses', color: '#22B07D', pants: '#1F2A44', skin: '#8D5524', beard: false, size: 1.2, reduceMotion: true, name: 'روبي', motion: 'dance' });
   await tab(page, 'صوت').click();
   await tap(page, 'voice-test');
-  await until(() => page.evaluate(() => window.__spoken.some((t) => t.includes('روبي'))), 5000, 'the robot speaks');
+  await until(() => page.evaluate(() => window.__spoken.some((t) => t.includes('روبي'))), 5000, 'the character speaks');
   await tap(page, 'robot-voice');
   await tap(page, 'save-robot');
   await until(async () => (await api('GET', '/me/preferences', undefined, user.token)).preferences.robot.voice === false, 10000, 'voice off saved');
   // The saved character follows the shopper to another device.
   const other = await open(user, '/');
-  await until(async () => (await other.locator('[data-testid="mascot"]').innerHTML()).toLowerCase().includes('22b07d'), 10000, 'same robot elsewhere');
+  await until(async () => (await other.locator('[data-testid="mascot"]').innerHTML()).toLowerCase().includes('22b07d'), 10000, 'same character elsewhere');
 });
 
-e2e('L087 put my photo on the robot screen with consent, kept on the device only, and delete it', async ({ open }) => {
+e2e('L087 put my photo on the character\'s face with consent, kept on the device only, and delete it', async ({ open }) => {
   const user = await stack.register('صاحب الصورة');
   const page = await open(user, '/robot-create');
   const uploads = [];
@@ -1027,12 +1041,13 @@ e2e('L087 put my photo on the robot screen with consent, kept on the device only
   await pickFile(page, 'face-gallery', png([250, 200, 160]));
   await tap(page, 'face-confirm');
   await see(page, 'ممتاز! كمّل تخصيص لونه وملابسه وحركاته.');
-  await until(() => page.locator('svg image').first().getAttribute('href').then((h) => (h || '').startsWith('data:image/')).catch(() => false), 5000, 'photo on the robot');
+  const engine = await engineFrame(page, '[data-testid="robot-create"]');
+  await until(async () => (await probe(engine))?.photoFace === true, 10000, "the photo is the 3D character's face");
   assert.ok(await page.evaluate(() => (localStorage.getItem('luqta-robot-face-v1') || '').startsWith('data:image/')));
   assert.equal((await api('GET', '/me/preferences', undefined, user.token)).preferences.robot.faceConsent, true);
   assert.deepEqual(uploads, [], 'the photo is never uploaded');
   await tap(page, 'face-delete');
-  await until(async () => (await page.locator('svg image').count()) === 0, 5000, 'photo removed');
+  await until(async () => (await probe(engine))?.photoFace === false, 5000, 'photo removed from the character');
   assert.equal(await page.evaluate(() => localStorage.getItem('luqta-robot-face-v1')), null);
   await until(async () => (await api('GET', '/me/preferences', undefined, user.token)).preferences.robot.faceConsent === false, 5000, 'consent withdrawn');
 });

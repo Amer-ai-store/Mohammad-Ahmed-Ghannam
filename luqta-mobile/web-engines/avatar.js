@@ -5,9 +5,10 @@
  * hips → knees → ankles). No sprite swapping is used for motion.
  *
  * Messages in  (JSON via postMessage / window.LuqtaAvatar.command):
- *   {type:'profile', profile:{skin,hair,outfit,pants,boots,beard,faceDataUrl}}
+ *   {type:'profile', profile:{skin,hair,outfit,pants,boots,beard,accessory,faceDataUrl}}
+ *     accessory: 'none' | 'glasses' | 'cap' | 'headphones'
  *   {type:'action', action:'idle'|'walk'|'run'|'jump'|'sleep'|'wake'|'cart'|'come'|'wave'|
- *                           'point'|'thumbs'|'think'|'crossed'|'listen'|'sit'|'stop'}
+ *                           'point'|'thumbs'|'think'|'crossed'|'listen'|'sit'|'stop'|'dance'|'sad'|'talk'}
  *   {type:'facing', yaw:<radians>}   {type:'reduceMotion', value:bool}
  *   {type:'pause', value:bool}       {type:'probe', id}
  *   {type:'processFace', dataUrl, id}
@@ -68,6 +69,9 @@
     cart: std(0xd73a3a, 0.4, 0.2),
     cartWire: std(0xbfc3c9, 0.25, 0.9),
     wheel: std(0x1b1b1b, 0.7),
+    frame: std(0x1b1b1f, 0.35, 0.3),
+    lens: new T.MeshStandardMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.28, roughness: 0.1 }),
+    cap: std(0xff6b4a, 0.6),
   };
 
   // ---------- geometry helpers ----------
@@ -148,6 +152,22 @@
    [0.03, 0.3, 0.12, 0.07, 1.4, 0.6, 1.2]].forEach(function (p) {
     var h = at(sphere(p[3], M.hair, 18, 14), hair, p[0], p[1], p[2]); h.scale.set(p[4], p[5], p[6]);
   });
+  // accessories (profile.accessory), mounted on the head bone so they follow every pose
+  var acc = { glasses: new T.Group(), cap: new T.Group(), headphones: new T.Group() };
+  Object.keys(acc).forEach(function (k) { acc[k].visible = false; B.head.add(acc[k]); });
+  var accessory = 'none';
+  ['L', 'R'].forEach(function (s) {
+    var sx = s === 'L' ? 1 : -1;
+    at(new T.Mesh(new T.TorusGeometry(0.034, 0.0065, 8, 24), M.frame), acc.glasses, 0.062 * sx, 0.152, 0.17);
+    at(new T.Mesh(new T.CircleGeometry(0.031, 20), M.lens), acc.glasses, 0.062 * sx, 0.152, 0.168);
+    var arm = at(box(0.008, 0.008, 0.15, M.frame), acc.glasses, 0.1 * sx, 0.156, 0.095); arm.rotation.y = 0.12 * sx;
+    var cup = at(cyl(0.052, 0.052, 0.046, M.frame), acc.headphones, 0.17 * sx, 0.125, 0); cup.rotation.z = Math.PI / 2;
+    var pad = at(cyl(0.046, 0.046, 0.014, M.cap), acc.headphones, 0.145 * sx, 0.125, 0); pad.rotation.z = Math.PI / 2;
+  });
+  at(box(0.032, 0.007, 0.007, M.frame), acc.glasses, 0, 0.158, 0.172);
+  at(new T.Mesh(new T.TorusGeometry(0.186, 0.013, 8, 28, Math.PI), M.frame), acc.headphones, 0, 0.13, 0);
+  var capTop = at(new T.Mesh(new T.SphereGeometry(0.19, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), M.cap), acc.cap, 0, 0.2, -0.01); capTop.scale.set(0.95, 0.82, 1.02);
+  var brim = at(box(0.21, 0.014, 0.14, M.cap), acc.cap, 0, 0.212, 0.17); brim.rotation.x = -0.12;
   // photo face (front cap of the head sphere)
   var photoFace = null;
   function buildPhotoFace(texture, alpha) {
@@ -296,6 +316,27 @@
       else { p = base(); var k3 = S(Math.PI * clamp01((c - 1.8) / 1.4)); p.shoulderL = [-2.9 * k3, 0, 0.25]; p.shoulderR = [-2.9 * k3, 0, -0.25]; p.elbowL = [-0.4 * k3, 0, 0]; p.elbowR = [-0.4 * k3, 0, 0]; p.spine[0] = -0.12 * k3; p.head[0] = -0.2 * k3; }
       return p;
     },
+    dance: function (t) {
+      var p = base(), a = amp(), beat = S(t * 6), sway = S(t * 3);
+      p.hips[1] = sway * 0.22 * a; p.hips[2] = sway * 0.07 * a; p.spine[2] = -sway * 0.1 * a; p.head[2] = sway * 0.12 * a;
+      p.shoulderL = [-0.2, 0, 2.3 + beat * 0.3 * a]; p.elbowL = [0, 0, 0.4 + beat * 0.25 * a];
+      p.shoulderR = [-0.2, 0, -2.3 + beat * 0.3 * a]; p.elbowR = [0, 0, -0.4 + beat * 0.25 * a];
+      p.kneeL[0] = 0.22 + beat * 0.14 * a; p.kneeR[0] = 0.22 - beat * 0.14 * a; p.rootY = Math.abs(beat) * 0.035 * a;
+      return p;
+    },
+    sad: function (t) {
+      var p = base();
+      p.neck[0] = 0.32; p.head[0] = 0.22 + S(t * 0.8) * 0.02 * amp(); p.chest[0] = 0.16; p.spine[0] = 0.08;
+      p.shoulderL[0] = 0.12; p.shoulderR[0] = 0.12; p.shoulderL[2] = 0.04; p.shoulderR[2] = -0.04;
+      return p;
+    },
+    talk: function (t) {
+      var p = ACTIONS.idle(t), g = S(t * 4.5) * amp();
+      p.shoulderR = [-0.75 + g * 0.2, 0.2, -0.35]; p.elbowR = [-1.35 + g * 0.25, 0, 0];
+      p.shoulderL = [-0.45 - g * 0.15, -0.2, 0.3]; p.elbowL = [-1.2 - g * 0.2, 0, 0];
+      p.head[1] = S(t * 1.6) * 0.15 * amp(); p.head[0] = S(t * 4.5) * 0.04 * amp();
+      return p;
+    },
     come: function (t) {
       var p = ACTIONS.idle(t), w = S(t * 7) * amp();
       p.shoulderR = [-1.35, 0.35, -0.25]; p.elbowR = [-1.2 - 0.55 * Math.max(0, w), 0, 0]; p.wristR = [0.4, 0, 0];
@@ -389,6 +430,9 @@
     M.pants.color.setHex(hex(pr.pants, 0xd1191c));
     M.boots.color.setHex(hex(pr.boots, 0x101010));
     beard.visible = pr.beard !== false;
+    accessory = Object.prototype.hasOwnProperty.call(acc, pr.accessory) ? pr.accessory : 'none';
+    Object.keys(acc).forEach(function (k) { acc[k].visible = k === accessory; });
+    hair.scale.set(1, accessory === 'cap' ? 0.7 : 1, 1);
     if (pr.faceDataUrl && /^data:image\/(png|jpeg|webp);base64,/.test(pr.faceDataUrl)) {
       new T.TextureLoader().load(pr.faceDataUrl, function (tex) {
         tex.encoding = T.sRGBEncoding; buildPhotoFace(tex, faceAlpha()); face.visible = false; beardMain.visible = false; moustache.visible = false;
@@ -470,7 +514,7 @@
   function probe(id) {
     var joints = {};
     JOINTS.forEach(function (j) { if (B[j]) joints[j] = [B[j].rotation.x, B[j].rotation.y, B[j].rotation.z].map(function (v) { return Math.round(v * 1000) / 1000; }); });
-    post({ type: 'probe', id: id, action: state.action, fps: fps, bones: skeleton.bones.length, rootY: root.position.y, rootRotZ: root.rotation.z, cartVisible: cart.visible, photoFace: !!photoFace, joints: joints });
+    post({ type: 'probe', id: id, action: state.action, fps: fps, bones: skeleton.bones.length, rootY: root.position.y, rootRotZ: root.rotation.z, cartVisible: cart.visible, photoFace: !!photoFace, accessory: accessory, joints: joints });
   }
   function command(msg) {
     if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) { return; } }

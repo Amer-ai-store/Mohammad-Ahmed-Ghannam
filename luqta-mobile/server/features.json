@@ -1122,8 +1122,8 @@
   {
    "id": "L081",
    "area": "robot",
-   "title": "روبوت متحرك جذاب",
-   "titleEn": "Animated robot mascot",
+   "title": "شخصية متحركة جذابة ثلاثية الأبعاد",
+   "titleEn": "Animated 3D character mascot",
    "surfaces": [
     "app"
    ],
@@ -1196,8 +1196,8 @@
   {
    "id": "L087",
    "area": "robot",
-   "title": "صورتك على شاشة الروبوت بموافقة وحذف",
-   "titleEn": "Your photo on the robot screen, with consent and delete",
+   "title": "صورتك على وجه الشخصية بموافقة وحذف",
+   "titleEn": "Your photo on the character's face, with consent and delete",
    "surfaces": [
     "app"
    ],

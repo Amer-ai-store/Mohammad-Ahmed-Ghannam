@@ -10,7 +10,7 @@ import { useI18n } from "../lib/i18n";
 import { useRobot } from "../lib/robot";
 import { pickPhoto } from "../lib/photos";
 
-// "اصنع شخصيتك": the photo stays on this device only (never uploaded) and is shown inside the robot's screen.
+// "اصنع شخصيتك": the photo stays on this device only (never uploaded) and becomes the 3D character's face.
 export default function RobotCreate() {
   const { colors: t } = useTheme();
   const { t: tr } = useI18n();
@@ -38,10 +38,10 @@ export default function RobotCreate() {
     setStep("photo");
   }
   return (
-    <Shell title="اصنع شخصيتك" subtitle="ضع صورتك على شاشة لُقطي — تبقى على جهازك فقط" back testID="robot-create">
+    <Shell title="اصنع شخصيتك" subtitle="ضع صورة وجهك على لُقطي — تبقى على جهازك فقط" back testID="robot-create">
       <Tabs testID="create-steps" value={step} onChange={(s) => { if (s === "photo" || photo) setStep(s); }} tabs={[{ id: "photo", label: "١ صورة" }, { id: "preview", label: "٢ معاينة" }, { id: "customize", label: "٣ تخصيص" }]} />
       <Card tone="soft" style={{ alignItems: "center", paddingVertical: 20, marginTop: 12 }}>
-        <Robot size={180} motion={photo ? "wave" : "idle"} face={photo} bubble="top" message={photo ? tr("هذا أنا؟") : tr("خلّيني ألبس وجهك!")} />
+        <Robot size={180} motion={photo ? "wave" : "idle"} face={photo} mode="3d" bubble="top" message={photo ? tr("هذا أنا؟") : tr("خلّيني ألبس وجهك!")} />
       </Card>
       {error ? <Notice text={error} tone="danger" /> : null}
       {step === "photo" ? (
@@ -59,7 +59,7 @@ export default function RobotCreate() {
       ) : null}
       {step === "preview" ? (
         <Card style={{ marginTop: 12, gap: 10 }}>
-          <Txt style={{ color: t.muted }}>{tr("هكذا ستظهر صورتك على شاشة لُقطي. أعجبتك؟")}</Txt>
+          <Txt style={{ color: t.muted }}>{tr("هكذا سيبدو وجهك على لُقطي. أعجبك؟")}</Txt>
           <Row>
             <Button title={tr("اعتمد الصورة")} testID="face-confirm" disabled={!photo} onPress={() => void confirm()} style={{ flex: 1 }} />
             <Button title={tr("صورة أخرى")} secondary onPress={() => setStep("photo")} style={{ flex: 1 }} />

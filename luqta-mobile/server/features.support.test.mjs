@@ -55,9 +55,13 @@ test('L096 L100 tickets and the searchable help center', async (t) => {
 test('L083 L084 L124 character and language preferences are saved and validated', async (t) => {
   const { request, register } = await fixture(t);
   const customer = await register();
-  const robot = { name: 'بيبو', color: '#FF6B4A', outfit: 'cape', accessory: 'crown', size: 1.2, reduceMotion: true, voice: false, motion: 'dance' };
+  // The companion is the mockups' character: its look (skin, hair, clothes, beard, accessory) is part of the preference.
+  const robot = { name: 'بيبو', color: '#FF6B4A', outfit: 'cape', accessory: 'glasses', size: 1.2, reduceMotion: true, voice: false, motion: 'dance',
+    skin: '#8D5524', hair: '#111111', pants: '#1F2A44', boots: '#5A3A22', beard: false, use3d: false };
   const saved = (await request('PATCH', '/me/preferences', { robot, locale: 'en' }, customer.token)).body.preferences;
   assert.deepEqual(saved.robot, { ...robot, faceConsent: false }); assert.equal(saved.locale, 'en');
+  assert.equal((await request('PATCH', '/me/preferences', { robot: { skin: 'brown' } }, customer.token)).status, 400);
+  assert.equal((await request('PATCH', '/me/preferences', { robot: { beard: 'yes' } }, customer.token)).status, 400);
   assert.equal((await request('PATCH', '/me/preferences', { robot: { size: 3 } }, customer.token)).status, 400);
   assert.equal((await request('PATCH', '/me/preferences', { robot: { outfit: 'tuxedo' } }, customer.token)).status, 400);
   assert.equal((await request('PATCH', '/me/preferences', { robot: { color: 'red' } }, customer.token)).status, 400);

@@ -5,24 +5,36 @@ import * as Speech from "expo-speech";
 import { api } from "./api";
 import { useSession } from "./session";
 
-export type RobotMotion = "idle" | "wave" | "walk" | "jump" | "come" | "stop" | "dance" | "sleep" | "sad" | "talk";
+// The shopping companion is the human character from the لُقطة mockups (a rigged 3D model, with the mockups' poses as
+// still images). The module keeps its historical "robot" names so screens and saved preferences stay compatible.
+export type RobotMotion = "idle" | "wave" | "walk" | "jump" | "come" | "stop" | "dance" | "sleep" | "sad" | "talk"
+  | "cart" | "thumbs" | "think" | "point" | "run" | "sit" | "listen" | "crossed";
 export type RobotOutfit = "none" | "scarf" | "cape" | "bowtie" | "hoodie";
 export type RobotAccessory = "none" | "cap" | "crown" | "glasses" | "headphones" | "flower";
+// Accessories the character can wear; older saved values (crown, flower) simply show none.
+export const CHARACTER_ACCESSORIES = ["none", "glasses", "cap", "headphones"] as const;
 export type RobotPrefs = {
   name: string; color: string; outfit: RobotOutfit; accessory: RobotAccessory; size: number;
+  skin: string; hair: string; pants: string; boots: string; beard: boolean; use3d: boolean;
   reduceMotion: boolean; voice: boolean; motion: Exclude<RobotMotion, "idle" | "sleep" | "sad" | "talk">; faceConsent: boolean;
 };
 export type RobotEvent = "cart" | "favorite" | "order" | "error" | "checkin" | "hello" | "search" | "reward";
-export const ROBOT_DEFAULTS: RobotPrefs = { name: "لُقطي", color: "#7C5CFF", outfit: "none", accessory: "none", size: 1, reduceMotion: false, voice: true, motion: "wave", faceConsent: false };
-export const ROBOT_COLORS = ["#7C5CFF", "#FF6B4A", "#22B07D", "#2F80ED", "#F2A900", "#E0559B", "#3B3F5C"];
+// Defaults are the mockups' character: black leather vest (color), red trousers, black boots, a beard.
+export const ROBOT_DEFAULTS: RobotPrefs = { name: "لُقطي", color: "#141414", outfit: "none", accessory: "none", size: 1, reduceMotion: false, voice: true, motion: "wave", faceConsent: false,
+  skin: "#E0A27C", hair: "#3F281B", pants: "#C4161B", boots: "#101010", beard: true, use3d: true };
+export const ROBOT_COLORS = ["#141414", "#5B3FD6", "#FF6B4A", "#22B07D", "#2F80ED", "#F2A900", "#E0559B"];
+export const SKIN_TONES = ["#F2C9A6", "#E0A27C", "#C68B5E", "#A8704A", "#8D5524", "#5C3A21"];
+export const HAIR_COLORS = ["#3F281B", "#111111", "#6B4423", "#B5651D", "#D9B26F", "#9E9E9E"];
+export const PANTS_COLORS = ["#C4161B", "#1F2A44", "#3B3F45", "#6B4F3A", "#2E5E4E", "#E8E2D6"];
+export const BOOTS_COLORS = ["#101010", "#5A3A22", "#E9E9E9", "#7A1F1F"];
 const REACTIONS: Record<RobotEvent, { motion: RobotMotion; message: string }> = {
-  cart: { motion: "jump", message: "أضفتها للسلة! 🎉" },
-  favorite: { motion: "wave", message: "حفظتها في مفضلتك 💜" },
+  cart: { motion: "cart", message: "أضفتها للسلة! 🎉" },
+  favorite: { motion: "thumbs", message: "حفظتها في مفضلتك 💜" },
   order: { motion: "dance", message: "طلبك في الطريق! 🛵" },
   error: { motion: "sad", message: "أوه! حاول مرة ثانية" },
   checkin: { motion: "jump", message: "حضورك اليوم سجلناه ⭐" },
   hello: { motion: "wave", message: "أهلًا! شو بدك اليوم؟" },
-  search: { motion: "come", message: "خليني أدور معك 🔎" },
+  search: { motion: "think", message: "خليني أدور معك 🔎" },
   reward: { motion: "dance", message: "نقاطك زادت! 🏆" },
 };
 const PREFS_KEY = "luqta-robot-v1";

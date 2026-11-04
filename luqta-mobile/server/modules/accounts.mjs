@@ -12,7 +12,9 @@ export const PREFERENCE_DEFAULTS = {
   onboarded: false,
   notifications: { orders: true, offers: true, support: true, priceAlerts: true, pantry: true, robot: true },
   privacy: { personalizedRecommendations: true, shareLocationWithDriver: true, saveSearchHistory: true, analytics: false, marketingEmails: false },
-  robot: { name: 'لُقطي', color: '#7C5CFF', outfit: 'none', accessory: 'none', size: 1, reduceMotion: false, voice: true, motion: 'wave', faceConsent: false },
+  // The companion is the mockups' character: black vest (color), red trousers, black boots, a beard.
+  robot: { name: 'لُقطي', color: '#141414', outfit: 'none', accessory: 'none', size: 1, reduceMotion: false, voice: true, motion: 'wave', faceConsent: false,
+    skin: '#E0A27C', hair: '#3F281B', pants: '#C4161B', boots: '#101010', beard: true, use3d: true },
 };
 
 function deviceName(req, body) {
@@ -67,10 +69,10 @@ export function install(c, api) {
       if (!r || typeof r !== 'object' || Array.isArray(r)) fail(400, 'إعدادات الشخصية غير صالحة');
       const robot = { ...current.robot };
       if (r.name !== undefined) robot.name = text(r.name, 'اسم الشخصية', 1, 20);
-      if (r.color !== undefined) { if (typeof r.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(r.color)) fail(400, 'لون الشخصية يجب أن يكون HEX'); robot.color = r.color; }
+      for (const key of ['color', 'skin', 'hair', 'pants', 'boots']) if (r[key] !== undefined) { if (typeof r[key] !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(r[key])) fail(400, 'لون الشخصية يجب أن يكون HEX'); robot[key] = r[key]; }
       for (const [key, options] of [['outfit', OUTFITS], ['accessory', ACCESSORIES], ['motion', MOTIONS]]) if (r[key] !== undefined) { if (!options.includes(r[key])) fail(400, `اختيار ${key} غير متاح`); robot[key] = r[key]; }
       if (r.size !== undefined) robot.size = Math.round(number(r.size, 'حجم الشخصية', 0.6, 1.4) * 100) / 100;
-      for (const key of ['reduceMotion', 'voice', 'faceConsent']) if (r[key] !== undefined) { if (typeof r[key] !== 'boolean') fail(400, `قيمة ${key} غير صالحة`); robot[key] = r[key]; }
+      for (const key of ['reduceMotion', 'voice', 'faceConsent', 'beard', 'use3d']) if (r[key] !== undefined) { if (typeof r[key] !== 'boolean') fail(400, `قيمة ${key} غير صالحة`); robot[key] = r[key]; }
       next.robot = robot;
     }
     return next;

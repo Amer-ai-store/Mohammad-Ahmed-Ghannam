@@ -4,17 +4,18 @@ import { AVATAR_JS, THREE_JS, VIEWER_JS } from "./webEngines.generated.ts";
 
 export type AvatarAction =
   | "idle" | "walk" | "run" | "jump" | "sleep" | "wake" | "cart" | "come" | "wave"
-  | "point" | "thumbs" | "think" | "crossed" | "listen" | "sit" | "stop";
+  | "point" | "thumbs" | "think" | "crossed" | "listen" | "sit" | "stop" | "dance" | "sad" | "talk";
 
 export const AVATAR_ACTIONS: AvatarAction[] = [
   "idle", "walk", "run", "jump", "sleep", "wake", "cart", "come", "wave",
-  "point", "thumbs", "think", "crossed", "listen", "sit", "stop",
+  "point", "thumbs", "think", "crossed", "listen", "sit", "stop", "dance", "sad", "talk",
 ];
 
 export type AvatarProfile = {
   skin?: string; hair?: string; outfit?: string; pants?: string; boots?: string;
-  beard?: boolean; faceDataUrl?: string;
+  beard?: boolean; accessory?: AvatarAccessory; faceDataUrl?: string;
 };
+export type AvatarAccessory = "none" | "glasses" | "cap" | "headphones";
 
 const LINE_SEPARATORS = new RegExp("[\\u2028\\u2029]", "g");
 const safeJson = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c").replace(LINE_SEPARATORS, " ");
