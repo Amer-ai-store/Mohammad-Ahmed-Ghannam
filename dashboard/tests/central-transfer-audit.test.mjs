@@ -95,6 +95,7 @@ test('migration audit is public status only and never exposes private evidence o
   assert.match(source,/credentials:'omit'/);
   assert.doesNotMatch(source,/method:\s*['"]POST['"]/);
   assert.ok(index.includes('id="central-transfer-audit-root"'));
+  assert.ok(index.indexOf('id="central-transfer-audit-root"')<index.indexOf('id="release-verification-root"'),'transfer matrix is visible before the long Actions list');
   assert.ok(index.includes('central-transfer-audit.mjs'));
   new Script(source.replace(/^'use strict';/,'').replace(/^\s*\/\*[\s\S]*?\*\//,''),{filename:'transfer-coverage-inline.js'});
 });
