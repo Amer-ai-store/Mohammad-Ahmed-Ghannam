@@ -86,4 +86,62 @@ function readAudit15Ops(filename){
     caveat:'Historical count or value differences do not prove deletion, fraud or user attribution. Windows scheduler status does not verify AI model execution.'
   };
 }
-module.exports={readAudit15Ops};
+function readSchemaCatalog(filename,requestUrl){
+  if(typeof filename!=='string'||!path.isAbsolute(filename))
+    throw Object.assign(Error('SCHEMA_SOURCE_NOT_CONFIGURED'),{status:503});
+  let input;
+  try{
+    const stat=fs.lstatSync(filename);
+    if(!stat.isFile()||stat.isSymbolicLink()||stat.size<100||stat.size>12*1024*1024)throw Error('invalid_file');
+    input=JSON.parse(fs.readFileSync(filename,'utf8'));
+  }catch{
+    throw Object.assign(Error('SCHEMA_SOURCE_UNAVAILABLE'),{status:503});
+  }
+  if(input?.schema!=='jawafa.private.schema.v1'||input.businessRowsIncluded!==false||
+    !Array.isArray(input.tables)||input.tables.length!==1024||
+    !Array.isArray(input.foreignKeys)||input.foreignKeys.length!==38)
+      throw Object.assign(Error('SCHEMA_SOURCE_INVALID'),{status:502});
+  const params=new URL(requestUrl,'http://127.0.0.1').searchParams;
+  const offsetRaw=params.get('offset')??'0',limitRaw=params.get('limit')??'50',nameRaw=params.get('name')??'';
+  if(!/^\d{1,4}$/.test(offsetRaw)||!/^\d{1,3}$/.test(limitRaw)||!/^[a-zA-Z0-9_]{0,64}$/.test(nameRaw))
+      throw Object.assign(Error('INVALID_SCHEMA_QUERY'),{status:422});
+  const offset=Number(offsetRaw),limit=Number(limitRaw);
+  if(limit<1||limit>100||offset>1024)
+      throw Object.assign(Error('INVALID_SCHEMA_QUERY'),{status:422});
+  const filtered=input.tables.filter(x=>typeof x?.table==='string'&&
+    x.table.toLowerCase().includes(nameRaw.toLowerCase()));
+  const page=filtered.slice(offset,offset+limit);
+  const names=new Set(page.map(t=>(String(t.schema)+'.'+t.table).toLowerCase()));
+  const rows=page.map(t=>({
+    schema:String(t.schema).slice(0,128),
+    name:String(t.table).slice(0,128),
+    columnCount:Array.isArray(t.columns)?t.columns.length:0,
+    columns:Array.isArray(t.columns)?t.columns.slice(0,250).map(c=>({
+      name:String(c?.name??'').slice(0,128),
+      sqlType:String(c?.sqlType??'unknown').slice(0,80),
+      nullable:String(c?.nullable??'').slice(0,3),
+      position:Number.isSafeInteger(Number(c?.position))?Number(c.position):null
+    })):[]
+  }));
+  const relations=input.foreignKeys.filter(f=>
+    names.has((String(f.fromSchema)+'.'+f.fromTable).toLowerCase())||
+    names.has((String(f.toSchema)+'.'+f.toTable).toLowerCase())
+  ).map(f=>({
+    fromSchema:String(f.fromSchema).slice(0,128),fromTable:String(f.fromTable).slice(0,128),
+    fromColumn:String(f.fromColumn).slice(0,128),
+    toSchema:String(f.toSchema).slice(0,128),toTable:String(f.toTable).slice(0,128),
+    toColumn:String(f.toColumn).slice(0,128),
+    evidence:'SQL_SCHEMA_DECLARED_FK_ONLY'
+  }));
+  const checked=new Date(input.observedAtUtc).getTime();
+  return {
+    schema:'jawafa.schema.catalog.page.v1',classification:'OWNER_ONLY_SCHEMA_METADATA_NO_BUSINESS_ROWS',
+    source:'JAWAFFASVR protected schema snapshot',
+    observedAtUtc:input.observedAtUtc,
+    stale:!Number.isFinite(checked)||Math.abs(Date.now()-checked)>30*60*1000,
+    totalTables:1024,totalForeignKeys:38,matchingTables:filtered.length,
+    offset,limit,rows,relationships:relations,
+    note:'Declared SQL foreign keys are not sufficient proof of TrustSoft business-posting relationships.'
+  };
+}
+module.exports={readAudit15Ops,readSchemaCatalog};
