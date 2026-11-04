@@ -18,8 +18,8 @@ function error(res,status,message){
   res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
   res.end(JSON.stringify({error:message}));
 }
-function proxy(req,res,port){
-  const up=http.request({hostname:'127.0.0.1',port,path:req.url,method:req.method,
+function proxy(req,res,port,targetPath=req.url){
+  const up=http.request({hostname:'127.0.0.1',port,path:targetPath,method:req.method,
     timeout:7000,headers:{Authorization:req.headers.authorization||'',Accept:'application/json'}},r=>{
       res.writeHead(r.statusCode||502,{
         'Content-Type':r.headers['content-type']||'application/json; charset=utf-8',
@@ -39,7 +39,7 @@ function handler(req,res){
   try{url=new URL(req.url,'http://127.0.0.1')}catch{return error(res,400,'INVALID_URL')}
   if(routes.has(url.pathname))return proxy(req,res,8794);
   if(url.pathname.startsWith('/api/jawafa/v1/'))return proxy(req,res,8788);
-  if(url.pathname==='/api/export-status')return proxy(req,res,3461);
+  if(url.pathname==='/api/export-status')return proxy(req,res,3461,'/api/status');
   if(!['GET','HEAD'].includes(req.method))return error(res,405,'METHOD_NOT_ALLOWED');
   let pathname;
   try{pathname=decodeURIComponent(url.pathname)}catch{return error(res,400,'INVALID_PATH')}
