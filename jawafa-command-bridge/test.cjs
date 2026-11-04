@@ -12,6 +12,17 @@ test.before(async()=>{
       transferGuardStatus:'TRANSFER_VERIFIED_15_OF_15',verifiedTransferFiles:15,verifiedRoundtrips:15,
       previousVerifiedFull:7,previousVerifiedDelta:8},
     existingAgents:{agents:[{name:'JawafaExportAgent20Min',category:'data_pipeline',lastSchedulerResult:0,schedulerState:'Ready'}]},
+    historicalKeyedAnalysis:{
+      keyedComparisonSourceSha256:'a'.repeat(64),
+      keyedTables:Array.from({length:6},(_,i)=>({
+        table:'Test_'+i,referenceRows:10,laterComparisonRows:12,
+        sharedKeys:10,addedKeys:2,missingKeysFromLater:0,changedSharedRecords:i,
+        sample_keys_private:[{key:'NEVER_LEAK'}]
+      })),
+      postingCorrelation:{sourceSha256:'b'.repeat(64),candidatePostingChanges:126,matchedHistoryEvents:126,unmatchedJournalIds:0},
+      transactionHistoryContinuity:{sourceSha256:'c'.repeat(64),baselineRows:1065770,newHistoryIds:4027,
+        overlapWithBaseline:419,newIdsContiguous:false,countReconciles:true}
+    },
     export:{mode:'PARTIAL_REFERENCE_ONLY',totalTables:1024,processedTables:1023,remainingTables:1,failedTables:0,progressPercent:99.9}
   };
   fs.writeFileSync(path.join(dir,'audit15.json'),JSON.stringify(fixture));
@@ -69,6 +80,11 @@ test('Private Audit15 endpoint verifies owner and excludes unsafe internal file 
   assert.equal(owner.data.audit15.historicalRootCauseVerified,false);
   assert.equal(owner.data.existingAgents.agents[0].aiModelEndpointVerified,false);
   assert.equal(owner.data.export.completenessAccepted,false);
+  assert.equal(owner.data.historicalKeyedAnalysis.keyedTables.length,6);
+  assert.equal(owner.data.historicalKeyedAnalysis.postingCorrelation.matchedHistoryEvents,126);
+  assert.equal(owner.data.historicalKeyedAnalysis.postingCorrelation.humanIdentityVerified,false);
+  assert.equal(owner.data.historicalKeyedAnalysis.transactionHistoryContinuity.newIdsContiguous,false);
+  assert.ok(!JSON.stringify(owner.data).includes('NEVER_LEAK'));
   assert.ok(!Object.hasOwn(owner.data,'sourceFiles'));
   const noAuth=await api(prefix+'audit15-ops',{headers:{authorization:''}});
   assert.equal(noAuth.status,401);
