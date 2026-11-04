@@ -13,7 +13,7 @@
   },
   "public_inventory": {
     "main_native_views": 39,
-    "main_navigation_destinations": 65,
+    "main_navigation_destinations": 80,
     "main_groups": 6,
     "aas_routes": 14,
     "aas_manifest_files": 17,
@@ -42,7 +42,7 @@
       "title": "القيادة الرئيسية والتنقل",
       "source_status": "verified",
       "runtime_status": "unverified",
-      "count": "39 شاشة / 65 رابط تنقل / 6 مجموعات",
+      "count": "39 شاشة / 80 رابط تنقل / 6 مجموعات",
       "evidence": "dashboard/index.html",
       "note": "بنية التنقل موجودة ومثبتة في ملفات الموقع، ولا يعني ذلك أن كل زر متصل بخدمة حية."
     },

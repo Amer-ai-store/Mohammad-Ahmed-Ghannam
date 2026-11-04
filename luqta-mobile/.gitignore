@@ -6,6 +6,9 @@ node_modules/
 # Expo
 .expo/
 dist/
+dist-e2e/
+# end-to-end failure screenshots
+e2e/artifacts/
 web-build/
 mobile-build/
 expo-env.d.ts

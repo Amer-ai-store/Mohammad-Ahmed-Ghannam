@@ -1,106 +1,112 @@
-import React, { useState } from "react";
+import React from "react";
 import { View } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
+import { Bell, Bot, ChartPie, Download, Gift, Globe, Headset, CircleQuestionMark as HelpCircle, LayoutDashboard, ListChecks, LogOut, MapPin, Package, PiggyBank, Refrigerator, Server, Share2, ShieldCheck, Store, Trash, Truck, UserRound, Wallet } from "lucide-react-native";
 import { Shell } from "../components/Shell";
-import { Button, Txt } from "../components/ui";
-import { AccountCard, AccountLink, errorMessage, FormField, FormMessage } from "../components/AccountKit";
-import { api } from "../lib/api";
+import { Mascot } from "../components/Robot";
+import { Badge, Button, Card, ListRow, Row, Txt } from "../components/ui";
 import { useSession } from "../lib/session";
 import { useStore } from "../lib/store";
 import { useTheme } from "../lib/theme";
+import { useI18n } from "../lib/i18n";
+import { useMoney } from "../lib/money";
+import { useApi } from "../lib/useApi";
 
-const roleNames = { customer: "عميل", admin: "مدير المتجر", driver: "سائق توصيل" };
-
-function RecoveryCodeCard() {
-  const { colors: t } = useTheme();
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const issue = async () => {
-    setBusy(true); setError("");
-    try {
-      const result = await api.post<{ recoveryCode: string }>("/auth/recovery-code", { password });
-      if (!result.recoveryCode) throw new Error("لم يصدر الخادم رمزًا جديدًا.");
-      setPassword(""); setCode(result.recoveryCode);
-    } catch (failure) { setError(errorMessage(failure)); }
-    finally { setBusy(false); }
-  };
-  return <AccountCard>
-    <Txt weight="bold" style={{ fontSize: 20 }}>رمز استرداد الحساب</Txt>
-    <Txt style={{ color: t.muted, lineHeight: 25 }}>إذا نسيت كلمة المرور، يمكنك استخدامها مع رمز استرداد محفوظ. إصدار رمز جديد يُبطل الرمز السابق، ولا يُرسل الرمز بالبريد أو الرسائل النصية.</Txt>
-    {code ? <>
-      <Txt selectable accessibilityLabel="رمز استرداد الحساب، اضغط مطولًا لنسخه" style={{ color: t.orange, fontSize: 20, lineHeight: 30 }}>{code}</Txt>
-      <Txt style={{ color: t.muted, lineHeight: 24 }}>يظهر الآن فقط. انسخه واحفظه في مكان خاص، ثم أخفه من الشاشة.</Txt>
-      <Button title="حفظت الرمز، إخفاؤه" secondary onPress={() => setCode("")} />
-    </> : <>
-      <FormField label="كلمة المرور الحالية لإصدار رمز جديد" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" returnKeyType="done" onSubmitEditing={() => { if (!busy && password) void issue(); }} />
-      <Button title="إصدار رمز استرداد جديد" secondary busy={busy} disabled={!password} onPress={() => void issue()} />
-    </>}
-    <FormMessage text={error} />
-  </AccountCard>;
-}
+type Profile = { name: string; email: string; phone: string; avatar: string };
+type Rewards = { points: number; redeemablePoints: number };
+type Tier = { tier: { id: string; name: string }; next: { name: string; pointsNeeded: number } | null; progress: number };
 
 export default function ProfileScreen() {
-  const session = useSession();
   const { colors: t } = useTheme();
-  const { favorites, cartCount } = useStore();
-  const [name, setName] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [success, setSuccess] = useState(false);
-  const saveName = async () => {
-    setBusy(true); setMessage(""); setSuccess(false);
-    try {
-      if (name.trim().length < 2) throw new Error("أدخل اسمًا من حرفين على الأقل.");
-      await api.patch("/auth/me", { name: name.trim() });
-      await session.refreshUser();
-      setEditing(false); setSuccess(true); setMessage("تم تحديث الاسم في قاعدة بيانات الحساب.");
-    } catch (failure) { setMessage(errorMessage(failure)); }
-    finally { setBusy(false); }
-  };
-  const logout = async () => {
-    setBusy(true); setMessage(""); setSuccess(false);
-    try { await session.logout(); }
-    catch (failure) { setMessage(errorMessage(failure)); }
-    finally { setBusy(false); }
-  };
-  return <Shell title="حسابي" subtitle="طلباتك وعناوينك وإعدادات المتجر في مكان واحد.">
-    <View style={{ maxWidth: 850, width: "100%", alignSelf: "center", gap: 16 }}>
-      <AccountCard>
-        <Txt weight="extra" style={{ fontSize: 25 }}>{session.user ? `أهلًا، ${session.user.name}` : "أهلًا بك في لُقطة"}</Txt>
-        <Txt style={{ color: t.muted, lineHeight: 24 }}>{session.user ? `${session.user.email} · ${roleNames[session.user.role]}` : "تصفّح المنتجات كزائر، وسجّل الدخول لحفظ طلباتك وعناوينك في قاعدة البيانات."}</Txt>
-        <Txt style={{ color: session.connected ? t.green : t.muted }}>{session.connected ? "اتصال فعلي بالخادم" : session.configured ? "عنوان خادم محفوظ · الاتصال غير مؤكد" : "وضع الاستعراض المحلي · دون خادم"}</Txt>
-        {session.user ? <>
-          {editing ? <>
-            <FormField label="الاسم الكامل" value={name} onChangeText={setName} maxLength={100} />
-            <Button title="حفظ الاسم" busy={busy} onPress={() => void saveName()} />
-            <Button title="إلغاء التعديل" secondary onPress={() => setEditing(false)} />
-          </> : <Button title="تعديل الاسم" secondary onPress={() => { setName(session.user?.name || ""); setEditing(true); }} />}
-          <Button title="تسجيل الخروج" secondary onPress={() => void logout()} busy={busy} />
-        </> : <>
-          <Button title="تسجيل الدخول" onPress={() => router.push("/login")} />
-          <Button title="إنشاء حساب" secondary onPress={() => router.push("/register")} />
-        </>}
-        <FormMessage text={message || session.error} success={success} />
-      </AccountCard>
-      {session.user ? <RecoveryCodeCard /> : null}
-      <AccountLink href="/orders" title="طلباتي والتتبع" detail="حالة الطلب، الإلغاء، المرتجعات وتتبع سائق التوصيل" />
-      <AccountLink href="/wallet" title="المحفظة والمكافآت" detail="الرصيد والنقاط وسجل القيود والاستردادات" />
-      <AccountLink href="/addresses" title="دفتر العناوين" detail="عناوين التوصيل المحفوظة ونقطة الموقع الاختيارية" />
-      <AccountLink href="/notifications" title="الإشعارات" detail="تحديثات حالة طلباتك من قاعدة بيانات المتجر" />
-      <AccountLink href="/favorites" title="المفضلة" detail={`${favorites.length} منتجًا محفوظًا`} />
-      <AccountLink href="/cart" title="سلة المشتريات" detail={`${cartCount} قطعة في السلة`} />
-      <AccountLink href="/appearance" title="المظهر والوضع الليلي" detail="فاتح أو داكن أو حسب إعداد الجهاز" />
-      <AccountLink href="/social" title="ربط حساب Facebook" detail="موافقة رسمية عبر Meta وصلاحيات محددة" />
-      <AccountLink href="/connection" title="اتصال الخادم" detail="اختبار الاتصال وحفظ عنوان الخادم" />
-      {session.user?.role === "admin" ? <>
-        <AccountLink href="/command-center" title="ربط مركز القيادة المركزي" detail="استيراد وصول المالك واختبار ومزامنة الأصناف والطلبات" />
-        <AccountLink href="/admin" title="لوحة الإدارة والقيادة" detail="المخزون والأصناف والطلبات والوكلاء وسجل التعديلات" />
-      </> : null}
-      {session.user?.role === "driver" ? <AccountLink href="/driver" title="لوحة السائق" detail="الطلبات المسندة ومشاركة الموقع وحالة التسليم" /> : null}
-      {session.user ? <AccountLink href="/delete-account" title="حذف الحساب والبيانات الشخصية" detail="طلب حذف نهائي مع التحقق من كلمة المرور والالتزامات النشطة" /> : null}
-    </View>
-  </Shell>;
+  const { t: tr } = useI18n();
+  const money = useMoney();
+  const { user, logout, configured } = useSession();
+  const store = useStore();
+  const profile = useApi<{ profile: Profile }>("/me/profile", { needsUser: true });
+  const rewards = useApi<Rewards>("/rewards", { needsUser: true });
+  const tier = useApi<Tier>("/rewards/tier", { needsUser: true });
+  const vendors = useApi<{ vendors: { id: string; name: string }[] }>("/vendor/me", { needsUser: true });
+  const go = (href: Href) => () => router.push(href);
+  const icon = (I: typeof Bell) => <I size={19} color={t.primary} />;
+  if (!user) return (
+    <Shell title="حسابي" subtitle="سجّل الدخول لحفظ عناوينك وطلباتك ونقاطك" testID="profile">
+      <Card style={{ alignItems: "center", gap: 12 }}>
+        <Mascot size={120} motion="wave" bubble="top" message="أهلًا! خلّينا نتعرّف" interactive={false} />
+        <Button title={tr("تسجيل الدخول")} onPress={() => router.push("/login")} style={{ alignSelf: "stretch" }} />
+        <Button title={tr("إنشاء حساب")} secondary onPress={() => router.push("/register")} style={{ alignSelf: "stretch" }} />
+      </Card>
+      <Card style={{ marginTop: 12 }}>
+        <ListRow icon={icon(Globe)} title="اللغة والمظهر" onPress={go("/appearance")} />
+        <ListRow icon={icon(Bot)} title="شخصيتي وحركتها" onPress={go("/robot")} />
+        <ListRow icon={icon(Server)} title="اتصال الخادم" onPress={go("/connection")} />
+        <ListRow icon={icon(HelpCircle)} title="مركز المساعدة" onPress={go("/help")} />
+      </Card>
+    </Shell>
+  );
+  const avatar = profile.data?.profile.avatar || "";
+  const emoji = avatar.startsWith("emoji:") ? avatar.slice(6) : "";
+  return (
+    <Shell title="حسابي" testID="profile">
+      <Card tone="primary" style={{ gap: 12 }} testID="profile-card">
+        <Row>
+          <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: t.paper, alignItems: "center", justifyContent: "center" }}>
+            {emoji ? <Txt style={{ fontSize: 30 }}>{emoji}</Txt> : <UserRound size={28} color={t.primary} />}
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt weight="extra" style={{ color: t.onPrimary, fontSize: 20 }}>{user.name}</Txt>
+            <Txt style={{ color: t.onPrimary, opacity: 0.85, fontSize: 12 }}>{user.email}{profile.data?.profile.phone ? ` · ${profile.data.profile.phone}` : ""}</Txt>
+          </View>
+          {tier.data ? <Badge label={tr("عضوية {t}", { t: tier.data.tier.name })} tone="warning" /> : null}
+        </Row>
+        <Button title={tr("تعديل بياناتي")} secondary onPress={go("/account")} style={{ minHeight: 42, paddingVertical: 8 }} />
+      </Card>
+      <Card style={{ marginTop: 12, gap: 8 }} testID="points-card">
+        <Row style={{ justifyContent: "space-between" }}>
+          <View>
+            <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("نقاطي")}</Txt>
+            <Txt weight="extra" style={{ fontSize: 28, color: t.orange }}>{rewards.data?.points ?? 0}</Txt>
+            <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("قابل للاستبدال بـ {m}", { m: money.format((rewards.data?.redeemablePoints ?? 0) / 100) })}</Txt>
+          </View>
+          <Button title={tr("استبدل")} testID="redeem-points" onPress={go("/rewards")} style={{ minHeight: 44, paddingVertical: 8 }} />
+        </Row>
+        {tier.data?.next ? <>
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: t.line, overflow: "hidden" }}><View style={{ width: `${tier.data.progress}%`, height: 8, backgroundColor: t.warning }} /></View>
+          <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("باقي {n} نقطة للمستوى {t}", { n: tier.data.next.pointsNeeded, t: tier.data.next.name })}</Txt>
+        </> : null}
+      </Card>
+      <Card style={{ marginTop: 12 }}>
+        <ListRow testID="menu-account" icon={icon(MapPin)} title="بياناتي وعناويني" detail="الاسم والهاتف والعناوين" onPress={go("/account")} />
+        <ListRow testID="menu-robot" icon={icon(Bot)} title="شخصيتي وحركتها" detail="لون وملابس وحركات لُقطي" onPress={go("/robot")} />
+        <ListRow testID="menu-appearance" icon={icon(Globe)} title="اللغة والمظهر" detail="عربي/English، نهاري/ليلي، العملة" onPress={go("/appearance")} />
+        <ListRow testID="menu-notifications" icon={icon(Bell)} title="الإشعارات" detail={store.unreadCount ? tr("{n} غير مقروءة", { n: store.unreadCount }) : undefined} onPress={go("/notifications")} />
+        <ListRow testID="menu-privacy" icon={icon(ShieldCheck)} title="الخصوصية والأجهزة" detail="الأجهزة وكلمة المرور وسجل البحث" onPress={go("/privacy")} />
+        <ListRow testID="menu-export" icon={icon(Download)} title="تصدير بياناتي" onPress={() => router.push({ pathname: "/privacy", params: { section: "export" } })} />
+      </Card>
+      <Card style={{ marginTop: 12 }}>
+        <ListRow icon={icon(Package)} title="طلباتي" onPress={go("/orders")} />
+        <ListRow icon={icon(Wallet)} title="المحفظة وبطاقات الهدايا" onPress={go("/wallet")} />
+        <ListRow icon={icon(Gift)} title="مكافآتي والدعوات" onPress={go("/rewards")} />
+        <ListRow icon={icon(PiggyBank)} title="ميزانيتي الأسبوعية" onPress={go("/budget")} />
+        <ListRow icon={icon(Refrigerator)} title="مخزن البيت" detail="الصلاحية وتوفير الكربون" onPress={go("/pantry")} />
+        <ListRow icon={icon(ListChecks)} title="قوائمي" onPress={go("/lists")} />
+        <ListRow icon={icon(Headset)} title="الدعم" onPress={go("/support")} />
+        <ListRow icon={icon(HelpCircle)} title="مركز المساعدة" onPress={go("/help")} />
+      </Card>
+      <Card style={{ marginTop: 12 }}>
+        {user.role === "admin" ? <ListRow icon={icon(LayoutDashboard)} title="لوحة القيادة" detail="المؤشرات والمنتجات والطلبات والمزامنة" onPress={go("/admin")} /> : null}
+        {user.role === "admin" ? <ListRow icon={icon(ChartPie)} title="إدارة المشروع" onPress={go("/admin/project")} /> : null}
+        {vendors.data?.vendors.length ? <ListRow icon={icon(Store)} title="لوحة التاجر" detail={vendors.data.vendors.map((v) => v.name).join("، ")} onPress={go("/vendor")} /> : null}
+        {user.role === "driver" ? <ListRow icon={icon(Truck)} title="لوحة السائق" onPress={go("/driver")} /> : null}
+        <ListRow icon={icon(Share2)} title="ربط Facebook" onPress={go("/social")} />
+        <ListRow icon={icon(Server)} title={configured ? "اتصال الخادم" : "إعداد اتصال الخادم"} onPress={go("/connection")} />
+      </Card>
+      <Card style={{ marginTop: 12 }}>
+        <ListRow testID="logout" icon={<LogOut size={19} color={t.danger} />} title="تسجيل الخروج" danger onPress={() => void logout()} />
+        <ListRow icon={<Trash size={19} color={t.danger} />} title="حذف الحساب" danger onPress={go("/delete-account")} />
+      </Card>
+      <View style={{ alignItems: "center", marginTop: 18 }}>
+        <Mascot size={100} motion="sleep" bubble="top" message="Zzz… اضغطني لأصحو" />
+      </View>
+    </Shell>
+  );
 }
