@@ -119,6 +119,8 @@
         متبقية:e.remainingTables,
         فشل_مُعلن:e.failedTables,
         نسبة_معلنة:e.progressPercent,
+        الجدول_المرجعي_غير_المصدر:(e.referenceOnlyTableNames||[]).join('، ')||'غير محدد',
+        مطابقة_الجرد:e.coverageReconciled===true?'مطابقة وصفية':'غير مثبتة',
         اعتماد_الإكمال:'غير معتمد'
       }]));
     }
