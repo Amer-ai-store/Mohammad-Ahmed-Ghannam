@@ -146,6 +146,11 @@ test('genuine authenticated Audit15 metadata can render 15 rows and agent tasks'
       transferGuardStatus:'TRANSFER_VERIFIED_15_OF_15',verifiedTransferFiles:15,verifiedRoundtrips:15,historicalRootCauseVerified:false},
     existingAgents:{agents:[{name:'JawafaExportAgent20Min',category:'data_pipeline',
       schedulerState:'Ready',lastSchedulerResult:0,lastRunLocal:'2026-11-04T02:30:30',aiModelEndpointVerified:false}]},
+    historicalKeyedAnalysis:{
+      keyedTables:Array.from({length:6},(_,i)=>({table:'Keyed'+i,referenceRows:10,laterComparisonRows:20,sharedKeys:10,addedKeys:10,missingKeysFromLater:0,changedSharedRecords:i+1})),
+      postingCorrelation:{candidatePostingChanges:126,matchedHistoryEvents:126},
+      transactionHistoryContinuity:{newHistoryIds:4027,newIdsContiguous:false,countReconciles:true}
+    },
     export:{mode:'PARTIAL_REFERENCE_ONLY',processedTables:1023,totalTables:1024,remainingTables:1,failedTables:0,progressPercent:99.9}};
   const snapshot={state:'connected',stale:false,data:{audit15_ops:status}};
   const renderer=rows=>{const node=fakeNode('table');node.textContent=JSON.stringify(rows);return node;};
@@ -154,6 +159,9 @@ test('genuine authenticated Audit15 metadata can render 15 rows and agent tasks'
   let nodes=flatten(host);
   assert.ok(nodes.some(x=>x.textContent.includes('Test14')));
   assert.ok(nodes.some(x=>x.textContent.includes('غير محسوم')));
+  assert.ok(nodes.some(x=>x.textContent.includes('Keyed5')));
+  assert.ok(nodes.some(x=>x.textContent.includes('126')));
+  assert.ok(nodes.some(x=>x.textContent.includes('4027')));
   ctx.TrustSoftOperationsUI.render({group:'agents',host,snapshot,tableRenderer:renderer});
   nodes=flatten(host);
   assert.ok(nodes.some(x=>x.textContent.includes('JawafaExportAgent20Min')));
