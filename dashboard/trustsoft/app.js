@@ -1,5 +1,5 @@
 'use strict';
-const labels={overview:'نظرة عامة',control:'المراقبة والسيطرة',sales:'المبيعات',purchases:'المشتريات',accounting:'المحاسبة',checks:'الشيكات',inventory:'المخزون',users:'المستخدمون',operations:'التقارير التشغيلية',financial:'التقارير المالية',investigation:'التحقيق المالي',schema:'المخطط والعلاقات'};
+const labels={overview:'نظرة عامة',control:'المراقبة والسيطرة',catalog:'دليل الجداول',audit15:'تدقيق الجداول الـ15',agents:'مساحات وكلاء الخادم',accounting:'المحاسبة',purchases:'المشتريات والموردون',sales:'المبيعات ونقاط البيع',inventory:'المواد والمستودعات',employees:'الموظفون والرواتب',definitions:'التعريفات الرئيسية',users:'المستخدمون والصلاحيات',checks:'الشيكات',operations:'التقارير التشغيلية',financial:'التقارير المالية',investigation:'التحقيق المالي',schema:'المخطط والعلاقات'};
 const errors={agent_sql_not_verified:'لم يثبت اتصال SQL بواسطة وكيل الخادم',sql_not_configured:'اتصال SQL غير مهيأ',sql_driver_missing:'برنامج تشغيل SQL غير مثبت',sql_connection_or_query_failed:'تعذر الاتصال أو تنفيذ الاستعلام',read_only_principal_required:'الحساب يملك صلاحيات تتجاوز القراءة؛ أُوقفت القراءة',tls_configuration_required:'يلزم اتصال مشفر بشهادة موثوقة',wrong_server:'الخادم لا يطابق JAWAFFASVR',dashboard_unreachable:'تعذر الاتصال بخدمة اللوحة',wrong_database:'قاعدة البيانات لا تطابق Jawafa_DB',invalid_mapping:'ربط الأعمدة غير صالح'};
 const $=id=>document.getElementById(id);
 // GitHub Pages hosts the central UI; its short-lived API session stays in memory.
@@ -45,7 +45,7 @@ const dedicatedControl=document.body?.dataset.startSection==='control';
 const adminEntry=dedicatedControl||(portalClient&&document.body?.dataset.portalAdmin==='true');
 let selected=dedicatedControl||document.body?.dataset.defaultSection==='control'?'control':'overview',snapshot=null,busy=false,timer;
 function el(tag,text){const n=document.createElement(tag);n.textContent=text;return n;}
-for(const [key,label] of Object.entries(labels)){if(dedicatedControl&&key!=='control')continue;const b=el('button',label);b.onclick=()=>{selected=key;render();};b.dataset.section=key;$('nav').append(b);}
+for(const [key,label] of Object.entries(labels)){if(dedicatedControl&&key!=='control')continue;const b=el('button',label);b.onclick=()=>{selected=key;if(!snapshot&&selected!=='control'){refresh();}else render();};b.dataset.section=key;$('nav').append(b);}
 function table(rows){if(!rows?.length)return el('div','لا توجد نتائج مثبتة لهذا العرض.');const wrap=document.createElement('div'),t=document.createElement('table'),head=document.createElement('thead'),body=document.createElement('tbody'),keys=[...new Set(rows.flatMap(Object.keys))],tr=document.createElement('tr');keys.forEach(k=>tr.append(el('th',k)));head.append(tr);rows.forEach(row=>{const r=document.createElement('tr');keys.forEach(k=>r.append(el('td',typeof row[k]==='object'?JSON.stringify(row[k]):String(row[k]??'—'))));body.append(r);});t.append(head,body);wrap.className='table-scroll';wrap.append(t);return wrap;}
 function render(){if(!snapshot)return;
  $('title').textContent=labels[selected];document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',String(b.dataset.section===selected)));
@@ -54,7 +54,17 @@ function render(){if(!snapshot)return;
  $('alert').hidden=ok;$('alert').textContent=(errors[s.error]||s.error||'بانتظار التحقق')+' — لا توجد بيانات حية مؤكدة. أي بيانات سابقة أدناه قديمة.';
  $('updated').textContent='آخر قراءة ناجحة: '+(s.last_success?new Date(s.last_success*1000).toLocaleString('ar'):'لم تحدث');
  $('cards').replaceChildren();for(const [label,value] of [['حالة القراءة',ok?'ناجحة':'غير مثبتة'],['الجداول والعروض المرئية',d&&d.schema_state!=='not_discovered'?new Set(d.catalog.map(c=>c.schema_name+'.'+c.object_name)).size:'—'],['العلاقات المعلنة',d&&d.schema_state!=='not_discovered'?d.relations.length:'—'],['إخفاقات متتالية',s.failures]]){const c=el('div','');c.className='card';c.append(el('span',label),el('strong',String(value)));$('cards').append(c);}
- $('control-panel').hidden=selected!=='control';$('data-panel').hidden=selected==='control';if(selected==='control'){$('cards').hidden=!controlState;$('alert').hidden=true;$('status').textContent='قناة الإدارة • جارٍ التحقق';refreshControl();return renderEvents();}$('cards').hidden=false;
+ const opsMode=selected==='audit15'||selected==='agents';
+  const directoryMode=opsMode||Boolean(globalThis.TrustSoftCatalog?.spec[selected]);
+ $('directory-panel').hidden=!directoryMode;
+ $('control-panel').hidden=selected!=='control';$('data-panel').hidden=selected==='control'||directoryMode;
+ if(selected==='control'){$('cards').hidden=!controlState;$('alert').hidden=true;$('status').textContent='قناة الإدارة • جارٍ التحقق';refreshControl();return renderEvents();}$('cards').hidden=false;
+ if(directoryMode){
+   if(opsMode)globalThis.TrustSoftOperationsUI.render({group:selected,snapshot:s,host:$('directory-content'),tableRenderer:table});
+    else globalThis.TrustSoftDirectoryUI.render({group:selected,snapshot:s,host:$('directory-content'),tableRenderer:table});
+   renderEvents();
+   return;
+ }
  $('panel-title').textContent=labels[selected];$('scope').textContent='';$('content').replaceChildren();
  if(!d){$('content').append(el('div','لم يتم جلب بيانات من TrustSoft. لا تُعرض بيانات تجريبية.'));return renderEvents();}
  if(selected==='overview'){$('content').append(table(Object.entries(d.sections).map(([k,v])=>({القسم:labels[k]||k,الحالة:v.state,صفوف_العينة:v.rows.length}))));}

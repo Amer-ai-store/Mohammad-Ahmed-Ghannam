@@ -22,3 +22,40 @@ button{touch-action:manipulation}
 }
 
 .portal-session-note{font-size:13px;color:#65788d}aside a{color:#a6ead5}.portal-session-note button{margin:8px}
+
+
+/* TRUSTSOFT — source-driven module directory (read only) */
+#directory-panel { overflow: visible; }
+.directory-summary { border-radius: 13px; padding: 17px 19px; background: #edf6f6; border: 1px solid #cce7e6; }
+.directory-summary h2 { margin: 0 0 4px; font-size: 20px; color: #13354d; }
+.directory-note { margin: 10px 0; color: #596d7e; font-size: 13px; line-height: 1.8; }
+.directory-chip { display: inline-flex; margin: 6px 0 4px 8px; padding: 4px 10px; border: 1px solid #bedbd9; background: #f8fcfa; border-radius: 30px; font-size: 12px; color: #26525c; }
+.directory-tabs { margin: 17px 0 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.directory-tab { min-height: 46px; background: #fff; color: #20435d; border: 1px solid #cfdde4; font-size: 13px; line-height: 1.5; font-weight: 600; }
+.directory-tab[aria-selected=true] { color: #fff; background: #123f59; border-color: #123f59; }
+.directory-detail { min-width: 0; padding: 18px 1px 4px; }
+.directory-detail h3 { font-size: 18px; margin: 8px 0 12px; }
+.directory-detail h4 { font-size: 14px; margin: 17px 0 8px; }
+.posting-workflow { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 16px 0; }
+.posting-stage { padding: 14px; background: #f0f8f5; border: 1px solid #b9ded4; border-radius: 11px; min-width: 0; }
+.posting-stage strong { display: block; font-size: 16px; color: #174d48; }
+.posting-stage small { display: block; font-size: 11px; line-height: 1.65; color: #668a82; letter-spacing: normal; }
+.directory-search { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0 7px; }
+.directory-search input { min-width: 190px; flex: 1 1 260px; padding: 10px 13px; border: 1px solid #c0d2dc; border-radius: 9px; font: inherit; font-size: 15px; background: #fff; }
+.directory-tally { color: #45677a; font-size: 13px; }
+.directory-results { max-width: 100%; min-width: 0; }
+.directory-pagination { display: flex; justify-content: flex-end; align-items: center; gap: 9px; padding: 14px 0; }
+.directory-pagination button { font-size: 13px; }
+.directory-proposals { padding: 16px 19px; border: 1px dashed #b0cac8; background: #f8fbfc; border-radius: 12px; margin: 24px 0 5px; }
+.directory-proposals h3 { margin: 0 0 10px; font-size: 16px; }
+.directory-proposals ul { margin: 0; padding-right: 21px; line-height: 2; font-size: 13px; }
+#directory-panel .table-scroll { overflow-x: auto; max-width: 100%; }
+@media(max-width:700px){
+ #directory-panel { padding: 13px; }
+ .directory-summary { padding: 14px; }
+ .directory-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+ .directory-tab { font-size: 12px; padding: 9px 7px; min-height: 48px; overflow-wrap: anywhere; }
+ .posting-workflow { grid-template-columns: 1fr; gap: 7px; }
+ .directory-detail { padding: 12px 0; }
+ .directory-summary h2 { font-size: 18px; }
+}

@@ -404,7 +404,8 @@ nav.side{gap:.5rem}
 <div class="panel" data-jawafa-pane="jawafa-investigations"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
 <section class="view" data-view="jawafa-agents" aria-labelledby="h-jawafa-agents" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-agents">مجلس CFO / CPO / GM</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-agents">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-agents">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-agents">NOT_CONNECTED</span></div>
-<div class="panel" data-jawafa-pane="jawafa-agents"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<div class="panel" data-jawafa-pane="jawafa-agents"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div>
+<section class="panel" id="jawafa-audit15-agent-console" aria-label="الوكلاء وأدلة الجداول التاريخية"><h3>تدقيق الجداول التاريخية والوكلاء</h3><p class="muted">تظهر التفاصيل من المصدر الخاص بعد المصادقة فقط؛ لا تُعرض بيانات مالية على GitHub Pages.</p></section></section>
 <section class="view" data-view="jawafa-commands" aria-labelledby="h-jawafa-commands" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-commands">الأوامر التنفيذية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-commands">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-commands">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-commands">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-commands"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -2583,6 +2584,8 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
 })();
 </script>
 <script src="jawafa-integration.js" defer></script>
+<script src="jawafa-audit15-console.js" defer></script>
+<script src="jawafa-schema-console.js" defer></script>
 <script src="jawafa-periodic-report.js" defer></script>
 
 <script src="aas-integration.js" defer></script>
