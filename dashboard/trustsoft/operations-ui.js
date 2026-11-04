@@ -71,6 +71,22 @@
       }));
       host.append(h('h3','مقارنة المصدر التاريخي — ليست نتيجة اتهام أو حذف'));
       host.append(tableRenderer(rows));
+      const historical=data.historicalKeyedAnalysis;
+      if(historical?.keyedTables?.length===6){
+        host.append(h('h3','ستة جداول: مقارنة السجلات بالمفاتيح عبر ملفات تاريخية'));
+        host.append(tableRenderer(historical.keyedTables.map(x=>({
+          الجدول:x.table,مشتركة:x.sharedKeys,مضافة:x.addedKeys,
+          مفقودة_لاحقًا:x.missingKeysFromLater,مشتركة_تغيّرت:x.changedSharedRecords,
+          معنى_الفروق:'مقارنة CSV، ليست إثبات تعديل SQL'
+        }))));
+        const p=historical.postingCorrelation,c=historical.transactionHistoryContinuity;
+        info(host,'مطابقة ترحيل: '+String(p?.matchedHistoryEvents??'غير مثبت')+' حدث من '+String(p?.candidatePostingChanges??'غير مثبت')+
+        ' تغيير مرصود. توقيت الساعة والهوية البشرية غير موثوقين؛ لا استنتاج بشأن المسؤول.');
+        info(host,'استمرارية TransactionHistory: '+String(c?.newHistoryIds??'—')+
+        ' مُعرفًا جديدًا، وتسلسل المعرفات '+(c?.newIdsContiguous===true?'متصل':'غير متصل أو غير مثبت')+'.');
+      }else{
+        info(host,'المقارنة التاريخية بالمفاتيح لم تُحمّل من مصدر موثق في هذه الجلسة.');
+      }
       info(host,'التحقق من النقل: '+String(summary.transferGuardStatus||'غير متوفر')+
         ' • فحص الملفات: '+String(summary.verifiedTransferFiles??'—')+
         '/15 • فحص الاسترجاع: '+String(summary.verifiedRoundtrips??'—')+'/15.');
