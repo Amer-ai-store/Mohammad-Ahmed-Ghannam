@@ -10,9 +10,10 @@ const portalApi=document.body?.dataset.apiOrigin;
 const portalClient=portalApi==='https://trustsoft-control.zxzx-mohammad91.workers.dev'&&globalThis.location?.origin==='https://amer-ai-store.github.io';
 const invalidPortal=Boolean(portalApi)&&!portalClient;
 let portalSession='',portalGeneration=0;
-async function acceptPortalLogin(response){
+async function acceptPortalLogin(response, expectedGeneration=portalGeneration){
  if(!portalClient)return;
  const data=await response.json();
+ if(expectedGeneration!==portalGeneration)throw Error('portal_session_closed');
  if(typeof data.session!=='string'||data.session.length>4096||data.session.length<32)throw Error('portal_session_missing');
  portalSession=data.session;
 }
@@ -100,6 +101,7 @@ async function refresh(){
 
 $('login').onsubmit=async e=>{
  e.preventDefault();if(localFile)return;
+ const loginGeneration=portalGeneration;
  $('login-submit').disabled=true;
  try{
   if(portalClient)portalSession='';
@@ -110,7 +112,7 @@ $('login').onsubmit=async e=>{
    $('login-error').textContent=failure.error==='admin_not_configured'?'خدمة إدارة الموقع لم تُهيأ بعد؛ يلزم إعداد مضيف الويب.':'لم يُقبل مفتاح الدخول. تحقق من المفتاح الخاص بهذا الموقع.';
    return;
   }
-  await acceptPortalLogin(r);
+  await acceptPortalLogin(r,loginGeneration);
   $('login-error').textContent='';
   if(!await refresh())$('login-error').textContent='لم تثبت جلسة الدخول. استخدم رابط HTTPS للموقع واسمح بملفات ارتباطه، ثم أعد المحاولة.';
  }catch{
@@ -181,9 +183,10 @@ async function submitAction(action){
 }
 $('admin-login').onsubmit=async e=>{
  e.preventDefault();if(localFile)return;
+ const loginGeneration=portalGeneration;
  try{
   const r=await apiRequest('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:$('admin-token').value})});
-  $('admin-token').value='';if(!r.ok)throw Error();await acceptPortalLogin(r);await refreshControl();
+  $('admin-token').value='';if(!r.ok)throw Error();await acceptPortalLogin(r,loginGeneration);await refreshControl();
  }catch{$('control-message').textContent='تعذر دخول الإدارة؛ تحقق من المفتاح وإعداد الخدمة.';}
 };
 
