@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
+import {createHash, webcrypto} from 'node:crypto';
 import {resolve} from 'node:path';
 import {runInNewContext,Script} from 'node:vm';
 import {OFFICIAL_AGENTS} from '../aas/official-agent-roster.mjs';
@@ -98,4 +99,48 @@ test('migration audit is public status only and never exposes private evidence o
   assert.ok(index.indexOf('id="central-transfer-audit-root"')<index.indexOf('id="release-verification-root"'),'transfer matrix is visible before the long Actions list');
   assert.ok(index.includes('central-transfer-audit.mjs'));
   new Script(source.replace(/^'use strict';/,'').replace(/^\s*\/\*[\s\S]*?\*\//,''),{filename:'transfer-coverage-inline.js'});
+});
+
+test('interactive full-public-file SHA audit button actually runs 17 same-origin GET verifications',async()=>{
+  class FakeNode {
+    constructor(tag){this.tag=tag;this.textContent='';this.children=[];this.listeners={};this.disabled=false;}
+    append(...values){this.children.push(...values);}
+    replaceChildren(...values){this.children=values;}
+    setAttribute(){}
+    addEventListener(type,callback){this.listeners[type]=callback;}
+  }
+  const rootNode=new FakeNode('section'),calls=[];
+  const bytes=new TextEncoder().encode('safe public asset test');
+  const syntheticManifest={
+    ...manifest,
+    routes:manifest.routes,
+    files:Array.from({length:17},(_,i)=>({
+      path:'asset_'+i+'.js',bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')
+    }))
+  };
+  const response=(obj)=>({ok:true,status:200,json:async()=>obj});
+  const fetch=async(url,options={})=>{
+    calls.push({url,method:options.method||'GET',credentials:options.credentials});
+    if(String(url).includes('central-transfer-audit.json'))return response(report);
+    if(String(url).includes('integration-manifest.json'))return response(syntheticManifest);
+    if(String(url).includes('./aas/asset_'))return {
+      ok:true,status:200,arrayBuffer:async()=>bytes.slice().buffer
+    };
+    throw Error('Unexpected external request '+url);
+  };
+  const doc={
+    getElementById:id=>id==='central-transfer-audit-root'?rootNode:null,
+    createElement:tag=>new FakeNode(tag)
+  };
+  runInNewContext(source,{document:doc,fetch,crypto:webcrypto,AbortController,setTimeout,clearTimeout,console});
+  // The source performs one asynchronous status-only GET on initialization.
+  await new Promise(ok=>setTimeout(ok,10));
+  assert.equal(rootNode.children.length,6);
+  const button=rootNode.children[5].children[0],liveMessage=rootNode.children[3];
+  assert.equal(button.tag,'button');
+  assert.equal(typeof button.listeners.click,'function');
+  await button.listeners.click();
+  assert.match(liveMessage.textContent,/17\/17/);
+  assert.equal(calls.filter(x=>String(x.url).includes('./aas/asset_')).length,17);
+  assert.ok(calls.every(x=>x.method==='GET'&&x.credentials==='omit'));
 });
