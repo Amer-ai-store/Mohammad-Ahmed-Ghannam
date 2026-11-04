@@ -11,6 +11,10 @@ on:
       - "dashboard/tests/advisor-fallback.test.cjs"
       - "dashboard/tests/advisor-browser-smoke.cjs"
       - "jawafa-command-bridge/**"
+      - "dashboard/trustsoft/**"
+      - "dashboard/tests/trustsoft-native-embed.test.cjs"
+      - "tools/trustsoft-archive/**"
+      - "integrations/trustsoft/**"
       - ".github/workflows/jawafa-unified-qa.yml"
   push:
     branches: [main]
@@ -23,6 +27,10 @@ on:
       - "dashboard/tests/advisor-fallback.test.cjs"
       - "dashboard/tests/advisor-browser-smoke.cjs"
       - "jawafa-command-bridge/**"
+      - "dashboard/trustsoft/**"
+      - "dashboard/tests/trustsoft-native-embed.test.cjs"
+      - "tools/trustsoft-archive/**"
+      - "integrations/trustsoft/**"
       - ".github/workflows/jawafa-unified-qa.yml"
 permissions:
   contents: read
@@ -38,7 +46,7 @@ jobs:
       - name: Run durable operational API security and ACK/VERIFY tests
         run: node --test jawafa-command-bridge/test.cjs
       - name: Run native integration and code safety tests
-        run: node --test dashboard/tests/jawafa-native-integration.test.cjs dashboard/tests/jawafa-auth-guard.test.cjs dashboard/tests/jawafa-export-monitor.test.cjs dashboard/tests/advisor-fallback.test.cjs
+        run: node --test dashboard/tests/jawafa-native-integration.test.cjs dashboard/tests/jawafa-auth-guard.test.cjs dashboard/tests/jawafa-export-monitor.test.cjs dashboard/tests/advisor-fallback.test.cjs dashboard/tests/trustsoft-native-embed.test.cjs tools/trustsoft-archive/build-manifest.test.cjs
       - name: Browser navigation, real DOM, no iframe
         shell: bash
         run: |
