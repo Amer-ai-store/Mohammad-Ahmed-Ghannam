@@ -2,9 +2,8 @@
 (()=>{
  "use strict";
  function analyze(snapshot){
-  const ok=snapshot?.state==='connected' && snapshot?.stale===false;
   const data=snapshot?.data;
-  const sections=data && typeof data.sections==='object' ? Object.entries(data.sections) : [];
+  const sections=data && data.sections && typeof data.sections==='object' ? Object.entries(data.sections) : [];
   const rows=sections.map(([name,value])=>({
    section:String(name),
    sampleRows:Array.isArray(value?.rows)?value.rows.length:0,
@@ -12,6 +11,7 @@
    scope:String(value?.scope||'غير معتمد')
   }));
   const catalog=Array.isArray(data?.catalog)?data.catalog:[];
+  const ok=snapshot?.state==='connected' && snapshot?.stale===false && (catalog.length>0||sections.length>0);
   const stale=!ok;
   const anomalies=[];
   if(!data)anomalies.push('لم يصل أي سجل مصدر مصادق عليه');
