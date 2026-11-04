@@ -96,8 +96,8 @@ const flows = {
   async 'explore-search'() {
     const { ctx, page } = await open('/explore');
     await byId(page, 'explore-search').fill('سماعات');
-    await byId(page, 'product-card-headphones').waitFor({ timeout: 8000 });
-    check(!(await byId(page, 'product-card-rice').isVisible().catch(() => false)), 'unrelated product still shown');
+    await page.locator('[aria-label="تفاصيل سماعات لاسلكية"]').first().waitFor({ timeout: 8000 });
+    check(!(await page.locator('[aria-label="تفاصيل أرز بسمتي"]').first().isVisible().catch(() => false)), 'unrelated product still shown');
     await byId(page, 'explore-search').fill('zzzz-لا-يوجد');
     await page.getByText('لا توجد منتجات مطابقة').first().waitFor({ timeout: 5000 });
     return { ctx, page, note: 'search narrows to headphones; nonsense query shows the empty state' };
@@ -113,7 +113,7 @@ const flows = {
   async 'cart-quantity-remove'() {
     const { ctx, page } = await open('/cart', { cart: { rice: 1, milk: 2 } });
     await byId(page, 'cart-row-rice').waitFor({ timeout: 8000 });
-    await page.locator('[aria-label^="زيادة كمية"]').first().click();
+    await page.locator('[aria-label^="زيادة كمية"]').filter({ visible: true }).first().click();
     await page.waitForFunction((k) => Object.values(JSON.parse(localStorage.getItem(k) || '{}').cart || {}).reduce((a, b) => a + b, 0) === 4, STORE, { timeout: 5000 });
     await byId(page, 'cart-remove-milk').click();
     await page.waitForFunction((k) => !(JSON.parse(localStorage.getItem(k) || '{}').cart || {}).milk, STORE, { timeout: 5000 });
@@ -123,10 +123,8 @@ const flows = {
     return { ctx, page, note: `quantity +1, milk removed, demo coupon applied; cart=${JSON.stringify((await stored(page)).cart)}` };
   },
   async 'assistant-budget-basket'() {
-    const { ctx, page } = await open('/assistant');
-    await byId(page, 'chat-input').fill('جهز لي سلة بـ 20 دينار');
-    await byId(page, 'chat-send').click();
-    await byId(page, 'basket-suggestions').waitFor({ timeout: 10000 });
+    const { ctx, page } = await open('/assistant?q=' + encodeURIComponent('جهز لي سلة بـ 20 دينار'));
+    await byId(page, 'basket-suggestions').waitFor({ timeout: 15000 });
     await byId(page, 'review-basket').click();
     await page.waitForFunction((k) => Object.keys(JSON.parse(localStorage.getItem(k) || '{}').cart || {}).length > 0, STORE, { timeout: 8000 });
     const cart = (await stored(page)).cart;

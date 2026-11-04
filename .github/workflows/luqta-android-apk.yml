@@ -243,9 +243,12 @@ jobs:
       - name: Boot emulator (x86_64 image with ARM translation)
         run: |
           echo no | avdmanager create avd -n luqta -k 'system-images;android-30;google_apis;x86_64' -d pixel_5 --force
-          nohup "$ANDROID_HOME/emulator/emulator" -avd luqta -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 4096 -cores 3 > ../emulator.log 2>&1 &
-          adb wait-for-device
-          for i in $(seq 1 120); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ] && break; sleep 3; done
+          ls -l /dev/kvm || true
+          "$ANDROID_HOME/emulator/emulator" -accel-check || true
+          nohup "$ANDROID_HOME/emulator/emulator" -avd luqta -no-window -no-audio -no-boot-anim -no-metrics -accel auto -gpu swiftshader_indirect -no-snapshot -memory 4096 -cores 3 > ../emulator.log 2>&1 &
+          if ! timeout 420 adb wait-for-device; then echo "::error::emulator did not come up"; tail -120 ../emulator.log; exit 1; fi
+          booted=0; for i in $(seq 1 160); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ] && { booted=1; break; }; sleep 3; done
+          if [ $booted != 1 ]; then echo "::error::emulator did not finish booting"; tail -120 ../emulator.log; exit 1; fi
           adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0; adb shell settings put global animator_duration_scale 0
           adb shell input keyevent 82 || true
           adb shell getprop ro.build.version.release
