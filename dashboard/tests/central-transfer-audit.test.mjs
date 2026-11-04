@@ -76,6 +76,13 @@ test('migration audit is public status only and never exposes private evidence o
   assert.equal(report.schema,'aas.central.transfer.audit.v1');
   assert.equal(report.scope,'PUBLIC_METADATA_ONLY_NO_PRIVATE_DB_ROWS_NO_SECRETS');
   assert.equal(report.sections.length,8);
+  assert.equal(report.legacy_source_gaps.length,2);
+  assert.ok(report.legacy_source_gaps.some(x=>x.source_modules.includes('src/DocumentReader.tsx')));
+  assert.ok(report.legacy_source_gaps.some(x=>x.source_modules.includes('src/LiveConnection.tsx')));
+  assert.ok(report.legacy_source_gaps.every(x=>!x.migration_status.includes('VERIFIED_MIGRATED')));
+  assert.equal(report.private_connection_checks.private_aas_state_http_status,401);
+  assert.equal(report.private_connection_checks.owner_authenticated_read_verified,false);
+  assert.equal(report.private_connection_checks.agent_runtime_verified,false);
   assert.ok(report.sections.every(x=>['verified','present','pending','blocked','unverified'].includes(x.source_status)));
   assert.ok(report.sections.every(x=>x.runtime_status!=='verified'));
   assert.ok(report.sections.every(x=>x.evidence.startsWith('dashboard/')&&!x.evidence.includes('..')));
