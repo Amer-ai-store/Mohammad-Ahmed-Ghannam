@@ -79,7 +79,7 @@ test('migration audit is public status only and never exposes private evidence o
   assert.equal(report.legacy_source_gaps.length,2);
   assert.ok(report.legacy_source_gaps.some(x=>x.source_modules.includes('src/DocumentReader.tsx')));
   assert.ok(report.legacy_source_gaps.some(x=>x.source_modules.includes('src/LiveConnection.tsx')));
-  assert.ok(report.legacy_source_gaps.every(x=>!x.migration_status.includes('VERIFIED_MIGRATED')));
+  assert.ok(report.legacy_source_gaps.every(x=>x.migration_status!=='VERIFIED_MIGRATED'&&x.migration_status!=='ACCEPTED'));
   assert.equal(report.private_connection_checks.private_aas_state_http_status,401);
   assert.equal(report.private_connection_checks.owner_authenticated_read_verified,false);
   assert.equal(report.private_connection_checks.agent_runtime_verified,false);
