@@ -151,7 +151,7 @@ test('genuine authenticated Audit15 metadata can render 15 rows and agent tasks'
       postingCorrelation:{candidatePostingChanges:126,matchedHistoryEvents:126},
       transactionHistoryContinuity:{newHistoryIds:4027,newIdsContiguous:false,countReconciles:true}
     },
-    export:{mode:'PARTIAL_REFERENCE_ONLY',processedTables:1023,totalTables:1024,remainingTables:1,failedTables:0,progressPercent:99.9}};
+    export:{mode:'PARTIAL_REFERENCE_ONLY',processedTables:1023,totalTables:1024,remainingTables:1,failedTables:0,progressPercent:99.9,referenceOnlyTableNames:['dbo.ItemSalesSummary'],coverageReconciled:true}};
   const snapshot={state:'connected',stale:false,data:{audit15_ops:status}};
   const renderer=rows=>{const node=fakeNode('table');node.textContent=JSON.stringify(rows);return node;};
   assert.ok(ctx.TrustSoftOperationsUI.trusted(snapshot));
@@ -167,6 +167,8 @@ test('genuine authenticated Audit15 metadata can render 15 rows and agent tasks'
   assert.ok(nodes.some(x=>x.textContent.includes('JawafaExportAgent20Min')));
   assert.ok(nodes.some(x=>x.textContent.includes('غير مثبت')));
   assert.ok(nodes.some(x=>x.textContent.includes('PARTIAL_REFERENCE_ONLY')));
+  assert.ok(nodes.some(x=>x.textContent.includes('dbo.ItemSalesSummary')));
+  assert.ok(nodes.some(x=>x.textContent.includes('غير معتمد')));
 });
 test('operations UI is passive and available before app startup',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
