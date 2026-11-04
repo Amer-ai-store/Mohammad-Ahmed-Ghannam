@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '24'
       - name: Node tests — native navigation and private-link fail-closed guard
-        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs
+        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs dashboard/tests/central-transfer-audit.test.mjs
       - name: Publication preflight — reject private links in entire dashboard artifact
         shell: bash
         run: |
@@ -96,7 +96,13 @@ jobs:
           for n in $(seq 1 15); do
             if curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}?verify=${GITHUB_SHA}" -o /tmp/live-dashboard.html \
               && grep -Fq 'id="jf-investigation"' /tmp/live-dashboard.html \
+              && grep -Fq 'id="release-verification-root"' /tmp/live-dashboard.html \
+              && grep -Fq 'id="central-transfer-audit-root"' /tmp/live-dashboard.html \
+              && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}release-verification.mjs?verify=${GITHUB_SHA}" -o /tmp/live-verification.mjs \
+              && grep -Fq 'export const REPO=' /tmp/live-verification.mjs \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}data/jawafa-investigation-reports.json?verify=${GITHUB_SHA}" -o /tmp/live-manifest.json \
+              && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}data/central-transfer-audit.json?verify=${GITHUB_SHA}" -o /tmp/live-transfer-audit.json \
+              && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}central-transfer-audit.mjs?verify=${GITHUB_SHA}" -o /tmp/live-transfer-code.mjs \
               && python3 - <<'PY'
           import json
           with open("/tmp/live-manifest.json") as f: doc=json.load(f)
@@ -104,7 +110,14 @@ jobs:
           assert len(doc["reports"])==8
           assert all(x["href"] is None for x in doc["reports"])
           assert all(x["href"] is None for x in doc["private_evidence"])
-          print("Published manifest verified; private evidence references absent")
+          with open("/tmp/live-transfer-audit.json") as f: transfer=json.load(f)
+          assert transfer["schema"]=="aas.central.transfer.audit.v1"
+          assert transfer["scope"]=="PUBLIC_METADATA_ONLY_NO_PRIVATE_DB_ROWS_NO_SECRETS"
+          assert transfer["public_inventory"]["aas_manifest_files"]==17
+          assert len(transfer["sections"])==8
+          code=open("/tmp/live-transfer-code.mjs",encoding="utf-8").read()
+          assert "crypto.subtle.digest('SHA-256'" in code
+          print("Published manifest and transfer audit verified; private references absent")
           PY
             then
               echo "LIVE_PUBLIC_STATIC_DASHBOARD_VERIFIED"
