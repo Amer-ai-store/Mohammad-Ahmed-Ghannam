@@ -18,7 +18,7 @@
   toolbar.append(refresh,status);
   const tabs=el('div',undefined,'toolbar'),content=el('div',undefined,'table-wrap');
   let current=null,tab='audit15',pending=false;
-  const categories=[['audit15','الجداول الـ15'],['agents','الوكلاء المجدولون'],['security','الصلاحيات وAI']];
+  const categories=[['audit15','الجداول الـ15'],['keyed','فروق السجلات المربوطة'],['agents','الوكلاء المجدولون'],['security','الصلاحيات وAI']];
   for(const [id,name] of categories){
     const button=el('button',name,'tiny');button.type='button';
     button.setAttribute('aria-pressed',String(id===tab));
@@ -72,6 +72,36 @@
         const tr=el('tr');for(const k of keys)tr.append(el('td',String(row[k])));bodyRows.append(tr);
       }
       t.append(bodyRows);body.append(t);
+      return;
+    }
+    if(tab==='keyed'){
+      const h=current.historicalKeyedAnalysis;
+      if(!h||!Array.isArray(h.keyedTables)||h.keyedTables.length!==6){
+        text('لم تصل مقارنة مفاتيح السجلات من مصدر خاص معتمد.');
+        return;
+      }
+      content.replaceChildren();
+      content.append(el('h4','المقارنة التاريخية المرتبطة بالمفاتيح — ستة جداول'));
+      content.append(el('p','البيانات من تصديرات CSV غير ذرّية؛ اختلاف القيم أو حالة الترحيل لا يثبت وحده حذفًا أو تلاعبًا.','muted'));
+      const keyedRows=h.keyedTables.map(r=>({
+        الجدول:r.table,المرجع_الأقدم:r.referenceRows,استخراج_لاحق:r.laterComparisonRows,
+        المفاتيح_المشتركة:r.sharedKeys,المضافة:r.addedKeys,
+        مفقودة_في_الاستخراج_اللاحق:r.missingKeysFromLater,
+        سجلات_مشتركة_متغيرة:r.changedSharedRecords,سبب_التغيير:'غير مثبت'
+      }));
+      const t=el('table'),thead=el('thead'),tr=el('tr'),tbody=el('tbody'),keys=Object.keys(keyedRows[0]);
+      keys.forEach(k=>tr.append(el('th',k)));thead.append(tr);t.append(thead);
+      for(const row of keyedRows){
+        const rowNode=el('tr');keys.forEach(k=>rowNode.append(el('td',String(row[k]))));tbody.append(rowNode);
+      }
+      t.append(tbody);content.append(t);
+      const corr=h.postingCorrelation,continuity=h.transactionHistoryContinuity;
+      content.append(el('p','حالة قيود الترحيل: '+String(corr?.candidatePostingChanges??'غير مثبت')+
+        ' مرشح، و'+String(corr?.matchedHistoryEvents??'غير مثبت')+
+        ' حدث تاريخي متطابق. تاريخ ساعة الخادم ودلالة وظيفة TrustSoft والهوية البشرية: غير معتمدة.','muted'));
+      content.append(el('p','استمرارية TransactionHistory: '+String(continuity?.newHistoryIds??'غير مثبت')+
+        ' معرف جديد، وعدد الصفوف متطابق: '+(continuity?.countReconciles===true?'نعم':'لا / غير مثبت')+
+        '؛ تسلسل المعرفات متصل: '+(continuity?.newIdsContiguous===true?'نعم':'لا / غير مثبت')+'.','muted'));
       return;
     }
     if(tab==='agents'){
