@@ -402,9 +402,10 @@ nav.side{gap:.5rem}
 <section class="view" data-view="jawafa-investigations" aria-labelledby="h-jawafa-investigations" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-investigations">التحقيقات القضائية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-investigations">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-investigations">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-investigations">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-investigations"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="release-verification" aria-labelledby="h-release-verification" hidden><div class="view-head"><div><span class="eyebrow">AMER · RELEASE EVIDENCE</span><h1 id="h-release-verification">التحقق والإصدارات</h1><p>طلبات السحب وعمليات GitHub Actions وبوابات القبول في اللوحة المركزية.</p></div></div><div id="release-verification-root"></div></section>
 <section class="view" data-view="jawafa-agents" aria-labelledby="h-jawafa-agents" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-agents">مجلس CFO / CPO / GM</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-agents">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-agents">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-agents">NOT_CONNECTED</span></div>
-<div class="panel" data-jawafa-pane="jawafa-agents"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<p><a class="button" href="#release-verification">فتح مركز التحقق والإصدارات</a></p><div class="panel" data-jawafa-pane="jawafa-agents"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
 <section class="view" data-view="jawafa-commands" aria-labelledby="h-jawafa-commands" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-commands">الأوامر التنفيذية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-commands">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-commands">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-commands">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-commands"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -945,7 +946,7 @@ nav.side{gap:.5rem}
     ]],
     ["البنية | البيانات والإعدادات", [
       ["database","قواعد البيانات"],["servers","الخوادم والاتصالات","servers"],
-      ["github","المستودع والتطوير"],["activity","سجل النشاط"],["settings","الإعدادات"]
+      ["github","المستودع والتطوير"],["release-verification","التحقق والإصدارات"],["activity","سجل النشاط"],["settings","الإعدادات"]
     ]]
   ];
   const VIEWS = NAV.flatMap(([, items]) => items.map(i => i[0]));
@@ -2644,3 +2645,5 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 <script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>
 <script src="luqta-integration.js" defer></script>
+
+<script type="module" src="release-verification.mjs"></script>

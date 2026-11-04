@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '24'
       - name: Node tests — native navigation and private-link fail-closed guard
-        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs
+        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs
       - name: Publication preflight — reject private links in entire dashboard artifact
         shell: bash
         run: |
@@ -96,6 +96,9 @@ jobs:
           for n in $(seq 1 15); do
             if curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}?verify=${GITHUB_SHA}" -o /tmp/live-dashboard.html \
               && grep -Fq 'id="jf-investigation"' /tmp/live-dashboard.html \
+              && grep -Fq 'id="release-verification-root"' /tmp/live-dashboard.html \
+              && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}release-verification.mjs?verify=${GITHUB_SHA}" -o /tmp/live-verification.mjs \
+              && grep -Fq 'export const REPO=' /tmp/live-verification.mjs \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}data/jawafa-investigation-reports.json?verify=${GITHUB_SHA}" -o /tmp/live-manifest.json \
               && python3 - <<'PY'
           import json
