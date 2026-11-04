@@ -71,12 +71,19 @@ function readAudit15Ops(filename){
        Number(row.referenceRows)!==Number(tables.find(t=>t.table.toLowerCase()===name.toLowerCase()).referenceRows))
       throw Object.assign(Error('AUDIT15_HISTORY_CHAIN_INVALID'),{status:502});
     keyedNames.add(name.toLowerCase());
+    if(!['P0_FORENSIC_REVIEW','P1_FORENSIC_REVIEW'].includes(row.triagePriority)||
+       !Array.isArray(row.changedFieldCounts)||row.changedFieldCounts.length>40||
+       !row.changedFieldCounts.every(field=>
+          typeof field?.name==='string'&&/^[a-zA-Z_][a-zA-Z0-9_]{0,63}$/.test(field.name)&&INTEGER(field.occurrences)))
+      throw Object.assign(Error('AUDIT15_HISTORY_FIELD_COUNTS_INVALID'),{status:502});
     return {
       table:name,referenceRows:Number(row.referenceRows),
       laterComparisonRows:Number(row.laterComparisonRows),
       sharedKeys:Number(row.sharedKeys),addedKeys:Number(row.addedKeys),
       missingKeysFromLater:Number(row.missingKeysFromLater),
       changedSharedRecords:Number(row.changedSharedRecords),
+      triagePriority:row.triagePriority,
+      changedFieldCounts:row.changedFieldCounts.map(field=>({name:field.name,occurrences:Number(field.occurrences)})),
       evidence:'MANIFEST_VERIFIED_HISTORICAL_CSV_COMPARE_NOT_SQL_TRANSACTION_AUDIT',
       humanAttributionVerified:false,reasonVerified:false
     };
