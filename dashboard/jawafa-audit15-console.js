@@ -18,7 +18,7 @@
   toolbar.append(refresh,status);
   const tabs=el('div',undefined,'toolbar'),content=el('div',undefined,'table-wrap');
   let current=null,tab='audit15',pending=false;
-  const categories=[['audit15','الجداول الـ15'],['keyed','فروق السجلات المربوطة'],['agents','الوكلاء المجدولون'],['security','الصلاحيات وAI']];
+  const categories=[['audit15','الجداول الـ15'],['keyed','فروق السجلات المربوطة'],['export','استثناءات التصدير'],['agents','الوكلاء المجدولون'],['security','الصلاحيات وAI']];
   for(const [id,name] of categories){
     const button=el('button',name,'tiny');button.type='button';
     button.setAttribute('aria-pressed',String(id===tab));
@@ -105,6 +105,20 @@
       content.append(el('p','استمرارية TransactionHistory: '+String(continuity?.newHistoryIds??'غير مثبت')+
         ' معرف جديد، وعدد الصفوف متطابق: '+(continuity?.countReconciles===true?'نعم':'لا / غير مثبت')+
         '؛ تسلسل المعرفات متصل: '+(continuity?.newIdsContiguous===true?'نعم':'لا / غير مثبت')+'.','muted'));
+      return;
+    }
+    if(tab==='export'){
+      const e=current.export;
+      if(!e){text('لم يصل تقرير التصدير من المصدر الخاص.');return;}
+      table([{
+        الدورة:e.runName||'غير متوفر',
+        الحالة:e.mode,الجداول_الإجمالية:e.totalTables,
+        المعالجة:e.processedTables,المتبقية:e.remainingTables,
+        أخطاء_معلنة:e.failedTables,
+        جداول_مرجعية_غير_مصدرة:(e.referenceOnlyTableNames||[]).join('، ')||'غير محدد',
+        مطابقة_بيانات_الجرد:e.coverageReconciled===true?'مطابقة ميتاداتا':'غير مثبتة',
+        قبول_تصدير_كامل:'غير معتمد'
+      }]);
       return;
     }
     if(tab==='agents'){
