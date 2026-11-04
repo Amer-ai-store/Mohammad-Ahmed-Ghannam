@@ -17,6 +17,8 @@ test.before(async()=>{
       keyedTables:Array.from({length:6},(_,i)=>({
         table:'Test_'+i,referenceRows:10,laterComparisonRows:12,
         sharedKeys:10,addedKeys:2,missingKeysFromLater:0,changedSharedRecords:i,
+        triagePriority:i<3?'P0_FORENSIC_REVIEW':'P1_FORENSIC_REVIEW',
+        changedFieldCounts:[{name:'post',occurrences:i}],
         sample_keys_private:[{key:'NEVER_LEAK'}]
       })),
       postingCorrelation:{sourceSha256:'b'.repeat(64),candidatePostingChanges:126,matchedHistoryEvents:126,unmatchedJournalIds:0},
@@ -81,6 +83,8 @@ test('Private Audit15 endpoint verifies owner and excludes unsafe internal file 
   assert.equal(owner.data.existingAgents.agents[0].aiModelEndpointVerified,false);
   assert.equal(owner.data.export.completenessAccepted,false);
   assert.equal(owner.data.historicalKeyedAnalysis.keyedTables.length,6);
+  assert.equal(owner.data.historicalKeyedAnalysis.keyedTables[0].triagePriority,'P0_FORENSIC_REVIEW');
+  assert.equal(owner.data.historicalKeyedAnalysis.keyedTables[0].changedFieldCounts[0].name,'post');
   assert.equal(owner.data.historicalKeyedAnalysis.postingCorrelation.matchedHistoryEvents,126);
   assert.equal(owner.data.historicalKeyedAnalysis.postingCorrelation.humanIdentityVerified,false);
   assert.equal(owner.data.historicalKeyedAnalysis.transactionHistoryContinuity.newIdsContiguous,false);
