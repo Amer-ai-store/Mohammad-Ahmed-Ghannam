@@ -53,7 +53,7 @@
       "runtime_status": "unverified",
       "count": "14 قسمًا / 17 ملفًا متطابقًا SHA-256",
       "evidence": "dashboard/aas/integration-manifest.json",
-      "note": "جميع ملفات عميل AAS العامة متطابقة مع بيان الدمج. حالة مهام D1 والموافقات والتشغيل تتطلب مصادقة المالك."
+      "note": "تحققت بصمات SHA-256 لجميع ملفات العميل الـ17. يتطلب نقل مهام D1 والموافقات جلسة مالك؛ الطلب المجهول إلى API الخاص أعاد HTTP 401، وهذا لا يثبت القراءة المصرح بها."
     },
     {
       "id": "agents",
@@ -71,7 +71,7 @@
       "runtime_status": "unverified",
       "count": "17 واجهة مرتبطة بالتنقل",
       "evidence": "dashboard/jawafa-integration.js",
-      "note": "تظهر واجهات CFO/CPO/GM والتصدير والتقارير، لكن بيانات التشغيل الخاصة لا تُنقل إلى GitHub Pages تلقائيًا."
+      "note": "توجد 17 واجهة تنظيمية. التطبيق المرجعي القديم في AppDeploy يحفظ مهامًا في قاعدة تشغيل منفصلة؛ لم يثبت استيراد سجلاته أو مراعاة مراجعاتها إلى اللوحة المركزية."
     },
     {
       "id": "trustsoft",
@@ -80,7 +80,7 @@
       "runtime_status": "pending",
       "count": "12 قسمًا في النسخة العامة",
       "evidence": "dashboard/trustsoft/app.js",
-      "note": "توسعة المحاسبة والجداول الـ15 والوكلاء مرتبطة بPR #148 ولا تظهر جميعها في الإصدار العام. بوابات SQL والأمان غير معتمدة."
+      "note": "وجدنا في تطبيق TrustSoft السابق عبر AppDeploy وظيفتي قارئ صور المستندات وواجهة الاتصال الموقّع، بينما لا توجد أدلة على تكافؤهما مع الواجهة المنشورة ذات 12 قسمًا. توسعة PR #148 ما زالت غير مدمجة."
     },
     {
       "id": "luqta",
@@ -116,5 +116,46 @@
     "issue149": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/149"
   },
   "scope": "PUBLIC_METADATA_ONLY_NO_PRIVATE_DB_ROWS_NO_SECRETS",
-  "limitations": "فحص SHA-256 يثبت تطابق ملفات النشر فقط، وليس اكتمال نقل سجلات D1، أو تشغيل نماذج الوكلاء، أو اتصال SQL."
+  "limitations": "فحص SHA-256 يثبت تطابق ملفات النشر فقط، وليس اكتمال نقل سجلات D1، أو تشغيل نماذج الوكلاء، أو اتصال SQL.",
+  "legacy_source_gaps": [
+    {
+      "id": "trustsoft-document-reader",
+      "title": "قارئ مستندات TrustSoft القديم",
+      "source_app": "trustcontrol-jawafa-h3gws3",
+      "source_modules": [
+        "src/DocumentReader.tsx",
+        "src/LiveConnection.tsx"
+      ],
+      "source_features": [
+        "قراءة صور المستندات بموافقة",
+        "مراجعة الحقول وتصدير CSV",
+        "فحص اتصال موصل موقّع"
+      ],
+      "migration_status": "NOT_VERIFIED_IN_CENTRAL",
+      "risk": "لا تنقل رفع مستندات مالية إلى الواجهة العامة أو خدمة AI دون موافقة وصلاحيات محمية."
+    },
+    {
+      "id": "guava-legacy-tasks",
+      "title": "سجل مهام جوافة السابق",
+      "source_app": "guava-forensic-command-center-dhv9z9",
+      "source_modules": [
+        "src/main.ts",
+        "backend/index.ts"
+      ],
+      "source_features": [
+        "مهام بحالات متعددة",
+        "مراجع أدلة",
+        "خدمة تقرأ قاعدة تطبيق محمية"
+      ],
+      "migration_status": "OPERATIONAL_DATA_NOT_VERIFIED_MIGRATED",
+      "risk": "عدد السجلات الحالي ومطابقته غير مثبتين؛ لا تدمج أو تستبدل بيانات التشغيل دون نسخ ومطابقة."
+    }
+  ],
+  "private_connection_checks": {
+    "scope": "ANONYMOUS_NEGATIVE_TEST_ONLY",
+    "private_aas_state_http_status": 401,
+    "owner_authenticated_read_verified": false,
+    "agent_runtime_verified": false,
+    "jawafa_sql_e2e_verified": false
+  }
 }
