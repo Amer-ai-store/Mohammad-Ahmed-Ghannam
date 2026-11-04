@@ -52,3 +52,14 @@ test("analytic rule engine flags missing or stale data and recognizes bounded sa
  assert.equal(ready.sampleRowCount,2);assert.equal(ready.tableCatalogCount,1);
  assert.equal(ready.financialTotalsAllowed,false);
 });
+
+// Regression: native TrustSoft must offer least-privilege viewer login without blocking owner admin login.
+test("native TrustSoft supports explicit viewer and owner roles",()=>{
+ assert.match(standalone, /id="login-role"/);
+ assert.match(standalone, /value="admin"/);
+ assert.match(standalone, /value="viewer"/);
+ assert.match(client, /loginAsAdmin\?\x27\/api\/admin\/login\x27:\x27\/api\/login\x27/);
+ assert.match(client, /portalAdmin:\x27false\x27,defaultSection:\x27overview\x27/);
+ assert.match(client, /roleSelect\.value=\x27viewer\x27/);
+ assert.match(client, /loginTokenLabel\.textContent/);
+});

@@ -47,6 +47,11 @@ if(localFile){
 
 const dedicatedControl=document.body?.dataset.startSection==='control';
 const adminEntry=dedicatedControl||(portalClient&&document.body?.dataset.portalAdmin==='true');
+const roleSelect=$('login-role'),loginTokenLabel=$('login-token-label');
+if(roleSelect&&loginTokenLabel){
+ const syncLoginRole=()=>{loginTokenLabel.textContent=roleSelect.value==='admin'?'مفتاح إدارة TrustSoft':'مفتاح العرض (قراءة فقط)';};
+ roleSelect.addEventListener('change',syncLoginRole);syncLoginRole();
+}
 let selected=dedicatedControl||document.body?.dataset.defaultSection==='control'?'control':'overview',snapshot=null,busy=false,timer;
 function el(tag,text){const n=document.createElement(tag);n.textContent=text;return n;}
 for(const [key,label] of Object.entries(labels)){if(dedicatedControl&&key!=='control')continue;const b=el('button',label);b.onclick=()=>{selected=key;render();};b.dataset.section=key;$('nav').append(b);}
@@ -105,7 +110,8 @@ $('login').onsubmit=async e=>{
  $('login-submit').disabled=true;
  try{
   if(portalClient)portalSession='';
-  const r=await apiRequest(adminEntry?'/api/admin/login':'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:$('token').value})});
+  const loginAsAdmin=$('login-role')?.value==='admin'||(!$('login-role')&&adminEntry);
+  const r=await apiRequest(loginAsAdmin?'/api/admin/login':'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:$('token').value})});
   $('token').value='';
   if(!r.ok){
    const failure=await r.json();
@@ -218,10 +224,12 @@ globalThis.TrustSoftEmbedded = Object.freeze({
    getElementById(id){return shadowRoot.getElementById(id);},
    querySelectorAll(selector){return shadowRoot.querySelectorAll(selector);},
    createElement(tag){return page.createElement(tag);},
-   body:{dataset:{apiOrigin:'https://trustsoft-control.zxzx-mohammad91.workers.dev',portalAdmin:'true',defaultSection:'control'}},
+   body:{dataset:{apiOrigin:'https://trustsoft-control.zxzx-mohammad91.workers.dev',portalAdmin:'false',defaultSection:'overview'}},
    addEventListener(type,handler){page.addEventListener(type,handler);},
    get visibilityState(){return page.visibilityState;}
   };
+  const roleSelect=shadowRoot.getElementById('login-role');
+  if(roleSelect)roleSelect.value='viewer';
   return initializeTrustSoft(scoped);
  }
 });
