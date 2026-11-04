@@ -65,6 +65,27 @@ if(host){
     const note=e('p',report.limitations,'muted');
     const date=e('p','تقييم المصدر: '+report.verified_date+' • نسخة المصدر: '+report.checked_source_commit.slice(0,12)+' • المعلومات عامة فقط.','muted small');
     table.append(date,note);
+    if(Array.isArray(report.legacy_source_gaps)){
+      table.append(e('h3','وظائف سابقة تحتاج نقلًا وتحققًا وظيفيًا'));
+      const legacyTable=e('table'),head=e('thead'),header=e('tr'),body=e('tbody');
+      for(const x of ['الوظيفة القديمة','المصدر السابق','الوظائف الموجودة سابقًا','نتيجة مطابقة النقل','المخاطر'])header.append(e('th',x));
+      head.append(header);legacyTable.append(head);
+      for(const gap of report.legacy_source_gaps){
+        const tr=e('tr');
+        tr.append(e('td',gap.title),e('td',gap.source_app),
+          e('td',gap.source_features.join('، ')),
+          e('td','لم يثبت انتقال الوظيفة والبيانات إلى اللوحة المركزية'),
+          e('td',gap.risk));
+        body.append(tr);
+      }
+      legacyTable.append(body);table.append(legacyTable);
+    }
+    const negative=report.private_connection_checks;
+    if(negative){
+      table.append(e('p','فحص الاتصال الخاص بدون تسجيل الدخول: HTTP '+
+        negative.private_aas_state_http_status+
+        '. نجاح الرفض لا يثبت اتصال المالك ولا مزامنة مهام D1 أو تشغيل وكلاء AI.','muted'));
+    }
     message.textContent='المصفوفة قائمة على أدلة عامة. لا تعتبر «موجود في الكود» اعتمادًا لتنفيذ مهمة أو اتصال نموذج AI.';
   }
   async function getJson(url,signal){
@@ -83,7 +104,11 @@ if(host){
          !response.sections.every(x=>allowed.has(x.source_status)&&allowed.has(x.runtime_status)&&
            typeof x.evidence==='string'&&/^dashboard\/[a-zA-Z0-9_./-]+$/.test(x.evidence)&&
            !x.evidence.includes('..'))||
-         response.public_inventory?.aas_manifest_files!==17)
+         response.public_inventory?.aas_manifest_files!==17||
+         !Array.isArray(response.legacy_source_gaps)||response.legacy_source_gaps.length!==2||
+         !response.legacy_source_gaps.every(x=>Array.isArray(x.source_features)&&x.source_features.length>0&&
+           typeof x.risk==='string'&&typeof x.title==='string')||
+         response.private_connection_checks?.owner_authenticated_read_verified!==false)
         throw Error('بيان المطابقة لا يطابق عقد النشر الآمن.');
       audit=response;render(response);
     }catch(err){
