@@ -77,6 +77,8 @@
         host.append(tableRenderer(historical.keyedTables.map(x=>({
           الجدول:x.table,مشتركة:x.sharedKeys,مضافة:x.addedKeys,
           مفقودة_لاحقًا:x.missingKeysFromLater,مشتركة_تغيّرت:x.changedSharedRecords,
+          أولوية_التحقيق:x.triagePriority||'غير محدد',
+          الحقول_المختلفة:(x.changedFieldCounts||[]).map(f=>f.name+':'+f.occurrences).join('، '),
           معنى_الفروق:'مقارنة CSV، ليست إثبات تعديل SQL'
         }))));
         const p=historical.postingCorrelation,c=historical.transactionHistoryContinuity;
