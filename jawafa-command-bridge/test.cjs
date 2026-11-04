@@ -15,7 +15,17 @@ test.before(async()=>{
     export:{mode:'PARTIAL_REFERENCE_ONLY',totalTables:1024,processedTables:1023,remainingTables:1,failedTables:0,progressPercent:99.9}
   };
   fs.writeFileSync(path.join(dir,'audit15.json'),JSON.stringify(fixture));
-  app=createBridge({databaseFile:path.join(dir,'operational.db'),audit15File:path.join(dir,'audit15.json'),agentSecret:secret,qaSecret,allowedAgentIds:['worker-test'],verifyUser:async token=>{if(!token)throw Object.assign(Error('AUTH_REQUIRED'),{status:401});return token==='Bearer OWNER'?{uid:'owner-uid',role:'owner'}:{uid:'unauthorized',role:'viewer'}}});server=http.createServer(app.handler);await new Promise(ok=>server.listen(0,'127.0.0.1',ok));url='http://127.0.0.1:'+server.address().port});
+  const schemaFixture={
+    schema:'jawafa.private.schema.v1',observedAtUtc:new Date().toISOString(),businessRowsIncluded:false,
+    tables:Array.from({length:1024},(_,i)=>({schema:'dbo',table:'Test_'+String(i).padStart(4,'0'),
+      columns:[{name:'Id',sqlType:'int',nullable:'NO',position:1},{name:'TransNo',sqlType:'bigint',nullable:'YES',position:2}]})),
+    foreignKeys:Array.from({length:38},(_,i)=>({
+      fromSchema:'dbo',fromTable:'Test_'+String(i).padStart(4,'0'),fromColumn:'Id',
+      toSchema:'dbo',toTable:'Test_'+String(i+1).padStart(4,'0'),toColumn:'Id'
+    }))
+  };
+  fs.writeFileSync(path.join(dir,'schema-catalog.json'),JSON.stringify(schemaFixture));
+  app=createBridge({databaseFile:path.join(dir,'operational.db'),audit15File:path.join(dir,'audit15.json'),schemaCatalogFile:path.join(dir,'schema-catalog.json'),agentSecret:secret,qaSecret,allowedAgentIds:['worker-test'],verifyUser:async token=>{if(!token)throw Object.assign(Error('AUTH_REQUIRED'),{status:401});return token==='Bearer OWNER'?{uid:'owner-uid',role:'owner'}:{uid:'unauthorized',role:'viewer'}}});server=http.createServer(app.handler);await new Promise(ok=>server.listen(0,'127.0.0.1',ok));url='http://127.0.0.1:'+server.address().port});
 test.after(async()=>{await new Promise(ok=>server.close(ok));app.close();fs.rmSync(dir,{recursive:true,force:true})});
 const api=async(path,opts={})=>{const r=await fetch(url+path,{headers:{authorization:'Bearer OWNER',...opts.headers},method:opts.method||'GET',body:opts.body?JSON.stringify(opts.body):undefined});return {status:r.status,data:await r.json()}};
 const signed=(method,path,body,nonce)=>{const txt=JSON.stringify(body),t=Date.now().toString();return {method,body:txt,headers:{'x-jawafa-agent':'worker-test','x-jawafa-timestamp':t,'x-jawafa-nonce':nonce,'x-jawafa-signature':crypto.createHmac('sha256',secret).update([method,path,codeHash(Buffer.from(txt)),t,nonce].join('\n')).digest('hex')}}};
@@ -64,4 +74,29 @@ test('Private Audit15 endpoint verifies owner and excludes unsafe internal file 
   assert.equal(noAuth.status,401);
   const viewer=await api(prefix+'audit15-ops',{headers:{authorization:'Bearer VIEWER'}});
   assert.equal(viewer.status,403);
+});
+
+test('Owner-only paginated schema index has 1024 tables, 38 FKs and no SQL values',async()=>{
+  const first=await api(prefix+'schema-catalog?offset=0&limit=50');
+  assert.equal(first.status,200);
+  assert.equal(first.data.schema,'jawafa.schema.catalog.page.v1');
+  assert.equal(first.data.totalTables,1024);
+  assert.equal(first.data.totalForeignKeys,38);
+  assert.equal(first.data.rows.length,50);
+  assert.equal(first.data.rows[0].columns[0].name,'Id');
+  assert.ok(first.data.relationships.length>0);
+  assert.ok(!Object.hasOwn(first.data,'databasePassword'));
+  const last=await api(prefix+'schema-catalog?offset=1000&limit=50');
+  assert.equal(last.status,200);
+  assert.equal(last.data.rows.length,24);
+  const filtered=await api(prefix+'schema-catalog?name=Test_0012');
+  assert.equal(filtered.status,200);
+  assert.equal(filtered.data.matchingTables,1);
+  assert.equal(filtered.data.rows[0].name,'Test_0012');
+  const denied=await api(prefix+'schema-catalog',{headers:{authorization:''}});
+  assert.equal(denied.status,401);
+  const viewer=await api(prefix+'schema-catalog',{headers:{authorization:'Bearer VIEWER'}});
+  assert.equal(viewer.status,403);
+  const invalid=await api(prefix+'schema-catalog?limit=501');
+  assert.equal(invalid.status,422);
 });
