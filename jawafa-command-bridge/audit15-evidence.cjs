@@ -53,6 +53,59 @@ function readAudit15Ops(filename){
     lastSchedulerResult:Number.isSafeInteger(Number(a?.lastSchedulerResult))?Number(a.lastSchedulerResult):null,
     aiModelEndpointVerified:false
   }));
+  // Explicitly allowlist aggregate comparison evidence; never return private record IDs,
+  // money values, local absolute paths, human identities or raw history event arrays.
+  const h=input.historicalKeyedAnalysis;
+  if(!h||!Array.isArray(h.keyedTables)||h.keyedTables.length!==6||
+     !/^[a-f0-9]{64}$/i.test(h.keyedComparisonSourceSha256||'')||
+     !/^[a-f0-9]{64}$/i.test(h.postingCorrelation?.sourceSha256||'')||
+     !/^[a-f0-9]{64}$/i.test(h.transactionHistoryContinuity?.sourceSha256||''))
+    throw Object.assign(Error('AUDIT15_HISTORY_CHAIN_INVALID'),{status:502});
+  const keyedNames=new Set();
+  const keyedTables=h.keyedTables.map(row=>{
+    const name=row?.table;
+    if(typeof name!=='string'||!seen.has(name.toLowerCase())||
+       keyedNames.has(name.toLowerCase())||
+       ![row.referenceRows,row.laterComparisonRows,row.sharedKeys,row.addedKeys,
+         row.missingKeysFromLater,row.changedSharedRecords].every(INTEGER)||
+       Number(row.referenceRows)!==Number(tables.find(t=>t.table.toLowerCase()===name.toLowerCase()).referenceRows))
+      throw Object.assign(Error('AUDIT15_HISTORY_CHAIN_INVALID'),{status:502});
+    keyedNames.add(name.toLowerCase());
+    return {
+      table:name,referenceRows:Number(row.referenceRows),
+      laterComparisonRows:Number(row.laterComparisonRows),
+      sharedKeys:Number(row.sharedKeys),addedKeys:Number(row.addedKeys),
+      missingKeysFromLater:Number(row.missingKeysFromLater),
+      changedSharedRecords:Number(row.changedSharedRecords),
+      evidence:'MANIFEST_VERIFIED_HISTORICAL_CSV_COMPARE_NOT_SQL_TRANSACTION_AUDIT',
+      humanAttributionVerified:false,reasonVerified:false
+    };
+  });
+  const p=h.postingCorrelation,c=h.transactionHistoryContinuity;
+  if(![p.candidatePostingChanges,p.matchedHistoryEvents,p.unmatchedJournalIds,
+       c.baselineRows,c.newHistoryIds,c.overlapWithBaseline].every(INTEGER)||
+     Number(p.matchedHistoryEvents)>Number(p.candidatePostingChanges))
+    throw Object.assign(Error('AUDIT15_HISTORY_CHAIN_INVALID'),{status:502});
+  const historicalKeyedAnalysis={
+    keyedComparisonSourceSha256:h.keyedComparisonSourceSha256,
+    keyedTables,keyedComparisonScope:'SIX_FINANCIAL_TABLES_NON_ATOMIC_HISTORICAL_EXPORTS',
+    postingCorrelation:{
+      sourceSha256:p.sourceSha256,candidatePostingChanges:Number(p.candidatePostingChanges),
+      matchedHistoryEvents:Number(p.matchedHistoryEvents),
+      unmatchedJournalIds:Number(p.unmatchedJournalIds),
+      eventSequenceClockTrusted:false,functionIdsOfficiallyMapped:false,
+      humanIdentityVerified:false,causalAttribution:'UNVERIFIED'
+    },
+    transactionHistoryContinuity:{
+      sourceSha256:c.sourceSha256,
+      baselineRows:Number(c.baselineRows),
+      newHistoryIds:Number(c.newHistoryIds),
+      overlapWithBaseline:Number(c.overlapWithBaseline),
+      newIdsContiguous:c.newIdsContiguous===true,
+      countReconciles:c.countReconciles===true,
+      historicCauseAccepted:false
+    }
+  };
   const checked=new Date(input.checkedUtc).getTime();
   const stale=!Number.isFinite(checked)||Math.abs(Date.now()-checked)>30*60*1000;
   const x=input.export;
@@ -82,6 +135,7 @@ function readAudit15Ops(filename){
       historicalRootCauseVerified:false
     },
     existingAgents:{count:agents.length,agents},
+    historicalKeyedAnalysis,
     export:exportSummary,
     caveat:'Historical count or value differences do not prove deletion, fraud or user attribution. Windows scheduler status does not verify AI model execution.'
   };
