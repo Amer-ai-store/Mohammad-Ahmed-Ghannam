@@ -34,3 +34,13 @@ assert.doesNotMatch(js,/localStorage|sessionStorage|method:\s*['"](?:POST|PUT|DE
 assert.match(js,/GATE-15/);
 assert.match(js,/issues\/102/);
 });
+
+test('selected Pages publication receipt is pinned in the one canonical dashboard',()=>{
+ const html=readFileSync('dashboard/index.html','utf8');
+ const receipt='https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/41757350444';
+ assert.equal(html.split(receipt).length-1,2);
+ assert.match(html,/id="central-pages-run"/);
+ assert.match(html,/id="central-pages-provenance"/);
+ assert.match(html,/href="https:\/\/amer-ai-store\.github\.io\/Mohammad-Ahmed-Ghannam\/"/);
+ assert.match(html,/ليس قبولًا للربط المالي/);
+});
