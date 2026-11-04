@@ -2,7 +2,7 @@
 /* Offline immutable manifest builder for approved, pre-exported files. Never connects to SQL or cloud. */
 import {createHash} from 'node:crypto';
 import {createReadStream,createWriteStream} from 'node:fs';
-import {readdir,mkdir,open,stat} from 'node:fs/promises';
+import {readdir,mkdir,open,stat,lstat} from 'node:fs/promises';
 import {resolve,relative,join,extname,basename,sep} from 'node:path';
 import {pipeline} from 'node:stream/promises';
 const allowed=new Set(['.csv','.json','.parquet','.ndjson','.gz','.zip']);
@@ -12,12 +12,14 @@ const output=resolve(flags['--destination']||'');
 const run=flags['--run-id'];
 const sourceUtc=flags['--source-utc'];
 if(!flags['--source']||!flags['--destination']||!run||!sourceUtc)throw Error('Usage: --source=PATH --destination=PATH --run-id=SAFE_ID --source-utc=ISO_UTC');
-if(!/^[A-Za-z0-9_-]{8,100}$/.test(run)||!/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z/.test(sourceUtc)||!Number.isFinite(Date.parse(sourceUtc)))throw Error('INVALID_RUN_ID_OR_UTC');
+if(!/^[A-Za-z0-9_-]{8,100}$/.test(run)||!/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z/.test(sourceUtc)||!Number.isFinite(Date.parse(sourceUtc))||new Date(sourceUtc).toISOString().slice(0,19)!==sourceUtc.slice(0,19))throw Error('INVALID_RUN_ID_OR_UTC');
 if(output===root||output.startsWith(root+sep))throw Error('OUTPUT_CANNOT_BE_INSIDE_SOURCE');
+const sourceInfo=await lstat(root);
+if(!sourceInfo.isDirectory()||sourceInfo.isSymbolicLink())throw Error('SOURCE_MUST_BE_A_REAL_DIRECTORY');
 async function walk(dir){
  let files=[];
  for(const entry of await readdir(dir,{withFileTypes:true})){
-  const p=join(dir,entry.name),info=await stat(p);
+  const p=join(dir,entry.name),info=await lstat(p);
   if(info.isSymbolicLink()||entry.isSymbolicLink())throw Error('SYMLINK_REJECTED');
   if(entry.isDirectory())files.push(...await walk(p));
   else if(entry.isFile() && allowed.has(extname(entry.name).toLowerCase()))files.push(p);
