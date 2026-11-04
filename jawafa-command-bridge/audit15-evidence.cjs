@@ -123,6 +123,11 @@ function readAudit15Ops(filename){
     remainingTables:INTEGER(x.remainingTables)?Number(x.remainingTables):null,
     failedTables:INTEGER(x.failedTables)?Number(x.failedTables):null,
     progressPercent:Number.isFinite(Number(x.progressPercent))?Number(x.progressPercent):null,
+    runName:typeof x.runName==='string'&&/^20[0-9]{6}-[0-9]{4}$/.test(x.runName)?x.runName:null,
+    referenceOnlyTableNames:Array.isArray(x.referenceOnlyTableNames)?
+      x.referenceOnlyTableNames.filter(v=>typeof v==='string'&&/^[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/.test(v)).slice(0,10):[],
+    coverageReconciled:x.coverageReconciled===true,
+    coverageManifestSha256:typeof x.coverageManifestSha256==='string'&&/^[a-f0-9]{64}$/i.test(x.coverageManifestSha256)?x.coverageManifestSha256:null,
     completenessAccepted:false
   }:null;
   return {
