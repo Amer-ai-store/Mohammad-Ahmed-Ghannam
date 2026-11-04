@@ -1,6 +1,7 @@
 'use strict';
 const {test}=require('node:test'), assert=require('node:assert/strict'), http=require('node:http'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {createBridge,codeHash}=require('./server.cjs');
+const {createSidecar}=require('./audit15-sidecar.cjs');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'jawafa-test-'));let app,server,url;const secret='JAWAFA_AGENT_SIGNING_TEST_SECRET_32_BYTES_MIN';const qaSecret='JAWAFA_INDEPENDENT_QA_SIGNING_TEST_SECRET_32_BYTES';
 test.before(async()=>{
   const fixture={
@@ -122,4 +123,40 @@ test('Owner-only paginated schema index has 1024 tables, 38 FKs and no SQL value
   assert.equal(viewer.status,403);
   const invalid=await api(prefix+'schema-catalog?limit=501');
   assert.equal(invalid.status,422);
+});
+
+test('Private SQL-free metadata sidecar rejects unauthenticated callers and serves only owner-approved aggregates',async()=>{
+  const handler=createSidecar({
+    audit15File:path.join(dir,'audit15.json'),
+    schemaCatalogFile:path.join(dir,'schema-catalog.json'),
+    verifyOwner:async bearer=>bearer==='Bearer owner.test.signature'?{status:200}:{status:403,error:'OWNER_AUTH_REJECTED'}
+  });
+  const service=http.createServer(handler);
+  await new Promise(ok=>service.listen(0,'127.0.0.1',ok));
+  const base='http://127.0.0.1:'+service.address().port+'/api/jawafa/v1/';
+  try{
+    let response=await fetch(base+'audit15-ops');
+    assert.equal(response.status,401);
+    response=await fetch(base+'audit15-ops',{headers:{Authorization:'Bearer other.test.signature'}});
+    assert.equal(response.status,403);
+    response=await fetch(base+'audit15-ops',{headers:{Authorization:'Bearer owner.test.signature'}});
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('cache-control'),'no-store, max-age=0');
+    assert.equal(response.headers.get('access-control-allow-origin'),null);
+    const data=await response.json();
+    assert.equal(data.audit15.tables.length,15);
+    assert.equal(data.historicalKeyedAnalysis.keyedTables.length,6);
+    assert.equal(data.historicalKeyedAnalysis.postingCorrelation.humanIdentityVerified,false);
+    assert.equal(data.export.completenessAccepted,false);
+    assert.ok(!Object.hasOwn(data,'sourceFiles'));
+    response=await fetch(base+'schema-catalog?offset=1000&limit=50',{headers:{Authorization:'Bearer owner.test.signature'}});
+    assert.equal(response.status,200);
+    assert.equal((await response.json()).rows.length,24);
+    response=await fetch(base+'audit15-ops',{method:'POST',headers:{Authorization:'Bearer owner.test.signature'}});
+    assert.equal(response.status,405);
+    response=await fetch(base+'unknown',{headers:{Authorization:'Bearer owner.test.signature'}});
+    assert.equal(response.status,404);
+  }finally{
+    await new Promise(ok=>service.close(ok));
+  }
 });
