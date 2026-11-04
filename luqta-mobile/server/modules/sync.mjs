@@ -16,7 +16,7 @@ const SNAPSHOT_TABLES = ['categories', 'branches', 'branch_stock', 'orders', 'or
 const LIMITS = { schemaTables: 100, sampleTables: 20, rows: 500, bytes: 220_000 };
 const WRITABLE = { name: 'products', columns: ['id', 'name', 'price', 'stock', 'category'], primaryKey: ['id'] };
 // Use the same stable mapping as src/lib/commandCenter.ts; never expose local string IDs as numeric AAS IDs.
-const productNumber = (id) => {
+export const productNumber = (id) => {
   let hash = 2166136261;
   const raw = String(id);
   for (let index = 0; index < raw.length; index++) hash = Math.imul(hash ^ raw.charCodeAt(index), 16777619);
