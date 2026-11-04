@@ -13,7 +13,11 @@ test("full native client compiles and exposes one shared standalone + central im
  for(const source of [client,host,analytics])assert.doesNotThrow(()=>new vm.Script(source));
  assert.match(client,/TrustSoftEmbedded/);
  assert.match(client,/initializeTrustSoft\(globalThis.document\)/);
- assert.match(host,/attachShadow/);
+ assert.match(host,/container\.shadowRoot\|\|container\.attachShadow/);
+ assert.match(host,/shadow\.replaceChildren\(css,overrides,shell\)/);
+ assert.match(host,/container\.hidden\|\|section\.hidden/);
+ assert.match(client,/expectedGeneration!==portalGeneration/);
+ assert.match(client,/acceptPortalLogin\(r,loginGeneration\)/);
  assert.match(host,/TrustSoftEmbedded\.mount/);
  assert.ok(!host.includes("createElement('iframe')") && !host.includes("frame.src"));
  assert.ok(!index.includes('id="trustsoft-frame"'));
@@ -41,6 +45,8 @@ test("analytic rule engine flags missing or stale data and recognizes bounded sa
  const ctx={globalThis:{}};vm.runInNewContext(analytics,ctx);
  const calc=ctx.globalThis.TrustSoftInsights.analyze;
  const no=calc(null);assert.equal(no.evidence,"UNVERIFIED_OR_STALE");
+ assert.equal(calc({state:"connected",stale:false}).evidence,"UNVERIFIED_OR_STALE");
+ assert.equal(calc({state:"connected",stale:false,data:{catalog:[],sections:{}}}).evidence,"UNVERIFIED_OR_STALE");
  const ready=calc({state:"connected",stale:false,data:{catalog:[{}],sections:{checks:{state:"sample",rows:[{},{}]}}}});
  assert.equal(ready.evidence,"AUTHENTICATED_SAMPLE_ONLY");
  assert.equal(ready.sampleRowCount,2);assert.equal(ready.tableCatalogCount,1);
