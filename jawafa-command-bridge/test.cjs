@@ -25,7 +25,7 @@ test.before(async()=>{
       transactionHistoryContinuity:{sourceSha256:'c'.repeat(64),baselineRows:1065770,newHistoryIds:4027,
         overlapWithBaseline:419,newIdsContiguous:false,countReconciles:true}
     },
-    export:{mode:'PARTIAL_REFERENCE_ONLY',totalTables:1024,processedTables:1023,remainingTables:1,failedTables:0,progressPercent:99.9}
+    export:{mode:'PARTIAL_REFERENCE_ONLY',totalTables:1024,processedTables:1023,remainingTables:1,failedTables:0,progressPercent:99.9,runName:'20261104-0100',referenceOnlyTableNames:['dbo.ItemSalesSummary'],coverageReconciled:true,coverageManifestSha256:'d'.repeat(64)}
   };
   fs.writeFileSync(path.join(dir,'audit15.json'),JSON.stringify(fixture));
   const schemaFixture={
@@ -81,6 +81,9 @@ test('Private Audit15 endpoint verifies owner and excludes unsafe internal file 
   assert.equal(owner.data.existingAgents.agents[0].name,'JawafaExportAgent20Min');
   assert.equal(owner.data.audit15.historicalRootCauseVerified,false);
   assert.equal(owner.data.existingAgents.agents[0].aiModelEndpointVerified,false);
+  assert.equal(owner.data.export.completenessAccepted,false);
+  assert.equal(owner.data.export.referenceOnlyTableNames[0],'dbo.ItemSalesSummary');
+  assert.equal(owner.data.export.coverageReconciled,true);
   assert.equal(owner.data.export.completenessAccepted,false);
   assert.equal(owner.data.historicalKeyedAnalysis.keyedTables.length,6);
   assert.equal(owner.data.historicalKeyedAnalysis.keyedTables[0].triagePriority,'P0_FORENSIC_REVIEW');
