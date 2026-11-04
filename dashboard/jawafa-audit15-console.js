@@ -57,13 +57,13 @@
         'سلامة نقل الملفات سابقًا: '+a.transferGuardStatus+
         '؛ السبب التاريخي للتغييرات غير محسوم.','muted'));
       const body=el('div',undefined,'table-wrap');content.append(body);
-      const rows=a.tables.map(r=>({
+      const rows=a.tables.slice().sort((x,y)=>Number(y.historicalValueDifferenceCandidates||0)-Number(x.historicalValueDifferenceCandidates||0)).map(r=>({
         الجدول:r.table,سجلات_المرجع:r.referenceRows,سجلات_استخراج_لاحق:r.exportRows,
         فرق_العدد:r.laterMinusReference,مؤشرات_فروق_القيمة:r.historicalValueDifferenceCandidates,
         نمط_النسخة:r.priorAuditLatestMode,علاقات_SQL:r.declaredForeignKeyCount,
         نسبة_السبب:'غير مثبت'
       }));
-      const saved=content;const former=content.replaceChildren.bind(content);
+      // Sort by number of candidate differences for investigation triage, not proof of wrongdoing.
       const t=el('table'),head=el('thead'),header=el('tr'),bodyRows=el('tbody');
       const keys=Object.keys(rows[0]||{});
       for(const k of keys)header.append(el('th',k));
