@@ -1736,5 +1736,6 @@ export const EN: Record<string, string> = {
   "ك.ب": "KB",
   "استعادة مُختبرة": "Tested restore",
   "بالهاتف": "By phone",
-  "بالبريد": "By email"
+  "بالبريد": "By email",
+  "الأدوات الذكية": "Smart tools"
 };

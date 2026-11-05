@@ -116,4 +116,3 @@ test('NX-20/NX-02/NX-04 consent-gated household memory: predicted basket and bud
   await request('PUT', '/me/consents', { household_memory: false }, user.token);
   assert.equal((await request('GET', '/me/budget-forecast', undefined, user.token)).body.code, 'consent_required', 'withdrawing consent stops it');
 });
-

@@ -183,4 +183,3 @@ export function FeedbackPrompt() {
 export function HomeExtras() {
   return (<><FeedbackPrompt /><CheckinNudge /><StoriesRow /><CampaignStrip /><FlashSale /><CollectionRows /><SmartStrip /><PromoVideo /></>);
 }
-
