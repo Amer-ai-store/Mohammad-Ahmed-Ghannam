@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Bell, Bot, Compass, Gift, Heart, House, ListChecks, LayoutDashboard, Package, Refrigerator, ShoppingBag, Sparkles, Store, UserRound, Headset, Wallet } from "lucide-react-native";
+import { Bell, Bot, Compass, Gift, Heart, House, ListChecks, LayoutDashboard, Package, Refrigerator, ShoppingBag, Sparkles, Store, UserRound, Headset, Wallet, Wand2 } from "lucide-react-native";
 import { router, usePathname, type Href } from "expo-router";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 import { useStore } from "../lib/store";
@@ -20,6 +20,7 @@ const tabs = [
 ] as const;
 const more = [
   { href: "/assistant", label: "تسوق بالمحادثة", icon: Sparkles },
+  { href: "/smart-tools", label: "الأدوات الذكية", icon: Wand2 },
   { href: "/favorites", label: "اختياراتك", icon: Heart },
   { href: "/orders", label: "طلباتي", icon: Package },
   { href: "/lists", label: "قوائمي", icon: ListChecks },
@@ -43,9 +44,12 @@ export function Logo({ small = false }: { small?: boolean }) {
   );
 }
 
-export function Shell({ children, title, subtitle, search = false, robot, robotMotion, scroll = true, back = false, testID }: {
+export function Shell({ children, title, subtitle, search = false, robot, robotMotion, scroll = true, back = false, testID, header, side, footer }: {
   children: React.ReactNode; title: string; subtitle?: string; search?: boolean;
   robot?: boolean | string; robotMotion?: RobotMotion; scroll?: boolean; back?: boolean; testID?: string;
+  /** Extra content above the page title (a back row, a hero). */ header?: React.ReactNode;
+  /** A control shown beside the title, in place of the character. */ side?: React.ReactNode;
+  /** A bar kept at the bottom of the screen, outside the scrolling content. */ footer?: React.ReactNode;
 }) {
   const { colors: t } = useTheme();
   const s = useThemedStyles(makeStyles);
@@ -58,6 +62,7 @@ export function Shell({ children, title, subtitle, search = false, robot, robotM
   const active = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
   const content = (
     <View style={[s.content, { paddingHorizontal: desktop ? 36 : 18 }, scroll ? null : { flex: 1 }]}>
+      {header ?? null}
       {title ? (
         <View style={s.pageHeading}>
           <View style={{ flex: 1, gap: 4 }}>
@@ -65,7 +70,7 @@ export function Shell({ children, title, subtitle, search = false, robot, robotM
             <Txt accessibilityRole="header" weight="extra" style={{ fontSize: desktop ? 30 : 26, lineHeight: desktop ? 40 : 36 }}>{tr(title)}</Txt>
             {subtitle ? <Txt style={{ color: t.muted, lineHeight: 22 }}>{tr(subtitle)}</Txt> : null}
           </View>
-          {robot ? <Mascot size={desktop ? 92 : 74} motion={robotMotion} message={typeof robot === "string" ? robot : undefined} bubble={typeof robot === "string" ? "top" : "none"} /> : null}
+          {robot ? <Mascot size={desktop ? 92 : 74} motion={robotMotion} message={typeof robot === "string" ? robot : undefined} bubble={typeof robot === "string" ? "top" : "none"} /> : side ?? null}
         </View>
       ) : null}
       {search ? (
@@ -130,6 +135,7 @@ export function Shell({ children, title, subtitle, search = false, robot, robotM
             </View>
           </View>
           {scroll ? <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">{content}</ScrollView> : <View style={{ flex: 1 }}>{content}</View>}
+          {footer ? <View style={{ width: "100%", maxWidth: 760, alignSelf: "center", paddingHorizontal: desktop ? 36 : 16, paddingTop: 6 }}>{footer}</View> : null}
           {!desktop ? (
             <SafeAreaView edges={["bottom"]} style={s.bottomWrap}>
               <View style={s.bottomNav} accessibilityRole="tablist">

@@ -8,6 +8,7 @@ import { ProductCard } from "../components/ProductCard";
 import { ProductGrid } from "../components/ProductGrid";
 import { Mascot } from "../components/Robot";
 import { Countdown } from "../components/Countdown";
+import { CollectionRows, PromoVideo, SmartStrip, StoriesRow } from "../components/smart/HomeExtras";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { useStore } from "../lib/store";
 import { useSession } from "../lib/session";
@@ -121,6 +122,9 @@ export default function Home() {
         </ScrollView>
       ) : null}
 
+      <StoriesRow />
+      <SmartStrip />
+
       {deals.data?.deals?.length ? (
         <>
           <SectionTitle title="عروض خاطفة ⚡" subtitle="تنتهي قريبًا — الكمية محدودة" action="كل العروض" onPress={() => router.navigate("/offers")} />
@@ -137,6 +141,9 @@ export default function Home() {
 
       <SectionTitle title="مختارة لك" subtitle={recommendations.data?.personalized ? "حسب اهتماماتك ومشترياتك" : "الأكثر طلبًا الآن"} />
       <ProductGrid items={recommended.slice(0, columns * 2)} reasons={Object.fromEntries(recommended.map((p) => [p.id, p.reason]))} />
+
+      <CollectionRows />
+      <PromoVideo />
 
       {recentlyViewed.length ? (
         <>

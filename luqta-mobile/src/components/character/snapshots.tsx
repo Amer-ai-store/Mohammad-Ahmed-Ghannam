@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { View } from "react-native";
+import { InteractionManager, Platform, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CHARACTER_SNAPSHOTS_KEY } from "../../lib/characterCache";
 import { useRobot } from "../../lib/robot";
@@ -48,6 +48,15 @@ export function CharacterSnapshotProvider({ children }: { children: React.ReactN
   const failed = useRef(new Set<string>());
   // Nothing is drawn before the saved pictures are read, so a picture kept on the device is never drawn twice.
   const [loaded, setLoaded] = useState(false);
+  // On a phone the hidden 3D view starts only once the app has settled after launch: booting a WebView with the
+  // 3D engine competes with the first screens for the CPU and made start-up stutter.
+  const [settled, setSettled] = useState(Platform.OS === "web");
+  useEffect(() => {
+    if (settled) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const task = InteractionManager.runAfterInteractions(() => { timer = setTimeout(() => setSettled(true), 3000); });
+    return () => { task.cancel(); if (timer) clearTimeout(timer); };
+  }, [settled]);
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(CACHE_KEY).then((raw) => {
@@ -104,7 +113,7 @@ export function CharacterSnapshotProvider({ children }: { children: React.ReactN
   return (
     <Context.Provider value={value}>
       {children}
-      {active && pending.length && !webglUnavailable ? <Snapshotter key={active.look} look={active.look} profileKey={active.profileKey} actions={pending} onPicture={store} onFinish={finish} /> : null}
+      {settled && active && pending.length && !webglUnavailable ? <Snapshotter key={active.look} look={active.look} profileKey={active.profileKey} actions={pending} onPicture={store} onFinish={finish} /> : null}
     </Context.Provider>
   );
 }

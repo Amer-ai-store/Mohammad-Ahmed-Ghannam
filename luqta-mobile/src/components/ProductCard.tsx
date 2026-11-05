@@ -1,5 +1,6 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 import { Heart, Plus, Star, ShoppingBag, Zap } from "lucide-react-native";
 import { router } from "expo-router";
 import { Product, products as sampleProducts } from "../data/products";
@@ -11,6 +12,9 @@ import { Txt } from "./ui";
 import { ASSET_URI, cutoutImages, productImages } from "../lib/designAssets";
 
 
+// Looked up for every card on every render, so a map instead of a search through the list.
+const SAMPLE_BY_ID = new Map(sampleProducts.map((item) => [item.id, item]));
+
 // Photo when the product has one; otherwise an illustrated tile (emoji on the product colour) so groceries still look great.
 export function ProductImage({ product, style, uri }: { product: Product; style?: object; uri?: string }) {
   const { colors: t } = useTheme();
@@ -19,7 +23,7 @@ export function ProductImage({ product, style, uri }: { product: Product; style?
   const sourceKey = `${product.id}:${String(source)}`;
   const [failedSource, setFailedSource] = React.useState("");
   const failed = failedSource === sourceKey;
-  const original = sampleProducts.find((item) => item.id === product.id);
+  const original = SAMPLE_BY_ID.get(product.id);
   // "asset:<key>" names a bundled image directly (extra gallery views from the mockups).
   const assetKey = typeof uri === "string" && uri.startsWith(ASSET_URI) ? uri.slice(ASSET_URI.length) : "";
   // The catalog photo ships inside the app; use that copy (no network needed) whenever the requested image is that photo.
@@ -39,11 +43,13 @@ export function ProductImage({ product, style, uri }: { product: Product; style?
     // their soft floor shadows are white.
     return (
       <View style={[{ width: "100%", height: "100%", padding: "8%", backgroundColor: "#FFFFFF" }, style]}>
-        <Image accessibilityLabel={product.name} source={bundled} onError={() => setFailedSource(sourceKey)} style={{ width: "100%", height: "100%", resizeMode: "contain" }} />
+        <Image accessibilityLabel={product.name} source={bundled} onError={() => setFailedSource(sourceKey)} contentFit="contain" cachePolicy="memory-disk" recyclingKey={sourceKey} style={{ width: "100%", height: "100%" }} />
       </View>
     );
   }
-  return <Image accessibilityLabel={product.name} source={bundled || remote} onError={() => setFailedSource(sourceKey)} style={[{ width: "100%", height: "100%", resizeMode: "cover" }, style]} />;
+  // expo-image decodes at the size shown and keeps a memory and disk cache, so long product lists scroll without
+  // re-decoding full-size photos or downloading them again.
+  return <Image accessibilityLabel={product.name} source={bundled || remote} onError={() => setFailedSource(sourceKey)} contentFit="cover" cachePolicy="memory-disk" recyclingKey={sourceKey} transition={120} style={[{ width: "100%", height: "100%" }, style]} />;
 }
 
 export function ProductCard({ product, width, reason }: { product: Product; width: number | `${number}%`; reason?: string }) {
@@ -99,6 +105,32 @@ export function ProductCard({ product, width, reason }: { product: Product; widt
     </View>
   );
 }
+// A compact horizontal card for rows of suggestions (home extras, "bought together").
+export function MiniProductCard({ product, width }: { product: Product; width: number | `${number}%` }) {
+  const { colors: t } = useTheme();
+  const { addToCart } = useStore();
+  const money = useMoney();
+  const { t: tr } = useI18n();
+  const out = typeof product.stock === "number" && product.stock <= 0;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={tr("تفاصيل {name}", { name: product.name })} onPress={() => router.push(`/product/${product.id}`)} testID={`mini-${product.id}`}
+      style={{ width, flexDirection: "row-reverse", gap: 10, padding: 10, borderRadius: 18, borderWidth: 1, borderColor: t.line, backgroundColor: t.paper, minHeight: 120 }}>
+      <View style={{ width: "42%", height: 100 }}><ProductImage product={product} /></View>
+      <View style={{ flex: 1, justifyContent: "space-between" }}>
+        <View style={{ gap: 2 }}>
+          <Txt weight="bold" numberOfLines={2} style={{ fontSize: 14 }}>{product.name}</Txt>
+          <Txt weight="bold" style={{ fontSize: 14, color: t.primary }}>{money.format(product.price)}</Txt>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={tr("أضف {name} إلى السلة", { name: product.name })} disabled={out} testID={`mini-add-${product.id}`}
+          onPress={() => (product.hasVariants ? router.push(`/product/${product.id}`) : addToCart(product.id))}
+          style={{ alignSelf: "flex-start", width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: t.primary, opacity: out ? 0.4 : 1 }}>
+          <Plus size={20} color={t.onPrimary} strokeWidth={2.6} />
+        </Pressable>
+      </View>
+    </Pressable>
+  );
+}
+
 const makeStyles = (t: Palette) => StyleSheet.create({
   card: { backgroundColor: t.paper, borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: t.line, minHeight: 290 },
   photo: { height: 150, backgroundColor: t.imageBackground },

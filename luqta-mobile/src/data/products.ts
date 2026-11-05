@@ -2,6 +2,12 @@ export type ProductCategory = string;
 
 export type Product = {
   id: string;
+  /** Nutrition facts (G14), when the store entered them. */
+  nutrition?: { calories?: number; protein?: number; carbs?: number; fat?: number; sugar?: number; fiber?: number; sodium?: number; per?: string };
+  /** End of a flash sale price, ISO time. */
+  offerEndsAt?: string;
+  /** Best-before date of the stock on sale, ISO time. */
+  expiresAt?: string;
   name: string;
   subtitle: string;
   brand: string;
@@ -2062,3 +2068,8 @@ export function formatPrice(price: number, currency = "JOD"): string {
     return `${Number(price).toFixed(2)} ${currency}`;
   }
 }
+
+// Arabic label of a category id (falls back to the id for categories the catalog does not know).
+export const categoryLabel = (id: string) => categories.find((c) => c.id === id)?.label || id;
+const AR_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+export const toArabicDigits = (s: string) => s.replace(/\d/g, (d) => AR_DIGITS[Number(d)]);

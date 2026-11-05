@@ -1,7 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import { router, type Href } from "expo-router";
-import { Bell, Bot, ChartPie, Download, Gift, Globe, Headset, CircleQuestionMark as HelpCircle, LayoutDashboard, ListChecks, LogOut, MapPin, Package, PiggyBank, Refrigerator, Server, Share2, ShieldCheck, Store, Trash, Truck, UserRound, Wallet } from "lucide-react-native";
+import { Bell, Bot, ChartPie, Wand2, Download, Gift, Globe, Headset, CircleQuestionMark as HelpCircle, LayoutDashboard, ListChecks, LogOut, MapPin, Package, PiggyBank, Refrigerator, Server, Share2, ShieldCheck, Store, Trash, Truck, UserRound, Wallet } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Mascot } from "../components/Robot";
 import { Badge, Button, Card, ListRow, Row, Txt } from "../components/ui";
@@ -85,6 +85,7 @@ export default function ProfileScreen() {
       <Card style={{ marginTop: 12 }}>
         <ListRow icon={icon(Package)} title="طلباتي" onPress={go("/orders")} />
         <ListRow icon={icon(Wallet)} title="المحفظة وبطاقات الهدايا" onPress={go("/wallet")} />
+        <ListRow icon={icon(Wand2)} title="الأدوات الذكية" onPress={go("/smart-tools")} />
         <ListRow icon={icon(Gift)} title="مكافآتي والدعوات" onPress={go("/rewards")} />
         <ListRow icon={icon(PiggyBank)} title="ميزانيتي الأسبوعية" onPress={go("/budget")} />
         <ListRow icon={icon(Refrigerator)} title="مخزن البيت" detail="الصلاحية وتوفير الكربون" onPress={go("/pantry")} />
