@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme } from "../lib/theme";
 import { SessionProvider } from "../lib/session";
 import { I18nProvider, rootDirection, useI18n } from "../lib/i18n";
 import { RobotProvider } from "../lib/robot";
+import { CharacterSnapshotProvider } from "../components/character/snapshots";
 
 export default function RootLayout() {
   return <ThemeProvider><I18nProvider><AppLayout /></I18nProvider></ThemeProvider>;
@@ -43,10 +44,10 @@ function AppLayout() {
     <SafeAreaProvider>
       {metadata}
       <View style={{ flex: 1, direction: rootDirection(lang), backgroundColor: theme.background }}>
-        <SessionProvider><RobotProvider><StoreProvider>
+        <SessionProvider><RobotProvider><CharacterSnapshotProvider><StoreProvider>
           <StatusBar style={isDark ? "light" : "dark"} />
           <Stack screenOptions={{ title, headerShown: false, contentStyle: { backgroundColor: theme.background }, animation: "fade" }} />
-        </StoreProvider></RobotProvider></SessionProvider>
+        </StoreProvider></CharacterSnapshotProvider></RobotProvider></SessionProvider>
       </View>
     </SafeAreaProvider>
   );

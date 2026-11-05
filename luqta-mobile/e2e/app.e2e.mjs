@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { startStack, go, id, see, tap, fill, field, until, noErrors, password, button } from './harness.mjs';
 import { productNumber } from '../server/modules/sync.mjs';
 import { solidPng } from '../server/testkit.mjs';
+import { staffStrings } from '../scripts/staff-strings.mjs';
 
 const ARTIFACTS = fileURLToPath(new URL('./artifacts/', import.meta.url));
 let stack;
@@ -1031,6 +1032,39 @@ e2e('L082 L083 L084 L085 commands, size, reduced motion, colours, outfits, acces
   await until(async () => (await other.locator('[data-testid="mascot"]').innerHTML()).toLowerCase().includes('22b07d'), 10000, 'same character elsewhere');
 });
 
+// L084: small spots (here the header on a phone) show a still picture of the shopper's own look, drawn once by the 3D
+// engine and kept on the device, instead of the mockups' default pose.
+e2e('L084 the still character in small spots shows the shopper\'s own colours', async ({ open }) => {
+  const user = await stack.register('صاحب الشخصية الخضراء');
+  const { preferences } = await api('GET', '/me/preferences', undefined, user.token);
+  await api('PATCH', '/me/preferences', { robot: { ...preferences.robot, color: '#22B07D', pants: '#1F2A44' } }, user.token);
+  const page = await open(user, '/rewards');
+  const character = page.locator('[data-testid="mascot-character"]').filter({ visible: true }).first();
+  await character.waitFor();
+  await until(async () => (await character.getAttribute('data-poster')) === 'snapshot', 30000, 'the still picture of the own look');
+  // The picture is drawn with the saved green vest: count clearly green, opaque pixels in it.
+  const green = async () => character.evaluate(async (element) => {
+    const src = element.querySelector('img')?.getAttribute('src') || '';
+    if (!src.startsWith('data:image/png;base64,')) return -1;
+    const image = new Image(); image.src = src; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let count = 0;
+    for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3] > 200 && pixels[i + 1] > pixels[i] + 40 && pixels[i + 1] > pixels[i + 2] + 15) count++;
+    return count;
+  });
+  const first = await green();
+  assert.ok(first > 300, `green vest pixels in the still picture: ${first}`);
+  // The hidden drawing view closes once the picture exists, so it keeps no WebGL context open.
+  await until(async () => (await page.locator('iframe[title="character-snapshot"]').count()) === 0, 10000, 'the drawing view closed');
+  // Kept on the device: after a reload the same picture comes from the cache, with no drawing view at all.
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await until(async () => (await character.getAttribute('data-poster')) === 'snapshot', 10000, 'the cached picture after a reload');
+  assert.equal(await page.locator('iframe[title="character-snapshot"]').count(), 0, 'nothing redrawn after a reload');
+  assert.ok((await green()) > 300, 'the cached picture is the green one');
+});
+
 e2e('L087 put my photo on the character\'s face with consent, kept on the device only, and delete it', async ({ open }) => {
   const user = await stack.register('صاحب الصورة');
   const page = await open(user, '/robot-create');
@@ -1046,9 +1080,23 @@ e2e('L087 put my photo on the character\'s face with consent, kept on the device
   assert.ok(await page.evaluate(() => (localStorage.getItem('luqta-robot-face-v1') || '').startsWith('data:image/')));
   assert.equal((await api('GET', '/me/preferences', undefined, user.token)).preferences.robot.faceConsent, true);
   assert.deepEqual(uploads, [], 'the photo is never uploaded');
+  // The small header character is drawn with the photo too, and that picture stays on the device.
+  const cache = () => page.evaluate(() => JSON.parse(localStorage.getItem('luqta-character-snapshots-v1') || 'null'));
+  const header = page.locator('[data-testid="mascot-character"]').filter({ visible: true }).first();
+  await go(page, '/rewards');
+  await until(async () => (await header.getAttribute('data-poster')) === 'snapshot', 30000, 'a still picture drawn with the photo');
+  assert.equal((await cache())?.withFace, true);
+  assert.deepEqual(uploads, [], 'the drawn picture is never uploaded either');
+  await go(page, '/robot-create');
+  const again = await engineFrame(page, '[data-testid="robot-create"]');
+  await until(async () => (await probe(again))?.photoFace === true, 10000, 'the photo is back after reopening');
   await tap(page, 'face-delete');
-  await until(async () => (await probe(engine))?.photoFace === false, 5000, 'photo removed from the character');
+  await until(async () => (await probe(again))?.photoFace === false, 5000, 'photo removed from the character');
   assert.equal(await page.evaluate(() => localStorage.getItem('luqta-robot-face-v1')), null);
+  // Deleting the photo also deletes the pictures drawn with it; the header is redrawn without the face.
+  assert.equal(await cache(), null, 'no stored picture keeps the face');
+  await go(page, '/rewards');
+  await until(async () => (await header.getAttribute('data-poster')) === 'snapshot' && (await cache())?.withFace === false, 30000, 'a new picture without the face');
   await until(async () => (await api('GET', '/me/preferences', undefined, user.token)).preferences.robot.faceConsent === false, 5000, 'consent withdrawn');
 });
 
@@ -1257,4 +1305,77 @@ e2e('L123 L124 L125 day and night modes, English with the page direction flipped
   await go(page, '/appearance');
   await page.getByRole('radio', { name: 'العربية' }).click();
   await see(page, 'اللغة والمظهر');
+});
+
+// L124 for the staff screens: with English chosen, the admin dashboard (every section), project management, sync,
+// the merchant dashboard and the driver screen show no staff text left in Arabic. Data such as product and customer
+// names stays as it was entered.
+e2e('L124 the staff screens in English: admin dashboard, project, sync, merchant and driver', async ({ open }) => {
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const source = readFileSync(`${root}src/lib/i18n-en.ts`, 'utf8');
+  const EN = JSON.parse(source.slice(source.indexOf('{'), source.lastIndexOf('}') + 1).replace(/,\s*}$/, '}'));
+  // Phrases of 8+ letters without placeholders, compared with whole pieces of the page's text (lines, and the parts
+  // between "·" separators): data such as the imported product «تمر من لوحة القيادة» may contain a phrase.
+  const phrases = [...staffStrings(root).strings.keys()].filter((k) => k.length >= 8 && !k.includes('{') && !k.includes('\n'));
+  const pieces = async (page) => new Set((await page.evaluate(() => document.body.innerText)).split('\n').flatMap((line) => line.split(' · ')).map((piece) => piece.trim()).filter(Boolean));
+  const english = async (user, path) => {
+    const page = await open(user);
+    await page.context().addInitScript(() => { try { window.localStorage.setItem('luqta-language-v1', 'en'); } catch {} });
+    await go(page, path);
+    return page;
+  };
+  const stillArabic = async (page, where) => {
+    const shown = await pieces(page);
+    assert.deepEqual(phrases.filter((phrase) => shown.has(phrase)), [], `${where}: staff text still in Arabic`);
+  };
+
+  // Control: in Arabic, the same check does find the staff text, so a pass in English means it was translated.
+  const arabic = await open(stack.admin, '/admin');
+  await id(arabic, 'admin-overview').waitFor();
+  await see(arabic, 'مبيعات اليوم');
+  const shown = await pieces(arabic);
+  assert.ok(phrases.filter((phrase) => shown.has(phrase)).length >= 3, 'the check finds Arabic staff text when Arabic is chosen');
+
+  const admin = await english(stack.admin, '/admin');
+  await see(admin, 'Sales, orders, inventory and sync in one place');
+  await id(admin, 'admin-overview').waitFor();
+  await see(admin, EN['مبيعات اليوم']);
+  await stillArabic(admin, 'admin overview');
+  await tab(admin, 'Products').click();
+  await see(admin, EN['إضافة صنف']);
+  await stillArabic(admin, 'admin products');
+  await tab(admin, 'Orders').click();
+  await see(admin, EN['ملاحظة قرار الإرجاع']);
+  await stillArabic(admin, 'admin orders');
+  await tab(admin, 'More').click();
+  for (const label of ['المخزون والاستيراد', 'استيراد العروض', 'تصميم المتجر', 'المرتجعات', 'العروض', 'المستخدمون والمحفظة', 'دعم العملاء', 'قناة الوكلاء', 'الإعدادات', 'سجل العمليات']) {
+    await button(admin, EN[label]).click();
+    await until(async () => (await button(admin, EN[label]).getAttribute('aria-selected')) === 'true', 5000, `${EN[label]} selected`);
+    await admin.waitForTimeout(400);
+    await stillArabic(admin, `admin: ${EN[label]}`);
+  }
+  // A typing mistake in a number field is explained in English too.
+  await button(admin, EN['العروض']).click();
+  await admin.getByLabel(EN['قيمة الخصم']).fill('abc');
+  await button(admin, EN['حفظ رمز الخصم']).click();
+  await see(admin, `Enter a valid number for ${EN['قيمة الخصم']}.`);
+
+  for (const [path, title] of [['/admin/project', 'إدارة المشروع'], ['/admin/sync', 'المخزون والمزامنة']]) {
+    await go(admin, path);
+    await see(admin, EN[title]);
+    await admin.waitForTimeout(400);
+    await stillArabic(admin, path);
+  }
+
+  const merchant = await stack.register('تاجر إنجليزي');
+  const { vendor } = await asAdmin('POST', '/admin/vendors', { name: 'Corner Bakery', commission: 8 });
+  await asAdmin('POST', `/admin/vendors/${vendor.id}/members`, { email: merchant.user.email, role: 'owner' });
+  const shop = await english(merchant, '/vendor');
+  await id(shop, 'vendor-summary').waitFor();
+  await see(shop, EN['ملخص المبيعات']);
+  await stillArabic(shop, 'merchant dashboard');
+
+  const road = await english(await stack.ensureDriver(), '/driver');
+  await see(road, EN['طلبات التوصيل المعيّنة']);
+  await stillArabic(road, 'driver screen');
 });

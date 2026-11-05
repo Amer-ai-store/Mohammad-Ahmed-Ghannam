@@ -5,14 +5,16 @@ import { useTheme } from "../lib/theme";
 import { useI18n } from "../lib/i18n";
 import { CHARACTER_ACCESSORIES, ROBOT_DEFAULTS, RobotMotion, RobotPrefs, useRobot } from "../lib/robot";
 import { posePosters } from "../lib/designAssets";
-import { avatarHtml, type AvatarAccessory, type AvatarProfile } from "./character/characterHtml";
+import { avatarHtml, type AvatarAccessory, type AvatarAction, type AvatarProfile } from "./character/characterHtml";
 import { CharacterFrame } from "./character/CharacterFrame";
 import type { EngineMessage, FrameHandle } from "./character/CharacterFrame.types";
+import { markWebglMissing, useCharacterSnapshots, webglMissing } from "./character/snapshots";
 import { Txt } from "./ui";
 
 // The shopping companion is the human character from the لُقطة mockups. Large spots run the rigged 3D model
-// (web-engines/avatar.js, in a WebView/iframe); small spots, the moment before 3D is ready, and devices without
-// WebGL show the mockups' own pose for the same motion. Components keep their historical names (Robot, Mascot).
+// (web-engines/avatar.js, in a WebView/iframe). Small spots and the moment before 3D is ready show a still picture
+// of the shopper's own look, drawn once by the same engine (character/snapshots.tsx); until it exists, and on
+// devices without WebGL, they show the mockups' pose for the motion. Components keep their historical names.
 const MOTION_LABEL: Record<RobotMotion, string> = {
   idle: "يقف مبتسمًا", wave: "يلوّح لك", walk: "يمشي", jump: "يقفز", come: "يقترب منك", stop: "متوقف", dance: "يرقص", sleep: "نائم", sad: "حزين", talk: "يتحدث",
   cart: "يدفع عربة التسوق", thumbs: "يرفع إبهامه", think: "يفكّر", point: "يشير", run: "يركض", sit: "يجلس", listen: "يستمع", crossed: "يكتّف ذراعيه",
@@ -23,8 +25,6 @@ const POSTER: Record<RobotMotion, keyof typeof posePosters> = {
 };
 // Below this size the still pose reads better than a tiny 3D canvas, and it saves a WebGL context.
 const MIN_3D = 88;
-// Remembered for the session once the engine reports it cannot draw here.
-let webglMissing = false;
 
 type Look = Pick<RobotPrefs, "color" | "skin" | "hair" | "pants" | "boots" | "beard" | "accessory" | "use3d" | "name">;
 type Props = {
@@ -44,15 +44,25 @@ export function Robot({ size = 120, motion = "idle", message, look, face, reduce
   const profile: AvatarProfile = { skin: prefs.skin, hair: prefs.hair, outfit: prefs.color, pants: prefs.pants, boots: prefs.boots, beard: prefs.beard, accessory, ...(photo ? { faceDataUrl: photo } : {}) };
   const profileKey = JSON.stringify(profile);
   // Hidden screens stay mounted in the navigation stack, so only the focused one keeps its 3D view (and WebGL context).
-  const want3d = mode !== "still" && (mode === "3d" || size >= MIN_3D) && prefs.use3d !== false && !webglMissing && focused;
+  const want3d = mode !== "still" && (mode === "3d" || size >= MIN_3D) && prefs.use3d !== false && !webglMissing() && focused;
   const [live, setLive] = useState(false);
   const [failed, setFailed] = useState(false);
   // The page is built once; later changes reach the engine as commands, so the 3D view never reloads.
   const [html] = useState(() => avatarHtml({ action: motion, profile, reduceMotion: still }));
-  const onFail = useCallback(() => { webglMissing = true; setFailed(true); }, []);
+  const onFail = useCallback(() => { markWebglMissing(); setFailed(true); }, []);
 
   // The still pose breathes gently (and hops for jumps and dances) unless motion is reduced.
   const showPoster = !(want3d && live && !failed);
+  // The still picture of this look and pose, drawn on demand where the picture is what stays on screen.
+  const snapshots = useCharacterSnapshots();
+  const picture = snapshots.picture(profileKey, motion as AvatarAction);
+  const { request } = snapshots;
+  // Only the focused screen asks, once the saved look is read: a preview left on a hidden screen with an unsaved look
+  // would otherwise replace the saved look's pictures.
+  const lookReady = robot.hydrated;
+  useEffect(() => {
+    if (focused && lookReady && showPoster && !want3d && !picture && prefs.use3d !== false && !webglMissing()) request(profileKey, motion as AvatarAction);
+  }, [focused, lookReady, showPoster, want3d, picture, prefs.use3d, profileKey, motion, request]);
   const [bob] = useState(() => new Animated.Value(0));
   useEffect(() => {
     bob.stopAnimation();
@@ -70,7 +80,7 @@ export function Robot({ size = 120, motion = "idle", message, look, face, reduce
   const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, lift] });
 
   const label = `${prefs.name || ROBOT_DEFAULTS.name} ${tr(MOTION_LABEL[motion])}`;
-  const lookData = { motion, mode: showPoster ? "still" : "3d", look: [prefs.color, prefs.skin, prefs.hair, prefs.pants, prefs.boots, accessory, prefs.beard ? "beard" : "shaved", photo ? "photo" : "drawn"].join(" ").toLowerCase() };
+  const lookData = { motion, mode: showPoster ? "still" : "3d", poster: picture ? "snapshot" : "design", look: [prefs.color, prefs.skin, prefs.hair, prefs.pants, prefs.boots, accessory, prefs.beard ? "beard" : "shaved", photo ? "photo" : "drawn"].join(" ").toLowerCase() };
   const bubbleView = message && bubble !== "none" ? (
     <View style={[styles.bubble, { backgroundColor: t.paper, borderColor: t.line, maxWidth: Math.max(140, size * 1.5) }]} accessibilityLiveRegion="polite">
       <Txt weight="bold" style={{ fontSize: 13, textAlign: "center" }}>{message}</Txt>
@@ -82,7 +92,7 @@ export function Robot({ size = 120, motion = "idle", message, look, face, reduce
       <Pressable accessibilityRole={onPress ? "button" : "image"} accessibilityLabel={label} onPress={onPress} disabled={!onPress} hitSlop={8}
         testID={`${testID || "robot"}-character`} {...({ dataSet: lookData } as object)} style={{ width: Math.round(size * 0.8), height: size }}>
         {want3d && !failed ? <Live3D html={html} title={label} motion={motion} profileKey={profileKey} still={still} onReady={setLive} onFail={onFail} /> : null}
-        {showPoster ? <Animated.Image source={posePosters[POSTER[motion]]} resizeMode="contain" accessible={false} style={{ width: "100%", height: "100%", transform: [{ translateY }] }} /> : null}
+        {showPoster ? <Animated.Image source={picture ? { uri: picture } : posePosters[POSTER[motion]]} resizeMode="contain" accessible={false} style={{ width: "100%", height: "100%", transform: [{ translateY }] }} /> : null}
       </Pressable>
       {bubble === "side" ? bubbleView : null}
     </View>

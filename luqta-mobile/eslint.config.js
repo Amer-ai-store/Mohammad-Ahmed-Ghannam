@@ -5,6 +5,7 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    // The packed 3D engines are generated string literals (tools/build-web-engines.mjs), not code to lint.
+    ignores: ["dist/*", "src/components/character/webEngines.generated.ts"],
   },
 ]);

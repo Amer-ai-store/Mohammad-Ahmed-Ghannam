@@ -11,6 +11,7 @@ import { AccountCard, errorMessage, FormMessage } from '../components/AccountKit
 import { api } from '../lib/api';
 import { useSession } from '../lib/session';
 import { useTheme } from '../lib/theme';
+import { useI18n } from '../lib/i18n';
 import { buildCommandCenterSnapshot, parseCommandCenterConfig, syncCommandCenter, testCommandCenter, type CommandCenterConfig } from '../lib/commandCenter';
 
 const CONFIG_KEY = 'luqta-command-center-owner-config-v1';
@@ -21,6 +22,7 @@ type CatalogOrder = { id: string; date?: string; createdAt?: string; status: str
 export default function CommandCenterScreen() {
   const session = useSession();
   const { colors: t } = useTheme();
+  const { t: tr } = useI18n();
   const config = useRef<CommandCenterConfig | null>(null);
   const [configured, setConfigured] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -81,7 +83,7 @@ export default function CommandCenterScreen() {
     const snapshot = buildCommandCenterSnapshot(catalog.products, orders.orders, deviceId, Constants.expoConfig?.version || '1.1.0', settings.settings.storeName);
     const result = await syncCommandCenter(config.current, snapshot);
     setReceipt(result);
-    setMessage(`أكدت اللوحة استلام ${result.productsAccepted} صنفًا و${result.ordersAccepted} سطر طلب، مراجعة ${result.revision}.`);
+    setMessage(tr('أكدت اللوحة استلام {products} صنفًا و{orders} سطر طلب، مراجعة {revision}.', { products: result.productsAccepted, orders: result.ordersAccepted, revision: result.revision }));
   });
   const remove = () => run(async () => {
     await SecureStore.deleteItemAsync(CONFIG_KEY);
@@ -89,19 +91,19 @@ export default function CommandCenterScreen() {
     setMessage('حُذف وصول لوحة القيادة من هذا الهاتف.');
   });
 
-  if (Platform.OS === 'web') return <Shell title="مركز القيادة"><AccountCard><Txt>استيراد ملف الوصول متاح في تطبيق الهاتف فقط.</Txt></AccountCard></Shell>;
-  if (!session.hydrated) return <Shell title="مركز القيادة"><AccountCard><Txt>جارٍ فحص جلسة المدير...</Txt></AccountCard></Shell>;
-  if (!session.configured || !session.user || session.user.role !== 'admin') return <Shell title="مركز القيادة"><AccountCard><Txt>سجّل الدخول كمدير متجر بعد ربط خادم المتجر لتفعيل هذا الاتصال.</Txt><Button title="إعداد خادم المتجر" onPress={() => router.push('/connection')} /></AccountCard></Shell>;
+  if (Platform.OS === 'web') return <Shell title="مركز القيادة"><AccountCard><Txt>{tr('استيراد ملف الوصول متاح في تطبيق الهاتف فقط.')}</Txt></AccountCard></Shell>;
+  if (!session.hydrated) return <Shell title="مركز القيادة"><AccountCard><Txt>{tr('جارٍ فحص جلسة المدير...')}</Txt></AccountCard></Shell>;
+  if (!session.configured || !session.user || session.user.role !== 'admin') return <Shell title="مركز القيادة"><AccountCard><Txt>{tr('سجّل الدخول كمدير متجر بعد ربط خادم المتجر لتفعيل هذا الاتصال.')}</Txt><Button title="إعداد خادم المتجر" onPress={() => router.push('/connection')} /></AccountCard></Shell>;
 
   return <Shell title="مركز القيادة" subtitle="مزامنة موثقة مع لوحة Amer AI Command Center."><View style={{ maxWidth: 760, width: '100%', alignSelf: 'center', gap: 18 }}>
     <AccountCard>
-      <Txt weight="bold" style={{ fontSize: 21 }}>{configured ? 'ملف اتصال محفوظ على الهاتف' : 'لم يُستورد ملف الاتصال بعد'}</Txt>
-      <Txt style={{ color: t.muted, lineHeight: 26 }}>نزّل ملف aas-app-connection.json من «الخوادم والربط» في لوحة القيادة الخاصة بك، ثم استورده هنا. يُحفظ المفتاح في مخزن الهاتف الآمن، ولا يُضمّن في التطبيق.</Txt>
+      <Txt weight="bold" style={{ fontSize: 21 }}>{tr(configured ? 'ملف اتصال محفوظ على الهاتف' : 'لم يُستورد ملف الاتصال بعد')}</Txt>
+      <Txt style={{ color: t.muted, lineHeight: 26 }}>{tr('نزّل ملف aas-app-connection.json من «الخوادم والربط» في لوحة القيادة الخاصة بك، ثم استورده هنا. يُحفظ المفتاح في مخزن الهاتف الآمن، ولا يُضمّن في التطبيق.')}</Txt>
       <Button title="استيراد ملف اتصال المالك" onPress={() => void importFile()} busy={busy} />
       {configured ? <><Button title="اختبار الوصول للوحة" secondary onPress={() => void test()} busy={busy} /><Button title="مزامنة الأصناف والطلبات الآن" onPress={() => void sync()} busy={busy} /><Button title="حذف وصول اللوحة من الهاتف" secondary onPress={() => void remove()} busy={busy} /></> : null}
-      <FormMessage text={message} success={success} />
-      {receipt ? <Txt selectable style={{ color: t.green, lineHeight: 26 }}>إيصال الاستلام: {receipt.receivedAt} · مراجعة {receipt.revision}</Txt> : null}
+      <FormMessage text={message ? tr(message) : ''} success={success} />
+      {receipt ? <Txt selectable style={{ color: t.green, lineHeight: 26 }}>{tr('إيصال الاستلام: {at} · مراجعة {revision}', { at: receipt.receivedAt, revision: receipt.revision })}</Txt> : null}
     </AccountCard>
-    <AccountCard><Txt weight="bold">حدود المزامنة</Txt><Txt style={{ color: t.muted, lineHeight: 26 }}>تُرسل أسماء الأصناف وأسعارها وكمياتها، وأسطُر الطلبات وحالاتها فقط. لا تُرسل أسماء العملاء أو عناوينهم أو طرق الدفع. سعر الجملة غير مسجل في المتجر حاليًا، لذلك يُرسل 0 حتى يُضاف حقل فعلي. كل إرسال يستبدل لقطة التطبيق السابقة في اللوحة، والمزامنة التلقائية معطّلة.</Txt></AccountCard>
+    <AccountCard><Txt weight="bold">{tr('حدود المزامنة')}</Txt><Txt style={{ color: t.muted, lineHeight: 26 }}>{tr('تُرسل أسماء الأصناف وأسعارها وكمياتها، وأسطُر الطلبات وحالاتها فقط. لا تُرسل أسماء العملاء أو عناوينهم أو طرق الدفع. سعر الجملة غير مسجل في المتجر حاليًا، لذلك يُرسل 0 حتى يُضاف حقل فعلي. كل إرسال يستبدل لقطة التطبيق السابقة في اللوحة، والمزامنة التلقائية معطّلة.')}</Txt></AccountCard>
   </View></Shell>;
 }

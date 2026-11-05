@@ -4,9 +4,10 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { STAFF_ONLY, staffStrings } from '../../scripts/staff-strings.mjs';
+
 const root = fileURLToPath(new URL('../..', import.meta.url));
-// Staff-only screens (store admin, merchant, driver) are Arabic-only for now.
-const STAFF_ONLY = /(^|\/)(admin(\.tsx|\/)|driver\.tsx|command-center\.tsx|vendor\.tsx|components\/admin\/)/;
+// Staff screens (store admin, merchant, driver, command center) have their own, stricter check below.
 const PATTERNS = [/\btr?\(\s*"([^"]*[؀-ۿ][^"]*)"/g, /\b(?:title|label|detail|subtitle|action|text|message|robot|placeholder)="([^"]*[؀-ۿ][^"]*)"/g, /\[\s*"[a-z_-]+"\s*,\s*"([^"]*[؀-ۿ][^"]*)"/g];
 
 function dictionary() {
@@ -32,6 +33,14 @@ test('L124 every customer-facing string sent through the translator has an Engli
   const en = dictionary(), missing = [];
   for (const [arabic, file] of customerStrings()) if (!en[arabic]) missing.push(`${file}: ${arabic}`);
   assert.deepEqual(missing, [], `missing English text:\n${missing.join('\n')}`);
+});
+
+test('L124 every staff-screen string (admin, merchant, driver, command center) has an English version', () => {
+  const en = dictionary();
+  const { strings, problems } = staffStrings(root);
+  assert.ok(strings.size > 300, `found ${strings.size} staff strings`);
+  for (const [arabic, file] of strings) if (!en[arabic]) problems.push(`${file}: ${arabic}`);
+  assert.deepEqual(problems, [], `staff strings without English:\n${problems.join('\n')}`);
 });
 
 test('L124 English translations keep the same placeholders and are never empty', () => {

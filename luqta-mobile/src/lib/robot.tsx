@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CHARACTER_SNAPSHOTS_KEY } from "./characterCache";
 import * as Speech from "expo-speech";
 import { api } from "./api";
 import { useSession } from "./session";
@@ -41,7 +42,7 @@ const PREFS_KEY = "luqta-robot-v1";
 const FACE_KEY = "luqta-robot-face-v1";
 
 type RobotState = {
-  prefs: RobotPrefs; face: string | null; reaction: { motion: RobotMotion; message: string; at: number } | null;
+  prefs: RobotPrefs; face: string | null; hydrated: boolean; reaction: { motion: RobotMotion; message: string; at: number } | null;
   systemReduceMotion: boolean; reduceMotion: boolean;
   update: (changes: Partial<RobotPrefs>) => Promise<void>;
   setFace: (dataUri: string | null) => Promise<void>;
@@ -58,6 +59,8 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   const { user } = useSession();
   const [prefs, setPrefs] = useState<RobotPrefs>(ROBOT_DEFAULTS);
   const [face, setFaceState] = useState<string | null>(null);
+  // True once the look and face saved on the device have been read.
+  const [hydrated, setHydrated] = useState(false);
   const [reaction, setReaction] = useState<RobotState["reaction"]>(null);
   const [systemReduceMotion, setSystemReduceMotion] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -66,7 +69,7 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.multiGet([PREFS_KEY, FACE_KEY]).then(([[, saved], [, savedFace]]) => {
       if (saved) { try { setPrefs(valid(JSON.parse(saved))); } catch { /* ignore a corrupted cache */ } }
       if (savedFace && savedFace.startsWith("data:image/")) setFaceState(savedFace);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setHydrated(true));
     AccessibilityInfo.isReduceMotionEnabled().then(setSystemReduceMotion).catch(() => {});
     const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setSystemReduceMotion);
     return () => subscription.remove();
@@ -86,7 +89,8 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   }, [prefs, user]);
   const setFace = useCallback(async (dataUri: string | null) => {
     setFaceState(dataUri);
-    if (dataUri) await AsyncStorage.setItem(FACE_KEY, dataUri); else await AsyncStorage.removeItem(FACE_KEY);
+    // Deleting the photo also deletes the still pictures of the character, which may show the face.
+    if (dataUri) await AsyncStorage.setItem(FACE_KEY, dataUri); else await AsyncStorage.multiRemove([FACE_KEY, CHARACTER_SNAPSHOTS_KEY]);
   }, []);
   const play = useCallback((motion: RobotMotion, message = "") => {
     if (timer.current) clearTimeout(timer.current);
@@ -104,7 +108,7 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   const stopSpeaking = useCallback(() => { try { Speech.stop(); } catch { /* nothing is playing */ } setSpeaking(false); }, []);
   const react = useCallback((event: RobotEvent, message?: string) => { const r = REACTIONS[event]; play(r.motion, message ?? r.message); }, [play]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-  const value = useMemo<RobotState>(() => ({ prefs, face, reaction, systemReduceMotion, reduceMotion: prefs.reduceMotion || systemReduceMotion, update, setFace, react, play, speak, stopSpeaking, speaking }), [prefs, face, reaction, systemReduceMotion, update, setFace, react, play, speak, stopSpeaking, speaking]);
+  const value = useMemo<RobotState>(() => ({ prefs, face, hydrated, reaction, systemReduceMotion, reduceMotion: prefs.reduceMotion || systemReduceMotion, update, setFace, react, play, speak, stopSpeaking, speaking }), [prefs, face, hydrated, reaction, systemReduceMotion, update, setFace, react, play, speak, stopSpeaking, speaking]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

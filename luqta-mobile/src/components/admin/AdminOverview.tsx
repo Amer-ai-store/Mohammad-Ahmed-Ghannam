@@ -37,16 +37,16 @@ export function AdminOverview({ onTab }: { onTab: (tab: "products" | "orders" | 
   const max = Math.max(1, ...(report.data?.byDay || []).map((d) => d.revenue));
   const setCapacity = async (slot: Slot, delta: number) => {
     setError("");
-    try { await api.put("/admin/slots", { date: slot.date, window: slot.window, capacity: Math.max(slot.booked, slot.capacity + delta) }); slots.reload(); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تعديل السعة"); }
+    try { await api.put("/admin/slots", { date: slot.date, window: slot.window, capacity: Math.max(slot.booked, slot.capacity + delta) }); slots.reload(); } catch (e) { setError(e instanceof Error ? tr(e.message) : tr("تعذر تعديل السعة")); }
   };
   return (
     <View style={{ gap: 12 }} testID="admin-overview">
       {error ? <Notice text={error} tone="danger" /> : null}
       <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 }}>
         {card("مبيعات اليوم", money.format(k?.salesToday ?? 0), TrendingUp, t.success, "kpi-sales")}
-        {card("الطلبات", `${k?.orders ?? 0} · ${tr("{n} نشطة", { n: k?.activeOrders ?? 0 })}`, ClipboardList, t.primary, "kpi-orders")}
+        {card("الطلبات", [k?.orders ?? 0, tr("{n} نشطة", { n: k?.activeOrders ?? 0 })].join(" · "), ClipboardList, t.primary, "kpi-orders")}
         {card("المزامنة", k?.sync ? `${k.sync.status === "success" ? "✓" : k.sync.status === "partial" ? "◐" : "✕"} ${k.sync.id}` : tr("لم تُشغّل بعد"), RefreshCw, t.orange, "kpi-sync")}
-        {card("الأقسام", `${k?.categories ?? 0} · ${tr("{n} مخزون منخفض", { n: k?.lowStock ?? 0 })}`, Boxes, t.warning, "kpi-categories")}
+        {card("الأقسام", [k?.categories ?? 0, tr("{n} مخزون منخفض", { n: k?.lowStock ?? 0 })].join(" · "), Boxes, t.warning, "kpi-categories")}
       </View>
       <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 }}>
         {([["المنتجات", PackageSearch, () => onTab("products")], ["الطلبات", ClipboardList, () => onTab("orders")], ["البائعون", Store, () => router.push({ pathname: "/admin/project", params: { tab: "vendors" } })], ["المخزون والمزامنة", RefreshCw, () => router.push("/admin/sync")], ["إدارة المشروع", ChartPie, () => router.push("/admin/project")], ["التقارير", BarChart3, () => setDays(30)]] as const).map(([label, Icon, go]) => (

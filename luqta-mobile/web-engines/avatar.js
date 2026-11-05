@@ -12,7 +12,8 @@
  *   {type:'facing', yaw:<radians>}   {type:'reduceMotion', value:bool}
  *   {type:'pause', value:bool}       {type:'probe', id}
  *   {type:'processFace', dataUrl, id}
- * Messages out: ready, actionChanged, probe, faceProcessed, error.
+ *   {type:'snapshot', action, id}     still PNG of one pose with the current look
+ * Messages out: ready, actionChanged, probe, faceProcessed, snapshot, error.
  */
 (function () {
   'use strict';
@@ -420,6 +421,12 @@
   }
 
   // ---------- profile ----------
+  // Snapshots wait for a face photo that is still loading, so a still picture never shows the drawn face by mistake.
+  var facePending = 0, waitingShots = [];
+  function faceSettled() {
+    facePending = Math.max(0, facePending - 1);
+    if (!facePending) waitingShots.splice(0).forEach(function (s) { snapshot(s.action, s.id); });
+  }
   function hex(c, fb) { return /^#[0-9a-fA-F]{6}$/.test(c || '') ? parseInt(c.slice(1), 16) : fb; }
   function applyProfile(pr) {
     pr = pr || {};
@@ -434,9 +441,11 @@
     Object.keys(acc).forEach(function (k) { acc[k].visible = k === accessory; });
     hair.scale.set(1, accessory === 'cap' ? 0.7 : 1, 1);
     if (pr.faceDataUrl && /^data:image\/(png|jpeg|webp);base64,/.test(pr.faceDataUrl)) {
+      facePending++;
       new T.TextureLoader().load(pr.faceDataUrl, function (tex) {
         tex.encoding = T.sRGBEncoding; buildPhotoFace(tex, faceAlpha()); face.visible = false; beardMain.visible = false; moustache.visible = false;
-      }, undefined, function () { post({ type: 'error', code: 'FACE_TEXTURE' }); });
+        faceSettled();
+      }, undefined, function () { post({ type: 'error', code: 'FACE_TEXTURE' }); faceSettled(); });
     } else {
       if (photoFace) { B.head.remove(photoFace); photoFace = null; }
       face.visible = true; beardMain.visible = true; moustache.visible = true;
@@ -516,6 +525,31 @@
     JOINTS.forEach(function (j) { if (B[j]) joints[j] = [B[j].rotation.x, B[j].rotation.y, B[j].rotation.z].map(function (v) { return Math.round(v * 1000) / 1000; }); });
     post({ type: 'probe', id: id, action: state.action, fps: fps, bones: skeleton.bones.length, rootY: root.position.y, rootRotZ: root.rotation.z, cartVisible: cart.visible, photoFace: !!photoFace, accessory: accessory, joints: joints });
   }
+  // A still picture of one pose with the current look, for the small spots that show a picture instead of the live
+  // view. The pose is taken at a moment that reads well (mid-stride, top of the jump) and fully settled.
+  var SNAP_AT = { walk: 0.25, run: 0.16, cart: 0.29, jump: 0.92, dance: 0.26, wave: 0.2, come: 0.22, wake: 2.6 };
+  // The poses a snapshot may use, looked up by name in a Map of the engine's own actions: a received name can only
+  // select one of them, never an inherited property such as __proto__.
+  var POSES = new Map(Object.keys(ACTIONS).map(function (name) { return [name, ACTIONS[name]]; }));
+  function snapshot(action, id) {
+    var poseFn = POSES.get(action);
+    if (typeof poseFn !== 'function') { post({ type: 'error', id: id, code: 'UNKNOWN_ACTION', action: action }); return; }
+    if (facePending) { waitingShots.push({ action: action, id: id }); return; }
+    var live = state.action;
+    var props = function (a) { cart.visible = a === 'cart'; pillow.visible = a === 'sleep'; zzz.forEach(function (z) { z.visible = a === 'sleep'; }); };
+    state.action = action; props(action); frameCamera();
+    var t = Object.prototype.hasOwnProperty.call(SNAP_AT, action) ? SNAP_AT[action] : 0.5;
+    apply(poseFn(t), 1);
+    root.rotation.y = state.targetYaw;
+    if (pillow.visible) pillow.position.set(-0.62, 0.08, 0);
+    zzz.forEach(function (z, i) { if (z.visible) { var c = (i + 1) / 4; z.position.set(0.15 + c * 0.35, 0.55 + c * 0.7, 0.2); z.material.opacity = 1 - c * 0.6; } });
+    shadow.scale.set(1 - current.rootY * 1.2, 1, 1 - current.rootY * 1.2);
+    renderer.render(scene, camera);
+    var dataUrl = '';
+    try { dataUrl = canvas.toDataURL('image/png'); } catch (e) { post({ type: 'error', id: id, code: 'SNAPSHOT', message: String(e && e.message || e) }); }
+    state.action = live; props(live); frameCamera();
+    if (dataUrl) post({ type: 'snapshot', id: id, action: action, dataUrl: dataUrl, width: canvas.width, height: canvas.height });
+  }
   function command(msg) {
     if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) { return; } }
     if (!msg || typeof msg !== 'object') return;
@@ -527,6 +561,7 @@
       case 'pause': state.paused = !!msg.value; break;
       case 'probe': probe(msg.id); break;
       case 'processFace': processFace(String(msg.dataUrl || ''), msg.id); break;
+      case 'snapshot': snapshot(String(msg.action), msg.id); break;
       default: break;
     }
   }

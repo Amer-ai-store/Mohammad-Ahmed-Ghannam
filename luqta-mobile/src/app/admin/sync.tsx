@@ -109,7 +109,7 @@ export default function SyncScreen() {
               <Txt style={{ flex: 2, fontSize: 12 }} numberOfLines={1}>{row.name}</Txt>
               <Txt style={{ flex: 1, fontSize: 11, color: t.muted }} numberOfLines={1}>{row.sku}</Txt>
               <Txt style={{ flex: 1, fontSize: 11 }} numberOfLines={1}>{row.branch}</Txt>
-              <View style={{ flex: 1 }}><TextInput testID={`qty-${row.branchId}-${row.productId}`} accessibilityLabel={`${tr("كمية")} ${row.name}`} value={edited ?? String(row.quantity)} onChangeText={(v) => setEdits((e) => ({ ...e, [key]: v.replace(/\D/g, "") }))} onSubmitEditing={() => edited !== undefined && void saveStock(row)} keyboardType="number-pad" style={{ minHeight: 32, borderRadius: 8, borderWidth: 1, borderColor: edited !== undefined ? t.primary : t.line, paddingHorizontal: 6, color: t.ink, textAlign: "center" }} /></View>
+              <View style={{ flex: 1 }}><TextInput testID={`qty-${row.branchId}-${row.productId}`} accessibilityLabel={tr("كمية {name}", { name: row.name })} value={edited ?? String(row.quantity)} onChangeText={(v) => setEdits((e) => ({ ...e, [key]: v.replace(/\D/g, "") }))} onSubmitEditing={() => edited !== undefined && void saveStock(row)} keyboardType="number-pad" style={{ minHeight: 32, borderRadius: 8, borderWidth: 1, borderColor: edited !== undefined ? t.primary : t.line, paddingHorizontal: 6, color: t.ink, textAlign: "center" }} /></View>
               <Txt style={{ flex: 1, fontSize: 11, color: t.muted, textAlign: "center" }}>v{row.version}</Txt>
             </Row>
           );
@@ -118,7 +118,7 @@ export default function SyncScreen() {
       </Card>
       <SectionTitle title="استيراد ملف CSV" />
       <Card style={{ gap: 8 }} testID="csv-import">
-        <TextInput testID="csv-input" accessibilityLabel={tr("محتوى CSV")} value={csv} onChangeText={setCsv} multiline placeholder={"id,name,price,stock,category\nmilk,حليب طازج,1.25,40,dairy"} placeholderTextColor={t.muted} style={{ minHeight: 110, borderRadius: 14, borderWidth: 1, borderColor: t.line, padding: 10, color: t.ink, backgroundColor: t.paper, fontFamily: "Tajawal_500Medium", textAlignVertical: "top" }} />
+        <TextInput testID="csv-input" accessibilityLabel={tr("محتوى CSV")} value={csv} onChangeText={setCsv} multiline placeholder={tr("id,name,price,stock,category\nmilk,حليب طازج,1.25,40,dairy")} placeholderTextColor={t.muted} style={{ minHeight: 110, borderRadius: 14, borderWidth: 1, borderColor: t.line, padding: 10, color: t.ink, backgroundColor: t.paper, fontFamily: "Tajawal_500Medium", textAlignVertical: "top" }} />
         <Button title={tr("معاينة الفروقات")} testID="csv-preview" secondary busy={busy === "csv"} disabled={!csv.trim()} onPress={() => void csvPreview()} />
       </Card>
       <SectionTitle title="إيصالات المزامنة" />
