@@ -1737,7 +1737,7 @@ export const EN: Record<string, string> = {
   "استعادة مُختبرة": "Tested restore",
   "بالهاتف": "By phone",
   "بالبريد": "By email",
-  "الأدوات الذكية": "Smart tools"
+  "الأدوات الذكية": "Smart tools",
   "جواز لُقطة العالمي": "Luqta Global Passport",
   "عالم {name}": "{name}'s universe",
   "عالمك يبدأ من هنا": "Your universe starts here",
