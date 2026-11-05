@@ -160,11 +160,11 @@ export default function Checkout() {
       {step === "review" ? (
         <View style={{ gap: 12, marginTop: 14 }}>
           <Card style={{ gap: 6 }}>
-            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("العنوان")}</Txt><Pressable onPress={() => setStep("address")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
+            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("العنوان")}</Txt><Pressable accessibilityRole="button" onPress={() => setStep("address")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
             <Txt style={{ color: t.muted }}>{[draft.name, draft.city, draft.district, draft.street, draft.building].filter(Boolean).join("، ")}</Txt>
-            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("الموعد")}</Txt><Pressable onPress={() => setStep("address")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
+            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("الموعد")}</Txt><Pressable accessibilityRole="button" onPress={() => setStep("address")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
             <Txt style={{ color: t.muted }} testID="review-slot">{slot ? `${slots.data?.slots.find((s) => s.date === slot.date && s.window === slot.window)?.label || ""} · ${slot.date}` : quote?.zone ? tr("أقرب وقت (حوالي {h} ساعة)", { h: Math.round(quote.zone.etaMinutes / 60) }) : tr("أقرب وقت متاح")}</Txt>
-            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("الدفع")}</Txt><Pressable onPress={() => setStep("payment")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
+            <Row style={{ justifyContent: "space-between" }}><Txt weight="bold">{tr("الدفع")}</Txt><Pressable accessibilityRole="button" onPress={() => setStep("payment")}><Txt style={{ color: t.primary }}>{tr("تعديل")}</Txt></Pressable></Row>
             <Txt style={{ color: t.muted }}>{method === "card" && cardToken ? `${cardToken.brand.toUpperCase()} •••• ${cardToken.last4} (${tr("تجريبي")})` : tr(method === "cod" ? "الدفع عند الاستلام" : method === "wallet" ? "رصيد المحفظة" : "بطاقة ائتمان")}</Txt>
             {notes ? <Txt style={{ color: t.muted, fontSize: 12 }}>📝 {notes}</Txt> : null}
             {gift.wrap ? <Txt style={{ color: t.muted, fontSize: 12 }}>🎁 {gift.message || tr("تغليف هدية")}</Txt> : null}

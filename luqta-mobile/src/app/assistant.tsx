@@ -84,7 +84,7 @@ export default function Assistant() {
   };
   const mini = (p: Product, quantity?: number, note?: string) => (
     <Row key={p.id} style={{ backgroundColor: t.background, borderRadius: 16, padding: 8 }}>
-      <Pressable onPress={() => router.push(`/product/${p.id}`)} style={{ width: 46, height: 46, borderRadius: 12, overflow: "hidden" }}><ProductImage product={p} /></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => router.push(`/product/${p.id}`)} style={{ width: 46, height: 46, borderRadius: 12, overflow: "hidden" }}><ProductImage product={p} /></Pressable>
       <View style={{ flex: 1 }}><Txt weight="bold" numberOfLines={1} style={{ fontSize: 13 }}>{quantity ? `${quantity} × ` : ""}{p.name}</Txt><Txt style={{ color: t.muted, fontSize: 11 }}>{money.format(p.price)}{note ? ` · ${tr(note)}` : ""}</Txt></View>
       <Pressable testID={`assistant-add-${p.id}`} accessibilityRole="button" accessibilityLabel={`${tr("أضف إلى السلة")} ${p.name}`} onPress={() => store.addToCart(p.id, quantity || 1)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: t.primary, alignItems: "center", justifyContent: "center" }}><Txt weight="extra" style={{ color: t.onPrimary, textAlign: "center" }}>+</Txt></Pressable>
     </Row>

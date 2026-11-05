@@ -7,6 +7,9 @@ import { ProductCard, ProductImage } from "../../components/ProductCard";
 import { ProductReviews } from "../../components/ProductReviews";
 import { VideoPlayer } from "../../components/VideoPlayer";
 import { Countdown } from "../../components/Countdown";
+import { FlashBadges, TogetherSection, useProductEvents } from "../../components/smart/ProductExtras";
+import { PriceInsight } from "../../components/smart/PriceInsight";
+import { NutritionCard } from "../../components/smart/NutritionCard";
 import { Badge, Button, Card, Chip, EmptyState, Field, KeyValue, Notice, Row, SectionTitle, Stepper, Tabs, Txt } from "../../components/ui";
 import { useStore } from "../../lib/store";
 import { useSession } from "../../lib/session";
@@ -53,6 +56,7 @@ function ProductContent({ id }: { id: string }) {
   const substitutes = useApi<{ outOfStock: boolean; substitutes: (Product & { priceDifference: number })[] }>(product ? `/products/${product.id}/substitutes` : null);
   const questions = useApi<{ questions: Question[] }>(product ? `/products/${product.id}/questions` : null);
   useEffect(() => { if (product?.id) rememberProduct(product.id); }, [product?.id, rememberProduct]);
+  useProductEvents(product?.id);
   if (!product) return <Shell title="تفاصيل المنتج"><EmptyState title="المنتج غير متاح" detail={catalogStatus === "loading" ? "جارٍ تحميل الكتالوج…" : "قد يكون المنتج مؤرشفًا أو الرابط غير صحيح."} /></Shell>;
   const available = selectedProduct?.stock === undefined ? (requiresVariant ? 0 : 10) : Math.max(0, selectedProduct.stock);
   const remaining = Math.min(99, available - (selectedProduct ? cart[selectedProduct.id] || 0 : 0));
@@ -185,7 +189,7 @@ function ProductContent({ id }: { id: string }) {
                 <Txt weight="bold">❓ {q.question}</Txt>
                 <Txt style={{ fontSize: 11, color: t.muted }}>{tr("سأل {name}", { name: q.askedBy })}</Txt>
                 {q.answers.map((a) => <View key={a.id} style={{ flexDirection: "row-reverse", gap: 6, alignItems: "flex-start" }}>{a.official ? <Badge label="رد رسمي" tone="success" /> : null}<Txt style={{ flex: 1, fontSize: 13 }}>{a.answer} — <Txt style={{ color: t.muted, fontSize: 11 }}>{a.by}</Txt></Txt></View>)}
-                {answerFor === q.id ? <Row><View style={{ flex: 1 }}><Field label="إجابتك" value={answer} onChangeText={setAnswer} testID="answer-input" /></View><Button title={tr("إرسال")} onPress={() => void reply(q.id)} disabled={answer.trim().length < 2} style={{ marginTop: 22 }} /></Row> : user ? <Pressable onPress={() => setAnswerFor(q.id)}><Txt style={{ color: t.primary, fontSize: 12 }}>{tr("أجب عن السؤال")}</Txt></Pressable> : null}
+                {answerFor === q.id ? <Row><View style={{ flex: 1 }}><Field label="إجابتك" value={answer} onChangeText={setAnswer} testID="answer-input" /></View><Button title={tr("إرسال")} onPress={() => void reply(q.id)} disabled={answer.trim().length < 2} style={{ marginTop: 22 }} /></Row> : user ? <Pressable accessibilityRole="button" onPress={() => setAnswerFor(q.id)}><Txt style={{ color: t.primary, fontSize: 12 }}>{tr("أجب عن السؤال")}</Txt></Pressable> : null}
               </View>
             ))}
             <Field label="اسأل عن المنتج" testID="question-input" value={question} onChangeText={setQuestion} placeholder={tr("مثلًا: هل يناسب الأطفال؟")} />
@@ -193,6 +197,11 @@ function ProductContent({ id }: { id: string }) {
           </Card>
         ) : null}
         {tab === "reviews" ? <ProductReviews productId={product.id} /> : null}
+
+        <FlashBadges product={product} />
+        {product.nutrition ? <NutritionCard nutrition={product.nutrition} /> : null}
+        <PriceInsight product={product} />
+        <TogetherSection product={product} />
 
         {substitutes.data?.outOfStock && substitutes.data.substitutes.length ? (
           <View testID="substitutes">

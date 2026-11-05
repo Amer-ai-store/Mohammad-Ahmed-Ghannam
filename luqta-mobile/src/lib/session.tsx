@@ -18,6 +18,8 @@ type Session = {
   logout: () => Promise<void>;
   configure: (url: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  /** Accept a session returned by phone OTP / Google / one-time-code exchange. */
+  adoptSession: (result: { token: string; user: SessionUser }) => Promise<void>;
 };
 const Context = createContext<Session | null>(null);
 const STORAGE_KEY = "luqta-commerce-session-v1";
@@ -147,7 +149,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setUser(result.user);
     setError("");
   }, []);
-  return <Context.Provider value={{ user, hydrated, configured, baseUrl, connected, error, login, register, deleteAccount, logout, configure, refreshUser }}>{children}</Context.Provider>;
+  const adoptSession = useCallback(async (result: { token: string; user: SessionUser }) => { await acceptSession(result, api.baseUrl()); }, [acceptSession]);
+  return <Context.Provider value={{ user, hydrated, configured, baseUrl, connected, error, login, register, deleteAccount, logout, configure, refreshUser, adoptSession }}>{children}</Context.Provider>;
 }
 
 export function useSession() {

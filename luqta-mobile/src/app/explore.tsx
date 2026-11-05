@@ -186,7 +186,7 @@ export default function Explore() {
           </Row>
         </Card>
       ) : null}
-      {didYouMean && !shown.length ? <Pressable onPress={() => run(didYouMean)} style={{ marginTop: 10 }}><Txt style={{ color: t.primary }}>{tr("هل تقصد «{q}»؟", { q: didYouMean })}</Txt></Pressable> : null}
+      {didYouMean && !shown.length ? <Pressable accessibilityRole="button" onPress={() => run(didYouMean)} style={{ marginTop: 10 }}><Txt style={{ color: t.primary }}>{tr("هل تقصد «{q}»؟", { q: didYouMean })}</Txt></Pressable> : null}
       <View style={{ marginTop: 14 }}>
         {shown.length ? <ProductGrid items={shown} /> : <Card style={{ alignItems: "center", gap: 10 }}><Txt weight="bold">{tr("لا توجد نتائج مطابقة")}</Txt><Button title={tr("اسأل لُقطي")} onPress={() => router.navigate({ pathname: "/assistant", params: { q: submitted } })} secondary /></Card>}
       </View>

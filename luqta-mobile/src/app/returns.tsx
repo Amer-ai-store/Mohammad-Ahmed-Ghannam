@@ -86,7 +86,7 @@ export default function Returns() {
           </Card>
           <Card style={{ gap: 8 }}>
             <Txt weight="bold">{tr("صورة المنتج (اختياري)")}</Txt>
-            {photo ? <View><Image source={{ uri: photo }} style={{ width: "100%", height: 180, borderRadius: 16 }} accessibilityLabel={tr("الصورة المرفقة")} /><Pressable onPress={() => setPhoto(null)} style={{ position: "absolute", top: 8, left: 8, backgroundColor: t.paper, borderRadius: 16, padding: 6 }}><Trash size={16} color={t.danger} /></Pressable></View> : null}
+            {photo ? <View><Image source={{ uri: photo }} style={{ width: "100%", height: 180, borderRadius: 16 }} accessibilityLabel={tr("الصورة المرفقة")} /><Pressable accessibilityRole="button" onPress={() => setPhoto(null)} style={{ position: "absolute", top: 8, left: 8, backgroundColor: t.paper, borderRadius: 16, padding: 6 }}><Trash size={16} color={t.danger} /></Pressable></View> : null}
             <Button title={tr(photo ? "تغيير الصورة" : "أرفق صورة")} testID="return-photo" secondary icon={<Camera size={16} color={t.ink} />} onPress={() => void attach()} />
           </Card>
           {selected.length ? <Notice text={tr("المبلغ المتوقع: {m}", { m: money.format(Math.round(estimate * 1000) / 1000) })} tone="success" /> : null}
