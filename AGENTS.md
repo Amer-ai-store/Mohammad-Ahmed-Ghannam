@@ -48,3 +48,11 @@ DATABASE_READONLY_URL (only if a verified least-privilege account exists)
 - Setup script: detect package manager from lockfiles, install with its frozen/CI mode, and run existing lint/test scripts; never run database migrations during setup.
 - Verify: environment starts, repository checkout succeeds, tests return exit code 0, and no secret appears in logs.
 - Record the provider environment identifier, run URL, timestamp and evidence once actually created.
+
+## Per-conversation repository selection and signing safety
+
+- At the beginning of each new GitHub-related task, resolve the exact `owner/repo` from the current request; do not silently reuse this repository for a different task. Read the selected repository's own `AGENTS.md`, its workflows, security requirements and latest evidence.
+- This file applies to agents operating **in this repository**, not automatically to every ChatGPT account conversation. A short reusable account-level instruction template is stored in [docs/chatgpt-github-operating-policy.md](docs/chatgpt-github-operating-policy.md); the account owner must enable it through ChatGPT Custom Instructions where supported.
+- Android release signing setup ([.github/workflows/release-signing-setup.yml](.github/workflows/release-signing-setup.yml)) is a **one-time, human-initiated** operation only for the relevant app and repository. **Never dispatch it in response to an unrelated task or as a recurring automation**. Do not copy a signing key, PAT or signing secrets into another repository. Check existing signing secrets and previously distributed APK certificate before any creation.
+- If any `SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD` or `SIGNING_KEY_PASSWORD` already exists, fail closed without modification. Do not delete existing partial secrets to retry automatically. GitHub secrets are not retrievable and writes to the three secrets are not atomic; require secure independently controlled recovery/backup planning before treating the signing setup as production ready.
+- Signing setup must never modify `RELEASE_PUBLISHING_ENABLED`, `RELEASE_APPROVED_SHA`, the `production` environment, financial data or Issue #102 release acceptance. Use non-destructive validation for recurring tasks.
