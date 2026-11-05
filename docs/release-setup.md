@@ -59,6 +59,22 @@ https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/releases/latest/download
 
 لا تضع ملف المفتاح أو كلمات مروره في المستودع.
 
+### بلا حاسوب ولا طرفية (من المتصفح فقط)
+ينشئ الـ workflow `release-signing-setup.yml` المفتاح على خادم GitHub، ويحفظه في الأسرار الثلاثة. لا يمر المفتاح بك ولا بأي طرف آخر.
+1. أنشئ رمزًا مؤقتًا من https://github.com/settings/personal-access-tokens/new:
+   - **Expiration**: يوم واحد.
+   - **Repository access**: «Only select repositories»، ثم اختر هذا المستودع فقط.
+   - **Permissions → Repository permissions → Secrets**: «Read and write»، ولا شيء غيره.
+   - اضغط **Generate token** وانسخ الرمز.
+2. احفظه سرًّا باسم `RELEASE_SETUP_TOKEN` من **Settings → Secrets and variables → Actions → New repository secret**.
+3. شغّل **Actions → Release signing key setup (one time) → Run workflow** على `main`.
+4. بعد نجاحه احذف السر `RELEASE_SETUP_TOKEN`، وألغِ الرمز من صفحة الرموز.
+
+ملاحظات:
+- يرفض الـ workflow استبدال مفتاح محفوظ، لأن مفتاحًا جديدًا يمنع التطبيقات المثبتة من التحديث.
+- لا يغيّر متغيرات النشر ولا بيئة `production`.
+- تبقى النسخة الوحيدة من المفتاح في أسرار المستودع، ولا يعرضها GitHub مرة أخرى. ما دامت محفوظة فالتحديثات تعمل. إن احتجت يومًا إلى مفتاح جديد، فعلى المستخدمين حذف التطبيق مرة واحدة ثم تثبيته من جديد.
+
 ## ملاحظات
 - `ADMIN_PASSWORD` لا يدخل أي APK منشور، لأن الإصدارات عامة ويمكن لأي شخص تنزيلها.
 - أي PR يغيّر هذا الـ workflow أو إعدادات التطبيق الأصلية (`luqta-mobile/app.json` و`app.config.js` و`package.json` و`plugins/`)، وكذلك التشغيل اليدوي من فرع غير `main`، يبني الـ APK ويرفعه كـ artifact دون نشر Release.
