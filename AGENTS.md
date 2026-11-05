@@ -49,6 +49,11 @@ DATABASE_READONLY_URL (only if a verified least-privilege account exists)
 - Verify: environment starts, repository checkout succeeds, tests return exit code 0, and no secret appears in logs.
 - Record the provider environment identifier, run URL, timestamp and evidence once actually created.
 
+## Releasing the Luqta Android app
+
+- For every new release follow [docs/release-runbook.md](docs/release-runbook.md). The stable signing key, the `production` environment and `RELEASE_PUBLISHING_ENABLED` are set up since v2.0.86; only `RELEASE_APPROVED_SHA` changes per release.
+- The owner works from a phone only (no computer, no terminal). Give short Arabic steps with direct browser links. The owner does two things: updates `RELEASE_APPROVED_SHA` to the SHA you send, and approves `production` in Chrome (Desktop site), because the GitHub mobile app does not show the approval button. You do everything else and verify the signer is `CN=Amer AI Store, O=Amer AI Store, C=JO`, the Release exists and the `latest/download/amer-store.apk` link works.
+
 ## Per-conversation repository selection and signing safety
 
 - At the beginning of each new GitHub-related task, resolve the exact `owner/repo` from the current request; do not silently reuse this repository for a different task. Read the selected repository's own `AGENTS.md`, its workflows, security requirements and latest evidence.

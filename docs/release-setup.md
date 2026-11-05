@@ -15,7 +15,7 @@
 >
 > **كيف تعرف أن مفتاح التوقيع الثابت غير مضبوط؟** يظهر في سجل خطوة «Build, sign and verify the release APK» السطر `Signer #1 certificate DN: CN=Amer Store CI`، وهو المفتاح المؤقت الذي يولّده الـ workflow، مع تحذير «No upload key for this run». بعد ضبط الأسرار، يظهر اسم شهادتك أنت.
 >
-> **للنشر بعد ضبط البوابات:** ضع في `RELEASE_APPROVED_SHA` آخر commit على `main`، ثم شغّل **Actions → Release Android app → Run workflow** على `main`، ووافق على بيئة `production`.
+> **للنشر بعد ضبط البوابات:** ضع في `RELEASE_APPROVED_SHA` آخر commit على `main`، ثم شغّل **Actions → Release Android app → Run workflow** على `main`، ووافق على بيئة `production`. الخطوات المختصرة لكل نسخة، مع الأخطاء الشائعة، في [release-runbook.md](release-runbook.md).
 
 ## تطبيق Android (`.github/workflows/release.yml`)
 يُنشر الآن التطبيق المدموج في `luqta-mobile/` (Expo وReact Native)، بدل تطبيق Kotlin القديم في `app/`.
