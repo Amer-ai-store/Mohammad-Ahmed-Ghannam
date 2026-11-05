@@ -69,6 +69,22 @@ const png = (rgb, size = 48) => ({ name: 'photo.png', mimeType: 'image/png', buf
 const tab = (page, name) => page.getByRole('tab', { name, exact: true }).filter({ visible: true }).first();
 const toast = (page, text) => page.locator('[data-testid="toast"]').filter({ hasText: text, visible: true }).first().waitFor();
 
+e2e('guest passport keeps local choices and remains usable without a commerce login', async ({ open }) => {
+  const page = await open(null, '/passport');
+  await id(page, 'local-passport').waitFor();
+  await id(page, 'passport-name').fill('Orbit Shopper');
+  await tap(page, 'passport-region-GB');
+  await page.locator('[data-testid^="passport-interest-"]').first().click();
+  await tap(page, 'passport-save');
+  await id(page, 'passport-notice').getByText('حُفظت اختياراتك على جهازك.', { exact: false }).waitFor();
+  await go(page, '/');
+  await id(page, 'home-passport').waitFor();
+  await see(page, 'أهلًا Orbit');
+  await go(page, '/passport');
+  assert.equal(await id(page, 'passport-name').inputValue(), 'Orbit Shopper');
+  await page.locator('[data-testid^="passport-interest-"][aria-checked="true"], [data-testid^="passport-interest-"][aria-selected="true"]').first().waitFor();
+});
+
 // =====================================================================================================
 // Accounts and privacy
 // =====================================================================================================
