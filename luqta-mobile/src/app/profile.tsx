@@ -1,7 +1,8 @@
 import React from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, type Href } from "expo-router";
-import { Bell, Bot, ChartPie, Download, Gift, Globe, Headset, CircleQuestionMark as HelpCircle, LayoutDashboard, ListChecks, LogOut, MapPin, Package, PiggyBank, Refrigerator, Server, Share2, ShieldCheck, Store, Trash, Truck, UserRound, Wallet } from "lucide-react-native";
+import { Bell, Bot, ChartPie, Download, Gift, Globe, Globe2, Sparkles, Headset, CircleQuestionMark as HelpCircle, LayoutDashboard, ListChecks, LogOut, MapPin, Package, PiggyBank, Refrigerator, Server, Share2, ShieldCheck, Store, Trash, Truck, UserRound, Wallet } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Mascot } from "../components/Robot";
 import { Badge, Button, Card, ListRow, Row, Txt } from "../components/ui";
@@ -30,12 +31,21 @@ export default function ProfileScreen() {
   const icon = (I: typeof Bell) => <I size={19} color={t.primary} />;
   if (!user) return (
     <Shell title="حسابي" subtitle="سجّل الدخول لحفظ عناوينك وطلباتك ونقاطك" testID="profile">
+      <LinearGradient colors={["#11082C", "#4335A2", "#8655CE"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 28, padding: 22, gap: 10, marginBottom: 14 }}>
+        <Row><Globe2 size={21} color="#BFF4EA" /><Txt weight="bold" style={{ color: "#BFF4EA", letterSpacing: 2 }}>LUQTA UNIVERSE</Txt><Sparkles size={20} color="#FFDC9C" /></Row>
+        <Txt weight="extra" style={{ color: "#FFFFFF", fontSize: 25 }}>{tr("ملف شخصي يتجاوز الحدود")}</Txt>
+        <Txt style={{ color: "#E6E0FF", lineHeight: 23 }}>{tr("استكشف منتجات العالم وخصّص تفضيلاتك محليًا، دون اشتراط خادم للتصفح.")}</Txt>
+        <Pressable testID="profile-passport-guest" accessibilityRole="button" onPress={go("/passport")} style={{ backgroundColor: "#FFFFFF", borderRadius: 15, padding: 13, marginTop: 6 }}>
+          <Txt weight="bold" style={{ color: "#34237E", textAlign: "center" }}>{tr("افتح جواز التسوق العالمي ✦")}</Txt>
+        </Pressable>
+      </LinearGradient>
       <Card style={{ alignItems: "center", gap: 12 }}>
         <Mascot size={120} motion="wave" bubble="top" message="أهلًا! خلّينا نتعرّف" interactive={false} />
         <Button title={tr("تسجيل الدخول")} onPress={() => router.push("/login")} style={{ alignSelf: "stretch" }} />
         <Button title={tr("إنشاء حساب")} secondary onPress={() => router.push("/register")} style={{ alignSelf: "stretch" }} />
       </Card>
       <Card style={{ marginTop: 12 }}>
+        <ListRow icon={icon(Globe2)} title="جواز التسوق العالمي" detail="منطقة واسم عرض واهتمامات على الجهاز" onPress={go("/passport")} />
         <ListRow icon={icon(Globe)} title="اللغة والمظهر" onPress={go("/appearance")} />
         <ListRow icon={icon(Bot)} title="شخصيتي وحركتها" onPress={go("/robot")} />
         <ListRow icon={icon(Server)} title="اتصال الخادم" onPress={go("/connection")} />
@@ -47,6 +57,20 @@ export default function ProfileScreen() {
   const emoji = avatar.startsWith("emoji:") ? avatar.slice(6) : "";
   return (
     <Shell title="حسابي" testID="profile">
+      <LinearGradient colors={["#11082C", "#39278B", "#A05FCB"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 28, padding: 22, gap: 12, marginBottom: 14 }}>
+        <Row style={{ justifyContent: "space-between" }}>
+          <Row gap={8}><Globe2 size={20} color="#BFF4EA" /><Txt weight="bold" style={{ color: "#BFF4EA", letterSpacing: 2 }}>LUQTA UNIVERSE</Txt></Row>
+          <Sparkles size={24} color="#FBE29B" />
+        </Row>
+        <Txt weight="extra" style={{ color: "#FFFFFF", fontSize: 27 }}>{tr("مرحبًا بك في عالمك، {name}", { name: user.name.split(" ")[0] })}</Txt>
+        <Txt style={{ color: "#E4DEFC", lineHeight: 23 }}>{tr("هويتك ومتجرك وأسلوبك في مكان واحد. بيانات حسابك الحقيقية محمية في خدمة التجارة.")}</Txt>
+        <Row wrap gap={9}>
+          {([{ title: "طلباتي", path: "/orders" }, { title: "مكافآتي", path: "/rewards" }, { title: "جوازي", path: "/passport" }] as const).map((action) =>
+            <Pressable key={action.path} accessibilityRole="button" onPress={go(action.path)} style={{ paddingHorizontal: 15, paddingVertical: 11, backgroundColor: "#FFFFFF22", borderColor: "#FFFFFF50", borderWidth: 1, borderRadius: 16 }}>
+              <Txt weight="bold" style={{ color: "#FFFFFF", fontSize: 13 }}>{tr(action.title)}</Txt>
+            </Pressable>)}
+        </Row>
+      </LinearGradient>
       <Card tone="primary" style={{ gap: 12 }} testID="profile-card">
         <Row>
           <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: t.paper, alignItems: "center", justifyContent: "center" }}>
@@ -76,6 +100,7 @@ export default function ProfileScreen() {
       </Card>
       <Card style={{ marginTop: 12 }}>
         <ListRow testID="menu-account" icon={icon(MapPin)} title="بياناتي وعناويني" detail="الاسم والهاتف والعناوين" onPress={go("/account")} />
+        <ListRow testID="menu-passport" icon={icon(Globe2)} title="جوازي العالمي" detail="اهتماماتي ومنطقتي — تُحفظ على الجهاز" onPress={go("/passport")} />
         <ListRow testID="menu-robot" icon={icon(Bot)} title="شخصيتي وحركتها" detail="لون وملابس وحركات لُقطي" onPress={go("/robot")} />
         <ListRow testID="menu-appearance" icon={icon(Globe)} title="اللغة والمظهر" detail="عربي/English، نهاري/ليلي، العملة" onPress={go("/appearance")} />
         <ListRow testID="menu-notifications" icon={icon(Bell)} title="الإشعارات" detail={store.unreadCount ? tr("{n} غير مقروءة", { n: store.unreadCount }) : undefined} onPress={go("/notifications")} />
