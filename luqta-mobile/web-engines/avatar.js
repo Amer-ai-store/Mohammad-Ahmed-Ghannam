@@ -528,12 +528,12 @@
   // A still picture of one pose with the current look, for the small spots that show a picture instead of the live
   // view. The pose is taken at a moment that reads well (mid-stride, top of the jump) and fully settled.
   var SNAP_AT = { walk: 0.25, run: 0.16, cart: 0.29, jump: 0.92, dance: 0.26, wave: 0.2, come: 0.22, wake: 2.6 };
+  // The poses a snapshot may use, looked up by name in a Map of the engine's own actions: a received name can only
+  // select one of them, never an inherited property such as __proto__.
+  var POSES = new Map(Object.keys(ACTIONS).map(function (name) { return [name, ACTIONS[name]]; }));
   function snapshot(action, id) {
-    // Only the engine's own actions run, never inherited names such as __proto__ (same guard as the animation loop).
-    var poseFn = (Object.prototype.hasOwnProperty.call(ACTIONS, action) && typeof ACTIONS[action] === 'function')
-      ? ACTIONS[action]
-      : null;
-    if (!poseFn) { post({ type: 'error', id: id, code: 'UNKNOWN_ACTION', action: action }); return; }
+    var poseFn = POSES.get(action);
+    if (typeof poseFn !== 'function') { post({ type: 'error', id: id, code: 'UNKNOWN_ACTION', action: action }); return; }
     if (facePending) { waitingShots.push({ action: action, id: id }); return; }
     var live = state.action;
     var props = function (a) { cart.visible = a === 'cart'; pillow.visible = a === 'sleep'; zzz.forEach(function (z) { z.visible = a === 'sleep'; }); };

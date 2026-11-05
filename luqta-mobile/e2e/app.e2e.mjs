@@ -1080,9 +1080,23 @@ e2e('L087 put my photo on the character\'s face with consent, kept on the device
   assert.ok(await page.evaluate(() => (localStorage.getItem('luqta-robot-face-v1') || '').startsWith('data:image/')));
   assert.equal((await api('GET', '/me/preferences', undefined, user.token)).preferences.robot.faceConsent, true);
   assert.deepEqual(uploads, [], 'the photo is never uploaded');
+  // The small header character is drawn with the photo too, and that picture stays on the device.
+  const cache = () => page.evaluate(() => JSON.parse(localStorage.getItem('luqta-character-snapshots-v1') || 'null'));
+  const header = page.locator('[data-testid="mascot-character"]').filter({ visible: true }).first();
+  await go(page, '/rewards');
+  await until(async () => (await header.getAttribute('data-poster')) === 'snapshot', 30000, 'a still picture drawn with the photo');
+  assert.equal((await cache())?.withFace, true);
+  assert.deepEqual(uploads, [], 'the drawn picture is never uploaded either');
+  await go(page, '/robot-create');
+  const again = await engineFrame(page, '[data-testid="robot-create"]');
+  await until(async () => (await probe(again))?.photoFace === true, 10000, 'the photo is back after reopening');
   await tap(page, 'face-delete');
-  await until(async () => (await probe(engine))?.photoFace === false, 5000, 'photo removed from the character');
+  await until(async () => (await probe(again))?.photoFace === false, 5000, 'photo removed from the character');
   assert.equal(await page.evaluate(() => localStorage.getItem('luqta-robot-face-v1')), null);
+  // Deleting the photo also deletes the pictures drawn with it; the header is redrawn without the face.
+  assert.equal(await cache(), null, 'no stored picture keeps the face');
+  await go(page, '/rewards');
+  await until(async () => (await header.getAttribute('data-poster')) === 'snapshot' && (await cache())?.withFace === false, 30000, 'a new picture without the face');
   await until(async () => (await api('GET', '/me/preferences', undefined, user.token)).preferences.robot.faceConsent === false, 5000, 'consent withdrawn');
 });
 

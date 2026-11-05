@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-05T08:20:15.379Z",
+ "generatedAt": "2026-11-05T13:46:34.420Z",
  "summary": {
   "total": 241,
   "passed": 241,
@@ -7,7 +7,7 @@
  },
  "suites": {
   "server": {
-   "generatedAt": "2026-11-05T08:17:37.365Z",
+   "generatedAt": "2026-11-05T13:43:30.574Z",
    "tests": [
     {
      "name": "one-time recovery codes reset passwords and revoke every prior session",
@@ -1408,7 +1408,7 @@
    ]
   },
   "app-e2e": {
-   "generatedAt": "2026-11-05T08:20:15.379Z",
+   "generatedAt": "2026-11-05T13:46:34.420Z",
    "tests": [
     {
      "name": "L001 L002 register in the app, keep the session across reloads, sign out and sign in again",
@@ -1900,7 +1900,7 @@
    ]
   },
   "dashboard-e2e": {
-   "generatedAt": "2026-11-05T08:20:15.379Z",
+   "generatedAt": "2026-11-05T13:46:34.420Z",
    "tests": [
     {
      "name": "L001 L101 the admin signs in to the dashboard, sees live KPIs and the latest orders, signs out and back in",

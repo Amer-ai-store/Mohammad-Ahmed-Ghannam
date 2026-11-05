@@ -1,14 +1,17 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CHARACTER_SNAPSHOTS_KEY } from "../../lib/characterCache";
+import { useRobot } from "../../lib/robot";
 import { avatarHtml, type AvatarAction, type AvatarProfile } from "./characterHtml";
 import { CharacterFrame } from "./CharacterFrame";
 import type { EngineMessage, FrameHandle } from "./CharacterFrame.types";
 
 // Still pictures of the shopper's own character. Small spots (headers, chat avatars, the moment before the live 3D
 // view is ready) show a picture instead of the 3D view. These pictures are drawn by the same 3D engine with the
-// saved look, once per look and pose, in a hidden view that closes when it is done. They stay on this device only.
-const CACHE_KEY = "luqta-character-snapshots-v1";
+// saved look, once per look and pose, in a hidden view that closes when it is done. They stay on this device only,
+// and deleting the face photo deletes the pictures drawn with it (lib/robot.tsx removes the cache with the photo).
+const CACHE_KEY = CHARACTER_SNAPSHOTS_KEY;
 // Each picture is a PNG of about 30–60 KB; a look rarely needs more than a handful of poses.
 const MAX_POSES = 12;
 const TIMEOUT_MS = 12_000;
@@ -25,8 +28,10 @@ export function lookId(profileKey: string) {
   return `${profileKey.length.toString(36)}-${(hash >>> 0).toString(36)}`;
 }
 
-type Shots = { look: string; images: Partial<Record<AvatarAction, string>> };
+type Shots = { look: string; withFace?: boolean; images: Partial<Record<AvatarAction, string>> };
+const hasFace = (profileKey: string) => profileKey.includes('"faceDataUrl"');
 type Api = { picture: (profileKey: string, action: AvatarAction) => string | undefined; request: (profileKey: string, action: AvatarAction) => void };
+const NO_SHOTS: Shots = { look: "", images: {} };
 const Context = createContext<Api>({ picture: () => undefined, request: () => {} });
 
 export function useCharacterSnapshots() {
@@ -34,7 +39,11 @@ export function useCharacterSnapshots() {
 }
 
 export function CharacterSnapshotProvider({ children }: { children: React.ReactNode }) {
-  const [shots, setShots] = useState<Shots>({ look: "", images: {} });
+  const robot = useRobot();
+  // Once the photo is deleted, pictures and drawings that include the face are no longer used.
+  const faceGone = robot.hydrated && !robot.face;
+  const [stored, setShots] = useState<Shots>({ look: "", images: {} });
+  const shots = faceGone && stored.withFace ? NO_SHOTS : stored;
   const [job, setJob] = useState<{ look: string; profileKey: string; actions: AvatarAction[] } | null>(null);
   const failed = useRef(new Set<string>());
   // Nothing is drawn before the saved pictures are read, so a picture kept on the device is never drawn twice.
@@ -66,12 +75,12 @@ export function CharacterSnapshotProvider({ children }: { children: React.ReactN
     });
   }, [loaded]);
 
-  const store = useCallback((look: string, action: AvatarAction, image: string) => {
+  const store = useCallback((look: string, withFace: boolean, action: AvatarAction, image: string) => {
     setShots((now) => {
       const images = now.look === look ? { ...now.images } : {};
       images[action] = image;
       const kept = Object.fromEntries(Object.entries(images).slice(-MAX_POSES)) as Shots["images"];
-      const next = { look, images: kept };
+      const next = { look, withFace, images: kept };
       AsyncStorage.setItem(CACHE_KEY, JSON.stringify(next)).catch(() => {});
       return next;
     });
@@ -86,14 +95,16 @@ export function CharacterSnapshotProvider({ children }: { children: React.ReactN
     });
   }, []);
 
-  // Poses already drawn for this look are not drawn again; with nothing left, the hidden view closes.
-  const pending = job ? job.actions.filter((action) => !(shots.look === job.look && shots.images[action])) : [];
+  // Poses already drawn for this look are not drawn again; with nothing left, the hidden view closes. A drawing of a
+  // look with the face is dropped once the photo is deleted.
+  const active = job && !(faceGone && hasFace(job.profileKey)) ? job : null;
+  const pending = active ? active.actions.filter((action) => !(shots.look === active.look && shots.images[action])) : [];
 
   const value = useMemo(() => ({ picture, request }), [picture, request]);
   return (
     <Context.Provider value={value}>
       {children}
-      {job && pending.length && !webglUnavailable ? <Snapshotter key={job.look} look={job.look} profileKey={job.profileKey} actions={pending} onPicture={store} onFinish={finish} /> : null}
+      {active && pending.length && !webglUnavailable ? <Snapshotter key={active.look} look={active.look} profileKey={active.profileKey} actions={pending} onPicture={store} onFinish={finish} /> : null}
     </Context.Provider>
   );
 }
@@ -101,7 +112,7 @@ export function CharacterSnapshotProvider({ children }: { children: React.ReactN
 // The hidden view: loads the engine with the look, holds it still, and asks for one picture per pose in turn.
 function Snapshotter({ look, profileKey, actions, onPicture, onFinish }: {
   look: string; profileKey: string; actions: AvatarAction[];
-  onPicture: (look: string, action: AvatarAction, image: string) => void;
+  onPicture: (look: string, withFace: boolean, action: AvatarAction, image: string) => void;
   onFinish: (look: string, done: AvatarAction[], gaveUp: AvatarAction[]) => void;
 }) {
   const frame = useRef<FrameHandle>(null);
@@ -130,13 +141,13 @@ function Snapshotter({ look, profileKey, actions, onPicture, onFinish }: {
     } else if (message.type === "snapshot" && typeof message.dataUrl === "string" && typeof message.action === "string") {
       const action = message.action as AvatarAction;
       asked.current = null;
-      onPicture(look, action, message.dataUrl);
+      onPicture(look, hasFace(profileKey), action, message.dataUrl);
       onFinish(look, [action], []);
     } else if (message.type === "error") {
       if (message.code === "NO_WEBGL" || message.code === "NO_THREE") { markWebglMissing(); onFinish(look, [], latest.current); }
       else if (message.code === "SNAPSHOT" || (message.code === "UNKNOWN_ACTION" && asked.current)) { const action = asked.current; asked.current = null; if (action) onFinish(look, [], [action]); }
     }
-  }, [look, next, onFinish, onPicture]);
+  }, [look, next, onFinish, onPicture, profileKey]);
   return (
     <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden aria-hidden
       style={{ position: "absolute", left: 0, bottom: 0, width: 160, height: 200, opacity: 0 }} testID="character-snapshotter">

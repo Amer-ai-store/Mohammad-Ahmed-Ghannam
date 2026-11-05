@@ -57,9 +57,12 @@ export function Robot({ size = 120, motion = "idle", message, look, face, reduce
   const snapshots = useCharacterSnapshots();
   const picture = snapshots.picture(profileKey, motion as AvatarAction);
   const { request } = snapshots;
+  // Only the focused screen asks, once the saved look is read: a preview left on a hidden screen with an unsaved look
+  // would otherwise replace the saved look's pictures.
+  const lookReady = robot.hydrated;
   useEffect(() => {
-    if (showPoster && !want3d && !picture && prefs.use3d !== false && !webglMissing()) request(profileKey, motion as AvatarAction);
-  }, [showPoster, want3d, picture, prefs.use3d, profileKey, motion, request]);
+    if (focused && lookReady && showPoster && !want3d && !picture && prefs.use3d !== false && !webglMissing()) request(profileKey, motion as AvatarAction);
+  }, [focused, lookReady, showPoster, want3d, picture, prefs.use3d, profileKey, motion, request]);
   const [bob] = useState(() => new Animated.Value(0));
   useEffect(() => {
     bob.stopAnimation();
