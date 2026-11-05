@@ -81,7 +81,11 @@ e2e('guest passport keeps local choices and remains usable without a commerce lo
   await id(page, 'home-passport').waitFor();
   await see(page, 'أهلًا Orbit');
   await go(page, '/passport');
-  assert.equal(await id(page, 'passport-name').inputValue(), 'Orbit Shopper');
+  // The saved AsyncStorage preferences hydrate after the screen first renders.
+  // Do not mistake that initial empty field for lost data; wait for the stored value.
+  await until(async () => (await id(page, 'passport-name').inputValue()) === 'Orbit Shopper', 10000, 'passport saved name restored');
+  await page.reload();
+  await until(async () => (await id(page, 'passport-name').inputValue()) === 'Orbit Shopper', 10000, 'passport survives a full browser reload');
   await page.locator('[data-testid^="passport-interest-"][aria-checked="true"], [data-testid^="passport-interest-"][aria-selected="true"]').first().waitFor();
 });
 
