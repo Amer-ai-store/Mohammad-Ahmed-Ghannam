@@ -69,6 +69,7 @@ https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/releases/latest/download
 2. احفظه سرًّا باسم `RELEASE_SETUP_TOKEN` من **Settings → Secrets and variables → Actions → New repository secret**.
 3. شغّل **Actions → Release signing key setup (one time) → Run workflow** على `main`.
 4. بعد نجاحه احذف السر `RELEASE_SETUP_TOKEN`، وألغِ الرمز من صفحة الرموز.
+   لحذف السر دون لمس صفحة الأسرار، شغّل **Actions → Release setup token cleanup → Run workflow** على `main`. يحذف السر `RELEASE_SETUP_TOKEN` وحده، ولا يعمل إلا بعد وجود الأسرار الثلاثة `SIGNING_*`. يبقى الرمز نفسه صالحًا حتى تاريخ انتهائه، لكن لا يستطيع أي workflow استعماله بعد حذف السر.
 
 ملاحظات:
 - **التشغيل مرة واحدة فقط:** لا تشغّله تلقائيًا مع كل طلب أو PR أو محادثة، ولا تنسخه إلى مستودع غير مرتبط بالتطبيق.
