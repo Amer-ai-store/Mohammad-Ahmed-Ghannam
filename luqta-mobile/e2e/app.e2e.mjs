@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { startStack, go, id, see, tap, fill, field, until, noErrors, password, button } from './harness.mjs';
 import { productNumber } from '../server/modules/sync.mjs';
 import { solidPng } from '../server/testkit.mjs';
+import { staffStrings } from '../scripts/staff-strings.mjs';
 
 const ARTIFACTS = fileURLToPath(new URL('./artifacts/', import.meta.url));
 let stack;
@@ -1257,4 +1258,77 @@ e2e('L123 L124 L125 day and night modes, English with the page direction flipped
   await go(page, '/appearance');
   await page.getByRole('radio', { name: 'العربية' }).click();
   await see(page, 'اللغة والمظهر');
+});
+
+// L124 for the staff screens: with English chosen, the admin dashboard (every section), project management, sync,
+// the merchant dashboard and the driver screen show no staff text left in Arabic. Data such as product and customer
+// names stays as it was entered.
+e2e('L124 the staff screens in English: admin dashboard, project, sync, merchant and driver', async ({ open }) => {
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const source = readFileSync(`${root}src/lib/i18n-en.ts`, 'utf8');
+  const EN = JSON.parse(source.slice(source.indexOf('{'), source.lastIndexOf('}') + 1).replace(/,\s*}$/, '}'));
+  // Phrases of 8+ letters without placeholders, compared with whole pieces of the page's text (lines, and the parts
+  // between "·" separators): data such as the imported product «تمر من لوحة القيادة» may contain a phrase.
+  const phrases = [...staffStrings(root).strings.keys()].filter((k) => k.length >= 8 && !k.includes('{') && !k.includes('\n'));
+  const pieces = async (page) => new Set((await page.evaluate(() => document.body.innerText)).split('\n').flatMap((line) => line.split(' · ')).map((piece) => piece.trim()).filter(Boolean));
+  const english = async (user, path) => {
+    const page = await open(user);
+    await page.context().addInitScript(() => { try { window.localStorage.setItem('luqta-language-v1', 'en'); } catch {} });
+    await go(page, path);
+    return page;
+  };
+  const stillArabic = async (page, where) => {
+    const shown = await pieces(page);
+    assert.deepEqual(phrases.filter((phrase) => shown.has(phrase)), [], `${where}: staff text still in Arabic`);
+  };
+
+  // Control: in Arabic, the same check does find the staff text, so a pass in English means it was translated.
+  const arabic = await open(stack.admin, '/admin');
+  await id(arabic, 'admin-overview').waitFor();
+  await see(arabic, 'مبيعات اليوم');
+  const shown = await pieces(arabic);
+  assert.ok(phrases.filter((phrase) => shown.has(phrase)).length >= 3, 'the check finds Arabic staff text when Arabic is chosen');
+
+  const admin = await english(stack.admin, '/admin');
+  await see(admin, 'Sales, orders, inventory and sync in one place');
+  await id(admin, 'admin-overview').waitFor();
+  await see(admin, EN['مبيعات اليوم']);
+  await stillArabic(admin, 'admin overview');
+  await tab(admin, 'Products').click();
+  await see(admin, EN['إضافة صنف']);
+  await stillArabic(admin, 'admin products');
+  await tab(admin, 'Orders').click();
+  await see(admin, EN['ملاحظة قرار الإرجاع']);
+  await stillArabic(admin, 'admin orders');
+  await tab(admin, 'More').click();
+  for (const label of ['المخزون والاستيراد', 'استيراد العروض', 'تصميم المتجر', 'المرتجعات', 'العروض', 'المستخدمون والمحفظة', 'دعم العملاء', 'قناة الوكلاء', 'الإعدادات', 'سجل العمليات']) {
+    await button(admin, EN[label]).click();
+    await until(async () => (await button(admin, EN[label]).getAttribute('aria-selected')) === 'true', 5000, `${EN[label]} selected`);
+    await admin.waitForTimeout(400);
+    await stillArabic(admin, `admin: ${EN[label]}`);
+  }
+  // A typing mistake in a number field is explained in English too.
+  await button(admin, EN['العروض']).click();
+  await admin.getByLabel(EN['قيمة الخصم']).fill('abc');
+  await button(admin, EN['حفظ رمز الخصم']).click();
+  await see(admin, `Enter a valid number for ${EN['قيمة الخصم']}.`);
+
+  for (const [path, title] of [['/admin/project', 'إدارة المشروع'], ['/admin/sync', 'المخزون والمزامنة']]) {
+    await go(admin, path);
+    await see(admin, EN[title]);
+    await admin.waitForTimeout(400);
+    await stillArabic(admin, path);
+  }
+
+  const merchant = await stack.register('تاجر إنجليزي');
+  const { vendor } = await asAdmin('POST', '/admin/vendors', { name: 'Corner Bakery', commission: 8 });
+  await asAdmin('POST', `/admin/vendors/${vendor.id}/members`, { email: merchant.user.email, role: 'owner' });
+  const shop = await english(merchant, '/vendor');
+  await id(shop, 'vendor-summary').waitFor();
+  await see(shop, EN['ملخص المبيعات']);
+  await stillArabic(shop, 'merchant dashboard');
+
+  const road = await english(await stack.ensureDriver(), '/driver');
+  await see(road, EN['طلبات التوصيل المعيّنة']);
+  await stillArabic(road, 'driver screen');
 });

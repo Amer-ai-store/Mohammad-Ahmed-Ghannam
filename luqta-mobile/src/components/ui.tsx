@@ -17,13 +17,16 @@ export function Button({ title, onPress, secondary = false, disabled = false, bu
   title: string; onPress: () => void; secondary?: boolean; disabled?: boolean; busy?: boolean; style?: ViewStyle; icon?: React.ReactNode; tone?: "accent" | "primary" | "danger"; testID?: string;
 }) {
   const { colors: t } = useTheme();
+  const { t: tr } = useI18n();
   const s = useThemedStyles(makeStyles);
+  // Titles go through the translator here, so staff screens can pass their Arabic text as-is.
+  const label = tr(title);
   const background = secondary ? t.secondary : tone === "primary" ? t.primary : tone === "danger" ? t.danger : t.orange;
   const color = secondary ? t.ink : tone === "primary" ? t.onPrimary : t.onAccent;
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={title} aria-disabled={disabled || busy} aria-busy={busy} disabled={disabled || busy} onPress={onPress}
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} aria-disabled={disabled || busy} aria-busy={busy} disabled={disabled || busy} onPress={onPress}
       style={({ pressed }) => [s.button, { backgroundColor: background, opacity: disabled || busy ? 0.5 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, style]}>
-      {busy ? <ActivityIndicator color={color} /> : <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>{icon}<Txt weight="bold" style={{ color, textAlign: "center", fontSize: 16 }}>{title}</Txt></View>}
+      {busy ? <ActivityIndicator color={color} /> : <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>{icon}<Txt weight="bold" style={{ color, textAlign: "center", fontSize: 16 }}>{label}</Txt></View>}
     </Pressable>
   );
 }

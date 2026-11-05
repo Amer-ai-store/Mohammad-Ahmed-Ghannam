@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-01T15:37:02.715Z",
+ "generatedAt": "2026-11-05T05:43:40.531Z",
  "summary": {
-  "total": 225,
-  "passed": 225,
+  "total": 240,
+  "passed": 240,
   "failed": 0
  },
  "suites": {
   "server": {
-   "generatedAt": "2026-11-01T15:13:28.852Z",
+   "generatedAt": "2026-11-05T05:41:21.888Z",
    "tests": [
     {
      "name": "one-time recovery codes reset passwords and revoke every prior session",
@@ -259,6 +259,34 @@
      "passed": true,
      "features": [],
      "file": "server/commerce.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "P1: vendor cannot attach a variant to store-owned or foreign vendor products",
+     "passed": true,
+     "features": [],
+     "file": "server/critical-regressions.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "P2: a flash deal rejects an order exceeding the remaining allocation",
+     "passed": true,
+     "features": [],
+     "file": "server/critical-regressions.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "P2: approved partial return restores the originating branch stock",
+     "passed": true,
+     "features": [],
+     "file": "server/critical-regressions.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "P2: deleting an account removes delivery notes and gift recipient data",
+     "passed": true,
+     "features": [],
+     "file": "server/critical-regressions.test.mjs",
      "suite": "server"
     },
     {
@@ -929,6 +957,33 @@
      "suite": "server"
     },
     {
+     "name": "L118 AAS accepts exported order lines with stable numeric product IDs and no customer PII",
+     "passed": true,
+     "features": [
+      "L118"
+     ],
+     "file": "server/features.sync.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "L118 rejects incomplete AAS receipts rather than reporting a false successful export",
+     "passed": true,
+     "features": [
+      "L118"
+     ],
+     "file": "server/features.sync.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "L121 resolves actual AAS numeric catalog IDs for preview without inserting duplicates",
+     "passed": true,
+     "features": [
+      "L121"
+     ],
+     "file": "server/features.sync.test.mjs",
+     "suite": "server"
+    },
+    {
      "name": "L119 the bridge snapshot respects limits and never contains sensitive columns",
      "passed": true,
      "features": [
@@ -1203,7 +1258,48 @@
      "suite": "server"
     },
     {
+     "name": "every bundled design image exists and is a real PNG or JPEG",
+     "passed": true,
+     "features": [],
+     "file": "src/lib/designAssets.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "L018 product images and extra gallery views map to products the catalog sells",
+     "passed": true,
+     "features": [
+      "L018"
+     ],
+     "file": "src/lib/designAssets.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "L017 the home screen departments from the mockups are real categories, each with its illustration",
+     "passed": true,
+     "features": [
+      "L017"
+     ],
+     "file": "src/lib/designAssets.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "mockup cut-outs are RGBA PNGs, so they sit cleanly on the white product base",
+     "passed": true,
+     "features": [],
+     "file": "src/lib/designAssets.test.mjs",
+     "suite": "server"
+    },
+    {
      "name": "L124 every customer-facing string sent through the translator has an English version",
+     "passed": true,
+     "features": [
+      "L124"
+     ],
+     "file": "src/lib/i18n.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "L124 every staff-screen string (admin, merchant, driver, command center) has an English version",
      "passed": true,
      "features": [
       "L124"
@@ -1291,11 +1387,28 @@
      ],
      "file": "src/lib/viewer3d.test.mjs",
      "suite": "server"
+    },
+    {
+     "name": "L079 L088 the packed 3D engines are byte-for-byte the sources in web-engines/",
+     "passed": true,
+     "features": [
+      "L079",
+      "L088"
+     ],
+     "file": "src/lib/webEngines.test.mjs",
+     "suite": "server"
+    },
+    {
+     "name": "the avatar engine only runs its own actions, never inherited properties such as __proto__",
+     "passed": true,
+     "features": [],
+     "file": "src/lib/webEngines.test.mjs",
+     "suite": "server"
     }
    ]
   },
   "app-e2e": {
-   "generatedAt": "2026-11-01T15:15:34.897Z",
+   "generatedAt": "2026-11-05T05:43:40.531Z",
    "tests": [
     {
      "name": "L001 L002 register in the app, keep the session across reloads, sign out and sign in again",
@@ -1366,7 +1479,7 @@
      "suite": "app-e2e"
     },
     {
-     "name": "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed",
+     "name": "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed",
      "passed": true,
      "features": [
       "L013",
@@ -1489,7 +1602,7 @@
      "suite": "app-e2e"
     },
     {
-     "name": "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the robot reacting",
+     "name": "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the character reacting",
      "passed": true,
      "features": [
       "L035",
@@ -1623,7 +1736,7 @@
      "suite": "app-e2e"
     },
     {
-     "name": "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the robot speaking",
+     "name": "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the character speaking",
      "passed": true,
      "features": [
       "L071",
@@ -1689,7 +1802,7 @@
      "suite": "app-e2e"
     },
     {
-     "name": "L087 put my photo on the robot screen with consent, kept on the device only, and delete it",
+     "name": "L087 put my photo on the character's face with consent, kept on the device only, and delete it",
      "passed": true,
      "features": [
       "L087"
@@ -1765,11 +1878,20 @@
      ],
      "file": "e2e/app.e2e.mjs",
      "suite": "app-e2e"
+    },
+    {
+     "name": "L124 the staff screens in English: admin dashboard, project, sync, merchant and driver",
+     "passed": true,
+     "features": [
+      "L124"
+     ],
+     "file": "e2e/app.e2e.mjs",
+     "suite": "app-e2e"
     }
    ]
   },
   "dashboard-e2e": {
-   "generatedAt": "2026-11-01T15:37:02.715Z",
+   "generatedAt": "2026-11-05T05:43:40.531Z",
    "tests": [
     {
      "name": "L001 L101 the admin signs in to the dashboard, sees live KPIs and the latest orders, signs out and back in",
@@ -2275,6 +2397,34 @@
    "passed": true,
    "features": [],
    "file": "server/commerce.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "P1: vendor cannot attach a variant to store-owned or foreign vendor products",
+   "passed": true,
+   "features": [],
+   "file": "server/critical-regressions.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "P2: a flash deal rejects an order exceeding the remaining allocation",
+   "passed": true,
+   "features": [],
+   "file": "server/critical-regressions.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "P2: approved partial return restores the originating branch stock",
+   "passed": true,
+   "features": [],
+   "file": "server/critical-regressions.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "P2: deleting an account removes delivery notes and gift recipient data",
+   "passed": true,
+   "features": [],
+   "file": "server/critical-regressions.test.mjs",
    "suite": "server"
   },
   {
@@ -2945,6 +3095,33 @@
    "suite": "server"
   },
   {
+   "name": "L118 AAS accepts exported order lines with stable numeric product IDs and no customer PII",
+   "passed": true,
+   "features": [
+    "L118"
+   ],
+   "file": "server/features.sync.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "L118 rejects incomplete AAS receipts rather than reporting a false successful export",
+   "passed": true,
+   "features": [
+    "L118"
+   ],
+   "file": "server/features.sync.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "L121 resolves actual AAS numeric catalog IDs for preview without inserting duplicates",
+   "passed": true,
+   "features": [
+    "L121"
+   ],
+   "file": "server/features.sync.test.mjs",
+   "suite": "server"
+  },
+  {
    "name": "L119 the bridge snapshot respects limits and never contains sensitive columns",
    "passed": true,
    "features": [
@@ -3219,7 +3396,48 @@
    "suite": "server"
   },
   {
+   "name": "every bundled design image exists and is a real PNG or JPEG",
+   "passed": true,
+   "features": [],
+   "file": "src/lib/designAssets.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "L018 product images and extra gallery views map to products the catalog sells",
+   "passed": true,
+   "features": [
+    "L018"
+   ],
+   "file": "src/lib/designAssets.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "L017 the home screen departments from the mockups are real categories, each with its illustration",
+   "passed": true,
+   "features": [
+    "L017"
+   ],
+   "file": "src/lib/designAssets.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "mockup cut-outs are RGBA PNGs, so they sit cleanly on the white product base",
+   "passed": true,
+   "features": [],
+   "file": "src/lib/designAssets.test.mjs",
+   "suite": "server"
+  },
+  {
    "name": "L124 every customer-facing string sent through the translator has an English version",
+   "passed": true,
+   "features": [
+    "L124"
+   ],
+   "file": "src/lib/i18n.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "L124 every staff-screen string (admin, merchant, driver, command center) has an English version",
    "passed": true,
    "features": [
     "L124"
@@ -3309,6 +3527,23 @@
    "suite": "server"
   },
   {
+   "name": "L079 L088 the packed 3D engines are byte-for-byte the sources in web-engines/",
+   "passed": true,
+   "features": [
+    "L079",
+    "L088"
+   ],
+   "file": "src/lib/webEngines.test.mjs",
+   "suite": "server"
+  },
+  {
+   "name": "the avatar engine only runs its own actions, never inherited properties such as __proto__",
+   "passed": true,
+   "features": [],
+   "file": "src/lib/webEngines.test.mjs",
+   "suite": "server"
+  },
+  {
    "name": "L001 L002 register in the app, keep the session across reloads, sign out and sign in again",
    "passed": true,
    "features": [
@@ -3377,7 +3612,7 @@
    "suite": "app-e2e"
   },
   {
-   "name": "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed",
+   "name": "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed",
    "passed": true,
    "features": [
     "L013",
@@ -3500,7 +3735,7 @@
    "suite": "app-e2e"
   },
   {
-   "name": "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the robot reacting",
+   "name": "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the character reacting",
    "passed": true,
    "features": [
     "L035",
@@ -3634,7 +3869,7 @@
    "suite": "app-e2e"
   },
   {
-   "name": "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the robot speaking",
+   "name": "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the character speaking",
    "passed": true,
    "features": [
     "L071",
@@ -3700,7 +3935,7 @@
    "suite": "app-e2e"
   },
   {
-   "name": "L087 put my photo on the robot screen with consent, kept on the device only, and delete it",
+   "name": "L087 put my photo on the character's face with consent, kept on the device only, and delete it",
    "passed": true,
    "features": [
     "L087"
@@ -3773,6 +4008,15 @@
     "L123",
     "L124",
     "L125"
+   ],
+   "file": "e2e/app.e2e.mjs",
+   "suite": "app-e2e"
+  },
+  {
+   "name": "L124 the staff screens in English: admin dashboard, project, sync, merchant and driver",
+   "passed": true,
+   "features": [
+    "L124"
    ],
    "file": "e2e/app.e2e.mjs",
    "suite": "app-e2e"
@@ -4576,7 +4820,7 @@
   "L071": {
    "tests": [
     "L071 conversational shopping answers with products, store info or actions",
-    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the robot speaking"
+    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the character speaking"
    ],
    "failed": false,
    "surfaces": {
@@ -4593,7 +4837,7 @@
   "L072": {
    "tests": [
     "L072 budget basket stays within the budget and favours useful staples",
-    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the robot speaking"
+    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the character speaking"
    ],
    "failed": false,
    "surfaces": {
@@ -4627,7 +4871,7 @@
   "L076": {
    "tests": [
     "L076 voice and text commands become structured actions",
-    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the robot speaking"
+    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the character speaking"
    ],
    "failed": false,
    "surfaces": {
@@ -4644,7 +4888,7 @@
   "L077": {
    "tests": [
     "L077 recipes become a costed shopping list scaled to the number of people",
-    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the robot speaking"
+    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the character speaking"
    ],
    "failed": false,
    "surfaces": {
@@ -4678,12 +4922,13 @@
   "L079": {
    "tests": [
     "L079 recommendations use interests and history unless personalisation is switched off",
-    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed"
+    "L079 L088 the packed 3D engines are byte-for-byte the sources in web-engines/",
+    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed"
    ],
    "failed": false,
    "surfaces": {
     "server": {
-     "passed": 1,
+     "passed": 2,
      "failed": 0
     },
     "app": {
@@ -4695,7 +4940,7 @@
   "L013": {
    "tests": [
     "L013 L017 catalog comes from the database with managed categories",
-    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed",
+    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed",
     "L013 L018 L019 L020 L102 products: create one with a gallery, video, specifications and barcode, add a size variant, edit and archive"
    ],
    "failed": false,
@@ -4717,13 +4962,14 @@
   "L017": {
    "tests": [
     "L013 L017 catalog comes from the database with managed categories",
-    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed",
+    "L017 the home screen departments from the mockups are real categories, each with its illustration",
+    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed",
     "L017 L103 categories: add, hide and delete a catalog section"
    ],
    "failed": false,
    "surfaces": {
     "server": {
-     "passed": 1,
+     "passed": 2,
      "failed": 0
     },
     "app": {
@@ -4790,13 +5036,14 @@
   "L018": {
    "tests": [
     "L018 L019 L020 gallery, video, variants and specifications are validated and served",
+    "L018 product images and extra gallery views map to products the catalog sells",
     "L018 L019 L020 L026 product gallery with video, sizes with their own stock, the specifications table and sharing",
     "L013 L018 L019 L020 L102 products: create one with a gallery, video, specifications and barcode, add a size variant, edit and archive"
    ],
    "failed": false,
    "surfaces": {
     "server": {
-     "passed": 1,
+     "passed": 2,
      "failed": 0
     },
     "app": {
@@ -5165,7 +5412,7 @@
   "L069": {
    "tests": [
     "L069 campaigns are shown only while active and validate their links",
-    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed",
+    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed",
     "L067 L068 L069 offers, a flash deal with a quantity limit, and a home-screen campaign"
    ],
    "failed": false,
@@ -5524,7 +5771,7 @@
   "L039": {
    "tests": [
     "L038 L039 L040 server-side quote with coupons and delivery fees by zone",
-    "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the robot reacting",
+    "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the character reacting",
     "L039 L109 coupons: create a fixed discount, see it applied in checkout, then disable it"
    ],
    "failed": false,
@@ -5889,17 +6136,19 @@
    "tests": [
     "L083 L084 L124 character and language preferences are saved and validated",
     "L124 every customer-facing string sent through the translator has an English version",
+    "L124 every staff-screen string (admin, merchant, driver, command center) has an English version",
     "L124 English translations keep the same placeholders and are never empty",
-    "L123 L124 L125 day and night modes, English with the page direction flipped, and prices in a second currency"
+    "L123 L124 L125 day and night modes, English with the page direction flipped, and prices in a second currency",
+    "L124 the staff screens in English: admin dashboard, project, sync, merchant and driver"
    ],
    "failed": false,
    "surfaces": {
     "server": {
-     "passed": 3,
+     "passed": 4,
      "failed": 0
     },
     "app": {
-     "passed": 1,
+     "passed": 2,
      "failed": 0
     }
    }
@@ -5946,6 +6195,8 @@
   "L118": {
    "tests": [
     "L118 exporting to the command center maps fields, uses the API key and retries revision conflicts",
+    "L118 AAS accepts exported order lines with stable numeric product IDs and no customer PII",
+    "L118 rejects incomplete AAS receipts rather than reporting a false successful export",
     "L118 L120 service-key routes for external schedulers compare keys in constant time",
     "L118 sync explains what is missing when the command center is not configured",
     "L118 a connection set by the server environment cannot be overwritten from the dashboard",
@@ -5955,7 +6206,30 @@
    "failed": false,
    "surfaces": {
     "server": {
-     "passed": 4,
+     "passed": 6,
+     "failed": 0
+    },
+    "app": {
+     "passed": 1,
+     "failed": 0
+    },
+    "dashboard": {
+     "passed": 1,
+     "failed": 0
+    }
+   }
+  },
+  "L121": {
+   "tests": [
+    "L121 resolves actual AAS numeric catalog IDs for preview without inserting duplicates",
+    "L121 importing from the command center shows the diff first and rejects invalid rows",
+    "L118 L119 L120 L121 L122 L113 L104 central sync from the app: refresh now, receipts with retry and log download, diff before import, branch stock and CSV preview",
+    "L118 L119 L120 L121 L122 central sync: export, snapshot, operations with receipts and retry, diff before import, JSON import and log download"
+   ],
+   "failed": false,
+   "surfaces": {
+    "server": {
+     "passed": 2,
      "failed": 0
     },
     "app": {
@@ -6013,28 +6287,6 @@
     }
    }
   },
-  "L121": {
-   "tests": [
-    "L121 importing from the command center shows the diff first and rejects invalid rows",
-    "L118 L119 L120 L121 L122 L113 L104 central sync from the app: refresh now, receipts with retry and log download, diff before import, branch stock and CSV preview",
-    "L118 L119 L120 L121 L122 central sync: export, snapshot, operations with receipts and retry, diff before import, JSON import and log download"
-   ],
-   "failed": false,
-   "surfaces": {
-    "server": {
-     "passed": 1,
-     "failed": 0
-    },
-    "app": {
-     "passed": 1,
-     "failed": 0
-    },
-    "dashboard": {
-     "passed": 1,
-     "failed": 0
-    }
-   }
-  },
   "L122": {
    "tests": [
     "L122 receipts are listed, logs download as CSV or JSON and failed runs can be retried",
@@ -6060,12 +6312,13 @@
   "L088": {
    "tests": [
     "L088 the 3D viewer page cannot be broken out of by model data",
+    "L079 L088 the packed 3D engines are byte-for-byte the sources in web-engines/",
     "L088 L089 a 3D viewer that rotates and zooms, and \"try it in my room\" over the camera"
    ],
    "failed": false,
    "surfaces": {
     "server": {
-     "passed": 1,
+     "passed": 2,
      "failed": 0
     },
     "app": {
@@ -6076,7 +6329,7 @@
   },
   "L081": {
    "tests": [
-    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed"
+    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed"
    ],
    "failed": false,
    "surfaces": {
@@ -6088,7 +6341,7 @@
   },
   "L027": {
    "tests": [
-    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated robot, onboarding and recently viewed"
+    "L013 L017 L069 L079 L081 L027 the home screen shows server categories, campaigns, an animated 3D character, onboarding and recently viewed"
    ],
    "failed": false,
    "surfaces": {
@@ -6136,7 +6389,7 @@
   },
   "L035": {
    "tests": [
-    "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the robot reacting"
+    "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the character reacting"
    ],
    "failed": false,
    "surfaces": {
@@ -6148,7 +6401,7 @@
   },
   "L037": {
    "tests": [
-    "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the robot reacting"
+    "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the character reacting"
    ],
    "failed": false,
    "surfaces": {
@@ -6160,7 +6413,7 @@
   },
   "L086": {
    "tests": [
-    "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the robot reacting"
+    "L035 L037 L039 L086 the cart: quantities, save for later, a discount code and the character reacting"
    ],
    "failed": false,
    "surfaces": {
@@ -6220,7 +6473,7 @@
   },
   "L085": {
    "tests": [
-    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the robot speaking",
+    "L071 L072 L076 L077 L085 conversational shopping: a budget basket, a recipe, text and voice commands, with the character speaking",
     "L082 L083 L084 L085 commands, size, reduced motion, colours, outfits, accessories and voice are saved to the account"
    ],
    "failed": false,
@@ -6245,7 +6498,7 @@
   },
   "L087": {
    "tests": [
-    "L087 put my photo on the robot screen with consent, kept on the device only, and delete it"
+    "L087 put my photo on the character's face with consent, kept on the device only, and delete it"
    ],
    "failed": false,
    "surfaces": {
