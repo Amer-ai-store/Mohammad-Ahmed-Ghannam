@@ -6,10 +6,12 @@ import { Button, Txt } from "../components/ui";
 import { AccountCard, errorMessage, FormField, FormMessage } from "../components/AccountKit";
 import { useSession } from "../lib/session";
 import { useTheme } from "../lib/theme";
+import { useI18n } from "../lib/i18n";
 
 export default function LoginScreen() {
   const session = useSession();
   const { colors: t } = useTheme();
+  const { t: tr } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,5 +25,5 @@ export default function LoginScreen() {
     catch (failure) { setError(errorMessage(failure)); }
     finally { setBusy(false); }
   };
-  return <Shell title="تسجيل الدخول" subtitle="خيار تسجيل الدخول التجاري أو استكشاف المتجر كضيف."><View style={{ width: "100%", maxWidth: 540, alignSelf: "center", gap: 18 }}><AccountCard>{!session.configured ? <><FormMessage text="الحساب التجاري يحتاج اتصالًا بخادم آمن، لكن يمكنك تصفح المنتجات وتخصيص جوازك دون خادم." /><Button title="إعداد اتصال الخادم" onPress={() => router.push("/connection")} /></> : null}<FormField label="البريد الإلكتروني" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" returnKeyType="next" /><FormField label="كلمة المرور" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" textContentType="password" returnKeyType="done" onSubmitEditing={() => { if (!busy && session.configured) void submit(); }} /><FormMessage text={error} /><Button title="تسجيل الدخول" onPress={() => void submit()} busy={busy} disabled={!session.hydrated || !session.configured} /><Button title="نسيت كلمة المرور؟ استخدم رمز الاسترداد" secondary onPress={() => router.push("/recover-account")} /><Button title="إنشاء حساب جديد" secondary onPress={() => router.push("/register")} /><Button title={ "المتابعة كضيف دون خادم" } secondary testID="continue-guest" onPress={() => router.replace("/")} /><Txt style={{ color: t.muted, lineHeight: 24, fontSize: 13 }}>لا تتم مشاركة كلمة المرور مع وكلاء الإدارة. يستخدم الوكلاء مفاتيح منفصلة وصلاحيات محددة من لوحة الإدارة.</Txt></AccountCard><Button title="إعداد الخادم أو تغييره" secondary onPress={() => router.push("/connection")} /></View></Shell>;
+  return <Shell title="تسجيل الدخول" subtitle={tr("خيار تسجيل الدخول التجاري أو استكشاف المتجر كضيف.")}><View style={{ width: "100%", maxWidth: 540, alignSelf: "center", gap: 18 }}><AccountCard>{!session.configured ? <><FormMessage text={tr("الحساب التجاري يحتاج اتصالًا بخادم آمن، لكن يمكنك تصفح المنتجات وتخصيص جوازك دون خادم.")} /><Button title="إعداد اتصال الخادم" onPress={() => router.push("/connection")} /></> : null}<FormField label="البريد الإلكتروني" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" returnKeyType="next" /><FormField label="كلمة المرور" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" textContentType="password" returnKeyType="done" onSubmitEditing={() => { if (!busy && session.configured) void submit(); }} /><FormMessage text={error} /><Button title="تسجيل الدخول" onPress={() => void submit()} busy={busy} disabled={!session.hydrated || !session.configured} /><Button title="نسيت كلمة المرور؟ استخدم رمز الاسترداد" secondary onPress={() => router.push("/recover-account")} /><Button title="إنشاء حساب جديد" secondary onPress={() => router.push("/register")} /><Button title={tr("المتابعة كضيف دون خادم")} secondary testID="continue-guest" onPress={() => router.replace("/")} /><Txt style={{ color: t.muted, lineHeight: 24, fontSize: 13 }}>لا تتم مشاركة كلمة المرور مع وكلاء الإدارة. يستخدم الوكلاء مفاتيح منفصلة وصلاحيات محددة من لوحة الإدارة.</Txt></AccountCard><Button title="إعداد الخادم أو تغييره" secondary onPress={() => router.push("/connection")} /></View></Shell>;
 }
