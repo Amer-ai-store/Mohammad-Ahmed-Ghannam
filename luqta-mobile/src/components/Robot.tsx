@@ -23,8 +23,10 @@ const POSTER: Record<RobotMotion, keyof typeof posePosters> = {
   idle: "idle", wave: "thumbs", walk: "walk", jump: "jump", come: "point", stop: "crossed", dance: "jump", sleep: "sleep", sad: "think", talk: "listen",
   cart: "cart", thumbs: "thumbs", think: "think", point: "point", run: "run", sit: "sit", listen: "listen", crossed: "crossed",
 };
-// Below this size the still pose reads better than a tiny 3D canvas, and it saves a WebGL context.
-const MIN_3D = 88;
+// Below this size the still pose reads better than a tiny 3D canvas, and it saves a WebGL context. On a phone each
+// live character is a WebView running the whole 3D engine, so only the character's own screens (170 px and up) run
+// it; the home, profile and chat mascots show the shopper's character as a still picture of the same look.
+const MIN_3D = Platform.OS === "web" ? 88 : 150;
 
 type Look = Pick<RobotPrefs, "color" | "skin" | "hair" | "pants" | "boots" | "beard" | "accessory" | "use3d" | "name">;
 type Props = {
