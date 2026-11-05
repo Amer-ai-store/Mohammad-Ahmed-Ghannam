@@ -1439,4 +1439,7 @@ export const EN: Record<string, string> = {
   "يمكنك اختيار ثمانية اهتمامات كحد أقصى.": "You can choose up to eight interests.",
   "حُفظت اختياراتك على جهازك. سيظهر ترتيبك المفضل في الصفحة الرئيسية.": "Preferences saved on this device. Your preferred order will appear on the home screen.",
   "تعذر الحفظ على هذا الجهاز؛ لا تزال الاختيارات غير محفوظة.": "Could not save on this device; your changes are not stored.",
+  "المتابعة كضيف دون خادم": "Continue as guest without a server",
+  "خيار تسجيل الدخول التجاري أو استكشاف المتجر كضيف.": "Sign in to the store or explore as a guest.",
+  "الحساب التجاري يحتاج اتصالًا بخادم آمن، لكن يمكنك تصفح المنتجات وتخصيص جوازك دون خادم.": "A store account needs a secure server, but you can browse products and personalize your passport without one.",
 };
