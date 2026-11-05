@@ -2,16 +2,20 @@
 
 | الجزء | متى يُنشر | أين |
 |---|---|---|
-| تطبيق Android المدموج «لُقطة» | يُبنى مع كل push إلى `main` يغيّر `luqta-mobile/`؛ **النشر مُجمّد** (Issue #102) | artifact في GitHub Actions، وبعد رفع التجميد [GitHub Releases](https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/releases) |
-| لوحة التحكم (الويب) | **مُجمّد** (Issue #102): `pages.yml` لا ينشر شيئًا حتى يرفع المالك التجميد | https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/ |
+| تطبيق Android المدموج «لُقطة» | يُبنى مع كل push إلى `main` يغيّر `luqta-mobile/`، ويُحفظ كـ artifact. نشره كـ Release يبقى خلف البوابات أدناه | artifact في GitHub Actions، وبعد اجتياز البوابات [GitHub Releases](https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/releases) |
+| لوحة التحكم (الويب) | مع كل push إلى `main` يغيّر `dashboard/`: يفحص `pages.yml` خلو الملفات من الروابط الخاصة، ثم ينشر النسخة العامة، ويقرأها من الرابط العام للتحقق (`verify-live`) | https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/ |
 
-> ⛔ **النشر مُجمّد حاليًا (Issue #102).** يبني الـ workflow ملف APK موقّعًا ويحفظه كـ artifact في كل تشغيل، لكنه لا ينشر أي Release.
-> لرفع التجميد لاحقًا، بعد قبول المالك الصريح:
-> 1. أنشئ بيئة باسم `production` في **Settings → Environments**، وأضف لها **Required reviewers**.
-> 2. أضف متغيرًا (وليس سرًا) باسم `RELEASE_PUBLISHING_ENABLED` بقيمة `true`.
-> 3. أضف متغير `RELEASE_APPROVED_SHA` بقيمة SHA الكامل للـ commit المعتمد للنشر تحديدًا، ولا تستخدم اسم الفرع أو `*`.
-> 4. تأكد من وجود مفتاح التوقيع الثابت (`SIGNING_KEYSTORE_BASE64` وكلمات مروره) قبل الموافقة.
-> النشر لا يبدأ إلا مع تحقق جميع هذه الشروط. إذا كان التوقيع مؤقتًا، أو SHA غير معتمد، فإن مهمة `publish` تُتخطّى حتى لو كان مفتاح تشغيل النشر مفعلًا. لا يجوز اعتبار وجود بيئة `production` وحده إثباتًا لوجود مراجعين مفروضين؛ تحقق منهم من إعدادات GitHub. طلبات الدمج والتشغيل اليدوي من فرع غير `main` لا تستلم مفتاح التوقيع الثابت.
+> ⛔ **نشر الـ Release محكوم ببوابات (Issue #102).** رفع المالك التجميد الإداري في 2026-11-04، لكن الـ workflow لا ينشر أي Release إلا إذا تحققت كل هذه الشروط:
+> 1. بيئة باسم `production` في **Settings → Environments**، لها **Required reviewers**.
+> 2. متغير (وليس سرًا) باسم `RELEASE_PUBLISHING_ENABLED` بقيمة `true`.
+> 3. متغير `RELEASE_APPROVED_SHA` بقيمة SHA الكامل للـ commit المعتمد للنشر تحديدًا، لا اسم الفرع ولا `*`.
+> 4. مفتاح التوقيع الثابت: الأسرار `SIGNING_KEYSTORE_BASE64` و`SIGNING_STORE_PASSWORD` و`SIGNING_KEY_PASSWORD`.
+>
+> إذا كان التوقيع مؤقتًا، أو SHA غير معتمد، تُتخطّى مهمة `publish` حتى لو كان مفتاح تشغيل النشر مفعلًا. لا يجوز اعتبار وجود بيئة `production` وحده إثباتًا لوجود مراجعين مفروضين؛ تحقق منهم من إعدادات GitHub. طلبات الدمج والتشغيل اليدوي من فرع غير `main` لا تستلم مفتاح التوقيع الثابت.
+>
+> **كيف تعرف أن مفتاح التوقيع الثابت غير مضبوط؟** يظهر في سجل خطوة «Build, sign and verify the release APK» السطر `Signer #1 certificate DN: CN=Amer Store CI`، وهو المفتاح المؤقت الذي يولّده الـ workflow، مع تحذير «No upload key for this run». بعد ضبط الأسرار، يظهر اسم شهادتك أنت.
+>
+> **للنشر بعد ضبط البوابات:** ضع في `RELEASE_APPROVED_SHA` آخر commit على `main`، ثم شغّل **Actions → Release Android app → Run workflow** على `main`، ووافق على بيئة `production`.
 
 ## تطبيق Android (`.github/workflows/release.yml`)
 يُنشر الآن التطبيق المدموج في `luqta-mobile/` (Expo وReact Native)، بدل تطبيق Kotlin القديم في `app/`.
@@ -19,7 +23,7 @@
 
 1. يشغّل فحص الأنواع والـ lint واختبارات الخادم، وإذا فشل أي منها لا يُنشر شيء.
 2. يولّد مشروع Android الأصلي (`expo prebuild`)، ثم يبني نسخة **release** لمعالجات arm64 وarmv7، ويوقّعها بمفتاح الرفع، ويتحقق من التوقيع.
-3. يحفظ الـ APK كـ artifact باسم `luqta-release-apk`، ويُنشئ Release باسم `v2.0.<رقم التشغيل>` فيه `amer-store.apk` فقط عند رفع التجميد (انظر أعلاه).
+3. يحفظ الـ APK كـ artifact باسم `luqta-release-apk`، ويُنشئ Release باسم `v2.0.<رقم التشغيل>` فيه `amer-store.apk` فقط عند اجتياز البوابات (انظر أعلاه).
 
 رابط ثابت لأحدث نسخة دائمًا (لم يتغيّر):
 https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/releases/latest/download/amer-store.apk
@@ -33,7 +37,7 @@ https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/releases/latest/download
 
 ### اختبارات المتصفح (`luqta-jawafa-ci.yml`)
 في كل PR يغيّر التطبيق أو لوحة التحكم:
-- 44 اختبارًا تشغّل التطبيق في Chromium.
+- 45 اختبارًا تشغّل التطبيق في Chromium، منها اختبار يفتح شاشات الموظفين بالإنجليزية.
 - 25 اختبارًا تشغّل لوحة التحكم المركزية.
 - يرفض العمل إذا بقيت أي ميزة من الـ125 دون اختبار ناجح على كل واجهة تخصها.
 لقطات الشاشة للخطوات الفاشلة، والملف `feature-status.json`، تُرفع كـ artifact.
