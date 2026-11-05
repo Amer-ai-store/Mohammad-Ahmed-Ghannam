@@ -87,6 +87,11 @@ test('F-G15-06 Google: رابط OAuth ← رجوع ← رمز لمرة واحد�
   const { request } = await fixture(t, { GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'gsecret', GOOGLE_CALLBACK_URL: 'https://shop.example/api/auth/google/callback' }, { authFetch });
   const existing = await request('POST', '/auth/register', { name: 'سارة', email: 's@example.test', password });
   assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'javascript:alert(1)' })).status, 400);
+  // The callback issues a bearer-like one-time code in returnUrl: arbitrary sites must never receive it.
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://evil.example/auth' })).status, 400);
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://shop.example.evil.example/auth' })).status, 400);
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://shop.example/auth?next=evil' })).status, 400);
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://shop.example/auth' })).status, 200, 'the trusted callback origin is allowed');
   const start = await request('POST', '/auth/google/start', { returnUrl: 'luqta://auth' });
   const u = new URL(start.body.url);
   assert.equal(u.hostname, 'accounts.google.com'); assert.equal(u.searchParams.get('client_id'), 'gid'); assert.ok(!start.body.url.includes('gsecret'));
@@ -110,4 +115,29 @@ test('F-G15-07 حذف الحساب يزيل الهويات المرتبطة في
   assert.equal(del.status, 200, JSON.stringify(del.body));
   const s2 = await request('POST', '/auth/phone/start', { phone: '0791112222' });
   assert.equal((await request('POST', '/auth/phone/verify', { phone: '0791112222', code: s2.body.devCode })).body.isNew, true);
+});
+
+
+test('F-G15-08 Google redirect explicitly allowlists external storefront origins', async (t) => {
+  const { request } = await fixture(t, {
+    GOOGLE_CLIENT_ID: 'gid',
+    GOOGLE_CLIENT_SECRET: 'gsecret',
+    GOOGLE_CALLBACK_URL: 'https://shop.example/api/auth/google/callback',
+    GOOGLE_ALLOWED_RETURN_ORIGINS: 'https://global.example, https://bad.example/unsafe'
+  });
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://global.example/auth' })).status, 200);
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://bad.example/auth' })).status, 400, 'invalid configured origin paths must fail closed');
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://global.example.evil.com/auth' })).status, 400);
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://global.example/evil' })).status, 400);
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'https://global.example/auth#code' })).status, 400);
+  assert.equal((await request('POST', '/auth/google/start', { returnUrl: 'http://127.0.0.1:19006/auth' })).status, 200, 'local Expo web dev only');
+  const prod = await fixture(t, {
+    NODE_ENV: 'production',
+    GOOGLE_CLIENT_ID: 'gid',
+    GOOGLE_CLIENT_SECRET: 'gsecret',
+    GOOGLE_CALLBACK_URL: 'https://shop.example/api/auth/google/callback',
+    GOOGLE_ALLOWED_RETURN_ORIGINS: 'https://global.example'
+  });
+  assert.equal((await prod.request('POST', '/auth/google/start', { returnUrl: 'http://127.0.0.1:19006/auth' })).status, 400);
+  assert.equal((await prod.request('POST', '/auth/google/start', { returnUrl: 'exp+luqta://auth' })).status, 400, 'development scheme disabled in production');
 });
