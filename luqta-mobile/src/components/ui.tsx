@@ -6,11 +6,14 @@ import { router } from "expo-router";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 import { useI18n } from "../lib/i18n";
 
-export function Txt({ weight = "regular", style, ...props }: TextProps & { weight?: "regular" | "medium" | "bold" | "extra" }) {
+export function Txt({ weight = "regular", style, children, ...props }: TextProps & { weight?: "regular" | "medium" | "bold" | "extra" }) {
   const { colors: t } = useTheme();
-  const { align, isRTL } = useI18n();
+  const { align, isRTL, lang, t: tr } = useI18n();
   const font = { regular: "Tajawal_400Regular", medium: "Tajawal_500Medium", bold: "Tajawal_700Bold", extra: "Tajawal_800ExtraBold" }[weight];
-  return <Text {...props} style={[{ fontFamily: font, color: t.ink, textAlign: align, writingDirection: isRTL ? "rtl" : "ltr", fontSize: 15 }, style]} />;
+  // Plain Arabic text written straight in a screen is looked up in the English dictionary too (Arabic stays as the
+  // fallback), so screens that do not call t() themselves still switch language.
+  const content = lang === "en" && typeof children === "string" ? tr(children) : children;
+  return <Text {...props} style={[{ fontFamily: font, color: t.ink, textAlign: align, writingDirection: isRTL ? "rtl" : "ltr", fontSize: 15 }, style]}>{content}</Text>;
 }
 
 export function Button({ title, onPress, secondary = false, disabled = false, busy = false, style, icon, tone = "accent", testID }: {

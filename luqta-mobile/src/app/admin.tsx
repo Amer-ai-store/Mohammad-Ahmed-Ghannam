@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { MfaGate, MfaSettingsCard } from "../components/admin/MfaGate";
+import { OperationsPanel } from "../components/admin/OperationsPanel";
+import { GovernancePanel } from "../components/admin/GovernancePanel";
 import { AdminOverview } from "../components/admin/AdminOverview";
 import { categoryName, fallbackCategories } from "../lib/catalog";
 import { Pressable, ScrollView, View } from "react-native";
@@ -29,7 +32,7 @@ const roles = [{ value: "customer", label: "عميل" }, { value: "driver", labe
 const tabs = [
   { id: "overview", label: "نظرة عامة" }, { id: "products", label: "الأصناف" }, { id: "inventory", label: "المخزون والاستيراد" }, { id: "offers", label: "استيراد العروض" }, { id: "appearance", label: "تصميم المتجر" },
   { id: "orders", label: "الطلبات والتوصيل" }, { id: "returns", label: "المرتجعات" }, { id: "coupons", label: "العروض" },
-  { id: "users", label: "المستخدمون والمحفظة" }, { id: "tickets", label: "دعم العملاء" }, { id: "agents", label: "قناة الوكلاء" }, { id: "settings", label: "الإعدادات" }, { id: "audit", label: "سجل العمليات" },
+  { id: "users", label: "المستخدمون والمحفظة" }, { id: "tickets", label: "دعم العملاء" }, { id: "agents", label: "قناة الوكلاء" }, { id: "security", label: "الأمان والتحقق بخطوتين" }, { id: "operations", label: "العمليات الذكية" }, { id: "flags", label: "تشغيل الميزات" }, { id: "settings", label: "الإعدادات" }, { id: "audit", label: "سجل العمليات" },
 ];
 const formatMoney = (value: number, currency = "", locale = "ar") => `${Number(value || 0).toLocaleString(locale, { maximumFractionDigits: 3 })} ${currency}`;
 // Amounts and dates follow the chosen language; Arabic keeps the digits it always used.
@@ -73,7 +76,7 @@ export default function AdminScreen() {
   if (!configured) return <Shell title="لوحة القيادة"><AdminCard title="اربط خادم المتجر أولًا"><Details>لوحة الإدارة تقرأ وتكتب في قاعدة بيانات الخادم. أدخل عنوان خادمك واختبر اتصاله.</Details><Button title="إعداد اتصال الخادم" onPress={() => router.push("/connection")} /></AdminCard></Shell>;
   if (!user) return <Shell title="لوحة القيادة"><AdminCard title="تسجيل الدخول مطلوب"><Details>سجّل الدخول بحساب مدير للوصول إلى بيانات المتجر وإدارتها.</Details><Button title="تسجيل الدخول" onPress={() => router.push("/login")} /></AdminCard></Shell>;
   if (user.role !== "admin") return <Shell title="لوحة القيادة"><AdminCard title="هذه المساحة للمديرين"><Details>حسابك لا يملك صلاحية الإدارة. يتحقق الخادم من الدور عند كل عملية.</Details><Button title="العودة إلى حسابي" onPress={() => router.replace("/profile")} secondary /></AdminCard></Shell>;
-  return <AdminDashboard />;
+  return <MfaGate wrap={(node) => <Shell title="لوحة القيادة">{node}</Shell>}><AdminDashboard /></MfaGate>;
 }
 
 const moreTabs = tabs.filter((tab) => !["overview", "products", "orders"].includes(tab.id));
@@ -88,7 +91,7 @@ function AdminDashboard() {
           {moreTabs.map(item => <UiChip key={item.id} label={item.label} active={more === item.id} onPress={() => setMore(item.id)} />)}
         </ScrollView>
         <View style={{ gap: 16 }} key={more}>
-          {more === "inventory" ? <><InventoryPanel /><JawafaBridgePanel /></> : more === "offers" ? <OffersPanel /> : more === "appearance" ? <AppearancePanel /> : more === "returns" ? <ReturnsPanel /> : more === "coupons" ? <CouponsPanel /> : more === "users" ? <UsersPanel /> : more === "tickets" ? <TicketsPanel /> : more === "agents" ? <AgentsPanel /> : more === "settings" ? <SettingsPanel /> : <AuditPanel />}
+          {more === "inventory" ? <><InventoryPanel /><JawafaBridgePanel /></> : more === "offers" ? <OffersPanel /> : more === "appearance" ? <AppearancePanel /> : more === "returns" ? <ReturnsPanel /> : more === "coupons" ? <CouponsPanel /> : more === "users" ? <UsersPanel /> : more === "tickets" ? <TicketsPanel /> : more === "agents" ? <AgentsPanel /> : more === "security" ? <MfaSettingsCard /> : more === "operations" ? <OperationsPanel /> : more === "flags" ? <GovernancePanel /> : more === "settings" ? <SettingsPanel /> : <AuditPanel />}
         </View>
       </>}
     </View>

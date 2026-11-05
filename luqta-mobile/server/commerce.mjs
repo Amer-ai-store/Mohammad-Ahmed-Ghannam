@@ -209,7 +209,12 @@ export async function createCommerceServer(options = {}) {
     fail(401, 'انتهت الجلسة أو رمز الوصول غير صالح', 'unauthorized');
   };
   const requireUser = (req) => { const actor = identity(req); if (actor.kind !== 'user') fail(403, 'هذه العملية تتطلب حساب مستخدم', 'forbidden'); return actor; };
-  const admin = (req, scope = null) => { const actor = identity(req); if (actor.kind === 'user' && actor.role === 'admin' || actor.kind === 'agent' && scope && actor.scopes.includes(scope)) return actor; fail(403, 'ليس لديك الإذن لهذه العملية', 'forbidden'); };
+  const admin = (req, scope = null) => {
+    const actor = identity(req);
+    if (actor.kind === 'user' && actor.role === 'admin') { if (ext && ext.mfaRequired(actor)) fail(403, 'أدخل رمز التحقق بخطوتين لإكمال عمليات الإدارة', 'mfa_required'); return actor; }
+    if (actor.kind === 'agent' && scope && actor.scopes.includes(scope)) return actor;
+    fail(403, 'ليس لديك الإذن لهذه العملية', 'forbidden');
+  };
   const ownOrder = (actor, orderId, allowDriver = false) => { const o = get('SELECT * FROM orders WHERE id=?', orderId); if (!o) fail(404, 'الطلب غير موجود', 'not_found'); if (o.user_id !== actor.id && actor.role !== 'admin' && !(allowDriver && o.driver_id === actor.id)) fail(403, 'لا يمكنك الوصول إلى هذا الطلب', 'forbidden'); return o; };
   const rateBuckets = new Map();
   // rateLimitScale > 1 only widens the per-address limits for automated end-to-end runs; production keeps 1.
@@ -233,15 +238,19 @@ export async function createCommerceServer(options = {}) {
       if (activeVariants(productId).length) fail(409, 'اختر المقاس أو اللون قبل إضافة هذا المنتج', 'variant_required');
       if (row.stock < quantity) fail(409, `الكمية المطلوبة غير متاحة للمنتج ${parse(row.data).name}`, 'out_of_stock');
       if (options.branchId) ext.checkBranchStock(options.branchId, productId, quantity);
-      const p = parse(row.data), price = ext ? ext.unitPrice(row, p, quantity) : p.price; subtotal = money(subtotal + price * quantity);
+      const p = parse(row.data);
+      if (ext) ext.checkSellable(p);
+      const price = ext ? ext.unitPrice(row, p, quantity) : p.price; subtotal = money(subtotal + price * quantity);
       return { productId, name: p.variantLabel ? `${p.name} — ${p.variantLabel}` : p.name, price, quantity };
     });
     return { lines, subtotal };
   };
-  const discountFor = (code, subtotal) => {
+  // userId: personal vouchers (a stamp-card reward) carry user_id and only work for that shopper.
+  const discountFor = (code, subtotal, userId = null) => {
     if (!code) return { discount: 0, row: null };
     const normalized = text(code, 'رمز الخصم', 1, 40).toUpperCase(), row = get('SELECT * FROM coupons WHERE code=? AND active=1', normalized);
     if (!row || row.expires_at && row.expires_at <= now() || row.max_uses !== null && row.uses >= row.max_uses) fail(400, 'رمز الخصم غير صالح أو انتهى', 'invalid_coupon');
+    if (row.user_id && row.user_id !== userId) fail(400, 'رمز الخصم غير صالح أو انتهى', 'invalid_coupon');
     if (subtotal < row.min_subtotal) fail(400, `الحد الأدنى لاستخدام الرمز ${row.min_subtotal}`, 'coupon_minimum');
     return { row, discount: money(Math.min(subtotal, row.type === 'percent' ? subtotal * row.value / 100 : row.value)) };
   };
@@ -365,7 +374,7 @@ export async function createCommerceServer(options = {}) {
   const oauthConfig = { appId: process.env.FACEBOOK_APP_ID, appSecret: process.env.FACEBOOK_APP_SECRET, callback: process.env.FACEBOOK_CALLBACK_URL, version: process.env.FACEBOOK_GRAPH_VERSION || 'v24.0', ...options.facebook };
   const facebookConfigured = !!(oauthConfig.appId && oauthConfig.appSecret && oauthConfig.callback);
   const optionalUser = (req) => { if (!req.headers.authorization) return null; try { const actor = identity(req); return actor.kind === 'user' ? actor : null; } catch { return null; } };
-  ext = await installModules({ db, get, all, run, transaction, setting, setSetting, publicSettings, audit, notify, balance, ledger, rewardBalance, rewardLedger, product, order, identity, requireUser, optionalUser, admin, ownOrder, rate, quote, discountFor, event, cancel, transition, validateProduct, validateAddress, importInventory, encrypt, decrypt, passwordHash, passwordValid, publicUser, options, dbPath, id, now, hash, json, parse, money, fail, text, number, integer, email, date, csvRows, STATUSES, SCOPES });
+  ext = await installModules({ session, issueRecoveryCode, db, get, all, run, transaction, setting, setSetting, publicSettings, audit, notify, balance, ledger, rewardBalance, rewardLedger, product, order, identity, requireUser, optionalUser, admin, ownOrder, rate, quote, discountFor, event, cancel, transition, validateProduct, validateAddress, importInventory, encrypt, decrypt, passwordHash, passwordValid, publicUser, options, dbPath, id, now, hash, json, parse, money, fail, text, number, integer, email, date, csvRows, STATUSES, SCOPES });
   async function readBody(req) {
     if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return {};
     let size = 0; const chunks = [];
@@ -405,7 +414,13 @@ export async function createCommerceServer(options = {}) {
       }
       const body = await readBody(req), p = path.slice(4).split('/').filter(Boolean);
       let match;
-      if (method === 'GET' && path === '/api/health') return send(200, { ok: true, service: 'luqta-commerce', currency: setting('currency'), facebookConfigured, database: 'connected' });
+      if (method === 'GET' && (path === '/api/health' || path === '/api/ready')) {
+        // A real readiness probe: the database must answer a query and the catalog must be readable.
+        let database = 'error', products = null;
+        try { if (get('SELECT 1 AS ok').ok === 1) { database = 'connected'; products = get('SELECT COUNT(*) AS n FROM products').n; } } catch { database = 'error'; }
+        const ready = database === 'connected';
+        return send(ready ? 200 : 503, { ok: ready, service: 'luqta-commerce', currency: ready ? setting('currency') : null, facebookConfigured, database, products, uptimeSeconds: Math.round(process.uptime()) });
+      }
       if (method === 'GET' && path === '/api/settings') return send(200, { settings: publicSettings() });
       if (method === 'POST' && path === '/api/auth/register') {
         rate(req, 'register', 15); if (body.role && body.role !== 'customer') fail(403, 'لا يمكن إنشاء صلاحيات إدارية من التسجيل العام', 'forbidden');
@@ -433,7 +448,9 @@ export async function createCommerceServer(options = {}) {
         if (method === 'DELETE') {
           rate(req, 'delete-account', 5);
           if (body.confirm !== 'حذف حسابي') fail(400, 'اكتب «حذف حسابي» لتأكيد حذف الحساب', 'confirmation_required');
-          if (!await passwordValid(body.password, actor.password_hash)) fail(401, 'كلمة المرور غير صحيحة', 'invalid_credentials');
+          // Phone and Google accounts have no password the shopper knows: the recovery code issued at sign-up confirms deletion.
+          const viaRecovery = typeof body.recoveryCode === 'string' && body.recoveryCode.length >= 20 && !!get('SELECT 1 AS x FROM recovery_codes WHERE user_id=? AND code_hash=?', actor.id, hash(body.recoveryCode));
+          if (!viaRecovery && !await passwordValid(body.password, actor.password_hash)) fail(401, 'كلمة المرور أو رمز الاسترداد غير صحيح', 'invalid_credentials');
           if (actor.role === 'admin' && get("SELECT COUNT(*) AS n FROM users WHERE role='admin'").n <= 1) fail(409, 'لا يمكن حذف حساب آخر مدير للمتجر', 'last_admin');
           if (get("SELECT id FROM orders WHERE user_id=? AND status NOT IN ('delivered','cancelled') LIMIT 1", actor.id)) fail(409, 'أكمل أو ألغِ طلباتك النشطة قبل حذف الحساب', 'active_orders');
           if (get("SELECT id FROM orders WHERE driver_id=? AND status NOT IN ('delivered','cancelled') LIMIT 1", actor.id)) fail(409, 'أكمل عمليات التوصيل المسندة قبل حذف الحساب', 'active_deliveries');
@@ -530,7 +547,7 @@ export async function createCommerceServer(options = {}) {
         if (method === 'PATCH') { const address = validateAddress({ ...parse(row.data), ...body }); transaction(() => { if (address.isDefault) for (const a of all('SELECT * FROM addresses WHERE user_id=?', actor.id)) run('UPDATE addresses SET data=? WHERE id=?', json({ ...parse(a.data), isDefault: false }), a.id); run('UPDATE addresses SET data=? WHERE id=?', json(address), row.id); }); return send(200, { address: { ...address, id: row.id } }); }
       }
       if (path === '/api/wishlist') { const actor = requireUser(req); if (method === 'GET') return send(200, { productIds: parse(get('SELECT product_ids FROM wishlists WHERE user_id=?', actor.id)?.product_ids, []) }); if (method === 'PUT') { if (!Array.isArray(body.productIds) || body.productIds.length > 500 || body.productIds.some((v) => typeof v !== 'string' || !get('SELECT id FROM products WHERE id=?', v))) fail(400, 'قائمة المفضلة غير صالحة'); const productIds = [...new Set(body.productIds)]; run('INSERT INTO wishlists VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET product_ids=excluded.product_ids', actor.id, json(productIds)); return send(200, { productIds }); } }
-      if (method === 'POST' && path === '/api/coupons/validate') { requireUser(req); const code = text(body.code, 'رمز الخصم', 1, 40), { subtotal } = quote(body.items), { row, discount } = discountFor(code, subtotal); return send(200, { code: row.code, discount, subtotal, currency: setting('currency') }); }
+      if (method === 'POST' && path === '/api/coupons/validate') { const couponActor = requireUser(req); const code = text(body.code, 'رمز الخصم', 1, 40), { subtotal } = quote(body.items), { row, discount } = discountFor(code, subtotal, couponActor.id); return send(200, { code: row.code, discount, subtotal, currency: setting('currency') }); }
       if (path === '/api/orders') {
         const actor = requireUser(req);
         if (method === 'GET') return send(200, { orders: all('SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 200', actor.id).map(order) });
@@ -540,7 +557,7 @@ export async function createCommerceServer(options = {}) {
           const address = validateAddress(body.address || {}), paymentMethod = body.paymentMethod || 'cod'; if (!['cod', 'wallet', 'card'].includes(paymentMethod)) fail(400, 'طريقة الدفع غير مدعومة');
           const checkout = ext.prepareCheckout(body, actor, address, paymentMethod);
           const created = transaction(() => {
-            const { lines, subtotal } = quote(body.items, { branchId: checkout.branchId }), { row: couponRow, discount } = discountFor(body.couponCode, subtotal), shipping = checkout.shipping(subtotal, discount), total = money(subtotal - discount + shipping + checkout.fees);
+            const { lines, subtotal } = quote(body.items, { branchId: checkout.branchId }), { row: couponRow, discount } = discountFor(body.couponCode, subtotal, actor.id), shipping = checkout.shipping(subtotal, discount), total = money(subtotal - discount + shipping + checkout.fees);
             if (paymentMethod === 'wallet' && balance(actor.id) < total) fail(409, 'رصيد المحفظة غير كافٍ', 'insufficient_balance');
             const orderId = id('LQ'), createdAt = now(), payment = paymentMethod === 'card' ? checkout.chargeCard(total, orderId) : null;
             run('INSERT INTO orders VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', orderId, actor.id, json(lines), json(address), subtotal, discount, shipping, total, setting('currency'), 'pending', paymentMethod, paymentMethod === 'wallet' || payment ? 'paid' : 'pending', null, couponRow?.id || null, key, createdAt, createdAt);
@@ -706,7 +723,7 @@ export async function createCommerceServer(options = {}) {
           if (method === 'POST' || method === 'PATCH') {
             const input = { ...(old ? coupon(old) : {}), ...body }, code = text(input.code, 'رمز الخصم', 2, 40).toUpperCase(); if (!/^[A-Z0-9_-]+$/.test(code)) fail(400, 'رمز الخصم يقبل أحرفًا إنجليزية وأرقامًا'); if (!['percent', 'fixed'].includes(input.type)) fail(400, 'نوع الخصم غير صالح'); const value = number(input.value, 'قيمة الخصم', 0.001, input.type === 'percent' ? 100 : 1e7), minimum = number(input.minSubtotal ?? 0, 'الحد الأدنى', 0, 1e7), maxUses = input.maxUses == null ? null : integer(input.maxUses, 'حد الاستخدام', 1, 1e7), expiresAt = input.expiresAt ? date(input.expiresAt, 'تاريخ الانتهاء') : null;
             const duplicate = get('SELECT id FROM coupons WHERE code=?', code); if (duplicate && duplicate.id !== old?.id) fail(409, 'رمز الخصم مستخدم'); const couponId = old?.id || id('cpn');
-            run('INSERT INTO coupons VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET code=excluded.code,type=excluded.type,value=excluded.value,min_subtotal=excluded.min_subtotal,max_uses=excluded.max_uses,expires_at=excluded.expires_at,active=excluded.active', couponId, code, input.type, value, minimum, maxUses, old?.uses || 0, expiresAt, input.active === false ? 0 : 1); audit(actor, 'coupon.save', couponId); return send(old ? 200 : 201, { coupon: coupon(get('SELECT * FROM coupons WHERE id=?', couponId)) });
+            run('INSERT INTO coupons(id,code,type,value,min_subtotal,max_uses,uses,expires_at,active) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET code=excluded.code,type=excluded.type,value=excluded.value,min_subtotal=excluded.min_subtotal,max_uses=excluded.max_uses,expires_at=excluded.expires_at,active=excluded.active', couponId, code, input.type, value, minimum, maxUses, old?.uses || 0, expiresAt, input.active === false ? 0 : 1); audit(actor, 'coupon.save', couponId); return send(old ? 200 : 201, { coupon: coupon(get('SELECT * FROM coupons WHERE id=?', couponId)) });
           }
         }
         if (method === 'POST' && section === 'wallet' && p[2] === 'adjust') {
@@ -767,6 +784,7 @@ export async function createCommerceServer(options = {}) {
                }
                updates.storefront = design;
              }
+             if (ext) ext.validateSettingsExtras(body, updates);
              transaction(() => { for (const [key, value] of Object.entries(updates)) setSetting(key, value); audit(actor, 'settings.update', '', updates); }); return send(200, { settings: publicSettings() }); }
         }
         if (method === 'GET' && section === 'audit') return send(200, { events: all('SELECT id,actor_id AS actorId,action,entity_id AS entityId,detail,created_at AS createdAt FROM audit ORDER BY created_at DESC,id DESC LIMIT 500').map((r) => ({ ...r, detail: parse(r.detail, {}) })) });

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Bookmark, ShoppingCart, Tag, Trash } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { ProductImage } from "../components/ProductCard";
@@ -24,7 +24,11 @@ export default function Cart() {
   const store = useStore();
   const { products, cart, saved, setQuantity, subtotal, shipping, settings } = store;
   const [coupon, setCoupon] = useState("");
+  // A code picked in the coupon wallet arrives as ?coupon= and is applied straight away.
+  const { coupon: offered } = useLocalSearchParams<{ coupon?: string }>();
   const [applied, setApplied] = useState("");
+  const [lastOffered, setLastOffered] = useState<string | undefined>(undefined);
+  if (typeof offered === "string" && offered && offered !== lastOffered) { setLastOffered(offered); setCoupon(offered); setApplied(offered.trim().toUpperCase()); }
   const [serverQuote, setQuote] = useState<Quote | null>(null);
   const [message, setMessage] = useState("");
   const lines = useMemo(() => Object.entries(cart).map(([id, quantity]) => ({ product: products.find((p) => p.id === id), quantity })).filter((l) => l.product), [cart, products]);
@@ -57,7 +61,7 @@ export default function Cart() {
           {lines.map(({ product, quantity }) => (
             <Card key={product!.id} style={{ padding: 12 }} testID={`cart-line-${product!.id}`}>
               <Row style={{ alignItems: "flex-start" }}>
-                <Pressable onPress={() => router.push(`/product/${product!.id}`)} style={{ width: 76, height: 76, borderRadius: 18, overflow: "hidden" }}><ProductImage product={product!} /></Pressable>
+                <Pressable accessibilityRole="button" onPress={() => router.push(`/product/${product!.id}`)} style={{ width: 76, height: 76, borderRadius: 18, overflow: "hidden" }}><ProductImage product={product!} /></Pressable>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Txt weight="bold" numberOfLines={2}>{product!.name}</Txt>
                   <Txt style={{ color: t.muted, fontSize: 12 }}>{product!.unit || product!.subtitle}</Txt>

@@ -1,7 +1,8 @@
 export type StoreSettings = {
   storeName: string; currency: string; country: string;
   shippingFee: number; freeShippingThreshold: number; returnsDays: number;
-  storefront?: { accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: boolean };
+  storefront?: { accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: boolean; promoVideoUrl?: string | null };
+  branches?: { id: string; name: string; city?: string; latitude?: number; longitude?: number }[];
   displayCurrencies?: Record<string, number>; giftWrapFee?: number; deliveryOtp?: boolean; requireTerms?: boolean; sandboxPayments?: boolean;
 };
 export type Address = {

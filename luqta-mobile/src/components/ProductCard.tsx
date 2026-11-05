@@ -99,6 +99,32 @@ export function ProductCard({ product, width, reason }: { product: Product; widt
     </View>
   );
 }
+// A compact horizontal card for rows of suggestions (home extras, "bought together").
+export function MiniProductCard({ product, width }: { product: Product; width: number | `${number}%` }) {
+  const { colors: t } = useTheme();
+  const { addToCart } = useStore();
+  const money = useMoney();
+  const { t: tr } = useI18n();
+  const out = typeof product.stock === "number" && product.stock <= 0;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={tr("تفاصيل {name}", { name: product.name })} onPress={() => router.push(`/product/${product.id}`)} testID={`mini-${product.id}`}
+      style={{ width, flexDirection: "row-reverse", gap: 10, padding: 10, borderRadius: 18, borderWidth: 1, borderColor: t.line, backgroundColor: t.paper, minHeight: 120 }}>
+      <View style={{ width: "42%", height: 100 }}><ProductImage product={product} /></View>
+      <View style={{ flex: 1, justifyContent: "space-between" }}>
+        <View style={{ gap: 2 }}>
+          <Txt weight="bold" numberOfLines={2} style={{ fontSize: 14 }}>{product.name}</Txt>
+          <Txt weight="bold" style={{ fontSize: 14, color: t.primary }}>{money.format(product.price)}</Txt>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={tr("أضف {name} إلى السلة", { name: product.name })} disabled={out} testID={`mini-add-${product.id}`}
+          onPress={() => (product.hasVariants ? router.push(`/product/${product.id}`) : addToCart(product.id))}
+          style={{ alignSelf: "flex-start", width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: t.primary, opacity: out ? 0.4 : 1 }}>
+          <Plus size={20} color={t.onPrimary} strokeWidth={2.6} />
+        </Pressable>
+      </View>
+    </Pressable>
+  );
+}
+
 const makeStyles = (t: Palette) => StyleSheet.create({
   card: { backgroundColor: t.paper, borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: t.line, minHeight: 290 },
   photo: { height: 150, backgroundColor: t.imageBackground },

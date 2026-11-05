@@ -72,7 +72,7 @@ export default function NotificationsScreen() {
             <Card key={a.id} testID={`alert-${a.id}`}>
               <Row>
                 {a.triggeredAt ? <Bell size={20} color={t.success} /> : <BellOff size={20} color={t.muted} />}
-                <Pressable style={{ flex: 1 }} onPress={() => router.push(`/product/${a.productId}`)}>
+                <Pressable accessibilityRole="button" style={{ flex: 1 }} onPress={() => router.push(`/product/${a.productId}`)}>
                   <Txt weight="bold">{a.name}</Txt>
                   <Txt style={{ color: t.muted, fontSize: 12 }}>{a.type === "price" ? tr("عند نزول السعر إلى {p} (الآن {c})", { p: money.format(a.targetPrice ?? 0), c: money.format(a.currentPrice ?? 0) }) : tr("عند عودة المنتج للمخزون")}</Txt>
                 </Pressable>

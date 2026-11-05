@@ -54,7 +54,7 @@ export default function ProjectScreen() {
         </Row>
         {pending.length ? <View style={{ gap: 6 }}>
           <Txt weight="bold" style={{ fontSize: 13 }}>{tr("الميزات القادمة للتحقق")}</Txt>
-          {pending.map((f) => <Row key={f.id}><Txt style={{ flex: 1, fontSize: 13 }}>{lang === "en" ? f.titleEn : f.title}</Txt><Badge label="مخطط" tone="muted" /><Pressable onPress={() => { setTab("features"); setOpen(f.id); }}><Txt style={{ color: t.primary, fontSize: 12 }}>{tr("التفاصيل")}</Txt></Pressable></Row>)}
+          {pending.map((f) => <Row key={f.id}><Txt style={{ flex: 1, fontSize: 13 }}>{lang === "en" ? f.titleEn : f.title}</Txt><Badge label="مخطط" tone="muted" /><Pressable accessibilityRole="button" onPress={() => { setTab("features"); setOpen(f.id); }}><Txt style={{ color: t.primary, fontSize: 12 }}>{tr("التفاصيل")}</Txt></Pressable></Row>)}
         </View> : null}
       </Card>
       <Row style={{ marginVertical: 12 }}>

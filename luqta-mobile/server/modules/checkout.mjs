@@ -179,7 +179,7 @@ export function install(c, api) {
     const actor = optionalUser(req);
     const { lines, subtotal } = c.quote(body.items, { branchId: body.branchId || null });
     let discount = 0, couponError = null;
-    if (body.couponCode) { try { discount = c.discountFor(body.couponCode, subtotal).discount; } catch (error) { if (!error.status) throw error; couponError = error.message; } }
+    if (body.couponCode) { try { discount = c.discountFor(body.couponCode, subtotal, actor?.id ?? null).discount; } catch (error) { if (!error.status) throw error; couponError = error.message; } }
     const shipping = shippingFor(actor, body.address?.city || '', subtotal), gift = giftInput(body.gift), slot = body.deliverySlot ? slotState(body.deliverySlot.date, body.deliverySlot.window) : null;
     const total = money(subtotal - discount + shipping.fee + (gift?.fee || 0));
     const budget = actor ? api.use('budgetStatus')(actor.id) : null;
