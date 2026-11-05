@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-05T05:43:40.531Z",
+ "generatedAt": "2026-11-05T08:20:15.379Z",
  "summary": {
-  "total": 240,
-  "passed": 240,
+  "total": 241,
+  "passed": 241,
   "failed": 0
  },
  "suites": {
   "server": {
-   "generatedAt": "2026-11-05T05:41:21.888Z",
+   "generatedAt": "2026-11-05T08:17:37.365Z",
    "tests": [
     {
      "name": "one-time recovery codes reset passwords and revoke every prior session",
@@ -1408,7 +1408,7 @@
    ]
   },
   "app-e2e": {
-   "generatedAt": "2026-11-05T05:43:40.531Z",
+   "generatedAt": "2026-11-05T08:20:15.379Z",
    "tests": [
     {
      "name": "L001 L002 register in the app, keep the session across reloads, sign out and sign in again",
@@ -1802,6 +1802,15 @@
      "suite": "app-e2e"
     },
     {
+     "name": "L084 the still character in small spots shows the shopper's own colours",
+     "passed": true,
+     "features": [
+      "L084"
+     ],
+     "file": "e2e/app.e2e.mjs",
+     "suite": "app-e2e"
+    },
+    {
      "name": "L087 put my photo on the character's face with consent, kept on the device only, and delete it",
      "passed": true,
      "features": [
@@ -1891,7 +1900,7 @@
    ]
   },
   "dashboard-e2e": {
-   "generatedAt": "2026-11-05T05:43:40.531Z",
+   "generatedAt": "2026-11-05T08:20:15.379Z",
    "tests": [
     {
      "name": "L001 L101 the admin signs in to the dashboard, sees live KPIs and the latest orders, signs out and back in",
@@ -3930,6 +3939,15 @@
     "L083",
     "L084",
     "L085"
+   ],
+   "file": "e2e/app.e2e.mjs",
+   "suite": "app-e2e"
+  },
+  {
+   "name": "L084 the still character in small spots shows the shopper's own colours",
+   "passed": true,
+   "features": [
+    "L084"
    ],
    "file": "e2e/app.e2e.mjs",
    "suite": "app-e2e"
@@ -6118,7 +6136,8 @@
   "L084": {
    "tests": [
     "L083 L084 L124 character and language preferences are saved and validated",
-    "L082 L083 L084 L085 commands, size, reduced motion, colours, outfits, accessories and voice are saved to the account"
+    "L082 L083 L084 L085 commands, size, reduced motion, colours, outfits, accessories and voice are saved to the account",
+    "L084 the still character in small spots shows the shopper's own colours"
    ],
    "failed": false,
    "surfaces": {
@@ -6127,7 +6146,7 @@
      "failed": 0
     },
     "app": {
-     "passed": 1,
+     "passed": 2,
      "failed": 0
     }
    }

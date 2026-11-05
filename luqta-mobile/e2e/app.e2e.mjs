@@ -1032,6 +1032,39 @@ e2e('L082 L083 L084 L085 commands, size, reduced motion, colours, outfits, acces
   await until(async () => (await other.locator('[data-testid="mascot"]').innerHTML()).toLowerCase().includes('22b07d'), 10000, 'same character elsewhere');
 });
 
+// L084: small spots (here the header on a phone) show a still picture of the shopper's own look, drawn once by the 3D
+// engine and kept on the device, instead of the mockups' default pose.
+e2e('L084 the still character in small spots shows the shopper\'s own colours', async ({ open }) => {
+  const user = await stack.register('صاحب الشخصية الخضراء');
+  const { preferences } = await api('GET', '/me/preferences', undefined, user.token);
+  await api('PATCH', '/me/preferences', { robot: { ...preferences.robot, color: '#22B07D', pants: '#1F2A44' } }, user.token);
+  const page = await open(user, '/rewards');
+  const character = page.locator('[data-testid="mascot-character"]').filter({ visible: true }).first();
+  await character.waitFor();
+  await until(async () => (await character.getAttribute('data-poster')) === 'snapshot', 30000, 'the still picture of the own look');
+  // The picture is drawn with the saved green vest: count clearly green, opaque pixels in it.
+  const green = async () => character.evaluate(async (element) => {
+    const src = element.querySelector('img')?.getAttribute('src') || '';
+    if (!src.startsWith('data:image/png;base64,')) return -1;
+    const image = new Image(); image.src = src; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let count = 0;
+    for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3] > 200 && pixels[i + 1] > pixels[i] + 40 && pixels[i + 1] > pixels[i + 2] + 15) count++;
+    return count;
+  });
+  const first = await green();
+  assert.ok(first > 300, `green vest pixels in the still picture: ${first}`);
+  // The hidden drawing view closes once the picture exists, so it keeps no WebGL context open.
+  await until(async () => (await page.locator('iframe[title="character-snapshot"]').count()) === 0, 10000, 'the drawing view closed');
+  // Kept on the device: after a reload the same picture comes from the cache, with no drawing view at all.
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await until(async () => (await character.getAttribute('data-poster')) === 'snapshot', 10000, 'the cached picture after a reload');
+  assert.equal(await page.locator('iframe[title="character-snapshot"]').count(), 0, 'nothing redrawn after a reload');
+  assert.ok((await green()) > 300, 'the cached picture is the green one');
+});
+
 e2e('L087 put my photo on the character\'s face with consent, kept on the device only, and delete it', async ({ open }) => {
   const user = await stack.register('صاحب الصورة');
   const page = await open(user, '/robot-create');
