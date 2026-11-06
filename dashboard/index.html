@@ -463,6 +463,11 @@ nav.side{gap:.5rem}
   <div class="panel"><h2>الرسائل الواردة والصادرة</h2><div id="pm-list" aria-live="polite"><p class="muted">استخدم تحديث السجل للتحقق من الرسائل.</p></div></div>
 </section>
 <section class="view" data-view="release-verification" aria-labelledby="h-release-verification" hidden><div class="view-head"><div><span class="eyebrow">AMER · RELEASE EVIDENCE</span><h1 id="h-release-verification">التحقق والإصدارات</h1><p>طلبات السحب وعمليات GitHub Actions وبوابات القبول في اللوحة المركزية.</p></div></div><div class="panel" id="central-dashboard-run-proof"><h2>مرجع نشر لوحة القيادة المركزية المثبت</h2><p><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/41757350444" target="_blank" rel="noopener noreferrer" data-release-proof="41757350444">Run #41757350444 — GitHub Pages: نجاح النشر والتحقق الحي (4 نوفمبر 2026)</a></p><p class="muted">مرجع للواجهة العامة فقط؛ لا يعني اكتمال قبول GATE-15 أو نشر PR #148.</p></div><section class="panel" id="central-transfer-audit-root" aria-label="التحقق من نقل اللوحات والوكلاء والوظائف"><h2>مطابقة نقل اللوحات والوكلاء والوظائف</h2><p class="muted">ستظهر نتيجة التحقق من ملفات النشر والمصادر وحالة اتصال الخدمات بصورة منفصلة.</p></section><div id="release-verification-root"></div></section>
+<section class="view" data-view="jawafa-forensic-workspace" aria-labelledby="h-jawafa-forensic-workspace" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · FORENSIC INVESTIGATION · OWNER-ONLY DETAIL</span><h1 id="h-jawafa-forensic-workspace">مساحة التحقيق الموسع — الأدلة والقرائن</h1>
+<p class="muted small">محاور عامة غير حساسة على اللوحة؛ التفاصيل القانونية والمالية في ملف المالك الخاص، وقراءة المصدر لا تتم إلا عبر HTTPS ومصادقة مستقلة.</p></div><span class="pill warn">SOURCE_VERIFICATION_REQUIRED</span></div>
+<div class="panel" id="jawafa-forensic-workspace-root"><p class="muted">تُحمّل أولويات التحقيق وسجل إحالة المدير دون نشر تفاصيل المستندات.</p></div>
+</section>
 <section class="view" data-view="jawafa-agents" aria-labelledby="h-jawafa-agents" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-agents">مجلس CFO / CPO / GM</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-agents">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-agents">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-agents">NOT_CONNECTED</span></div>
 <p><a class="button" href="#release-verification">فتح مركز التحقق والإصدارات</a></p><div class="panel" data-jawafa-pane="jawafa-agents"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -1012,7 +1017,7 @@ nav.side{gap:.5rem}
       ["jawafa-export","مراقبة التصدير"],["jawafa-accounting","القيود"],
       ["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","الموردون والمشتريات"],
       ["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],
-      ["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],
+      ["jawafa-investigations","التحقيقات القضائية"],["jawafa-forensic-workspace","التحقيق الموسع والأدلة"],["jawafa-agents","مجلس CFO / CPO / GM"],
       ["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],
       ["jawafa-periodic","تقرير الاتصال"],["jawafa-reports","التقارير المالية"],
       ["jawafa-errors","الأخطاء والإنجاز"]
@@ -2714,6 +2719,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 })();
 </script>
 <script src="jawafa-investigation.js" defer></script>
+<script src="jawafa-forensic-workspace.js" defer></script>
 <script src="command-home.js" defer></script>
 <script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>
