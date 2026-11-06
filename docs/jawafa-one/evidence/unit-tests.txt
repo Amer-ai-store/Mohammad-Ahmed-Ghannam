@@ -1,0 +1,10 @@
+# ran 2026-11-06T18:21:03Z · node v22.23.4
+ok 1 - CORE-01 roles: owner from ownerUid only, unknown role values grant nothing
+ok 2 - CORE-02 invite ids and email/social validation
+ok 3 - CORE-03 router: dedupe, forward-only states, receipts required from a recipient
+ok 4 - CORE-04 anomaly engine finds seeded cases and never marks DEMO data as proven
+ok 5 - CORE-05 aggregates are derived from the dataset, not hard coded
+ok 6 - CORE-06 browser module app.js parses as an ES module
+# tests 6
+# pass 6
+# fail 0
