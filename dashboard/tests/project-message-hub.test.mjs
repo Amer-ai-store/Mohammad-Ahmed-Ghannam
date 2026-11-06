@@ -1,15 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {parseHubMessage,composeHubMessage,HUB_ISSUE_URL} from "../project-messages.mjs";
+import {parseHubMessage,composeHubMessage,HUB_ISSUE_URL,validateDispatcherLinks,composeDispatcherMessage,isDispatcherMessage} from "../project-messages.mjs";
 import {normalizeChatUrl,normalizeProjectUrl,connectProjects,registerChats,effectiveEdges,neighbors,unlink,loadLinkGraph,saveLinkGraph,EMPTY_GRAPH} from "../project-links.mjs";
 const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const PROJECT_GPT="https://chatgpt.com/g/g-p-gpt123/project";
 const PROJECT_FINAL="https://chatgpt.com/g/g-p-final456/project";
-test("single existing dashboard exposes bulk project and many-chat controls",()=>{
-  for(const s of ['data-view="project-messages"','["project-messages","مركز مراسلات المشاريع"]',
-    'src="project-messages.mjs"','id="pm-links-form"','id="pm-add-chats-form"',
-    'id="pm-source-link"','id="pm-send-linked"','id="pm-project-list"'])assert.ok(html.includes(s),s);
+test("single dashboard exposes only two coordinator conversation link inputs",()=>{
+  for(const s of ['data-view="project-messages"','["project-messages","ربط موزّعي المهام"]',
+    'src="project-messages.mjs"','id="pm-dispatcher-links"','id="pm-dispatcher-1"','id="pm-dispatcher-2"',
+    'id="pm-compose"','id="pm-refresh"'])assert.ok(html.includes(s),s);
+  for(const obsolete of ['id="pm-links-form"','id="pm-add-chats-form"','id="pm-source-link"',
+    'id="pm-send-linked"','id="pm-project-list"','id="pm-filter"','name="first_project"',
+    'name="second_project"','name="auto_link"'])assert.ok(!html.includes(obsolete),"Obsolete many-to-many UI: "+obsolete);
+  assert.equal((html.match(/id="pm-dispatcher-[12]"/g)||[]).length,2);
   assert.ok(HUB_ISSUE_URL.endsWith("/issues/168"));
 });
 test("strict ChatGPT project URLs, reject untrusted hosts and conversation URLs",()=>{
@@ -79,4 +83,38 @@ test("GitHub messages prefaced by explanation text are discoverable and sender c
   assert.equal(received.authenticated_sender,undefined);
   assert.equal(received.read_at,undefined);
   assert.equal(parseHubMessage({id:17,body:comment.body.replace('"to_project": "التقرير النهائي"','"to_project": "not-registered"')}),null);
+});
+
+test("dispatcher-only routing validates two distinct private ChatGPT conversation URLs",()=>{
+  const first="https://chatgpt.com/c/coordinator-1?utm_source=local";
+  const second="https://chatgpt.com/g/g-p-project123/c/coordinator-2";
+  assert.deepEqual(validateDispatcherLinks(first,second),{
+    first_chat:"https://chatgpt.com/c/coordinator-1",
+    second_chat:second
+  });
+  assert.throws(()=>validateDispatcherLinks(first,first),/TWO_DISTINCT_CHATS_REQUIRED/);
+  assert.throws(()=>validateDispatcherLinks("https://example.org/c/foo",second),/CHATGPT_LINK_ONLY/);
+  assert.throws(()=>validateDispatcherLinks("https://chatgpt.com/g/g-p-project123/project",second),/CHAT_LINK_REQUIRED/);
+});
+test("only dispatcher 1 to dispatcher 2 is composed; private chat URLs never leak into public GitHub payload",()=>{
+  const raw=composeDispatcherMessage({id:"PMH-test",subject:"تنسيق",body:"توزيع المهمة داخل المشروع"});
+  assert.ok(!raw.includes("chatgpt.com"),"private links must not be published");
+  const message=parseHubMessage({id:123,body:raw});
+  assert.equal(message.from_project,"التقرير النهائي");
+  assert.equal(message.to_project,"gpt");
+  assert.equal(message.from_chat,"موزع المهام 1");
+  assert.equal(message.to_chat,"موزع المهام 2");
+  assert.ok(isDispatcherMessage(message));
+  assert.ok(!isDispatcherMessage({...message,to_chat:"وكيل مباشر"}));
+  assert.ok(!isDispatcherMessage({...message,from_project:"gpt",to_project:"التقرير النهائي"}));
+});
+test("plain JSON comments from existing issue remain parseable without endorsing delivery",()=>{
+  const payload={kind:"PROJECT_CHAT_MESSAGE",schema:"1.0",id:"test-plain",
+    from_project:"التقرير النهائي",from_chat:"موزع المهام 1",to_project:"gpt",to_chat:"موزع المهام 2",
+    subject:"test",body:"non-sensitive",reply_to:null};
+  const message=parseHubMessage({id:77,body:JSON.stringify(payload)});
+  assert.ok(isDispatcherMessage(message));
+  assert.equal(message.comment_id,77);
+  assert.equal(message.read_at,undefined);
+  assert.equal(message.acknowledged_at,undefined);
 });
