@@ -6,7 +6,7 @@
  */
 const http=require('node:http');
 const {readAudit15Ops,readSchemaCatalog}=require('./audit15-evidence.cjs');
-const ROUTES=new Set(['/api/jawafa/v1/audit15-ops','/api/jawafa/v1/schema-catalog']);
+const ROUTES=new Set(['/api/jawafa/v1/audit15-ops','/api/jawafa/v1/schema-catalog','/api/jawafa/v1/live-schema-proof']);
 const AUTH_PATH='/api/jawafa/v1/dashboard';
 const defaultVerifyOwner=async bearer=>{
   let response;
@@ -40,7 +40,43 @@ const reply=(res,status,obj)=>{
   });
   res.end(JSON.stringify(obj));
 };
-function createSidecar({audit15File,schemaCatalogFile,verifyOwner=defaultVerifyOwner}={}){
+async function fetchFreshLocalSchemaProof(){
+  let response;
+  try{
+    response=await fetch('http://127.0.0.1:3456/api/schema-graph',{
+      method:'GET',redirect:'error',cache:'no-store',
+      signal:AbortSignal.timeout(6000),
+      headers:{Accept:'application/json'}
+    });
+    if(response.status!==200)throw Error('LOCAL_SQL_BRIDGE_UNAVAILABLE');
+    const payload=await response.json();
+    if(payload?.ok!==true||
+       !Array.isArray(payload.tables)||payload.tables.length!==1024||
+       !Array.isArray(payload.relationships)||payload.relationships.length!==38||
+       !payload.tables.every(t=>typeof t?.schema==='string'&&typeof t?.name==='string'))
+      throw Error('LOCAL_SQL_BRIDGE_SCHEMA_INVALID');
+    const generated=Date.parse(payload.generatedAt||'');
+    const now=Date.now();
+    if(!Number.isFinite(generated)||generated>now+30000||now-generated>30000)
+      throw Error('LOCAL_SQL_BRIDGE_RESPONSE_STALE');
+    return {
+      schema:'jawafa.private.live-schema-proof.v1',
+      classification:'OWNER_ONLY_SCHEMA_METADATA_NO_BUSINESS_ROWS',
+      sourceType:'JAWAFFASVR_LOCAL_SCHEMA_BRIDGE_GET',
+      sourceEndpoint:'/api/schema-graph',
+      databaseIntended:'Jawafa_DB',
+      observedAtUtc:new Date(now).toISOString(),
+      bridgeGeneratedAtUtc:payload.generatedAt,
+      schemaTableCount:1024,declaredSqlForeignKeys:38,
+      financialRowsExposed:false,databasePrincipalLeastPrivilegeVerified:false,
+      browserDirectSQL:false,authenticatedFinancialRowReadVerified:false,
+      disclaimer:'Fresh read from local schema bridge; not proof of transaction-row read or read-only SQL principal.'
+    };
+  }catch{
+    throw Object.assign(Error('LOCAL_SCHEMA_BRIDGE_READING_FAILED'),{status:503});
+  }
+}
+function createSidecar({audit15File,schemaCatalogFile,verifyOwner=defaultVerifyOwner,readLiveSchema=fetchFreshLocalSchemaProof}={}){
   if(typeof audit15File!=='string'||typeof schemaCatalogFile!=='string')
     throw Error('AUDIT15_LOCAL_FILES_REQUIRED');
   return async(req,res)=>{
@@ -59,7 +95,9 @@ function createSidecar({audit15File,schemaCatalogFile,verifyOwner=defaultVerifyO
     try{
       const payload=url.pathname.endsWith('/audit15-ops')?
         readAudit15Ops(audit15File):
-        readSchemaCatalog(schemaCatalogFile,req.url);
+        url.pathname.endsWith('/schema-catalog')?
+          readSchemaCatalog(schemaCatalogFile,req.url):
+          await readLiveSchema();
       return reply(res,200,payload);
     }catch(e){
       return reply(res,[422,502,503].includes(e.status)?e.status:503,{error:'PRIVATE_SOURCE_VALIDATION_FAILED'});
@@ -79,4 +117,4 @@ if(require.main===module){
     process.stdout.write('AUDIT15_OWNER_AUTH_SIDECAR_LOOPBACK_READY port='+port+'\n');
   });
 }
-module.exports={createSidecar,defaultVerifyOwner};
+module.exports={createSidecar,defaultVerifyOwner,fetchFreshLocalSchemaProof};
