@@ -77,7 +77,7 @@ export default function ProfileScreen() {
       <Card style={{ marginTop: 12 }}>
         <ListRow testID="menu-account" icon={icon(MapPin)} title="بياناتي وعناويني" detail="الاسم والهاتف والعناوين" onPress={go("/account")} />
         <ListRow testID="menu-robot" icon={icon(Bot)} title="شخصيتي وحركتها" detail="لون وملابس وحركات لُقطي" onPress={go("/robot")} />
-        <ListRow testID="menu-appearance" icon={icon(Globe)} title="اللغة والمظهر" detail="عربي/English، نهاري/ليلي، العملة" onPress={go("/appearance")} />
+        <ListRow testID="menu-appearance" icon={icon(Globe)} title="اللغة والمظهر" detail="التصميم، عربي/English، نهاري/ليلي، العملة" onPress={go("/appearance")} />
         <ListRow testID="menu-notifications" icon={icon(Bell)} title="الإشعارات" detail={store.unreadCount ? tr("{n} غير مقروءة", { n: store.unreadCount }) : undefined} onPress={go("/notifications")} />
         <ListRow testID="menu-privacy" icon={icon(ShieldCheck)} title="الخصوصية والأجهزة" detail="الأجهزة وكلمة المرور وسجل البحث" onPress={go("/privacy")} />
         <ListRow testID="menu-export" icon={icon(Download)} title="تصدير بياناتي" onPress={() => router.push({ pathname: "/privacy", params: { section: "export" } })} />
@@ -86,6 +86,8 @@ export default function ProfileScreen() {
         <ListRow icon={icon(Package)} title="طلباتي" onPress={go("/orders")} />
         <ListRow icon={icon(Wallet)} title="المحفظة وبطاقات الهدايا" onPress={go("/wallet")} />
         <ListRow icon={icon(Wand2)} title="الأدوات الذكية" onPress={go("/smart-tools")} />
+        <ListRow testID="menu-nearby" icon={icon(MapPin)} title="المتاجر القريبة" detail="الفروع حولك على الخريطة وما يتوفر فيها" onPress={go("/nearby")} />
+        <ListRow testID="menu-companion" icon={icon(Bot)} title="رفيقك الذكي" detail="نيرا أو أوريون أو سِلك، بطلبك وكلماتك" onPress={go("/companion")} />
         <ListRow icon={icon(Gift)} title="مكافآتي والدعوات" onPress={go("/rewards")} />
         <ListRow icon={icon(PiggyBank)} title="ميزانيتي الأسبوعية" onPress={go("/budget")} />
         <ListRow icon={icon(Refrigerator)} title="مخزن البيت" detail="الصلاحية وتوفير الكربون" onPress={go("/pantry")} />

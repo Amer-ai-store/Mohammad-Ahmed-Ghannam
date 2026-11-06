@@ -4,7 +4,8 @@
 import React from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
 import * as Linking from "expo-linking";
-import { Check, LocateFixed, MapPin, Navigation } from "lucide-react-native";
+import { Check, ChevronLeft, LocateFixed, MapPin, Navigation } from "lucide-react-native";
+import { router } from "expo-router";
 import { Button, Txt } from "../ui";
 import StoresMap from "./StoresMap";
 import { ProductTile } from "./ProductTile";
@@ -80,6 +81,10 @@ export function NearbyStores({ nearby, map = "toggle", mapHeight = 280, onChoose
                   style={({ pressed }) => ({ flexDirection: "row-reverse", alignItems: "center", gap: 6, minHeight: 38, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: t.line, backgroundColor: pressed ? t.secondary : "transparent" })}>
                   <Navigation size={15} color={t.primary} />
                   <Txt weight="medium" style={{ fontSize: 12, color: t.primary }}>{tr("خرائط Google")}</Txt>
+                </Pressable>
+                <Pressable testID={`branch-details-${b.id}`} accessibilityRole="link" accessibilityLabel={tr("تفاصيل {name}", { name: b.name })} onPress={() => router.navigate({ pathname: "/branch/[id]", params: { id: b.id } })} hitSlop={6}
+                  style={({ pressed }) => ({ width: 34, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? t.secondary : "transparent" })}>
+                  <ChevronLeft size={18} color={t.muted} />
                 </Pressable>
               </View>
             );

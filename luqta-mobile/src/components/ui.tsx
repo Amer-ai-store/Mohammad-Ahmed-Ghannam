@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, TextInputProps, TextProps, View, ViewStyle } from "react-native";
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, TextInput, TextInputProps, TextProps, View, ViewStyle } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Minus, Plus, Sparkles } from "lucide-react-native";
 import { router } from "expo-router";
@@ -238,3 +238,33 @@ const makeStyles = (t: Palette) => StyleSheet.create({
   link: { flexDirection: "row-reverse", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: 4 },
   card: { borderRadius: 24, padding: 16, borderWidth: 1, shadowColor: t.shadow, shadowOpacity: 0.06, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 1 },
 });
+
+/** A compact figure with its label (distance, delivery time, item counts), used in rows of two to four. */
+export function StatTile({ label, value, icon, tone = "primary", testID }: { label: string; value: string; icon?: React.ReactNode; tone?: "primary" | "accent" | "success" | "warning"; testID?: string }) {
+  const { colors: t } = useTheme();
+  const { t: tr } = useI18n();
+  const soft = { primary: t.primarySoft, accent: t.orangeSoft, success: t.successSoft, warning: t.warningSoft }[tone];
+  const ink = { primary: t.primary, accent: t.orange, success: t.success, warning: t.warning }[tone];
+  return (
+    <View testID={testID} style={{ flex: 1, minWidth: 96, gap: 6, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: t.line, backgroundColor: t.paper }}>
+      {icon ? <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: soft, alignItems: "center", justifyContent: "center" }}>{icon}</View> : null}
+      <Txt weight="extra" style={{ fontSize: 18, color: ink }} numberOfLines={1}>{value}</Txt>
+      <Txt style={{ fontSize: 11, color: t.muted }} numberOfLines={1}>{tr(label)}</Txt>
+    </View>
+  );
+}
+
+/** A soft pulsing placeholder shown while content loads, instead of a bare spinner. */
+export function Skeleton({ height = 16, width = "100%", radius = 10, style }: { height?: number; width?: number | `${number}%`; radius?: number; style?: ViewStyle }) {
+  const { colors: t } = useTheme();
+  const [pulse] = React.useState(() => new Animated.Value(0.45));
+  React.useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 650, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.45, duration: 650, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return <Animated.View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[{ height, width, borderRadius: radius, backgroundColor: t.secondary, opacity: pulse }, style]} />;
+}

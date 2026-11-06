@@ -105,7 +105,7 @@ export function formatDistance(km: number, lang: "ar" | "en" = "ar"): string {
   return lang === "en" ? `${value} km` : `${value} كم`;
 }
 
-export type Branch = { id: string; name: string; city?: string; address?: string; latitude?: number | null; longitude?: number | null; hours?: string };
+export type Branch = { id: string; name: string; city?: string; address?: string; latitude?: number | null; longitude?: number | null; hours?: string; phone?: string };
 export type PlacedBranch = Branch & { latitude: number; longitude: number; km: number | null; eta: number | null };
 
 /** Branches that have coordinates, with distance and ETA from `home` when it is known, nearest first. */
@@ -133,4 +133,11 @@ export function googleMapsDirections(destination: GeoPoint, origin: GeoPoint | n
   if (validGeoPoint(origin)) url.searchParams.set("origin", `${fix(origin.latitude)},${fix(origin.longitude)}`);
   url.searchParams.set("travelmode", "driving");
   return url.toString();
+}
+
+/** A phone number safe to dial: digits with an optional leading +, spaces and dashes removed. */
+export function dialable(phone: string | null | undefined): string | null {
+  if (typeof phone !== "string") return null;
+  const digits = phone.replace(/[\s-]/g, "");
+  return /^\+?[0-9]{6,15}$/.test(digits) ? digits : null;
 }
