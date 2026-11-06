@@ -19,10 +19,15 @@ function AppLayout() {
   const { colors: theme, isDark } = useTheme();
   const { lang, t } = useI18n();
   const [loaded, error] = useFonts({
+    // The classic design's face (Tajawal) and the Rafiq design's (IBM Plex Sans Arabic for text, Readex Pro for headings).
     Tajawal_400Regular: require("@expo-google-fonts/tajawal/400Regular/Tajawal_400Regular.ttf"),
     Tajawal_500Medium: require("@expo-google-fonts/tajawal/500Medium/Tajawal_500Medium.ttf"),
     Tajawal_700Bold: require("@expo-google-fonts/tajawal/700Bold/Tajawal_700Bold.ttf"),
     Tajawal_800ExtraBold: require("@expo-google-fonts/tajawal/800ExtraBold/Tajawal_800ExtraBold.ttf"),
+    IBMPlexSansArabic_400Regular: require("@expo-google-fonts/ibm-plex-sans-arabic/400Regular/IBMPlexSansArabic_400Regular.ttf"),
+    IBMPlexSansArabic_500Medium: require("@expo-google-fonts/ibm-plex-sans-arabic/500Medium/IBMPlexSansArabic_500Medium.ttf"),
+    IBMPlexSansArabic_600SemiBold: require("@expo-google-fonts/ibm-plex-sans-arabic/600SemiBold/IBMPlexSansArabic_600SemiBold.ttf"),
+    ReadexPro_600SemiBold: require("@expo-google-fonts/readex-pro/600SemiBold/ReadexPro_600SemiBold.ttf"),
   });
   const title = t("لُقطة — اختيارات ذكية، لحياة أسهل");
   const metadata = (

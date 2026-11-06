@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
-import { Camera, Mic, Search, CalendarCheck, ArrowLeft, Sparkles } from "lucide-react-native";
+import { Camera, Mic, Search, CalendarCheck, ArrowLeft, Sparkles, X } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Shell } from "../components/Shell";
 import { Button, Card, Chip, Row, SectionTitle, Txt } from "../components/ui";
 import { ProductCard } from "../components/ProductCard";
@@ -10,6 +11,11 @@ import { Mascot } from "../components/Robot";
 import { Countdown } from "../components/Countdown";
 import { CollectionRows, PromoVideo, SmartStrip, StoriesRow } from "../components/smart/HomeExtras";
 import { CategoryIcon } from "../components/CategoryIcon";
+import { RafiqHero } from "../components/rafiq/RafiqHero";
+import { NearbyStores } from "../components/rafiq/NearbyStores";
+import { SocialLinks } from "../components/rafiq/SocialLinks";
+import { RafiqMark } from "../components/rafiq/marks";
+import { useNearby } from "../lib/useNearby";
 import { useStore } from "../lib/store";
 import { useSession } from "../lib/session";
 import { useTheme } from "../lib/theme";
@@ -23,9 +29,50 @@ import type { Product } from "../data/products";
 
 type Campaign = { id: string; title: string; subtitle: string; color: string; link: string; cta: string };
 type Deal = { id: string; productId: string; product: Product; price: number; endsAt: string; remaining: number | null };
+const DESIGN_HINT_KEY = "luqta-design-hint-v1";
+
+// Classic design: branches near the shopper, with the map behind a button so the home screen stays light.
+function ClassicNearby() {
+  const nearby = useNearby();
+  if (!nearby.branches.length && !nearby.loading) return null;
+  return (
+    <>
+      <SectionTitle title="قريب منك" subtitle="الفروع الأقرب إليك وما يتوفر فيها الآن" />
+      <NearbyStores nearby={nearby} map="toggle" />
+      <View style={{ marginTop: 12 }}><SocialLinks /></View>
+    </>
+  );
+}
+
+// A one-time invitation on the classic home to try the Rafiq design; the choice also lives in Language & appearance.
+function DesignHint() {
+  const { setDesign } = useTheme();
+  const { t: tr } = useI18n();
+  const [hidden, setHidden] = useState(true);
+  React.useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(DESIGN_HINT_KEY).then((v) => { if (active) setHidden(v === "dismissed"); }).catch(() => { if (active) setHidden(false); });
+    return () => { active = false; };
+  }, []);
+  if (hidden) return null;
+  const dismiss = () => { setHidden(true); void AsyncStorage.setItem(DESIGN_HINT_KEY, "dismissed").catch(() => {}); };
+  return (
+    <View testID="design-hint" style={{ marginTop: 14, flexDirection: "row-reverse", alignItems: "center", gap: 12, padding: 14, borderRadius: 20, backgroundColor: "#0D1220" }}>
+      <RafiqMark size={40} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Txt weight="extra" style={{ color: "#E8ECF5", fontSize: 15 }}>{tr("جديد: تصميم «رفيق»")}</Txt>
+        <Txt style={{ color: "#9BA4BA", fontSize: 12, lineHeight: 19 }}>{tr("سوق عائم ورفيق ذكي وخريطة للفروع القريبة. يمكنك العودة للتصميم الحالي في أي وقت.")}</Txt>
+      </View>
+      <Pressable testID="try-rafiq" accessibilityRole="button" accessibilityLabel={tr("جرّب تصميم رفيق")} onPress={() => { setDesign("rafiq"); dismiss(); }} style={{ paddingHorizontal: 14, minHeight: 40, borderRadius: 12, backgroundColor: "#B4F28A", justifyContent: "center" }}>
+        <Txt weight="bold" style={{ color: "#0F1F08", fontSize: 13 }}>{tr("جرّبه")}</Txt>
+      </Pressable>
+      <Pressable testID="dismiss-design-hint" accessibilityRole="button" accessibilityLabel={tr("إخفاء")} onPress={dismiss} hitSlop={10}><X size={18} color="#9BA4BA" /></Pressable>
+    </View>
+  );
+}
 
 export default function Home() {
-  const { colors: t } = useTheme();
+  const { colors: t, design, fonts } = useTheme();
   const { t: tr, lang, isRTL } = useI18n();
   const store = useStore();
   const { user } = useSession();
@@ -60,19 +107,23 @@ export default function Home() {
   const Arrow = ArrowLeft;
   return (
     <Shell title="" testID="home">
-      <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Txt style={{ color: t.muted }}>{user ? tr("أهلًا {name} 👋", { name: user.name.split(" ")[0] }) : tr("أهلًا بك 👋")}</Txt>
-          <Txt accessibilityRole="header" weight="extra" style={{ fontSize: 30, lineHeight: 42 }}>{tr("شو بدك اليوم؟")}</Txt>
+      {design === "rafiq" ? <RafiqHero /> : (
+        <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt style={{ color: t.muted }}>{user ? tr("أهلًا {name} 👋", { name: user.name.split(" ")[0] }) : tr("أهلًا بك 👋")}</Txt>
+            <Txt accessibilityRole="header" weight="extra" style={{ fontSize: 30, lineHeight: 42 }}>{tr("شو بدك اليوم؟")}</Txt>
+          </View>
+          <Mascot size={92} bubble="top" message={tr("اسألني أي شي!")} />
         </View>
-        <Mascot size={92} bubble="top" message={tr("اسألني أي شي!")} />
-      </View>
+      )}
       <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, backgroundColor: t.paper, borderRadius: 20, borderWidth: 1, borderColor: t.line, paddingHorizontal: 8, minHeight: 56 }}>
         <Search size={19} color={t.muted} />
-        <TextInput testID="home-search" accessibilityLabel={tr("ابحث عن منتج")} value={query} onChangeText={setQuery} onSubmitEditing={submit} returnKeyType="search" placeholder={tr("ابحث عن منتج، قسم أو وصفة…")} placeholderTextColor={t.muted} style={{ flex: 1, minHeight: 50, color: t.ink, fontFamily: "Tajawal_500Medium", fontSize: 15, textAlign: isRTL ? "right" : "left" }} />
+        <TextInput testID="home-search" accessibilityLabel={tr("ابحث عن منتج")} value={query} onChangeText={setQuery} onSubmitEditing={submit} returnKeyType="search" placeholder={tr("ابحث عن منتج، قسم أو وصفة…")} placeholderTextColor={t.muted} style={{ flex: 1, minWidth: 0, minHeight: 50, color: t.ink, fontFamily: fonts.medium, fontSize: 15, textAlign: isRTL ? "right" : "left" }} />
         <Pressable testID="home-voice" accessibilityRole="button" accessibilityLabel={tr("بحث صوتي")} onPress={() => router.navigate({ pathname: "/explore", params: { mode: "voice" } })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.primarySoft, alignItems: "center", justifyContent: "center" }}><Mic size={18} color={t.primary} /></Pressable>
         <Pressable testID="home-camera" accessibilityRole="button" accessibilityLabel={tr("بحث بالصورة")} onPress={() => router.navigate({ pathname: "/explore", params: { mode: "image" } })} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.orangeSoft, alignItems: "center", justifyContent: "center" }}><Camera size={18} color={t.orange} /></Pressable>
       </View>
+
+      {design === "classic" ? <DesignHint /> : null}
 
       {user && prefs.data && !prefs.data.preferences.onboarded ? (
         <Card style={{ marginTop: 16, gap: 10 }} tone="soft" testID="onboarding">
@@ -105,6 +156,8 @@ export default function Home() {
           </Pressable>
         ))}
       </View>
+
+      {design === "classic" ? <ClassicNearby /> : null}
 
       {campaigns.data?.campaigns?.length ? (
         <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginTop: 20 }} contentContainerStyle={{ gap: 12 }} testID="campaigns">

@@ -397,22 +397,26 @@ function OffersPanel() {
     </AdminCard></>;
 }
 function AppearancePanel() {
-  const resource = useAdminData<{ settings: { storefront?: { accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: boolean } } | null }>("/admin/settings", { settings: null });
+  const resource = useAdminData<{ settings: { storefront?: { accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: boolean; instagram?: string; facebook?: string } } | null }>("/admin/settings", { settings: null });
   const action = useAdminAction();
   const design = resource.data.settings?.storefront || {};
-  const [edits, setEdits] = useState<{ accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: string }>({});
+  const [edits, setEdits] = useState<{ accentColor?: string; heroTitle?: string; heroSubtitle?: string; showAssistant?: string; instagram?: string; facebook?: string }>({});
   const color = edits.accentColor ?? design.accentColor ?? "#FF6B4A";
   const title = edits.heroTitle ?? design.heroTitle ?? "لُقطات تستحق أن تكون لك";
   const subtitle = edits.heroSubtitle ?? design.heroSubtitle ?? "اكتشف منتجات تُشبه ذوقك";
   const assistant = edits.showAssistant ?? String(design.showAssistant !== false);
+  const instagram = edits.instagram ?? design.instagram ?? "";
+  const facebook = edits.facebook ?? design.facebook ?? "";
   return <><AdminRefresh busy={resource.loading} onPress={() => void resource.reload()} /><AdminNotice error={resource.error || action.error} message={action.message} />
     <AdminCard title="إدارة التصميم من نفس التطبيق">
       <AdminField label="لون الهوية بصيغة HEX" value={color} onChangeText={accentColor => setEdits(x => ({...x,accentColor}))} placeholder="#FF6B4A" />
       <AdminField label="عنوان الرئيسية" value={title} onChangeText={heroTitle => setEdits(x => ({...x,heroTitle}))} />
       <AdminField label="وصف الرئيسية" multiline value={subtitle} onChangeText={heroSubtitle => setEdits(x => ({...x,heroSubtitle}))} />
       <AdminChoices label="إظهار قسم المساعد" value={assistant} choices={[{value:"true",label:"إظهار"},{value:"false",label:"إخفاء"}]} onChange={showAssistant => setEdits(x => ({...x,showAssistant}))} />
+      <AdminField label="صفحة المتجر على إنستغرام" value={instagram} onChangeText={value => setEdits(x => ({...x,instagram:value}))} placeholder="https://instagram.com/…" />
+      <AdminField label="صفحة المتجر على فيسبوك" value={facebook} onChangeText={value => setEdits(x => ({...x,facebook:value}))} placeholder="https://facebook.com/…" />
       <Button title="حفظ تصميم المتجر" busy={action.busy} disabled={!resource.data.settings} onPress={() => void action.run(async () => {
-        await api.patch("/admin/settings", { storefront: { accentColor: color.trim(), heroTitle: title.trim(), heroSubtitle: subtitle.trim(), showAssistant: assistant === "true" } });
+        await api.patch("/admin/settings", { storefront: { accentColor: color.trim(), heroTitle: title.trim(), heroSubtitle: subtitle.trim(), showAssistant: assistant === "true", instagram: instagram.trim(), facebook: facebook.trim() } });
         setEdits({});
       }, "حُفظ تصميم المتجر؛ حدّث الكتالوج لرؤية التغييرات.", resource.reload)} />
       <Details>تعديل ترتيب الشاشات والمكوّنات البرمجية يتطلب تحديث شفرة React Native وإصدار التطبيق بعد اختبارها؛ هذه الشاشة تعدل إعدادات العرض فقط.</Details>

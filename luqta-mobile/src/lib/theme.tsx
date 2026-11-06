@@ -89,11 +89,99 @@ export const darkTheme: Palette = {
   discount: "#6FD3A6",
   shadow: "#000000",
 };
+// The "رفيق" design, a second look the shopper can choose in Language & appearance (the classic design above stays the
+// default). Night is its intended look: a deep void, leaf green for the AI and the shopper's own place, gold for the
+// brand. Day keeps the same roles on pearl surfaces, with a darker leaf that reads on white.
+export const rafiqDark: Palette = {
+  background: "#070A12",
+  paper: "#0D1220",
+  ink: "#E8ECF5",
+  muted: "#9BA4BA",
+  orange: "#B4F28A",
+  orangeSoft: "#1A2616",
+  line: "#222838",
+  green: "#9BE27A",
+  secondary: "#131A2B",
+  success: "#9BE27A",
+  danger: "#FF8A9A",
+  onAccent: "#0F1F08",
+  imageBackground: "#131A2B",
+  toast: "#E8ECF5",
+  onToast: "#070A12",
+  primary: "#D8B878",
+  primarySoft: "#2A2416",
+  onPrimary: "#1A1405",
+  warning: "#E8C36A",
+  warningSoft: "#2B2414",
+  successSoft: "#15241A",
+  shadow: "#000000",
+  backgroundDeep: "#05070D",
+  card: "#131A2B",
+  title: "#FFFFFF",
+  mutedSoft: "#7A839A",
+  chip: "#2A2416",
+  purple: "#A99BF0",
+  purpleSoft: "#1E1B36",
+  field: "#131A2B",
+  info: "#8FC9E8",
+  infoSoft: "#14243A",
+  warn: "#E8B86B",
+  warnSoft: "#2B2414",
+  discount: "#B4F28A",
+};
+export const rafiqLight: Palette = {
+  background: "#F3F5F9",
+  paper: "#FFFFFF",
+  ink: "#0D1220",
+  muted: "#5A6378",
+  orange: "#2F7A17",
+  orangeSoft: "#E6F4DC",
+  line: "#E1E5EE",
+  green: "#2F7A17",
+  secondary: "#EBEEF5",
+  success: "#2F7A17",
+  danger: "#C8364F",
+  onAccent: "#FFFFFF",
+  imageBackground: "#EEF1F7",
+  toast: "#0D1220",
+  onToast: "#FFFFFF",
+  primary: "#1F2A44",
+  primarySoft: "#E5E9F2",
+  onPrimary: "#FFFFFF",
+  warning: "#B7791F",
+  warningSoft: "#FBF1DC",
+  successSoft: "#E6F4DC",
+  shadow: "#0D1220",
+  backgroundDeep: "#E9EDF4",
+  card: "#FFFFFF",
+  title: "#070A12",
+  mutedSoft: "#8A93A8",
+  chip: "#F1E9D6",
+  purple: "#6B5BD6",
+  purpleSoft: "#ECE9FC",
+  field: "#F1F3F8",
+  info: "#2563EB",
+  infoSoft: "#E3ECFD",
+  warn: "#A86B1F",
+  warnSoft: "#FBF1DC",
+  discount: "#2F7A17",
+};
+
+export type Design = "classic" | "rafiq";
+export type Fonts = { regular: string; medium: string; bold: string; extra: string };
+export const DESIGN_FONTS: Record<Design, Fonts> = {
+  classic: { regular: "Tajawal_400Regular", medium: "Tajawal_500Medium", bold: "Tajawal_700Bold", extra: "Tajawal_800ExtraBold" },
+  rafiq: { regular: "IBMPlexSansArabic_400Regular", medium: "IBMPlexSansArabic_500Medium", bold: "IBMPlexSansArabic_600SemiBold", extra: "ReadexPro_600SemiBold" },
+};
+export const paletteFor = (design: Design, dark: boolean): Palette => (design === "rafiq" ? (dark ? rafiqDark : rafiqLight) : (dark ? darkTheme : theme));
 // Stores created before the redesign saved this rust colour as their accent; it now means "use the design accent".
 const LEGACY_ACCENT = "#B94721";
 
 type ThemeValue = {
   colors: Palette;
+  fonts: Fonts;
+  design: Design;
+  setDesign: (design: Design) => void;
   mode: ThemeMode;
   isDark: boolean;
   hydrated: boolean;
@@ -103,6 +191,9 @@ type ThemeValue = {
 };
 const Context = createContext<ThemeValue>({
   colors: theme,
+  fonts: DESIGN_FONTS.classic,
+  design: "classic",
+  setDesign: () => {},
   mode: "system",
   isDark: false,
   hydrated: false,
@@ -111,19 +202,23 @@ const Context = createContext<ThemeValue>({
   setAccentColor: () => {},
 });
 const STORAGE_KEY = "luqta-appearance-v1";
+const DESIGN_KEY = "luqta-design-v1";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemMode = useColorScheme();
   const [mode, setPreference] = useState<ThemeMode>("system");
+  const [design, setDesignState] = useState<Design>("classic");
   const [accentColor, setAccentColor] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [storageError, setStorageError] = useState(false);
   useEffect(() => {
     let active = true;
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((saved) => {
+    Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(DESIGN_KEY)])
+      .then(([saved, savedDesign]) => {
         if (active && (saved === "light" || saved === "dark" || saved === "system"))
           setPreference(saved);
+        if (active && (savedDesign === "classic" || savedDesign === "rafiq"))
+          setDesignState(savedDesign);
       })
       .catch(() => {
         if (active) setStorageError(true);
@@ -137,12 +232,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
   useEffect(() => {
     if (!hydrated) return;
-    AsyncStorage.setItem(STORAGE_KEY, mode)
+    Promise.all([AsyncStorage.setItem(STORAGE_KEY, mode), AsyncStorage.setItem(DESIGN_KEY, design)])
       .then(() => setStorageError(false))
       .catch(() => setStorageError(true));
-  }, [mode, hydrated]);
+  }, [mode, design, hydrated]);
   const isDark = mode === "dark" || (mode === "system" && systemMode === "dark");
-  const colors = useMemo<Palette>(() => ({ ...(isDark ? darkTheme : theme), ...(accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) && accentColor.toUpperCase() !== LEGACY_ACCENT ? { orange: accentColor } : {}) }), [isDark, accentColor]);
+  // The store's own accent colour (set by the admin) applies to the classic design; Rafiq keeps its leaf green.
+  const colors = useMemo<Palette>(() => ({ ...paletteFor(design, isDark), ...(design === "classic" && accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) && accentColor.toUpperCase() !== LEGACY_ACCENT ? { orange: accentColor } : {}) }), [design, isDark, accentColor]);
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
@@ -152,6 +248,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<ThemeValue>(
     () => ({
       colors,
+      fonts: DESIGN_FONTS[design],
+      design,
+      setDesign: (next) => {
+        if (next === "classic" || next === "rafiq") setDesignState(next);
+      },
       mode,
       isDark,
       hydrated,
@@ -162,7 +263,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           setPreference(next);
       },
     }),
-    [colors, mode, isDark, hydrated, storageError],
+    [colors, design, mode, isDark, hydrated, storageError],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
