@@ -1,7 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import { router, type Href } from "expo-router";
-import { Bell, Bot, ChartPie, Wand2, Download, Gift, Globe, Headset, CircleQuestionMark as HelpCircle, LayoutDashboard, ListChecks, LogOut, MapPin, Package, PiggyBank, Refrigerator, Server, Share2, ShieldCheck, Store, Trash, Truck, UserRound, Wallet } from "lucide-react-native";
+import { Bell, Bot, ChartPie, Wand2, Globe2, Download, Gift, Globe, Headset, CircleQuestionMark as HelpCircle, LayoutDashboard, ListChecks, LogOut, MapPin, Package, PiggyBank, Refrigerator, Server, Share2, ShieldCheck, Store, Trash, Truck, UserRound, Wallet } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Mascot } from "../components/Robot";
 import { Badge, Button, Card, ListRow, Row, Txt } from "../components/ui";
@@ -36,6 +36,7 @@ export default function ProfileScreen() {
         <Button title={tr("إنشاء حساب")} secondary onPress={() => router.push("/register")} style={{ alignSelf: "stretch" }} />
       </Card>
       <Card style={{ marginTop: 12 }}>
+        <ListRow testID="menu-passport-guest" icon={icon(Globe2)} title="جواز التسوق العالمي" detail="منطقة واسم عرض واهتمامات على الجهاز" onPress={go("/passport")} />
         <ListRow icon={icon(Globe)} title="اللغة والمظهر" onPress={go("/appearance")} />
         <ListRow icon={icon(Bot)} title="شخصيتي وحركتها" onPress={go("/robot")} />
         <ListRow icon={icon(Server)} title="اتصال الخادم" onPress={go("/connection")} />
@@ -76,6 +77,7 @@ export default function ProfileScreen() {
       </Card>
       <Card style={{ marginTop: 12 }}>
         <ListRow testID="menu-account" icon={icon(MapPin)} title="بياناتي وعناويني" detail="الاسم والهاتف والعناوين" onPress={go("/account")} />
+        <ListRow testID="menu-passport" icon={icon(Globe2)} title="جوازي العالمي" detail="اهتماماتي ومنطقتي — تُحفظ على الجهاز" onPress={go("/passport")} />
         <ListRow testID="menu-robot" icon={icon(Bot)} title="شخصيتي وحركتها" detail="لون وملابس وحركات لُقطي" onPress={go("/robot")} />
         <ListRow testID="menu-appearance" icon={icon(Globe)} title="اللغة والمظهر" detail="التصميم، عربي/English، نهاري/ليلي، العملة" onPress={go("/appearance")} />
         <ListRow testID="menu-notifications" icon={icon(Bell)} title="الإشعارات" detail={store.unreadCount ? tr("{n} غير مقروءة", { n: store.unreadCount }) : undefined} onPress={go("/notifications")} />

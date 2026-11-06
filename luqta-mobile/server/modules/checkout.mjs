@@ -133,18 +133,75 @@ export function install(c, api) {
     if (!wrap && !message) return null;
     return { wrap, message, recipient, fee: wrap ? money(setting('giftWrapFee')) : 0 };
   };
+  // ---- how the order reaches the shopper: standard delivery, express from the nearest branch, or pickup at a branch,
+  // plus an optional tip for the courier. Built on the branches table and its per-branch stock, so the options match
+  // the branches the app shows. Prices and times come from the server only.
+  const TIPS = [0, 0.5, 1, 2];
+  const PICKUP_READY_MINUTES = 30;
+  const expressConfig = () => ({ fee: 2, maxKm: 8, baseMinutes: 25, perKmMinutes: 3, ...(setting('express', {}) || {}) });
+  const kmBetween = (a, b) => {
+    const rad = (d) => (d * Math.PI) / 180, dLat = rad(b.latitude - a.latitude), dLng = rad(b.longitude - a.longitude);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2;
+    return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  };
+  const cartItems = (items) => (Array.isArray(items) ? items : []).slice(0, 200).map((l) => ({ productId: String(l?.productId || ''), quantity: Math.max(1, Math.min(1000, Math.floor(Number(l?.quantity) || 1))) })).filter((l) => l.productId);
+  const branchHasAll = (branchId, items) => items.length > 0 && items.every((l) => (get('SELECT quantity FROM branch_stock WHERE branch_id=? AND product_id=?', branchId, l.productId)?.quantity ?? 0) >= l.quantity);
+  const point = (lat, lng) => { const latitude = Number(lat), longitude = Number(lng); return Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180 && (latitude !== 0 || longitude !== 0) ? { latitude, longitude } : null; };
+  function deliveryChoices(items, destination) {
+    const cart = cartItems(items), branches = all('SELECT * FROM branches WHERE active=1 ORDER BY name'), cfg = expressConfig();
+    const pickup = branches.map((b) => ({ branchId: b.id, name: b.name, city: b.city, address: b.address, hours: b.hours, readyInMinutes: PICKUP_READY_MINUTES, available: branchHasAll(b.id, cart),
+      ...(destination && Number.isFinite(b.latitude) && Number.isFinite(b.longitude) ? { distanceKm: Math.round(kmBetween(destination, b) * 10) / 10 } : {}) }));
+    let express;
+    if (!destination) express = { available: false, reason: 'حدّد موقع التوصيل على الخريطة لمعرفة التوصيل السريع' };
+    else {
+      const near = branches.filter((b) => Number.isFinite(b.latitude) && Number.isFinite(b.longitude) && branchHasAll(b.id, cart)).map((b) => ({ b, km: kmBetween(destination, b) })).sort((x, y) => x.km - y.km)[0];
+      if (!near) express = { available: false, reason: 'لا يوجد فرع قريب يتوفر فيه كل ما في السلة' };
+      else if (near.km > cfg.maxKm) express = { available: false, reason: `أقرب فرع يبعد ${near.km.toFixed(1)} كم، والتوصيل السريع حتى ${cfg.maxKm} كم`, distanceKm: Math.round(near.km * 10) / 10 };
+      else express = { available: true, fee: money(cfg.fee), etaMinutes: Math.round(cfg.baseMinutes + cfg.perKmMinutes * near.km), branch: { id: near.b.id, name: near.b.name }, distanceKm: Math.round(near.km * 10) / 10 };
+    }
+    return { express, pickup, tips: TIPS };
+  }
+  /** The shopper's choice, checked against what the server offers now. */
+  function fulfillmentFor(body, destination) {
+    const mode = ['standard', 'express', 'pickup'].includes(body.deliveryMode) ? body.deliveryMode : 'standard';
+    let tip = 0;
+    if (body.tip !== undefined && body.tip !== null && body.tip !== 0) {
+      tip = money(number(body.tip, 'إكرامية السائق', 0, 10));
+      if (!TIPS.includes(tip)) fail(400, 'اختر الإكرامية من القيم المعروضة', 'invalid_tip');
+    }
+    if (mode === 'standard') return { mode, tip, extraFee: 0, branchId: null };
+    const choices = deliveryChoices(body.items, destination);
+    if (mode === 'express') {
+      if (!choices.express.available) fail(409, choices.express.reason || 'التوصيل السريع غير متاح لهذا العنوان', 'express_unavailable');
+      return { mode, tip, extraFee: choices.express.fee, branchId: choices.express.branch.id, branchName: choices.express.branch.name, etaMinutes: choices.express.etaMinutes };
+    }
+    const branch = choices.pickup.find((b) => b.branchId === body.pickupBranchId);
+    if (!branch) fail(400, 'اختر فرع الاستلام', 'unknown_branch');
+    if (!branch.available) fail(409, `بعض الأصناف غير متوفرة في ${branch.name}`, 'out_of_stock_branch');
+    return { mode, tip: 0, extraFee: 0, branchId: branch.branchId, branchName: branch.name, readyInMinutes: branch.readyInMinutes };
+  }
+  api.route('POST', '/delivery/options', ({ req, body }) => {
+    rate(req, 'delivery-options', 120, 60_000);
+    return deliveryChoices(body.items, point(body.latitude, body.longitude));
+  });
+
   api.provide('prepareCheckout', (body, actor, address, paymentMethod) => {
     const slot = parseSlot(body.deliverySlot), gift = giftInput(body.gift);
     const notes = body.deliveryNotes ? text(body.deliveryNotes, 'ملاحظات التوصيل', 1, 300) : '';
     if (setting('requireTerms') && body.acceptTerms !== true) fail(400, 'يجب الموافقة على الشروط والأحكام قبل تأكيد الطلب', 'terms_required');
-    const branchId = body.branchId ? text(body.branchId, 'الفرع', 1, 100) : null;
+    const fulfillment = fulfillmentFor(body, point(address.latitude, address.longitude));
+    const branchId = fulfillment.branchId || (body.branchId ? text(body.branchId, 'الفرع', 1, 100) : null);
     const cardToken = paymentMethod === 'card' ? body.cardToken : null;
     if (paymentMethod === 'card' && (typeof cardToken !== 'string' || !/^ptok_[a-f0-9]{32}$/.test(cardToken))) fail(400, 'أدخل بيانات البطاقة أولًا', 'card_token_required');
     let shippingInfo = null;
     return {
       branchId,
-      fees: gift?.fee || 0,
-      shipping(subtotal) { shippingInfo = shippingFor(actor, address.city, subtotal); return shippingInfo.fee; },
+      fees: money((gift?.fee || 0) + fulfillment.tip),
+      shipping(subtotal) {
+        if (fulfillment.mode === 'pickup') return 0;
+        shippingInfo = shippingFor(actor, address.city, subtotal);
+        return money(shippingInfo.fee + fulfillment.extraFee);
+      },
       chargeCard(total, orderId) {
         const t = get('SELECT * FROM payment_tokens WHERE id=? AND user_id=?', cardToken, actor.id);
         if (!t || t.used_at || t.expires_at <= now()) fail(409, 'انتهت صلاحية بيانات البطاقة؛ أدخلها مجددًا', 'card_token_expired');
@@ -159,7 +216,8 @@ export function install(c, api) {
           if (row.booked > row.capacity) fail(409, 'امتلأ موعد التوصيل للتو؛ اختر موعدًا آخر', 'slot_unavailable');
         }
         if (branchId) api.use('moveBranchStock')(branchId, lines, -1);
-        const data = { branchId, slot, deliveryNotes: notes, gift, termsAcceptedAt: body.acceptTerms === true ? now() : null, payment: payment ? { provider: payment.provider, brand: payment.brand, last4: payment.last4, reference: payment.reference, sandbox: true } : null, zone: shippingInfo?.zone ? { id: shippingInfo.zone.id, name: shippingInfo.zone.name, etaMinutes: shippingInfo.zone.etaMinutes } : null, tier: shippingInfo?.tier || null };
+        const { extraFee, ...chosen } = fulfillment;
+        const data = { branchId, slot, deliveryNotes: notes, gift, fulfillment: { ...chosen, fee: extraFee }, termsAcceptedAt: body.acceptTerms === true ? now() : null, payment: payment ? { provider: payment.provider, brand: payment.brand, last4: payment.last4, reference: payment.reference, sandbox: true } : null, zone: shippingInfo?.zone ? { id: shippingInfo.zone.id, name: shippingInfo.zone.name, etaMinutes: shippingInfo.zone.etaMinutes } : null, tier: shippingInfo?.tier || null };
         run('INSERT INTO order_extras VALUES(?,?)', orderId, json(data));
         api.emit('orderPlaced', orderId, lines, actor);
       },
@@ -180,10 +238,13 @@ export function install(c, api) {
     const { lines, subtotal } = c.quote(body.items, { branchId: body.branchId || null });
     let discount = 0, couponError = null;
     if (body.couponCode) { try { discount = c.discountFor(body.couponCode, subtotal, actor?.id ?? null).discount; } catch (error) { if (!error.status) throw error; couponError = error.message; } }
+    const fulfillment = fulfillmentFor(body, point(body.address?.latitude, body.address?.longitude));
     const shipping = shippingFor(actor, body.address?.city || '', subtotal), gift = giftInput(body.gift), slot = body.deliverySlot ? slotState(body.deliverySlot.date, body.deliverySlot.window) : null;
-    const total = money(subtotal - discount + shipping.fee + (gift?.fee || 0));
+    const delivery = fulfillment.mode === 'pickup' ? 0 : money(shipping.fee + fulfillment.extraFee);
+    const total = money(subtotal - discount + delivery + (gift?.fee || 0) + fulfillment.tip);
     const budget = actor ? api.use('budgetStatus')(actor.id) : null;
-    return { lines, subtotal, discount, couponError, shipping: shipping.fee, shippingBeforeBenefits: shipping.base, zone: shipping.zone, tier: shipping.tier, giftWrapFee: gift?.fee || 0, total, currency: setting('currency'),
+    return { lines, subtotal, discount, couponError, shipping: delivery, shippingBeforeBenefits: shipping.base, deliveryMode: fulfillment.mode, expressFee: fulfillment.extraFee, tip: fulfillment.tip,
+      fulfillment: { mode: fulfillment.mode, branchName: fulfillment.branchName || null, etaMinutes: fulfillment.etaMinutes || null, readyInMinutes: fulfillment.readyInMinutes || null }, zone: shipping.zone, tier: shipping.tier, giftWrapFee: gift?.fee || 0, total, currency: setting('currency'),
       freeShippingRemaining: shipping.freeOver !== null && shipping.base > 0 ? money(Math.max(0, shipping.freeOver - subtotal)) : 0,
       slot, budget: budget ? { ...budget, exceeds: budget.weeklyBudget !== null && total > budget.remaining } : null, requireTerms: !!setting('requireTerms') };
   });

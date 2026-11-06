@@ -11,7 +11,7 @@ import {useRobot} from './robot';
 
 export type Order = CommerceOrder;
 type State = {cart: Record<string,number>; favorites: string[]; compareIds: string[]; recentIds: string[]; saved: Record<string,number>; branchId: string|null};
-export type CheckoutInput = {address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;deliverySlot?:{date:string;window:string}|null;deliveryNotes?:string;gift?:{wrap:boolean;message?:string;recipient?:string}|null;acceptTerms?:boolean;cardToken?:string;items?:Record<string,number>;checkoutMode?:'cart'|'buy-now'};
+export type CheckoutInput = {address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;deliverySlot?:{date:string;window:string}|null;deliveryNotes?:string;gift?:{wrap:boolean;message?:string;recipient?:string}|null;acceptTerms?:boolean;cardToken?:string;items?:Record<string,number>;checkoutMode?:'cart'|'buy-now';deliveryMode?:'standard'|'express'|'pickup';pickupBranchId?:string;tip?:number};
 type Store = State & {
   hydrated: boolean; toast: string; products: Product[]; orders: Order[];
   catalogStatus: 'sample'|'loading'|'connected'|'offline'; catalogError: string;

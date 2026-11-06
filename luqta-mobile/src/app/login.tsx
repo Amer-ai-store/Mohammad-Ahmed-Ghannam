@@ -37,7 +37,7 @@ export default function LoginScreen() {
         {!session.configured ? (
           <Card style={{ gap: 10 }}>
             <Txt weight="bold" style={{ color: t.title, fontSize: 18 }}>اربط خادم المتجر أولًا</Txt>
-            <Txt style={{ color: t.muted, lineHeight: 24 }}>الحسابات محفوظة في قاعدة بيانات المتجر؛ لا يمكن الدخول دون اتصال فعلي.</Txt>
+            <Txt style={{ color: t.muted, lineHeight: 24 }}>حساب التجارة يحتاج خادمًا آمنًا؛ يمكنك تصفح المنتجات وتخصيص جوازك المحلي دون خادم.</Txt>
             <CTA title="إعداد اتصال الخادم" onPress={() => router.push("/connection")} />
           </Card>
         ) : null}
@@ -60,6 +60,7 @@ export default function LoginScreen() {
           {error ? <Txt accessibilityRole="alert" style={{ color: t.danger }}>{error}</Txt> : null}
         </Card>
         <CTA title="إنشاء حساب جديد بالبريد" tone="soft" onPress={() => router.push("/register")} />
+        <CTA title="المتابعة كضيف دون خادم" tone="soft" testID="continue-guest" onPress={() => router.replace("/")} />
         <Pressable accessibilityRole="button" onPress={() => router.push("/connection")}><Txt style={{ color: t.muted, textAlign: "center" }}>إعداد الخادم أو تغييره</Txt></Pressable>
         <Txt style={{ color: t.muted, lineHeight: 22, fontSize: 12, textAlign: "center" }}>بالمتابعة توافق على الشروط وسياسة الخصوصية. لا نشارك رقمك أو بريدك مع أي طرف.</Txt>
       </View>

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { Banknote, CheckSquare, CreditCard, Square, Wallet, ShieldCheck } from "lucide-react-native";
+import { Banknote, CheckSquare, CreditCard, Square, Wallet, ShieldCheck, Truck, Zap, Store as StoreIcon } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { AddressForm, AddressDraft, addressPayload, addressProblem, draftFrom, emptyAddress } from "../components/AddressForm";
 import { Badge, Button, Card, Chip, EmptyState, Field, KeyValue, Notice, Row, Tabs, Toggle, Txt } from "../components/ui";
@@ -15,7 +15,13 @@ import { api } from "../lib/api";
 import type { Address } from "../lib/commerce-types";
 
 type Slot = { date: string; window: string; label: string; from: string; to: string; remaining: number; available: boolean };
-type Quote = { subtotal: number; discount: number; couponError: string | null; shipping: number; giftWrapFee: number; total: number; zone: { name: string; etaMinutes: number } | null; tier: string | null; budget: { weeklyBudget: number | null; remaining: number | null; exceeds: boolean } | null };
+type DeliveryMode = "standard" | "express" | "pickup";
+type DeliveryOptions = {
+  express: { available: boolean; reason?: string; fee?: number; etaMinutes?: number; branch?: { id: string; name: string }; distanceKm?: number };
+  pickup: { branchId: string; name: string; city?: string; hours?: string; readyInMinutes: number; available: boolean; distanceKm?: number }[];
+  tips: number[];
+};
+type Quote = { subtotal: number; discount: number; couponError: string | null; shipping: number; giftWrapFee: number; total: number; tip?: number; expressFee?: number; deliveryMode?: DeliveryMode; zone: { name: string; etaMinutes: number } | null; tier: string | null; budget: { weeklyBudget: number | null; remaining: number | null; exceeds: boolean } | null };
 type Step = "address" | "payment" | "review";
 const newKey = () => `checkout-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -42,6 +48,10 @@ export default function Checkout() {
   const [cardToken, setCardToken] = useState<{ token: string; brand: string; last4: string } | null>(null);
   const [terms, setTerms] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("standard");
+  const [pickupBranchId, setPickupBranchId] = useState<string | null>(null);
+  const [tip, setTip] = useState(0);
+  const [options, setOptions] = useState<DeliveryOptions | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const idempotency = useRef(newKey());
@@ -54,13 +64,30 @@ export default function Checkout() {
   }
   const items = useMemo(() => Object.entries(lines).map(([productId, quantity]) => ({ productId, quantity })), [lines]);
   const giftPayload = gift.wrap || gift.message.trim() ? { wrap: gift.wrap, message: gift.message.trim() || undefined, recipient: gift.recipient.trim() || undefined } : null;
+  // Express and pickup depend on the cart and the delivery point; the server decides what is available and its price.
   useEffect(() => {
     let active = true;
     if (!configured || !items.length) return;
-    api.post<Quote>("/checkout/quote", { items, couponCode: params.coupon || undefined, address: { city: draft.city }, deliverySlot: slot || undefined, gift: giftPayload || undefined })
-      .then((q) => { if (active) setQuote(q); }).catch((e) => { if (active) setError(e instanceof Error ? e.message : "تعذر حساب الطلب"); });
+    api.post<DeliveryOptions>("/delivery/options", { items, latitude: draft.latitude, longitude: draft.longitude })
+      .then((o) => { if (active) setOptions(o); }).catch(() => { if (active) setOptions(null); });
     return () => { active = false; };
-  }, [configured, items, params.coupon, draft.city, slot, gift.wrap]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [configured, items, draft.latitude, draft.longitude]);
+  // A choice the server no longer offers falls back to standard delivery (adjusting state while rendering).
+  const [seenOptions, setSeenOptions] = useState<DeliveryOptions | null>(null);
+  if (options !== seenOptions) {
+    setSeenOptions(options);
+    if (deliveryMode === "express" && !options?.express.available) setDeliveryMode("standard");
+    if (deliveryMode === "pickup" && !options?.pickup.some((b) => b.branchId === pickupBranchId && b.available)) { setDeliveryMode("standard"); setPickupBranchId(null); }
+  }
+  const fulfillment = { deliveryMode, pickupBranchId: deliveryMode === "pickup" ? pickupBranchId || undefined : undefined, tip: deliveryMode === "pickup" ? 0 : tip };
+  useEffect(() => {
+    let active = true;
+    if (!configured || !items.length) return;
+    if (deliveryMode === "pickup" && !pickupBranchId) return;
+    api.post<Quote>("/checkout/quote", { items, couponCode: params.coupon || undefined, address: { city: draft.city, latitude: draft.latitude, longitude: draft.longitude }, deliverySlot: slot || undefined, gift: giftPayload || undefined, ...fulfillment })
+      .then((q) => { if (active) { setQuote(q); setError(""); } }).catch((e) => { if (active) setError(e instanceof Error ? e.message : "تعذر حساب الطلب"); });
+    return () => { active = false; };
+  }, [configured, items, params.coupon, draft.city, draft.latitude, draft.longitude, slot, gift.wrap, deliveryMode, pickupBranchId, tip]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!user) return <Shell title="إتمام الطلب"><EmptyState title="سجّل الدخول أولًا" detail="نحتاج حسابك لحفظ العنوان ومتابعة الطلب." action="تسجيل الدخول" href="/login" /></Shell>;
   if (!items.length) return <Shell title="إتمام الطلب"><EmptyState title="لا توجد منتجات للطلب" detail="أضف منتجات إلى السلة أولًا." /></Shell>;
   const productName = (id: string) => store.products.find((p) => p.id === id)?.name || id;
@@ -68,6 +95,7 @@ export default function Checkout() {
   async function toPayment() {
     setError("");
     const problem = addressProblem(draft); if (problem) { setError(problem); return; }
+    if (deliveryMode === "pickup" && !pickupBranchId) { setError(tr("اختر الفرع الذي ستستلم منه")); return; }
     if (selected === "new" && saveAddress && configured) {
       try { const created = await api.post<{ address: Address & { id: string } }>("/addresses", addressPayload(draft)); setSelected(created.address.id); addresses.reload(); } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ العنوان"); return; }
     }
@@ -90,7 +118,7 @@ export default function Checkout() {
   async function confirm() {
     setBusy(true); setError("");
     try {
-      const order = await store.submitOrder({ items: lines, checkoutMode: params.mode === 'buy-now' && store.buyNow ? 'buy-now' : 'cart', address: addressPayload(draft) as Address, paymentMethod: method, couponCode: params.coupon || undefined, idempotencyKey: idempotency.current, deliverySlot: slot, deliveryNotes: notes.trim() || undefined, gift: giftPayload, acceptTerms: terms, cardToken: cardToken?.token });
+      const order = await store.submitOrder({ items: lines, checkoutMode: params.mode === 'buy-now' && store.buyNow ? 'buy-now' : 'cart', address: addressPayload(draft) as Address, paymentMethod: method, couponCode: params.coupon || undefined, idempotencyKey: idempotency.current, ...fulfillment, deliverySlot: slot, deliveryNotes: notes.trim() || undefined, gift: giftPayload, acceptTerms: terms, cardToken: cardToken?.token });
       router.replace({ pathname: "/order/[id]", params: { id: order.id, placed: "1" } });
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذر إنشاء الطلب");
@@ -112,6 +140,39 @@ export default function Checkout() {
           ) : null}
           <Card><AddressForm value={draft} onChange={(next) => { setDraft(next); if (selected !== "new") setSelected("new"); }} /></Card>
           {selected === "new" ? <Toggle label="احفظ العنوان لطلباتي القادمة" value={saveAddress} onChange={setSaveAddress} /> : null}
+          <Card style={{ gap: 10 }} testID="fulfillment">
+            <Txt weight="bold">{tr("طريقة الاستلام")}</Txt>
+            {([
+              ["standard", "توصيل عادي", Truck, quote?.zone ? tr("حسب منطقة {z}", { z: quote.zone.name }) : tr("في الموعد الذي تختاره"), true],
+              ["express", "توصيل سريع", Zap, options?.express.available ? tr("+{m} · خلال {n} دقيقة تقريبًا من {b}", { m: money.format(options.express.fee || 0), n: options.express.etaMinutes || 0, b: options.express.branch?.name || "" }) : options?.express.reason || tr("حدّد موقع التوصيل على الخريطة لمعرفة التوصيل السريع"), !!options?.express.available],
+              ["pickup", "استلام من الفرع", StoreIcon, tr("بلا رسوم توصيل، جاهز خلال {n} دقيقة", { n: options?.pickup[0]?.readyInMinutes || 30 }), !!options?.pickup.some((b) => b.available)],
+            ] as const).map(([mode, label, Icon, detail, enabled]) => {
+              const on = deliveryMode === mode;
+              return (
+                <Pressable key={mode} testID={`mode-${mode}`} accessibilityRole="radio" aria-checked={on} aria-disabled={!enabled} disabled={!enabled} accessibilityLabel={tr(label)} onPress={() => setDeliveryMode(mode)}
+                  style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, padding: 12, borderRadius: 14, borderWidth: on ? 2 : 1, borderColor: on ? t.primary : t.line, backgroundColor: on ? t.primarySoft : t.paper, opacity: enabled ? 1 : 0.55 }}>
+                  <Icon size={20} color={on ? t.primary : t.muted} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt weight="bold" style={{ fontSize: 14 }}>{tr(label)}</Txt>
+                    <Txt style={{ fontSize: 12, color: t.muted }}>{detail}</Txt>
+                  </View>
+                </Pressable>
+              );
+            })}
+            {deliveryMode === "pickup" ? (
+              <View testID="pickup-branches"><Row wrap>
+                {(options?.pickup || []).map((b) => (
+                  <Chip key={b.branchId} testID={`pickup-${b.branchId}`} active={pickupBranchId === b.branchId} onPress={() => b.available && setPickupBranchId(b.branchId)}
+                    label={`${b.name}${b.distanceKm !== undefined ? ` · ${b.distanceKm} ${tr("كم")}` : ""}${b.available ? "" : ` · ${tr("غير متوفر كاملًا")}`}`} />
+                ))}
+              </Row></View>
+            ) : (
+              <View style={{ gap: 6 }} testID="tips">
+                <Txt style={{ fontSize: 13 }}>{tr("إكرامية للسائق (اختيارية)")}</Txt>
+                <Row wrap>{(options?.tips || [0, 0.5, 1, 2]).map((v) => <Chip key={v} testID={`tip-${v}`} label={v ? money.format(v) : tr("بدون")} active={tip === v} onPress={() => setTip(v)} />)}</Row>
+              </View>
+            )}
+          </Card>
           <Card style={{ gap: 10 }} testID="slots">
             <Txt weight="bold">{tr("موعد التوصيل")}</Txt>
             {days.map((date) => (
@@ -174,7 +235,8 @@ export default function Checkout() {
             <View style={{ height: 1, backgroundColor: t.line, marginVertical: 6 }} />
             <KeyValue label="المجموع الفرعي" value={money.format(quote?.subtotal ?? 0)} />
             {quote?.discount ? <KeyValue label="الخصم" value={`- ${money.format(quote.discount)}`} /> : null}
-            <KeyValue label={quote?.zone ? tr("التوصيل ({z})", { z: quote.zone.name }) : "التوصيل"} value={money.format(quote?.shipping ?? 0)} />
+            <KeyValue testID="review-delivery" label={deliveryMode === "pickup" ? tr("استلام من {b}", { b: options?.pickup.find((b) => b.branchId === pickupBranchId)?.name || "" }) : deliveryMode === "express" ? tr("توصيل سريع (~{n} دقيقة)", { n: options?.express.etaMinutes || 0 }) : quote?.zone ? tr("التوصيل ({z})", { z: quote.zone.name }) : "التوصيل"} value={money.format(quote?.shipping ?? 0)} />
+            {quote?.tip ? <KeyValue testID="review-tip" label="إكرامية السائق" value={money.format(quote.tip)} /> : null}
             {quote?.tier && quote.tier !== "bronze" ? <Txt style={{ color: t.success, fontSize: 12 }}>{tr("ميزة عضويتك طُبّقت على التوصيل")}</Txt> : null}
             {quote?.giftWrapFee ? <KeyValue label="تغليف الهدية" value={money.format(quote.giftWrapFee)} /> : null}
             <KeyValue label="الإجمالي" value={money.format(quote?.total ?? 0)} strong testID="review-total" />
