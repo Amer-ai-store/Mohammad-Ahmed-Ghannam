@@ -58,7 +58,7 @@ test('workspace renders rows, filters by priority, and rejects nonprivate URLs',
   assert.equal(area.children[0].children[1].children.length,12);
   const input=toolbar.children[0];input.value='foobar-nonexisting';input.listeners.input();
   assert.equal(area.children[0].tagName,'p');
-  const integration=root.children[7],bar=integration.children[1],privateUrl=bar.children[0],open=bar.children[1];
+  const integration=root.children[7],bar=integration.children[2],privateUrl=bar.children[0],open=bar.children[1];
   privateUrl.value='http://example.com/';
   open.onclick();
   assert.equal(opened.length,0);
