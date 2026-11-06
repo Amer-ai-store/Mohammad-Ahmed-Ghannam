@@ -700,7 +700,7 @@ function render() {
     renderUser();
     const v = document.querySelector(`section.view[data-view="${current}"]`);
     // Keep focus inside forms when a live snapshot arrives.
-    if (v && !(v.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.id !== "sales-branch" && document.activeElement.id !== "inv-low")) RENDER[current](v);
+    if (v && !(v.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.id !== "sales-branch" && document.activeElement.id !== "inv-low") && Object.hasOwn(RENDER, current)) RENDER[current](v);
     $("banner").replaceChildren(...(state.demo && ["home", "sales", "inventory", "finance", "investigations", "maps"].includes(current)
       ? [el("div", { class: "banner" }, el("b", null, T("بيانات تجريبية: ", "Demo data: ")), T("الأرقام في هذه الشاشة مولّدة للمعاينة فقط، وليست من قاعدة جوافة أو أي شركة.", "Figures on this screen are generated for preview only, not from Jawafa or any company."))] : []));
   });

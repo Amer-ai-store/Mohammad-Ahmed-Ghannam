@@ -5,5 +5,14 @@
 h1{color:#d9b45a;font-size:1.4rem}p{color:#93a89e;line-height:1.7}button{background:#22c55e;border:0;border-radius:10px;padding:10px 22px;font-weight:700;cursor:pointer}</style></head>
 <body><div class="card"><h1>تعذّر الاتصال بمركز القيادة</h1>
 <p>يحتاج JAWAFA ONE AI إلى الإنترنت لتسجيل الدخول وقراءة بيانات شركتك. لا يعرض التطبيق بيانات مخزنة أو تقديرية عند انقطاع الاتصال.</p>
-<p id="r" style="font-size:.8rem"></p><button onclick="location.href=new URLSearchParams(location.search).get('url')">إعادة المحاولة</button></div>
-<script>const q=new URLSearchParams(location.search);document.getElementById("r").textContent=q.get("reason")||"";</script></body></html>
+<p id="r" style="font-size:.8rem"></p><button id="retry" type="button">إعادة المحاولة</button></div>
+<script>
+const q=new URLSearchParams(location.search);
+document.getElementById("r").textContent=q.get("reason")||"";
+// Only an https address (or http on localhost for development) may be retried; anything else,
+// such as javascript: or file:, is ignored.
+function safeRetryUrl(raw){try{const u=new URL(raw);const local=u.hostname==="localhost"||u.hostname==="127.0.0.1";return u.protocol==="https:"||(u.protocol==="http:"&&local)?u.href:null}catch{return null}}
+const target=safeRetryUrl(q.get("url"));
+const btn=document.getElementById("retry");
+if(!target)btn.disabled=true;else btn.addEventListener("click",()=>{location.href=target});
+</script></body></html>
