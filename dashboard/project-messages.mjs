@@ -1,4 +1,4 @@
-import {EMPTY_GRAPH,parseSideLinks,createLinkGraph,loadLinkGraph,saveLinkGraph,neighbors,unlink} from "./project-links.mjs";
+import {parseSideLinks,createLinkGraph,connectProjects,registerChats,effectiveEdges,loadLinkGraph,saveLinkGraph,neighbors,unlink} from "./project-links.mjs";
 /* Project Message Hub. Public GitHub mailbox: NON-SENSITIVE coordination metadata only.
  * Never put finance data, personal records, credentials or private evidence URLs in this issue.
  * ChatGPT project chats cannot be pushed into via the ChatGPT UI by this module.
@@ -52,65 +52,94 @@ function initMessageHub(){
     });
     if(!list.children.length)list.append(el("p",{class:"muted"},"لا توجد رسائل لهذا المشروع."));
   }
-  /* Link registry is private to this browser. It is NOT an inter-chat transport. */
+  /* Local browser registry; project URLs do not grant ChatGPT chat permissions. */
   let graph=loadLinkGraph(localStorage);
-  const linksState=$("pm-links-status"), linksList=$("pm-links-list"), sourceSelect=$("pm-source-link");
+  const linksState=$("pm-links-status"), linksList=$("pm-links-list"), projectList=$("pm-project-list"),sourceSelect=$("pm-source-link");
   function reportLinks(text){linksState.textContent=text;}
   function renderLinks(){
-    linksList.replaceChildren();
-    sourceSelect.replaceChildren();
-    sourceSelect.append(el("option",{value:""},"اختر محادثة مرتبطة..."));
-    for(const node of graph.nodes){
-      if(!graph.edges.some(e=>e.left===node.key||e.right===node.key))continue;
-      sourceSelect.append(el("option",{value:node.key},node.project+" · "+node.title+" ("+neighbors(graph,node.key).length+" مستلمين)"));
+    linksList.replaceChildren();projectList.replaceChildren();sourceSelect.replaceChildren();
+    sourceSelect.append(el("option",{value:""},"إرسال يدوي — اختر محادثة من الروابط"));
+    const edges=effectiveEdges(graph);
+    for(const project of ["gpt","التقرير النهائي"]){
+      const url=graph.projects[project];
+      const p=el("p",{class:"small"});
+      p.append(el("span",{},project+": "));
+      if(url)p.append(el("a",{href:url,target:"_blank",rel:"noopener noreferrer"},"فتح رابط المشروع المسجّل"));
+      else p.append(el("span",{},"لم يُسجّل رابط المشروع بعد"));
+      projectList.append(p);
     }
-    if(!graph.edges.length)linksList.append(el("p",{class:"muted"},"لم تُضف روابط بعد."));
-    for(const edge of graph.edges){
+    for(const node of graph.nodes){
+      const n=neighbors(graph,node.key).length;
+      if(!n)continue;
+      sourceSelect.append(el("option",{value:node.key},node.project+" · "+node.title+" ("+n+" مستلمًا)"));
+    }
+    if(!edges.length)linksList.append(el("p",{class:"muted"},"لم تنشأ روابط بين المحادثات بعد؛ أضف قوائم المحادثات لكلا المشروعين."));
+    for(const edge of edges){
       const left=graph.nodes.find(n=>n.key===edge.left),right=graph.nodes.find(n=>n.key===edge.right);
       if(!left||!right)continue;
       const row=el("div",{class:"panel"});
-      row.append(el("strong",{},"ارتباط محدد (محلي، دون اتصال تلقائي)"));
+      row.append(el("strong",{},edge.automatic?"ارتباط شامل تلقائي — إعداد محلي":"ارتباط محدد — إعداد محلي"));
       for(const [caption,node] of [["الطرف الأول",left],["الطرف الثاني",right]]){
         const p=el("p",{class:"small"});
         p.append(el("span",{},caption+" · "+node.project+" · "+node.title+" · "));
         p.append(el("a",{href:node.url,target:"_blank",rel:"noopener noreferrer"}, "فتح المحادثة"));
         row.append(p);
       }
-      const remove=el("button",{type:"button",class:"button"},"حذف الارتباط");
+      const remove=el("button",{type:"button",class:"button"},"استبعاد هذه العلاقة");
       remove.addEventListener("click",()=>{
         graph=unlink(graph,edge.id);
-        try{saveLinkGraph(localStorage,graph);reportLinks("تم حذف الارتباط محليًا فقط.");}
-        catch{reportLinks("فشل الحفظ المحلي للروابط.");}
+        try{saveLinkGraph(localStorage,graph);reportLinks("تم استبعاد العلاقة على هذا الجهاز.");}
+        catch{reportLinks("فشل حفظ الاستبعاد محليًا.");}
         renderLinks();
       });
       row.append(remove);linksList.append(row);
     }
-    $("pm-links-count").textContent=graph.edges.length+" ارتباطًا بين "+graph.nodes.filter(n=>neighbors(graph,n.key).length).length+" محادثة. التخزين على هذا الجهاز فقط.";
+    const registered=graph.nodes.length,linked=graph.nodes.filter(n=>neighbors(graph,n.key).length).length;
+    $("pm-links-count").textContent=edges.length+" علاقة بين "+linked+" محادثة ("+registered+" محادثة مسجّلة). الربط الشامل: "+(graph.auto_pairs.length?"مفعّل":"غير مفعّل")+"؛ دليل وصول الرسائل: غير مثبت. جميع الروابط محفوظة على هذا الجهاز فقط.";
+  }
+  function commitGraph(next,label){
+    saveLinkGraph(localStorage,next);
+    graph=next;renderLinks();reportLinks(label);
   }
   $("pm-links-form").addEventListener("submit",event=>{
     event.preventDefault();
     const fields=new FormData(event.currentTarget);
     try{
-      const left=parseSideLinks(fields.get("first_links"),fields.get("first_project"));
-      const right=parseSideLinks(fields.get("second_links"),fields.get("second_project"));
-      if(left[0]?.project===right[0]?.project)throw Error("DISTINCT_PROJECTS_REQUIRED");
-      const next=createLinkGraph(graph,left,right);
-      const count=next.edges.length-graph.edges.length;
-      saveLinkGraph(localStorage,next);
-      graph=next;
-      renderLinks();
-      reportLinks("تم حفظ "+count+" ارتباط جديد على هذا الجهاز فقط. هذه روابط تنقل، ولا تثبت الاتصال أو إرسال الرسائل.");
-    }catch(error){reportLinks("تعذر حفظ الربط: "+String(error.message));}
+      const first=String(fields.get("first_project")),second=String(fields.get("second_project"));
+      const prev=effectiveEdges(graph).length;
+      let next=connectProjects(graph,{
+        first_project:first,first_url:fields.get("first_url"),
+        second_project:second,second_url:fields.get("second_url"),
+        auto_link:fields.get("auto_link")==="on"
+      });
+      const left=parseSideLinks(fields.get("first_links"),first);
+      const right=parseSideLinks(fields.get("second_links"),second);
+      if(left.length)next=registerChats(next,first,fields.get("first_links"));
+      if(right.length)next=registerChats(next,second,fields.get("second_links"));
+      if(fields.get("auto_link")!=="on"&&left.length&&right.length)next=createLinkGraph(next,left,right);
+      const delta=effectiveEdges(next).length-prev;
+      commitGraph(next,"سُجّل رابطا المشروعين و"+(left.length+right.length)+" محادثة؛ عدد العلاقات الجديدة "+delta+". حفظ على الجهاز فقط، وليس اتصالًا حيًا بالدردشات.");
+    }catch(error){reportLinks("تعذر تسجيل المشروعين: "+String(error.message));}
+  });
+  $("pm-add-chats-form").addEventListener("submit",event=>{
+    event.preventDefault();
+    const fields=new FormData(event.currentTarget);
+    try{
+      const project=String(fields.get("project"));
+      if(!graph.projects[project])throw Error("REGISTER_PROJECT_FIRST");
+      const next=registerChats(graph,project,fields.get("chat_links"));
+      commitGraph(next,"تم تسجيل محادثات جديدة للمشروع؛ الروابط الشاملة تربطها تلقائيًا بالمحادثات المعروفة في المشروع الآخر، دون وصول مضمون إلى ChatGPT.");
+    }catch(error){reportLinks("تعذر إضافة المحادثات: "+String(error.message));}
   });
   sourceSelect.addEventListener("change",()=>{
     const node=graph.nodes.find(n=>n.key===sourceSelect.value);
     if(!node)return;
     form.elements.namedItem("from_project").value=node.project;
     form.elements.namedItem("from_chat").value=node.title;
-    const dest=neighbors(graph,node.key);
-    if(dest.length){
-      form.elements.namedItem("to_project").value=dest[0].project;
-      form.elements.namedItem("to_chat").value=dest[0].title;
+    const destination=neighbors(graph,node.key);
+    if(destination.length){
+      form.elements.namedItem("to_project").value=destination[0].project;
+      form.elements.namedItem("to_chat").value=destination[0].title;
     }
   });
   renderLinks();
