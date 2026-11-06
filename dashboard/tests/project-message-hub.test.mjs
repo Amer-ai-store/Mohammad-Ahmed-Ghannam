@@ -60,3 +60,23 @@ test("GitHub issue receipt is SENT only; do not invent read or delivery evidence
   assert.equal(parseHubMessage({id:1,body:"hello"}),null);
   assert.throws(()=>composeHubMessage({id:"1",from_project:"other",to_project:"gpt",from_chat:"x",to_chat:"y",subject:"z",body:"hi"}));
 });
+
+test("GitHub messages prefaced by explanation text are discoverable and sender claims are not authenticated",()=>{
+  const payload={
+    kind:"PROJECT_CHAT_MESSAGE",schema:"1.0",id:"external-test",
+    from_project:"Github و ربط مع جميع محادثات codex وجميع دردشات",
+    from_chat:"محادثة إرسال تقرير تجريبي",to_project:"التقرير النهائي",
+    to_chat:"صندوق استقبال تقارير الوكلاء",subject:"تقرير تجريبي",
+    body:"تقرير تنسيقي فقط",reply_to:null
+  };
+  const ticks=String.fromCharCode(96).repeat(3);
+  const comment={id:6673589802,body:"تقرير تجريبي / TEST — لا يتضمن أسرارًا أو بيانات خاصة.\n\n"+ticks+"json\n"+JSON.stringify(payload,null,2)+"\n"+ticks+"\n\nDelivery semantics: SENT to GitHub only."};
+  const received=parseHubMessage(comment);
+  assert.equal(received.id,"external-test");
+  assert.equal(received.comment_id,6673589802);
+  assert.equal(received.to_project,"التقرير النهائي");
+  assert.equal(received.from_project,payload.from_project);
+  assert.equal(received.authenticated_sender,undefined);
+  assert.equal(received.read_at,undefined);
+  assert.equal(parseHubMessage({id:17,body:comment.body.replace('"to_project": "التقرير النهائي"','"to_project": "not-registered"')}),null);
+});
