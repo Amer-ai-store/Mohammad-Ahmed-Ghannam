@@ -23,8 +23,11 @@ const jawafaRoutes=[...jawafaBlock[1].matchAll(/^"([^"]+)":\{/gm)].map(x=>x[1]);
 
 test('canonical dashboard routes all 14 AAS screens and 17 Jawafa panes',()=>{
   assert.equal(nav.length,report.public_inventory.main_groups);
-  assert.equal(viewSet.size,report.public_inventory.main_native_views);
-  assert.equal(navRoutes.length,report.public_inventory.main_navigation_destinations);
+  // Snapshot inventory describes the existing published dashboard. A new proposed
+  // project-message view in this PR is not silently counted as published.
+  const proposedMessagingView=navRoutes.includes('project-messages')&&viewSet.has('project-messages')?1:0;
+  assert.equal(viewSet.size,report.public_inventory.main_native_views+proposedMessagingView);
+  assert.equal(navRoutes.length,report.public_inventory.main_navigation_destinations+proposedMessagingView);
   assert.equal(manifest.routes.length,14);
   assert.equal(new Set(manifest.routes).size,14);
   assert.ok(manifest.routes.every(x=>navRoutes.includes('aas-'+x)),'all AAS routes must be navigable');
