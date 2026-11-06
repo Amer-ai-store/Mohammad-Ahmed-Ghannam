@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '24'
       - name: Node tests — native navigation and private-link fail-closed guard
-        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs dashboard/tests/central-transfer-audit.test.mjs
+        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs dashboard/tests/central-transfer-audit.test.mjs dashboard/tests/jawafa-forensic-workspace.test.mjs
       - name: Publication preflight — reject private links in entire dashboard artifact
         shell: bash
         run: |
@@ -98,11 +98,14 @@ jobs:
               && grep -Fq 'id="jf-investigation"' /tmp/live-dashboard.html \
               && grep -Fq 'id="release-verification-root"' /tmp/live-dashboard.html \
               && grep -Fq 'id="central-transfer-audit-root"' /tmp/live-dashboard.html \
+              && grep -Fq 'id="jawafa-forensic-workspace-root"' /tmp/live-dashboard.html \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}release-verification.mjs?verify=${GITHUB_SHA}" -o /tmp/live-verification.mjs \
               && grep -Fq 'export const REPO=' /tmp/live-verification.mjs \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}data/jawafa-investigation-reports.json?verify=${GITHUB_SHA}" -o /tmp/live-manifest.json \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}data/central-transfer-audit.json?verify=${GITHUB_SHA}" -o /tmp/live-transfer-audit.json \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}central-transfer-audit.mjs?verify=${GITHUB_SHA}" -o /tmp/live-transfer-code.mjs \
+              && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}data/jawafa-forensic-workspace-public.json?verify=${GITHUB_SHA}" -o /tmp/live-forensic-metadata.json \
+              && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}jawafa-forensic-workspace.js?verify=${GITHUB_SHA}" -o /tmp/live-forensic-workspace.js \
               && python3 - <<'PY'
           import json
           with open("/tmp/live-manifest.json") as f: doc=json.load(f)
@@ -117,6 +120,11 @@ jobs:
           assert len(transfer["sections"])==8
           code=open("/tmp/live-transfer-code.mjs",encoding="utf-8").read()
           assert "crypto.subtle.digest('SHA-256'" in code
+          with open("/tmp/live-forensic-metadata.json",encoding="utf-8") as f: fmeta=json.load(f)
+          assert fmeta["classification"]=="PUBLIC_TOPIC_METADATA_NO_PERSONAL_OR_FINANCIAL_RECORDS"
+          assert len(fmeta["cases"])==26
+          assert fmeta["delivery"]["manager_ack_verified"] is False
+          assert "Jawafa_DB" not in open("/tmp/live-forensic-workspace.js",encoding="utf-8").read()
           print("Published manifest and transfer audit verified; private references absent")
           PY
             then
