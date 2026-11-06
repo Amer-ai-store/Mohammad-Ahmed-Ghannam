@@ -32,7 +32,7 @@ async function open(viewport) {
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
-  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource.*fonts/.test(m.text())) errors.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource.*fonts/.test(m.text())) errors.push({ at: Date.now(), text: m.text(), url: m.location()?.url || '' }); });
   const t0 = Date.now();
   await page.goto(base, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__jawafaState && window.__jawafaState.cloud !== 'loading', null, { timeout: 30000 });
@@ -42,6 +42,13 @@ const signIn = async (page, email, uid) => {
   const r = await page.evaluate(([e, u]) => window.__jawafaTestSignIn(e, u).then(c => 'ok:' + c.user.uid, err => 'err:' + (err.code || err.message)), [email, uid]);
   if (!r.startsWith('ok')) throw new Error('test sign-in failed: ' + r);
 };
+// Steps that deliberately make Firestore reject a request. The SDK may then reset its stream and the
+// browser logs a generic "Failed to load resource: 400" for the emulator; only those, inside these
+// windows, are expected. Any other console error still fails E2E-18.
+const denialWindows = [];
+async function expectDenial(fn) { const start = Date.now(); try { return await fn(); } finally { denialWindows.push([start, Date.now() + 2000]); } }
+const isExpectedDenialNoise = (e) => /Failed to load resource: the server responded with a status of 400/.test(e.text)
+  && /^http:\/\/127\.0\.0\.1:8080\//.test(e.url) && denialWindows.some(([a, b]) => e.at >= a && e.at <= b);
 const nav = async (page, v) => { await page.evaluate((v) => { location.hash = '#' + v; }, v); await page.waitForFunction((v) => !document.querySelector(`section.view[data-view="${v}"]`).hidden, v); };
 const waitState = (page, fn, arg) => page.waitForFunction(fn, arg, { timeout: 15000 });
 
@@ -157,10 +164,10 @@ try {
   check('E2E-11', r === 'auditor', 'invitee accepted and joined with role ' + r);
   await nav(b.page, 'company'); await b.page.waitForTimeout(300);
   check('E2E-12', await b.page.locator('input[name="name"]').isDisabled(), 'auditor sees company profile read-only');
-  const denied = await b.page.evaluate(async () => {
+  const denied = await expectDenial(() => b.page.evaluate(async () => {
     const fs = window.firebase.app().firestore(); const id = window.__jawafaState.companyId;
     try { await fs.collection('companies').doc(id).collection('workspaces').add({ name: 'x' }); return 'allowed'; } catch (e) { return e.code; }
-  });
+  }));
   check('E2E-13', denied === 'permission-denied', 'auditor direct API write rejected by server: ' + denied);
   await nav(b.page, 'branches');
   await b.page.waitForFunction(() => document.querySelectorAll('section.view[data-view="branches"] tbody tr td a').length === 1, null, { timeout: 5000 }).catch(() => {});
@@ -172,15 +179,15 @@ try {
   await signIn(c.page, 'stranger@example.com', 'strangerX');
   await waitState(c.page, () => window.__jawafaState.user);
   const companyA = await a.page.evaluate(() => window.__jawafaState.companyId);
-  const res = await c.page.evaluate(async (id) => {
+  const res = await expectDenial(() => c.page.evaluate(async (id) => {
     const fs = window.firebase.app().firestore(); const out = {};
     try { await fs.collection('companies').doc(id).get(); out.doc = 'allowed'; } catch (e) { out.doc = e.code; }
     try { await fs.collection('companies').doc(id).collection('agentMessages').get(); out.msgs = 'allowed'; } catch (e) { out.msgs = e.code; }
     try { await fs.collection('companies').doc(id).update({ plan: 'premium_plus' }); out.plan = 'allowed'; } catch (e) { out.plan = e.code; }
     return out;
-  }, companyA);
+  }, companyA));
   check('E2E-14', res.doc === 'permission-denied' && res.msgs === 'permission-denied' && res.plan === 'permission-denied', 'stranger API access to company A denied: ' + JSON.stringify(res));
-  const planOwner = await a.page.evaluate(async () => { try { await window.firebase.app().firestore().collection('companies').doc(window.__jawafaState.companyId).update({ plan: 'premium_plus' }); return 'allowed'; } catch (e) { return e.code; } });
+  const planOwner = await expectDenial(() => a.page.evaluate(async () => { try { await window.firebase.app().firestore().collection('companies').doc(window.__jawafaState.companyId).update({ plan: 'premium_plus' }); return 'allowed'; } catch (e) { return e.code; } }));
   check('E2E-15', planOwner === 'permission-denied', 'owner cannot self-upgrade to Premium Plus: ' + planOwner);
 
   // 5. Mobile layout.
@@ -192,8 +199,10 @@ try {
   await nav(c.page, 'company'); await c.page.waitForTimeout(400);
   await c.page.screenshot({ path: `${out}/05-company-mobile-stranger.png` });
 
-  const errs = [...a.errors, ...b.errors, ...c.errors].filter(e => !/permission-denied|PERMISSION_DENIED|Missing or insufficient permissions/.test(e));
-  check('E2E-18', errs.length === 0, 'no unexpected page/console errors' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
+  const all = [...a.errors, ...b.errors, ...c.errors].map(e => typeof e === 'string' ? { at: 0, text: e, url: '' } : e);
+  const errs = all.filter(e => !/permission-denied|PERMISSION_DENIED|Missing or insufficient permissions/.test(e.text) && !isExpectedDenialNoise(e));
+  const ignored = all.length - errs.length;
+  check('E2E-18', errs.length === 0, 'no unexpected page/console errors' + (ignored ? ` (${ignored} expected denial log(s) ignored)` : '') + (errs.length ? ': ' + errs.slice(0, 3).map(e => e.text + ' @ ' + e.url).join(' | ') : ''));
   check('PERF-01', a.loadMs < 8000 && c.loadMs < 8000, `time to ready (load + Firebase SDK + emulator): desktop ${a.loadMs} ms, mobile ${c.loadMs} ms`);
 } catch (e) {
   try { for (const [i, pg] of browser.contexts().flatMap(c => c.pages()).entries()) await pg.screenshot({ path: `${out}/fatal-${i}.png` }); } catch {}
