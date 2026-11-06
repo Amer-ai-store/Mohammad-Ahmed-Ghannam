@@ -414,10 +414,42 @@ nav.side{gap:.5rem}
     </div>
     <p id="pm-status" class="muted small" role="status" aria-live="polite">لم يتم فحص صندوق الرسائل بعد.</p>
   </div>
-  <div class="panel">
+  <div class="panel" id="pm-project-bulk">
+  <h2>ربط مشروع كامل دفعة واحدة — gpt ↔ التقرير النهائي</h2>
+  <p class="muted">أدخل رابط كل مشروع من ChatGPT، ويمكنك إضافة قائمة محادثاته دفعة واحدة أو إضافتها لاحقًا. عند اختيار «الربط الشامل» تُنشأ علاقات عديدة-إلى-عديدة تلقائيًا بين كل المحادثات <strong>المسجّلة</strong> في الطرفين، بما فيها المحادثات التي تضيفها لاحقًا. لا يتم استخراج المحادثات تلقائيًا من رابط المشروع؛ ولا تُرسل الرسائل مباشرة إلى واجهة ChatGPT دون موصل مصرح له.</p>
+  <form id="pm-links-form" style="display:grid;gap:.8rem;max-width:850px">
+    <fieldset style="display:grid;gap:.6rem"><legend>الطرف الأول</legend>
+      <label>المشروع <select name="first_project"><option value="gpt">gpt</option><option value="التقرير النهائي">التقرير النهائي</option></select></label>
+      <label>رابط المشروع الكامل <input name="first_url" type="url" required placeholder="https://chatgpt.com/g/g-p-.../project"></label>
+      <label>روابط محادثات الطرف الأول، سطر لكل محادثة (اختياري) <textarea name="first_links" rows="4" placeholder="اسم المحادثة | https://chatgpt.com/c/..."></textarea></label>
+    </fieldset>
+    <fieldset style="display:grid;gap:.6rem"><legend>الطرف الثاني</legend>
+      <label>المشروع <select name="second_project"><option value="التقرير النهائي">التقرير النهائي</option><option value="gpt">gpt</option></select></label>
+      <label>رابط المشروع الكامل <input name="second_url" type="url" required placeholder="https://chatgpt.com/g/g-p-.../project"></label>
+      <label>روابط محادثات الطرف الثاني، سطر لكل محادثة (اختياري) <textarea name="second_links" rows="4" placeholder="اسم المحادثة | https://chatgpt.com/c/..."></textarea></label>
+    </fieldset>
+    <label><input name="auto_link" type="checkbox" checked> ربط جميع المحادثات المسجّلة بين المشروعين، وإضافة أي محادثات أُسجّلها لاحقًا إلى الشبكة تلقائيًا</label>
+    <button type="submit" class="button">تسجيل المشروعين وربط جميع محادثاتهما المسجّلة</button>
+  </form>
+  <form id="pm-add-chats-form" style="display:grid;gap:.6rem;max-width:850px;margin-top:1.5rem">
+    <h3>إضافة محادثات جديدة لاحقًا إلى مشروع مرتبط</h3>
+    <label>المشروع <select name="project"><option>gpt</option><option>التقرير النهائي</option></select></label>
+    <label>روابط المحادثات <textarea name="chat_links" rows="3" required placeholder="اسم المحادثة | https://chatgpt.com/c/..."></textarea></label>
+    <button type="submit" class="button">إضافة المحادثات للشبكة</button>
+  </form>
+  <p id="pm-links-status" class="small muted" role="status" aria-live="polite">تسجيل الروابط محلي، وليس إثبات اتصال بالخادم.</p>
+  <p id="pm-links-count" class="small muted"></p>
+  <div id="pm-project-list"></div>
+  <div id="pm-links-list"></div>
+</div>
+<div class="panel">
     <h2>إعداد رسالة تنسيق لإرسالها عبر محادثة متصلة بـ GitHub</h2>
     <p class="muted small">لا يتوفر إرسال من هذه الصفحة العامة دون مصادقة خلفية خاصة. اضغط إنشاء الأمر ثم أرسله من إحدى محادثات ChatGPT المتصلة بـ GitHub، حيث يتم تسجيل تعليق فعلي برقم مرجعي.</p>
     <form id="pm-compose" style="display:grid;gap:.85rem;max-width:850px">
+      <label>اختيار مصدر من شبكة الروابط
+        <select id="pm-source-link"><option value="">إرسال يدوي</option></select>
+      </label>
+      <label><input type="checkbox" id="pm-send-linked" checked> إنشاء رسالة مستقلة لكل محادثة مرتبطة بالمصدر (متعدد المستلمين)</label>
       <label>المشروع المرسل <select name="from_project" required><option>التقرير النهائي</option><option>gpt</option></select></label>
       <label>الدردشة المرسلة <input name="from_chat" value="تنسيق المشاريع" maxlength="120" required></label>
       <label>المشروع المستلم <select name="to_project" required><option>gpt</option><option>التقرير النهائي</option></select></label>
