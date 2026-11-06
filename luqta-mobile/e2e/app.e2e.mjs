@@ -9,6 +9,7 @@ import { startStack, go, id, see, tap, fill, field, until, noErrors, password, b
 import { productNumber } from '../server/modules/sync.mjs';
 import { solidPng } from '../server/testkit.mjs';
 import { staffStrings } from '../scripts/staff-strings.mjs';
+import { isStrictPath } from '../src/lib/svgPath.ts';
 
 const ARTIFACTS = fileURLToPath(new URL('./artifacts/', import.meta.url));
 let stack;
@@ -1348,6 +1349,15 @@ e2e('L123 L081 the Rafiq design: user-chosen, companions, floating market, inten
   const a = await joints(character);
   await page.waitForTimeout(700);
   assert.notEqual(a, await joints(character), 'the character animates on the island');
+  // Phones are narrower than this test page. On a 320-360 dp screen an awning path once came out as "h--0.19", which
+  // the Android SVG parser rejects by closing the app. Every path must be plain path data at phone widths too.
+  for (const width of [320, 360, 412]) {
+    await page.setViewportSize({ width, height: 860 });
+    await page.waitForTimeout(400);
+    const paths = await page.locator('[data-testid="floating-market"] path').evaluateAll((els) => els.map((el) => el.getAttribute('d')));
+    assert.ok(paths.length > 10, `paths drawn at ${width}px`);
+    for (const d of paths) assert.ok(isStrictPath(d), `${width}px: ${d}`);
+  }
   // Companions: the choice changes the voice and is remembered.
   await see(page, 'أنا نيرا');
   await tap(page, 'companion-orion');

@@ -1860,5 +1860,6 @@ export const EN: Record<string, string> = {
   "محادثة كاملة": "Full chat",
   "التصميم، عربي/English، نهاري/ليلي، العملة": "Design, Arabic/English, day/night, currency",
   "الفروع حولك على الخريطة وما يتوفر فيها": "Branches around you on the map and what they have",
-  "نيرا أو أوريون أو سِلك، بطلبك وكلماتك": "Nira, Orion or Silk, in your own words"
+  "نيرا أو أوريون أو سِلك، بطلبك وكلماتك": "Nira, Orion or Silk, in your own words",
+  "أُغلق التطبيق أثناء تشغيل تصميم رفيق، فعاد إلى التصميم الكلاسيكي تلقائيًا. يمكنك تجربة تصميم رفيق مرة أخرى.": "The app closed while starting the Rafiq design, so it went back to the classic design automatically. You can try Rafiq again."
 };

@@ -22,7 +22,7 @@ const DESIGNS = [
 const LANGS: [Lang, string, string][] = [["ar", "العربية", "من اليمين إلى اليسار"], ["en", "English", "Left to right"]];
 
 export default function AppearanceScreen() {
-  const { colors: t, mode, setMode, isDark, storageError, hydrated, design, setDesign } = useTheme();
+  const { colors: t, mode, setMode, isDark, storageError, hydrated, design, setDesign, designRecovered } = useTheme();
   const { t: tr, lang, setLang, displayCurrency, setDisplayCurrency } = useI18n();
   const money = useMoney();
   const { user } = useSession();
@@ -39,6 +39,7 @@ export default function AppearanceScreen() {
   );
   return (
     <Shell title="اللغة والمظهر" subtitle="يُحفظ اختيارك على هذا الجهاز وفي حسابك" robot testID="appearance">
+      {designRecovered ? <View style={{ marginBottom: 12 }}><Notice text="أُغلق التطبيق أثناء تشغيل تصميم رفيق، فعاد إلى التصميم الكلاسيكي تلقائيًا. يمكنك تجربة تصميم رفيق مرة أخرى." tone="warning" /></View> : null}
       <Txt weight="bold" style={{ marginBottom: 8 }}>{tr("التصميم")}</Txt>
       <View style={{ gap: 10, marginBottom: 20 }} accessibilityRole="radiogroup">
         {DESIGNS.map((d) => option(design === d.design, d.design, d.title, d.detail, <d.icon color={design === d.design ? t.primary : t.muted} size={22} />, () => hydrated && setDesign(d.design as Design), `design-${d.design}`))}
