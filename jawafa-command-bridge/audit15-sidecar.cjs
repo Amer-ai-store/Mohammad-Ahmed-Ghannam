@@ -59,6 +59,17 @@ async function fetchFreshLocalSchemaProof(){
     const now=Date.now();
     if(!Number.isFinite(generated)||generated>now+30000||now-generated>30000)
       throw Error('LOCAL_SQL_BRIDGE_RESPONSE_STALE');
+    // Actual bounded read against the local SQL bridge. Drop values immediately;
+    // never send rows, personal values, or credentials to the browser.
+    const sampleResponse=await fetch('http://127.0.0.1:3456/api/query/TransactionHistory?limit=1',{
+      method:'GET',redirect:'error',cache:'no-store',
+      signal:AbortSignal.timeout(6000),headers:{Accept:'application/json'}
+    });
+    if(sampleResponse.status!==200)throw Error('LOCAL_SQL_BRIDGE_SAMPLE_UNAVAILABLE');
+    const sample=await sampleResponse.json();
+    if(sample?.ok!==true||sample?.table!=='TransactionHistory'||sample?.count!==1||
+       !Array.isArray(sample.data)||sample.data.length!==1)
+      throw Error('LOCAL_SQL_BRIDGE_SAMPLE_INVALID');
     return {
       schema:'jawafa.private.live-schema-proof.v1',
       classification:'OWNER_ONLY_SCHEMA_METADATA_NO_BUSINESS_ROWS',
@@ -68,9 +79,9 @@ async function fetchFreshLocalSchemaProof(){
       observedAtUtc:new Date(now).toISOString(),
       bridgeGeneratedAtUtc:payload.generatedAt,
       schemaTableCount:1024,declaredSqlForeignKeys:38,
-      financialRowsExposed:false,databasePrincipalLeastPrivilegeVerified:false,
+      financialRowsExposed:false,transactionHistoryBoundedSampleRead:true,sampleRowValuesReturned:false,databasePrincipalLeastPrivilegeVerified:false,
       browserDirectSQL:false,authenticatedFinancialRowReadVerified:false,
-      disclaimer:'Fresh read from local schema bridge; not proof of transaction-row read or read-only SQL principal.'
+      disclaimer:'Fresh local schema and one bounded TransactionHistory record read via bridge; SQL principal least privilege and owner E2E require independent verification.'
     };
   }catch{
     throw Object.assign(Error('LOCAL_SCHEMA_BRIDGE_READING_FAILED'),{status:503});
