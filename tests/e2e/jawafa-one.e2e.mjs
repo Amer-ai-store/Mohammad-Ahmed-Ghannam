@@ -125,7 +125,9 @@ try {
   await a.page.locator('input[name="lat"]').fill('32.0608'); await a.page.locator('input[name="lng"]').fill('36.0942');
   await a.page.getByRole('button', { name: 'إضافة' }).click();
   await waitState(a.page, () => window.__jawafaState.branches.length === 1);
-  check('E2E-24', await a.page.locator('section.view[data-view="branches"] td a[href*="32.0608,36.0942"]').count() === 1, 'branch saved to Firestore and listed with a Google Maps link');
+  // State updates first; the table is redrawn on the next animation frame, so wait for the DOM.
+  const branchLink = await a.page.waitForFunction(() => document.querySelectorAll('section.view[data-view="branches"] td a[href*="32.0608,36.0942"]').length === 1, null, { timeout: 5000 }).then(() => true, () => false);
+  check('E2E-24', branchLink, 'branch saved to Firestore and listed with a Google Maps link');
   await a.page.screenshot({ path: `${out}/08-branches.png` });
   await nav(a.page, 'audit');
   await waitState(a.page, () => ['company.create', 'member.invite', 'branch.create'].every(x => window.__jawafaState.audit.some(e => e.action === x)));
@@ -160,7 +162,8 @@ try {
     try { await fs.collection('companies').doc(id).collection('workspaces').add({ name: 'x' }); return 'allowed'; } catch (e) { return e.code; }
   });
   check('E2E-13', denied === 'permission-denied', 'auditor direct API write rejected by server: ' + denied);
-  await nav(b.page, 'branches'); await b.page.waitForTimeout(400);
+  await nav(b.page, 'branches');
+  await b.page.waitForFunction(() => document.querySelectorAll('section.view[data-view="branches"] tbody tr td a').length === 1, null, { timeout: 5000 }).catch(() => {});
   const ro = await b.page.evaluate(() => ({ form: !!document.querySelector('section.view[data-view="branches"] input[name="bname"]'), rows: document.querySelectorAll('section.view[data-view="branches"] tbody tr').length }));
   check('E2E-27', !ro.form && ro.rows === 1, 'auditor sees the company branch but no add form');
 
