@@ -59,7 +59,7 @@ export default function PassportScreen() {
     finally { setBusy(false); }
   };
 
-  return <Shell title={tr("جواز لُقطة العالمي")} back testID="local-passport">
+  return <Shell title="جواز لُقطة العالمي" back testID="local-passport">
     <LinearGradient colors={["#120A32", "#4533A7", "#9055CA"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       style={{ padding: 24, borderRadius: 28, gap: 13, overflow: "hidden", minHeight: 220 }}>
       <Row style={{ justifyContent: "space-between" }}>
@@ -75,7 +75,7 @@ export default function PassportScreen() {
 
     <Card style={{ marginTop: 16, gap: 12 }}>
       <Row><UserRound size={19} color={t.primary} /><Txt weight="extra" style={{ fontSize: 18 }}>{tr("اسمي في جواز التسوق")}</Txt></Row>
-      <TextInput value={passport.displayName} testID="passport-name" onChangeText={(displayName) => change({ ...passport, displayName })}
+      <TextInput value={passport.displayName} testID="passport-name" accessibilityLabel={tr("اسمي في جواز التسوق")} onChangeText={(displayName) => change({ ...passport, displayName })}
         maxLength={40} placeholder={tr("اسم العرض (اختياري)")} placeholderTextColor={t.muted}
         style={{ backgroundColor: t.field, color: t.ink, borderRadius: 15, borderColor: t.line, borderWidth: 1, padding: 14, fontSize: 16, textAlign: lang === "ar" ? "right" : "left" }} />
       <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("اسم محلي اختياري، وليس إثبات هوية أو حساب Google.")}</Txt>
