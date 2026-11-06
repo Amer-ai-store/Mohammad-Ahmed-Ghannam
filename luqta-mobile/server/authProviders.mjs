@@ -40,7 +40,29 @@ export function installAuthProviders(ctx) {
     : (env.AUTH_OTP_DEV === '1' && !production) ? 'dev' : null;
   const google = env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_CALLBACK_URL ? { id: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET, callback: env.GOOGLE_CALLBACK_URL } : null;
   const audiences = new Set([env.GOOGLE_CLIENT_ID, ...(env.GOOGLE_CLIENT_IDS || '').split(',')].map((s) => (s || '').trim()).filter(Boolean));
-  const allowedReturn = (u) => typeof u === 'string' && /^(luqta:\/\/|exp\+luqta[\w-]*:\/\/|https:\/\/[\w.-]+\/)[\w\-./?=&%]*$/.test(u) && u.length <= 300;
+  // Browser redirects carry a one-time login code: NEVER send them to an arbitrary HTTPS origin.
+  // GOOGLE_ALLOWED_RETURN_ORIGINS is a comma-separated list of exact HTTPS origins (no paths).
+  const callbackOrigin = google ? new URL(google.callback).origin : null;
+  const approvedOrigins = new Set([callbackOrigin, ...(env.GOOGLE_ALLOWED_RETURN_ORIGINS || '').split(',')]
+    .map((input) => {
+      if (!input) return null;
+      try {
+        const u = new URL(input.trim());
+        return u.protocol === 'https:' && u.pathname === '/' && !u.search && !u.hash && !u.username && !u.password ? u.origin : null;
+      } catch { return null; }
+    }).filter(Boolean));
+  const allowedReturn = (target) => {
+    if (typeof target !== 'string' || target.length > 300) return false;
+    // Native return targets may only be the app's dedicated authentication screen.
+    if (target === 'luqta://auth' || target === 'luqta:///auth') return true;
+    if (!production && /^exp\+luqta[\w-]*:\/\/\/?auth$/.test(target)) return true;
+    try {
+      const u = new URL(target);
+      if (u.pathname !== '/auth' || u.search || u.hash || u.username || u.password) return false;
+      if (!production && u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname)) return true;
+      return u.protocol === 'https:' && approvedOrigins.has(u.origin);
+    } catch { return false; }
+  };
 
   async function sendSms(phone, message) {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 15_000);
