@@ -38,6 +38,7 @@ function handler(req,res){
   let url;
   try{url=new URL(req.url,'http://127.0.0.1')}catch{return error(res,400,'INVALID_URL')}
   if(routes.has(url.pathname))return proxy(req,res,8794);
+  if(url.pathname==='/api/jawafa/v1/live-schema-proof')return proxy(req,res,8795);
   if(url.pathname.startsWith('/api/jawafa/v1/'))return proxy(req,res,8788);
   if(url.pathname==='/api/export-status')return proxy(req,res,3461,'/api/status');
   if(!['GET','HEAD'].includes(req.method))return error(res,405,'METHOD_NOT_ALLOWED');
