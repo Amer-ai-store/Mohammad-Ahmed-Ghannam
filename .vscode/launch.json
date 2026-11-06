@@ -33,8 +33,6 @@
             "type": "chrome",
             "webRoot": "${workspaceFolder}"
         },
-       .
-       . 
         {
             "request": "launch",
             "name": "Launch Program",

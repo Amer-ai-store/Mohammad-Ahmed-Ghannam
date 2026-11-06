@@ -120,5 +120,3 @@ data class StoredOrganicItemEntity(
     val quantity: Int = 1,
     val isNotified: Boolean = false
 )
-
-
