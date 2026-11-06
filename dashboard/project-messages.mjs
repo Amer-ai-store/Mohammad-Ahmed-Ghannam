@@ -1,4 +1,4 @@
-import {parseSideLinks,createLinkGraph,connectProjects,registerChats,effectiveEdges,loadLinkGraph,saveLinkGraph,neighbors,unlink} from "./project-links.mjs";
+import {normalizeChatUrl} from "./project-links.mjs";
 /* Project Message Hub. Public GitHub mailbox: NON-SENSITIVE coordination metadata only.
  * Never put finance data, personal records, credentials or private evidence URLs in this issue.
  * ChatGPT project chats cannot be pushed into via the ChatGPT UI by this module.
@@ -7,12 +7,28 @@ export const HUB_ISSUE_URL = "https://github.com/Amer-ai-store/Mohammad-Ahmed-Gh
 export const HUB_API_URL = "https://api.github.com/repos/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/168/comments";
 export const HUB_KIND = "PROJECT_CHAT_MESSAGE";
 export const KNOWN_PROJECTS = ["gpt", "التقرير النهائي"];
+export const DISPATCHER_LINKS_KEY = "amer.projectMessageHub.dispatchers.v1";
+export const DISPATCHER_FROM = {project:"التقرير النهائي",chat:"موزع المهام 1"};
+export const DISPATCHER_TO = {project:"gpt",chat:"موزع المهام 2"};
+export function validateDispatcherLinks(first,second) {
+  const first_chat=normalizeChatUrl(first),second_chat=normalizeChatUrl(second);
+  if(first_chat===second_chat)throw Error("TWO_DISTINCT_CHATS_REQUIRED");
+  return {first_chat,second_chat};
+}
+export function composeDispatcherMessage({id,subject,body}) {
+  return composeHubMessage({id,from_project:DISPATCHER_FROM.project,from_chat:DISPATCHER_FROM.chat,
+    to_project:DISPATCHER_TO.project,to_chat:DISPATCHER_TO.chat,subject,body});
+}
+export function isDispatcherMessage(message) {
+  return Boolean(message&&message.from_project===DISPATCHER_FROM.project&&message.from_chat===DISPATCHER_FROM.chat
+    &&message.to_project===DISPATCHER_TO.project&&message.to_chat===DISPATCHER_TO.chat);
+}
+
 export function parseHubMessage(comment) {
   const raw=String(comment?.body||"").trim();
   const fenced=raw.match(/(?:^|\n)\x60\x60\x60(?:json)?\s*([\s\S]*?)\s*\x60\x60\x60(?:\s|$)/i);
-  if(!fenced)return null;
   let message;
-  try {message=JSON.parse(fenced[1]);} catch {return null;}
+  try {message=JSON.parse(fenced?fenced[1]:raw);} catch {return null;}
   if(!message || typeof message!=="object" || Array.isArray(message) || message.kind!==HUB_KIND || message.schema!=="1.0")return null;
   const fields=["id","from_project","from_chat","to_project","to_chat","subject","body"];
   if(!fields.every(k=>typeof message[k]==="string" && message[k].trim() && message[k].length<=2500))return null;
@@ -35,159 +51,83 @@ function initMessageHub(){
   const root=document.querySelector('[data-view="project-messages"]');
   if(!root)return;
   const $=(id)=>root.querySelector("#"+id);
-  const state=$("pm-status"), list=$("pm-list"), form=$("pm-compose");
-  const setState=(s)=>state.textContent=s;
+  const status=$("pm-status"), list=$("pm-list"), linksForm=$("pm-dispatcher-links"),form=$("pm-compose");
+  const setState=(message)=>status.textContent=message;
+  const linksState=$("pm-links-status");
+  let dispatcherLinks=null;
+  try {
+    const saved=JSON.parse(localStorage.getItem(DISPATCHER_LINKS_KEY)||"null");
+    if(saved) {
+      dispatcherLinks=validateDispatcherLinks(saved.first_chat,saved.second_chat);
+      linksForm.elements.namedItem("first_chat").value=dispatcherLinks.first_chat;
+      linksForm.elements.namedItem("second_chat").value=dispatcherLinks.second_chat;
+      linksState.textContent="تم استرجاع ربط الموزّعين من هذا الجهاز. لم يُثبت اتصال مباشر بدردشات ChatGPT.";
+    }
+  }catch {linksState.textContent="تعذر استرجاع الروابط المحلية؛ أدخل رابط المحادثتين مجددًا.";}
+  linksForm.addEventListener("submit",(event)=>{
+    event.preventDefault();
+    try {
+      const fields=new FormData(linksForm);
+      const next=validateDispatcherLinks(fields.get("first_chat"),fields.get("second_chat"));
+      localStorage.setItem(DISPATCHER_LINKS_KEY,JSON.stringify(next));
+      dispatcherLinks=next;
+      linksState.textContent="تم حفظ رابط موزّع 1 ورابط موزّع 2 محليًا. لا يوجد ربط مباشر بدردشات ChatGPT أو نشر لهذه الروابط.";
+    }catch(error){linksState.textContent="تعذر حفظ الربط: "+String(error.message);}
+  });
   function draw(items){
     list.replaceChildren();
-    if(!items.length){list.append(el("p",{class:"muted"},"لا توجد رسائل مطابقة للفلاتر. لا يعني ذلك أن الطرف الآخر لا يملك رسائل في محادثاته."));return;}
-    const toFilter=$("pm-filter").value;
-    items.filter(m=>toFilter==="all"||m.to_project===toFilter).slice(-100).reverse().forEach(m=>{
+    if(!items.length){
+      list.append(el("p",{class:"muted"},"لا توجد رسائل تنسيق مسجلة بين الموزّعين ضمن التعليقات المقروءة."));
+      return;
+    }
+    items.slice(-100).reverse().forEach(m=>{
       const article=el("article",{class:"panel","data-message-id":m.id});
-      const title=el("h3",{},m.subject);
-      const routing=el("p",{class:"small muted"},m.from_project+" / "+m.from_chat+" ← "+m.to_project+" / "+m.to_chat);
-      const content=el("p",{},m.body);
-      const stateRow=el("p",{class:"small muted"}, "رسالة محفوظة في GitHub · تعليق #"+m.comment_id+" · "+(m.created_at||"وقت غير متاح")+" · اسم الطرف المرسل وارد من نص الرسالة وغير موثّق؛ لا يوجد إثبات لاستلامها داخل دردشة ChatGPT الأصلية");
-      const link=el("a",{href:m.permalink,target:"_blank",rel:"noopener noreferrer"},"فتح دليل الإرسال");
-      article.append(title,routing,content,stateRow,link);list.append(article);
+      article.append(el("h3",{},m.subject));
+      article.append(el("p",{class:"small muted"},"من "+DISPATCHER_FROM.chat+" / "+m.from_project+" إلى "+DISPATCHER_TO.chat+" / "+m.to_project));
+      article.append(el("p",{},m.body));
+      article.append(el("p",{class:"small muted"},"SENT على GitHub فقط · تعليق #"+m.comment_id+" · "+(m.created_at||"وقت غير متاح")+" · هوية مرسل الرسالة مُصرَّح بها في النص وغير موثّقة؛ DELIVERED وREAD غير مثبتتين."));
+      article.append(el("a",{href:m.permalink,target:"_blank",rel:"noopener noreferrer"},"فتح تعليق GitHub"));
+      list.append(article);
     });
-    if(!list.children.length)list.append(el("p",{class:"muted"},"لا توجد رسائل لهذا المشروع."));
   }
-  /* Local browser registry; project URLs do not grant ChatGPT chat permissions. */
-  let graph=loadLinkGraph(localStorage);
-  const linksState=$("pm-links-status"), linksList=$("pm-links-list"), projectList=$("pm-project-list"),sourceSelect=$("pm-source-link");
-  function reportLinks(text){linksState.textContent=text;}
-  function renderLinks(){
-    linksList.replaceChildren();projectList.replaceChildren();sourceSelect.replaceChildren();
-    sourceSelect.append(el("option",{value:""},"إرسال يدوي — اختر محادثة من الروابط"));
-    const edges=effectiveEdges(graph);
-    for(const project of ["gpt","التقرير النهائي"]){
-      const url=graph.projects[project];
-      const p=el("p",{class:"small"});
-      p.append(el("span",{},project+": "));
-      if(url)p.append(el("a",{href:url,target:"_blank",rel:"noopener noreferrer"},"فتح رابط المشروع المسجّل"));
-      else p.append(el("span",{},"لم يُسجّل رابط المشروع بعد"));
-      projectList.append(p);
-    }
-    for(const node of graph.nodes){
-      const n=neighbors(graph,node.key).length;
-      if(!n)continue;
-      sourceSelect.append(el("option",{value:node.key},node.project+" · "+node.title+" ("+n+" مستلمًا)"));
-    }
-    if(!edges.length)linksList.append(el("p",{class:"muted"},"لم تنشأ روابط بين المحادثات بعد؛ أضف قوائم المحادثات لكلا المشروعين."));
-    for(const edge of edges){
-      const left=graph.nodes.find(n=>n.key===edge.left),right=graph.nodes.find(n=>n.key===edge.right);
-      if(!left||!right)continue;
-      const row=el("div",{class:"panel"});
-      row.append(el("strong",{},edge.automatic?"ارتباط شامل تلقائي — إعداد محلي":"ارتباط محدد — إعداد محلي"));
-      for(const [caption,node] of [["الطرف الأول",left],["الطرف الثاني",right]]){
-        const p=el("p",{class:"small"});
-        p.append(el("span",{},caption+" · "+node.project+" · "+node.title+" · "));
-        p.append(el("a",{href:node.url,target:"_blank",rel:"noopener noreferrer"}, "فتح المحادثة"));
-        row.append(p);
-      }
-      const remove=el("button",{type:"button",class:"button"},"استبعاد هذه العلاقة");
-      remove.addEventListener("click",()=>{
-        graph=unlink(graph,edge.id);
-        try{saveLinkGraph(localStorage,graph);reportLinks("تم استبعاد العلاقة على هذا الجهاز.");}
-        catch{reportLinks("فشل حفظ الاستبعاد محليًا.");}
-        renderLinks();
-      });
-      row.append(remove);linksList.append(row);
-    }
-    const registered=graph.nodes.length,linked=graph.nodes.filter(n=>neighbors(graph,n.key).length).length;
-    $("pm-links-count").textContent=edges.length+" علاقة بين "+linked+" محادثة ("+registered+" محادثة مسجّلة). الربط الشامل: "+(graph.auto_pairs.length?"مفعّل":"غير مفعّل")+"؛ دليل وصول الرسائل: غير مثبت. جميع الروابط محفوظة على هذا الجهاز فقط.";
-  }
-  function commitGraph(next,label){
-    saveLinkGraph(localStorage,next);
-    graph=next;renderLinks();reportLinks(label);
-  }
-  $("pm-links-form").addEventListener("submit",event=>{
-    event.preventDefault();
-    const fields=new FormData(event.currentTarget);
-    try{
-      const first=String(fields.get("first_project")),second=String(fields.get("second_project"));
-      const prev=effectiveEdges(graph).length;
-      let next=connectProjects(graph,{
-        first_project:first,first_url:fields.get("first_url"),
-        second_project:second,second_url:fields.get("second_url"),
-        auto_link:fields.get("auto_link")==="on"
-      });
-      const left=parseSideLinks(fields.get("first_links"),first);
-      const right=parseSideLinks(fields.get("second_links"),second);
-      if(left.length)next=registerChats(next,first,fields.get("first_links"));
-      if(right.length)next=registerChats(next,second,fields.get("second_links"));
-      if(fields.get("auto_link")!=="on"&&left.length&&right.length)next=createLinkGraph(next,left,right);
-      const delta=effectiveEdges(next).length-prev;
-      commitGraph(next,"سُجّل رابطا المشروعين و"+(left.length+right.length)+" محادثة؛ عدد العلاقات الجديدة "+delta+". حفظ على الجهاز فقط، وليس اتصالًا حيًا بالدردشات.");
-    }catch(error){reportLinks("تعذر تسجيل المشروعين: "+String(error.message));}
-  });
-  $("pm-add-chats-form").addEventListener("submit",event=>{
-    event.preventDefault();
-    const fields=new FormData(event.currentTarget);
-    try{
-      const project=String(fields.get("project"));
-      if(!graph.projects[project])throw Error("REGISTER_PROJECT_FIRST");
-      const next=registerChats(graph,project,fields.get("chat_links"));
-      commitGraph(next,"تم تسجيل محادثات جديدة للمشروع؛ الروابط الشاملة تربطها تلقائيًا بالمحادثات المعروفة في المشروع الآخر، دون وصول مضمون إلى ChatGPT.");
-    }catch(error){reportLinks("تعذر إضافة المحادثات: "+String(error.message));}
-  });
-  sourceSelect.addEventListener("change",()=>{
-    const node=graph.nodes.find(n=>n.key===sourceSelect.value);
-    if(!node)return;
-    form.elements.namedItem("from_project").value=node.project;
-    form.elements.namedItem("from_chat").value=node.title;
-    const destination=neighbors(graph,node.key);
-    if(destination.length){
-      form.elements.namedItem("to_project").value=destination[0].project;
-      form.elements.namedItem("to_chat").value=destination[0].title;
-    }
-  });
-  renderLinks();
-  let messages=[];
   async function load(){
-    $("pm-refresh").disabled=true;setState("جارٍ التحقق من سجل المراسلات العام...");
+    $("pm-refresh").disabled=true;
+    setState("جارٍ قراءة سجل GitHub #168...");
     try {
       const response=await fetch(HUB_API_URL+"?per_page=100&page=1",{headers:{Accept:"application/vnd.github+json"},cache:"no-store"});
       if(!response.ok)throw Error("HTTP "+response.status);
-      const rows=await response.json();
-      if(!Array.isArray(rows))throw Error("INVALID_RESPONSE");
-      messages=rows.map(parseHubMessage).filter(Boolean);
+      const comments=await response.json();
+      if(!Array.isArray(comments))throw Error("INVALID_RESPONSE");
+      const messages=comments.map(parseHubMessage).filter(isDispatcherMessage);
       draw(messages);
-      setState("تمت قراءة "+messages.length+" رسالة موثقة من GitHub. SENT مثبتة عند وجود تعليق؛ الاستلام داخل ChatGPT غير مثبت.");
-    }catch(error){messages=[];list.replaceChildren();setState("تعذّر الوصول إلى سجل GitHub: "+String(error.message)+". لا يمكن إثبات وصول أو إرسال جديد.");}
-    finally {$("pm-refresh").disabled=false;}
+      setState("تمت قراءة "+comments.length+" تعليقًا؛ الرسائل المطابقة لمسار الموزّعين: "+messages.length+". وجود التعليق يثبت SENT فقط.");
+    }catch(error){
+      list.replaceChildren();
+      setState("تعذرت قراءة سجل GitHub: "+String(error.message)+". لا يوجد إثبات جديد للإرسال أو التسليم.");
+    }finally{$("pm-refresh").disabled=false;}
   }
   $("pm-refresh").addEventListener("click",load);
-  $("pm-filter").addEventListener("change",()=>draw(messages));
   form.addEventListener("submit",async(event)=>{
     event.preventDefault();
-    const fd=new FormData(form);
-    const id=()=>"PMH-"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36));
-    let payloads=[];
-    try {
-      const selected=graph.nodes.find(n=>n.key===sourceSelect.value);
-      if($("pm-send-linked").checked && selected){
-        const destinations=neighbors(graph,selected.key);
-        if(!destinations.length)throw Error("NO_DESTINATIONS");
-        if(destinations.length>25)throw Error("MORE_THAN_25_DESTINATIONS");
-        payloads=destinations.map(node=>composeHubMessage({
-          id:id(),from_project:selected.project,from_chat:selected.title,
-          to_project:node.project,to_chat:node.title,
-          subject:fd.get("subject"),body:fd.get("body")
-        }));
-      }else{
-        payloads=[composeHubMessage({
-          id:id(),from_project:fd.get("from_project"),to_project:fd.get("to_project"),
-          from_chat:fd.get("from_chat"),to_chat:fd.get("to_chat"),
-          subject:fd.get("subject"),body:fd.get("body")
-        })];
-      }
-    }catch(error){setState("تعذر إنشاء الأمر: "+String(error.message));return;}
-    const instruction="أرسل "+payloads.length+" رسالة تنسيق بنشر كل كتلة JSON تالية كتعليق مستقل على GitHub Issue #168 في مستودع Amer-ai-store/Mohammad-Ahmed-Ghannam عبر GitHub connector. اقرأ التعليقات بعد الكتابة وأعد معرف كل تعليق وتحقق من عدم تكراره. لا تنشر أي بيانات مالية أو أسرار، ولا تعتبر الرسالة DELIVERED أو READ دون دليل من الطرف المقابل. لا تكتب مباشرة في دردشة ChatGPT أخرى.\n\n"+payloads.join("\n\n--- رسالة مستقلة ---\n\n");
+    if(!dispatcherLinks){
+      setState("سجّل رابط محادثة 1 ورابط محادثة 2 واحفظهما أولًا.");
+      return;
+    }
+    const fields=new FormData(form);
+    const id="PMH-"+(crypto.randomUUID?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(36).slice(2));
+    let payload;
+    try{
+      payload=composeDispatcherMessage({id,subject:fields.get("subject"),body:fields.get("body")});
+    }catch(error){setState("تعذر إعداد الرسالة: "+String(error.message));return;}
+    const instruction="أرسل رسالة تنسيق واحدة فقط بنشر كتلة JSON التالية تعليقًا مستقلًا على GitHub Issue #168 في مستودع Amer-ai-store/Mohammad-Ahmed-Ghannam عبر GitHub connector. افحص وجود معرّف الرسالة قبل النشر لمنع التكرار، ثم اقرأ التعليق بعد الكتابة وأعد المعرّف ورابط الدليل. هذه الرسالة حصريًا من موزّع المهام 1 إلى موزّع المهام 2؛ يقوم كل موزّع بالتوزيع على وكلائه داخل مشروعه، دون توجيه مباشر عبر المشروعين لأي وكيل. لا تنشر روابط محادثات أو بيانات مالية أو أسرارًا، ولا تعلن DELIVERED أو READ دون دليل الطرف المقابل. لا تكتب مباشرة في محادثة ChatGPT أخرى.\n\n"+payload;
     $("pm-output").value=instruction;
     $("pm-output").hidden=false;
-    try {await navigator.clipboard.writeText(instruction);setState("تم نسخ أمر الإرسال. لم تُرسل الرسالة بعد: الصقه في محادثة متصلة بـ GitHub واطلب تنفيذها.");}
-    catch {setState("تم إعداد أمر الإرسال. انسخه من المربع والصقه في محادثة متصلة بـ GitHub؛ لم يُرسل بعد.");}
+    try{
+      await navigator.clipboard.writeText(instruction);
+      setState("تم نسخ أمر الإرسال الواحد. لم يتم نشر التعليق بعد؛ نفّذه من محادثة مرتبطة بموصل GitHub.");
+    }catch{
+      setState("تم تجهيز أمر الإرسال الواحد؛ انسخه من المربع ونفّذه من محادثة مرتبطة بموصل GitHub. لم يُرسل بعد.");
+    }
   });
   load();
 }
