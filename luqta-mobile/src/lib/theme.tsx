@@ -182,6 +182,8 @@ type ThemeValue = {
   fonts: Fonts;
   design: Design;
   setDesign: (design: Design) => void;
+  /** The Rafiq design did not finish starting last time (the app closed), so this launch fell back to classic. */
+  designRecovered: boolean;
   mode: ThemeMode;
   isDark: boolean;
   hydrated: boolean;
@@ -194,6 +196,7 @@ const Context = createContext<ThemeValue>({
   fonts: DESIGN_FONTS.classic,
   design: "classic",
   setDesign: () => {},
+  designRecovered: false,
   mode: "system",
   isDark: false,
   hydrated: false,
@@ -203,21 +206,30 @@ const Context = createContext<ThemeValue>({
 });
 const STORAGE_KEY = "luqta-appearance-v1";
 const DESIGN_KEY = "luqta-design-v1";
+// Set while the Rafiq design is starting on a phone and cleared once it has run for a few seconds. Still set at the
+// next launch means the app closed while showing it, so that launch falls back to the classic design.
+const DESIGN_BOOT_KEY = "luqta-design-boot-v1";
+const DESIGN_BOOT_OK_MS = 8000;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemMode = useColorScheme();
   const [mode, setPreference] = useState<ThemeMode>("system");
   const [design, setDesignState] = useState<Design>("classic");
+  const [designRecovered, setDesignRecovered] = useState(false);
   const [accentColor, setAccentColor] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [storageError, setStorageError] = useState(false);
   useEffect(() => {
     let active = true;
-    Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(DESIGN_KEY)])
-      .then(([saved, savedDesign]) => {
+    Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(DESIGN_KEY), AsyncStorage.getItem(DESIGN_BOOT_KEY)])
+      .then(([saved, savedDesign, boot]) => {
         if (active && (saved === "light" || saved === "dark" || saved === "system"))
           setPreference(saved);
-        if (active && (savedDesign === "classic" || savedDesign === "rafiq"))
+        if (active && savedDesign === "rafiq" && boot === "starting" && Platform.OS !== "web") {
+          setDesignState("classic");
+          setDesignRecovered(true);
+          void AsyncStorage.removeItem(DESIGN_BOOT_KEY).catch(() => {});
+        } else if (active && (savedDesign === "classic" || savedDesign === "rafiq"))
           setDesignState(savedDesign);
       })
       .catch(() => {
@@ -236,6 +248,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .then(() => setStorageError(false))
       .catch(() => setStorageError(true));
   }, [mode, design, hydrated]);
+  // Crash-loop guard for the Rafiq design on phones (see DESIGN_BOOT_KEY).
+  useEffect(() => {
+    if (!hydrated || Platform.OS === "web" || design !== "rafiq") return;
+    let done = false;
+    AsyncStorage.setItem(DESIGN_BOOT_KEY, "starting").catch(() => {});
+    const timer = setTimeout(() => { done = true; AsyncStorage.removeItem(DESIGN_BOOT_KEY).catch(() => {}); }, DESIGN_BOOT_OK_MS);
+    return () => { clearTimeout(timer); if (!done) AsyncStorage.removeItem(DESIGN_BOOT_KEY).catch(() => {}); };
+  }, [design, hydrated]);
   const isDark = mode === "dark" || (mode === "system" && systemMode === "dark");
   // The store's own accent colour (set by the admin) applies to the classic design; Rafiq keeps its leaf green.
   const colors = useMemo<Palette>(() => ({ ...paletteFor(design, isDark), ...(design === "classic" && accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) && accentColor.toUpperCase() !== LEGACY_ACCENT ? { orange: accentColor } : {}) }), [design, isDark, accentColor]);
@@ -251,8 +271,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       fonts: DESIGN_FONTS[design],
       design,
       setDesign: (next) => {
-        if (next === "classic" || next === "rafiq") setDesignState(next);
+        if (next === "classic" || next === "rafiq") { setDesignState(next); setDesignRecovered(false); }
       },
+      designRecovered,
       mode,
       isDark,
       hydrated,
@@ -263,7 +284,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           setPreference(next);
       },
     }),
-    [colors, design, mode, isDark, hydrated, storageError],
+    [colors, design, designRecovered, mode, isDark, hydrated, storageError],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
