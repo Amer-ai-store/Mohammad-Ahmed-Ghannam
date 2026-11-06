@@ -70,6 +70,25 @@ const png = (rgb, size = 48) => ({ name: 'photo.png', mimeType: 'image/png', buf
 const tab = (page, name) => page.getByRole('tab', { name, exact: true }).filter({ visible: true }).first();
 const toast = (page, text) => page.locator('[data-testid="toast"]').filter({ hasText: text, visible: true }).first().waitFor();
 
+// PR #161: a guest's device-local passport (display name, region, interests) shapes the home screen without an account.
+e2e('guest passport keeps local choices and remains usable without a commerce login', async ({ open }) => {
+  const page = await open(null, '/passport');
+  await id(page, 'local-passport').waitFor();
+  await id(page, 'passport-name').fill('Orbit Shopper');
+  await tap(page, 'passport-region-GB');
+  await page.locator('[data-testid^="passport-interest-"]').first().click();
+  await tap(page, 'passport-save');
+  await id(page, 'passport-notice').getByText('حُفظت اختياراتك على جهازك.', { exact: false }).waitFor();
+  await go(page, '/');
+  await id(page, 'home-passport').waitFor();
+  await see(page, 'أهلًا Orbit');
+  await go(page, '/passport');
+  // The saved preferences load after the screen first renders; wait for the stored value.
+  await until(async () => (await id(page, 'passport-name').inputValue()) === 'Orbit Shopper', 10000, 'passport saved name restored');
+  await page.reload();
+  await until(async () => (await id(page, 'passport-name').inputValue()) === 'Orbit Shopper', 10000, 'passport survives a full browser reload');
+});
+
 // =====================================================================================================
 // Accounts and privacy
 // =====================================================================================================
@@ -610,6 +629,56 @@ e2e('L038 L040 L041 L042 L043 L044 L047 L049 checkout: saved address, zone fee, 
   const after = (await api('GET', '/delivery/slots?days=3')).slots.find((s) => s.date === slot.date && s.window === slot.window);
   assert.equal(after.remaining, slot.remaining - 1, 'the slot capacity is used');
   await see(page, 'كل عام وأنت بخير');
+});
+
+// Issue #121: express delivery from the nearest branch with a courier tip, then pickup at a branch with no delivery fee.
+e2e('L038 L047 express delivery with a tip, and pickup at a branch, priced by the server', async ({ open }) => {
+  const user = await stack.register('مشتري سريع');
+  await withAddress(user);
+  const page = await open(user, '/explore');
+  await tap(page, 'add-headphones');
+  await go(page, '/cart');
+  await tap(page, 'checkout');
+  await until(async () => (await value(page, 'address-street')) === amman.street, 10000, 'saved address prefilled');
+  // The test address is about 1.6 km from the Abdoun branch, inside the express radius.
+  await until(async () => (await id(page, 'mode-express').getAttribute('aria-disabled')) !== 'true', 10000, 'express offered');
+  await tap(page, 'mode-express');
+  await tap(page, 'tip-1');
+  await tap(page, 'to-payment');
+  await tap(page, 'pay-cod');
+  await tap(page, 'to-review');
+  await until(async () => (await textOf(page, 'review-delivery')).includes('توصيل سريع'), 10000, 'express in the summary');
+  await id(page, 'review-tip').waitFor();
+  const quote = await api('POST', '/checkout/quote', { items: [{ productId: 'headphones', quantity: 1 }], address: { city: amman.city, latitude: amman.latitude, longitude: amman.longitude }, deliveryMode: 'express', tip: 1 }, user.token);
+  const shown = await page.evaluate((n) => new Intl.NumberFormat('ar-JO', { style: 'currency', currency: 'JOD', maximumFractionDigits: 3 }).format(n), quote.total);
+  await until(async () => (await textOf(page, 'review-total')).includes(shown), 10000, 'server total with the express fee and the tip');
+  await tap(page, 'accept-terms');
+  await tap(page, 'confirm-order');
+  await id(page, 'order-placed').waitFor();
+  let [order] = (await api('GET', '/orders', undefined, user.token)).orders;
+  assert.equal(order.extras.fulfillment.mode, 'express');
+  assert.equal(order.extras.fulfillment.tip, 1);
+  assert.equal(order.extras.fulfillment.branchId, 'br_amman');
+  assert.equal(order.total, quote.total);
+  // Pickup in Irbid: no delivery fee and no tip.
+  await go(page, '/explore');
+  await tap(page, 'add-headphones');
+  await go(page, '/cart');
+  await tap(page, 'checkout');
+  await until(async () => (await value(page, 'address-street')) === amman.street, 10000, 'saved address prefilled');
+  await tap(page, 'mode-pickup');
+  await tap(page, 'pickup-br_irbid');
+  await tap(page, 'to-payment');
+  await tap(page, 'pay-cod');
+  await tap(page, 'to-review');
+  await until(async () => (await textOf(page, 'review-delivery')).includes('فرع شارع الجامعة'), 10000, 'pickup branch in the summary');
+  await tap(page, 'accept-terms');
+  await tap(page, 'confirm-order');
+  await id(page, 'order-placed').waitFor();
+  [order] = (await api('GET', '/orders', undefined, user.token)).orders;
+  assert.equal(order.extras.fulfillment.mode, 'pickup');
+  assert.equal(order.extras.fulfillment.branchName, 'فرع شارع الجامعة');
+  assert.equal(order.shipping, 0);
 });
 
 e2e('L045 pay with the wallet balance', async ({ open }) => {

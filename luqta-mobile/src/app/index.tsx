@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, TextInput, View, useWindowDimensions } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Camera, Mic, Search, CalendarCheck, ArrowLeft, Sparkles, X } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Shell } from "../components/Shell";
@@ -16,6 +16,8 @@ import { NearbyStores } from "../components/rafiq/NearbyStores";
 import { SocialLinks } from "../components/rafiq/SocialLinks";
 import { RafiqMark } from "../components/rafiq/marks";
 import { useNearby } from "../lib/useNearby";
+import { UpdateBanner } from "../components/UpdateBanner";
+import { EMPTY_PASSPORT, readLocalPassport, rankByLocalInterests, type LocalPassport } from "../lib/localPassport";
 import { useStore } from "../lib/store";
 import { useSession } from "../lib/session";
 import { useTheme } from "../lib/theme";
@@ -80,6 +82,13 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const categories = useCategories();
   const [query, setQuery] = useState("");
+  // A guest's device-local passport (name, region, interests) shapes the greeting and the suggestions (PR #161).
+  const [passport, setPassport] = useState<LocalPassport>(EMPTY_PASSPORT);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    readLocalPassport().then((value) => { if (active) setPassport(value); }).catch(() => {});
+    return () => { active = false; };
+  }, []));
   const campaigns = useApi<{ campaigns: Campaign[] }>("/campaigns");
   const deals = useApi<{ serverTime: string; deals: Deal[] }>("/flash-deals");
   const recent = store.recentIds.slice(0, 10).join(",");
@@ -89,7 +98,9 @@ export default function Home() {
   const [interests, setInterests] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const columns = width >= 900 ? 4 : 2;
-  const recommended = recommendations.data?.products?.length ? recommendations.data.products : [...store.products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8).map((p) => ({ ...p, reason: "الأعلى تقييمًا" }));
+  const recommended = !user && passport.categories.length
+    ? rankByLocalInterests(store.products, passport.categories).slice(0, 8).map((p) => ({ ...p, reason: passport.categories.includes(p.category) ? "من اهتماماتك على هذا الجهاز" : "الأعلى تقييمًا" }))
+    : recommendations.data?.products?.length ? recommendations.data.products : [...store.products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8).map((p) => ({ ...p, reason: "الأعلى تقييمًا" }));
   const recentlyViewed = useMemo(() => store.recentIds.map((id) => store.products.find((p) => p.id === id)).filter((p): p is Product => !!p).slice(0, 10), [store.recentIds, store.products]);
   const featured = useMemo(() => store.products.filter((p) => (p.stock ?? 1) > 0).slice(0, 8), [store.products]);
   const submit = () => router.navigate({ pathname: "/explore", params: query.trim() ? { q: query.trim() } : {} });
@@ -107,10 +118,11 @@ export default function Home() {
   const Arrow = ArrowLeft;
   return (
     <Shell title="" testID="home">
+      <UpdateBanner />
       {design === "rafiq" ? <RafiqHero /> : (
         <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, marginBottom: 14 }}>
           <View style={{ flex: 1, gap: 2 }}>
-            <Txt style={{ color: t.muted }}>{user ? tr("أهلًا {name} 👋", { name: user.name.split(" ")[0] }) : tr("أهلًا بك 👋")}</Txt>
+            <Txt style={{ color: t.muted }}>{user ? tr("أهلًا {name} 👋", { name: user.name.split(" ")[0] }) : passport.displayName ? tr("أهلًا {name} 👋", { name: passport.displayName.split(" ")[0] }) : tr("أهلًا بك 👋")}</Txt>
             <Txt accessibilityRole="header" weight="extra" style={{ fontSize: 30, lineHeight: 42 }}>{tr("شو بدك اليوم؟")}</Txt>
           </View>
           <Mascot size={92} bubble="top" message={tr("اسألني أي شي!")} />
@@ -124,6 +136,12 @@ export default function Home() {
       </View>
 
       {design === "classic" ? <DesignHint /> : null}
+
+      {!user ? <Pressable testID="home-passport" accessibilityRole="button" onPress={() => router.push("/passport")}
+        style={{ marginTop: 14, backgroundColor: t.primarySoft, borderColor: t.primary, borderWidth: 1, padding: 14, borderRadius: 20, gap: 4 }}>
+        <Txt weight="extra" style={{ color: t.primary, fontSize: 16 }}>{tr("✦ جوازك العالمي — تسوق على ذوقك")}</Txt>
+        <Txt style={{ color: t.muted, fontSize: 12 }}>{passport.categories.length ? tr("تم اختيار {n} اهتمامات محلية", { n: passport.categories.length }) : tr("خصّص تجربة التصفح دون حساب أو خادم")}</Txt>
+      </Pressable> : null}
 
       {user && prefs.data && !prefs.data.preferences.onboarded ? (
         <Card style={{ marginTop: 16, gap: 10 }} tone="soft" testID="onboarding">

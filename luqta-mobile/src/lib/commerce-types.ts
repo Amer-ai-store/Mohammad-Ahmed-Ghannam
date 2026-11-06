@@ -26,6 +26,7 @@ export type OrderExtras = {
   payment?: {provider: string; brand: string; last4: string; reference: string; sandbox: boolean} | null;
   zone?: {id: string; name: string; etaMinutes: number} | null; tier?: string | null;
   rating?: {rating: number; driverRating: number | null; comment: string} | null;
+  fulfillment?: {mode: 'standard' | 'express' | 'pickup'; tip: number; fee?: number; branchId?: string | null; branchName?: string; etaMinutes?: number; readyInMinutes?: number} | null;
 };
 export const orderLabels: Record<string, string> = {
   pending: 'بانتظار التأكيد', confirmed: 'تم التأكيد', preparing: 'قيد التجهيز',
