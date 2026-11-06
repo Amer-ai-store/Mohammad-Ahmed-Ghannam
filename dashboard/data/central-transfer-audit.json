@@ -1,7 +1,7 @@
 {
   "schema": "aas.central.transfer.audit.v1",
-  "verified_date": "2026-11-04",
-  "checked_source_commit": "c58f5f2ddc4119194f0b8e08da92706224a5a790",
+  "verified_date": "2026-11-06",
+  "checked_source_commit": "SOURCE_COMMIT_CHANGING_VERIFY_CI",
   "central_url": "https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/",
   "canonical_release_evidence": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/41757350444",
   "status_semantics": {
@@ -12,8 +12,8 @@
     "blocked": "محجوب وفق ضوابط الأمن"
   },
   "public_inventory": {
-    "main_native_views": 39,
-    "main_navigation_destinations": 80,
+    "main_native_views": 40,
+    "main_navigation_destinations": 81,
     "main_groups": 6,
     "aas_routes": 14,
     "aas_manifest_files": 17,
@@ -42,7 +42,7 @@
       "title": "القيادة الرئيسية والتنقل",
       "source_status": "verified",
       "runtime_status": "unverified",
-      "count": "39 شاشة / 80 رابط تنقل / 6 مجموعات",
+      "count": "40 شاشة / 81 رابط تنقل / 6 مجموعات",
       "evidence": "dashboard/index.html",
       "note": "بنية التنقل موجودة ومثبتة في ملفات الموقع، ولا يعني ذلك أن كل زر متصل بخدمة حية."
     },
@@ -71,7 +71,7 @@
       "runtime_status": "unverified",
       "count": "17 واجهة مرتبطة بالتنقل",
       "evidence": "dashboard/jawafa-integration.js",
-      "note": "توجد 17 واجهة تنظيمية. التطبيق المرجعي القديم في AppDeploy يحفظ مهامًا في قاعدة تشغيل منفصلة؛ لم يثبت استيراد سجلاته أو مراعاة مراجعاتها إلى اللوحة المركزية."
+      "note": "أُضيفت مساحة التحقيق الموسع على GitHub Pages بفهرس موضوعات عامة فقط. تقارير المستندات الأصلية وبيانات القيود تحتاج جلسة مالك وبوابة HTTPS داخل الخادم؛ مصدر حي للمعاملات غير مثبت."
     },
     {
       "id": "trustsoft",
@@ -98,7 +98,7 @@
       "runtime_status": "blocked",
       "count": "15 جدولًا - تقرير محمي على الخادم",
       "evidence": "dashboard/jawafa-investigation.js",
-      "note": "أدلة التدقيق محفوظة محليًا؛ توسيع واجهتها ضمن PR #148 وليس منشورًا في main. لا نشر للبيانات المالية للعامة."
+      "note": "مساحة تحقيق 26 محورًا منشورة للبيانات الوصفية؛ تفاصيل الجداول التاريخية الحية ما تزال في PR #148/جسر خاص، ولم تُختبر مصادقة المالك أو قبول GATE-15."
     },
     {
       "id": "acceptance",
