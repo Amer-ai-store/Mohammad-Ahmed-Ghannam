@@ -83,7 +83,7 @@ function initMessageHub(){
     items.slice(-100).reverse().forEach(m=>{
       const article=el("article",{class:"panel","data-message-id":m.id});
       article.append(el("h3",{},m.subject));
-      article.append(el("p",{class:"small muted"},DISPATCHER_FROM.chat+" / "+m.from_project+" ← "+DISPATCHER_TO.chat+" / "+m.to_project));
+      article.append(el("p",{class:"small muted"},"من "+DISPATCHER_FROM.chat+" / "+m.from_project+" إلى "+DISPATCHER_TO.chat+" / "+m.to_project));
       article.append(el("p",{},m.body));
       article.append(el("p",{class:"small muted"},"SENT على GitHub فقط · تعليق #"+m.comment_id+" · "+(m.created_at||"وقت غير متاح")+" · هوية مرسل الرسالة مُصرَّح بها في النص وغير موثّقة؛ DELIVERED وREAD غير مثبتتين."));
       article.append(el("a",{href:m.permalink,target:"_blank",rel:"noopener noreferrer"},"فتح تعليق GitHub"));
