@@ -160,3 +160,47 @@ test('Private SQL-free metadata sidecar rejects unauthenticated callers and serv
     await new Promise(ok=>service.close(ok));
   }
 });
+
+test('Live SQL metadata proof is owner-only and never returns original TransactionHistory values',async()=>{
+  let called=0;
+  const handler=createSidecar({
+    audit15File:path.join(dir,'audit15.json'),
+    schemaCatalogFile:path.join(dir,'schema-catalog.json'),
+    verifyOwner:async b=>b==='Bearer owner.test.signature'?{status:200}:{status:403,error:'OWNER_AUTH_REJECTED'},
+    readLiveSchema:async()=>{
+      called++;
+      return {
+        schema:'jawafa.private.live-schema-proof.v1',
+        classification:'OWNER_ONLY_SCHEMA_METADATA_NO_BUSINESS_ROWS',
+        schemaTableCount:1024,declaredSqlForeignKeys:38,
+        transactionHistoryBoundedSampleRead:true,sampleRowValuesReturned:false,
+        observedAtUtc:new Date().toISOString(),
+        databasePrincipalLeastPrivilegeVerified:false,
+        financialRowsExposed:false
+      };
+    }
+  });
+  const service=http.createServer(handler);
+  await new Promise(ok=>service.listen(0,'127.0.0.1',ok));
+  const url='http://127.0.0.1:'+service.address().port+'/api/jawafa/v1/live-schema-proof';
+  try{
+    let res=await fetch(url);
+    assert.equal(res.status,401);
+    assert.equal(called,0,'unauthorized calls do not query local bridge');
+    res=await fetch(url,{headers:{Authorization:'Bearer viewer.test.signature'}});
+    assert.equal(res.status,403);
+    assert.equal(called,0);
+    res=await fetch(url,{headers:{Authorization:'Bearer owner.test.signature'}});
+    assert.equal(res.status,200);
+    assert.equal(called,1);
+    assert.equal(res.headers.get('access-control-allow-origin'),null);
+    const result=await res.json();
+    assert.equal(result.schemaTableCount,1024);
+    assert.equal(result.transactionHistoryBoundedSampleRead,true);
+    assert.equal(result.financialRowsExposed,false);
+    assert.equal(result.databasePrincipalLeastPrivilegeVerified,false);
+    assert.ok(!JSON.stringify(result).includes('AccountName'));
+    res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer owner.test.signature'}});
+    assert.equal(res.status,405);
+  }finally{await new Promise(ok=>service.close(ok));}
+});
