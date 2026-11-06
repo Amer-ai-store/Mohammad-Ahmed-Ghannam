@@ -1,15 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {parseHubMessage,composeHubMessage,HUB_ISSUE_URL} from "../project-messages.mjs";
+import {parseHubMessage,composeHubMessage,composeDispatcherMessage,isDispatcherRoute,normalizeDispatcherLinks,saveDispatcherLinks,loadDispatcherLinks,HUB_ISSUE_URL,DISPATCHER_STORAGE_KEY} from "../project-messages.mjs";
 import {normalizeChatUrl,normalizeProjectUrl,connectProjects,registerChats,effectiveEdges,neighbors,unlink,loadLinkGraph,saveLinkGraph,EMPTY_GRAPH} from "../project-links.mjs";
 const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const PROJECT_GPT="https://chatgpt.com/g/g-p-gpt123/project";
 const PROJECT_FINAL="https://chatgpt.com/g/g-p-final456/project";
-test("single existing dashboard exposes bulk project and many-chat controls",()=>{
-  for(const s of ['data-view="project-messages"','["project-messages","مركز مراسلات المشاريع"]',
-    'src="project-messages.mjs"','id="pm-links-form"','id="pm-add-chats-form"',
-    'id="pm-source-link"','id="pm-send-linked"','id="pm-project-list"'])assert.ok(html.includes(s),s);
+test("central dashboard offers exactly two dispatcher conversation links, no bulk routing UI",()=>{
+  const from=html.indexOf('data-view="project-messages"');
+  const to=html.indexOf('data-view="release-verification"',from);
+  const section=html.slice(from,to);
+  assert.ok(from>=0&&to>from);
+  for(const id of ['pm-links-form','pm-chat-one','pm-chat-two','pm-compose','pm-send-one','pm-send-two','pm-status','pm-refresh']){
+    assert.ok(section.includes('id="'+id+'"'),id);
+  }
+  assert.equal((section.match(/type="url"/g)||[]).length,2);
+  for(const removed of ['pm-add-chats-form','pm-send-linked','pm-source-link','first_project','second_project','pm-project-list','pm-links-list','pm-filter']){
+    assert.ok(!section.includes(removed),"legacy routing field still exposed: "+removed);
+  }
+  assert.ok(html.includes('src="project-messages.mjs"'));
   assert.ok(HUB_ISSUE_URL.endsWith("/issues/168"));
 });
 test("strict ChatGPT project URLs, reject untrusted hosts and conversation URLs",()=>{
@@ -79,4 +88,46 @@ test("GitHub messages prefaced by explanation text are discoverable and sender c
   assert.equal(received.authenticated_sender,undefined);
   assert.equal(received.read_at,undefined);
   assert.equal(parseHubMessage({id:17,body:comment.body.replace('"to_project": "التقرير النهائي"','"to_project": "not-registered"')}),null);
+});
+
+test("only two distinct ChatGPT conversation URLs are accepted as dispatcher links",()=>{
+  const one="https://chatgpt.com/c/12345678-1234-1234-1234-123456789abc";
+  const two="https://chatgpt.com/g/g-p-project-id/c/abcdef12-abcd-abcd-abcd-abcdef123456";
+  assert.deepEqual(normalizeDispatcherLinks(one+"?utm_source=xyz",two),{one,two});
+  assert.throws(()=>normalizeDispatcherLinks(one,one),/DISTINCT_DISPATCHERS_REQUIRED/);
+  assert.throws(()=>normalizeDispatcherLinks("https://chatgpt.com/share/s123",two),/LIVE_CONVERSATION_LINKS_REQUIRED/);
+  assert.throws(()=>normalizeDispatcherLinks("https://evil.invalid/c/a",two),/CHATGPT_LINK_ONLY/);
+  const store=new Map();
+  const adapter={getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)};
+  saveDispatcherLinks(adapter,one,two);
+  assert.deepEqual(loadDispatcherLinks(adapter),{one,two});
+  assert.equal(store.size,1);
+  assert.ok(store.has(DISPATCHER_STORAGE_KEY));
+});
+
+test("outgoing dispatcher messages can target only the opposite dispatcher",()=>{
+  for(const direction of ["1to2","2to1"]){
+    const raw=composeDispatcherMessage({direction,id:"pair-test-"+direction,subject:"اختبار",body:"ping"});
+    const message=parseHubMessage({id:90,body:raw});
+    assert.ok(isDispatcherRoute(message));
+    assert.equal(message.from_chat,direction==="1to2"?"موزع المهام 1":"موزع المهام 2");
+    assert.equal(message.to_chat,direction==="1to2"?"موزع المهام 2":"موزع المهام 1");
+    assert.ok(!raw.includes("chatgpt.com"));
+    assert.equal(message.reply_to,null);
+  }
+  assert.throws(()=>composeDispatcherMessage({direction:"any",id:"x",subject:"x",body:"x"}),/DISPATCHERS_ONLY/);
+  assert.equal(isDispatcherRoute({from_project:"التقرير النهائي",from_chat:"وكيل فرعي",to_project:"gpt",to_chat:"موزع المهام 2"}),false);
+  assert.equal(isDispatcherRoute({from_project:"التقرير النهائي",from_chat:"موزع المهام 1",to_project:"gpt",to_chat:"وكيل فرعي"}),false);
+});
+
+test("GitHub direct JSON and prefaced fenced JSON both parse, without false delivery claims",()=>{
+  const envelope={kind:"PROJECT_CHAT_MESSAGE",schema:"1.0",id:"direct-1",
+    from_project:"التقرير النهائي",from_chat:"موزع المهام 1",
+    to_project:"gpt",to_chat:"موزع المهام 2",subject:"ping",body:"test",reply_to:null};
+  const item=parseHubMessage({id:501,body:JSON.stringify(envelope)});
+  assert.equal(item.comment_id,501);
+  assert.ok(isDispatcherRoute(item));
+  assert.equal(item.read_at,undefined);
+  assert.equal(item.delivery_status,undefined);
+  assert.equal(parseHubMessage({id:502,body:"not JSON"}),null);
 });
