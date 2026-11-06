@@ -21,6 +21,7 @@
   for(const [value,label] of [['all','كل الأولويات'],['P0','P0 — عاجل'],['P1','P1 — متابعة']]){
     const option=make('option',label);option.value=value;pri.append(option);
   }
+  pri.value='all';
   const reload=make('button','تحديث بيانات الفهرس');reload.type='button';
   controls.append(q,pri,reload);
   const source=make('section',undefined,'panel'),rows=make('div',undefined,'table-wrap');
