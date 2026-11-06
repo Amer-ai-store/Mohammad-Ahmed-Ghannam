@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-11-06T18:20:24.878Z",
+  "ranAt": "2026-11-06T18:48:56.397Z",
   "environment": "Firebase Auth + Firestore emulators, Chromium (Playwright), local static server",
   "results": [
     {
@@ -10,7 +10,7 @@
     {
       "id": "E2E-02",
       "result": "PASS",
-      "detail": "12 views render after navigation"
+      "detail": "14 views render after navigation"
     },
     {
       "id": "E2E-03",
@@ -26,6 +26,31 @@
       "id": "E2E-05",
       "result": "PASS",
       "detail": "assistant answers from dataset and cites DEMO source"
+    },
+    {
+      "id": "E2E-19",
+      "result": "PASS",
+      "detail": "global search: typing «المخزون» + Enter opens the inventory screen"
+    },
+    {
+      "id": "E2E-20",
+      "result": "PASS",
+      "detail": "English mode: dir=ltr, navigation and headings in English (Inventory & warehouses)"
+    },
+    {
+      "id": "E2E-21",
+      "result": "PASS",
+      "detail": "light theme applied; body text contrast 16.6:1 (≥ 7 required)"
+    },
+    {
+      "id": "E2E-22",
+      "result": "PASS",
+      "detail": "CSV export: BOM, source line, formula injection neutralised, numbers kept"
+    },
+    {
+      "id": "E2E-23",
+      "result": "PASS",
+      "detail": "demo hidden → no figures shown, \"LIVE: BLOCKED\" panel instead"
     },
     {
       "id": "E2E-06",
@@ -48,6 +73,21 @@
       "detail": "owner invited auditor.a@example.com as auditor (email normalised)"
     },
     {
+      "id": "E2E-24",
+      "result": "PASS",
+      "detail": "branch saved to Firestore and listed with a Google Maps link"
+    },
+    {
+      "id": "E2E-25",
+      "result": "PASS",
+      "detail": "audit viewer lists company.create, member.invite and branch.create"
+    },
+    {
+      "id": "E2E-26",
+      "result": "PASS",
+      "detail": "user profile stores the last selected company in Firestore"
+    },
+    {
       "id": "E2E-10",
       "result": "PASS",
       "detail": "agent message persisted in Firestore with status QUEUED (no delivery channel → not advanced)"
@@ -66,6 +106,11 @@
       "id": "E2E-13",
       "result": "PASS",
       "detail": "auditor direct API write rejected by server: permission-denied"
+    },
+    {
+      "id": "E2E-27",
+      "result": "PASS",
+      "detail": "auditor sees the company branch but no add form"
     },
     {
       "id": "E2E-14",
@@ -95,7 +140,7 @@
     {
       "id": "PERF-01",
       "result": "PASS",
-      "detail": "time to ready (load + Firebase SDK + emulator): desktop 718 ms, mobile 660 ms"
+      "detail": "time to ready (load + Firebase SDK + emulator): desktop 831 ms, mobile 546 ms"
     }
   ]
 }

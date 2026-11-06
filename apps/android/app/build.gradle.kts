@@ -12,15 +12,28 @@ android {
     applicationId = "ai.jawafa.one"
     minSdk = 26
     targetSdk = 35
-    versionCode = 1
+    versionCode = (System.getenv("JAWAFA_VERSION_CODE") ?: "1").toInt()
     versionName = "0.1.0"
     resValue("string", "launchUrl", launchUrl)
     resValue("string", "hostName", launchHost)
   }
+  // Release signing comes from environment variables set by CI from repository secrets
+  // (see scripts/make-android-keystore.sh). The keystore is never committed.
+  val ksFile = System.getenv("JAWAFA_KEYSTORE_FILE")
+  if (ksFile != null && file(ksFile).exists()) {
+    signingConfigs {
+      create("release") {
+        storeFile = file(ksFile)
+        storePassword = System.getenv("JAWAFA_KEYSTORE_PASSWORD")
+        keyAlias = System.getenv("JAWAFA_KEY_ALIAS")
+        keyPassword = System.getenv("JAWAFA_KEY_PASSWORD")
+      }
+    }
+  }
   buildTypes {
     release {
       isMinifyEnabled = false
-      // Release signing is configured in CI from repository secrets; never commit a keystore.
+      signingConfig = signingConfigs.findByName("release")
     }
   }
   compileOptions {

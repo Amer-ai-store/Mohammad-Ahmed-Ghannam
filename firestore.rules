@@ -147,12 +147,25 @@ service cloud.firestore {
         allow delete: if canManage(cid);
       }
 
+      // Branches and warehouses: writers maintain them; fields are validated.
+      match /branches/{branchId} {
+        allow read: if isMember(cid);
+        allow create, update: if canWrite(cid)
+          && request.resource.data.keys().hasOnly(['name', 'kind', 'city', 'lat', 'lng', 'by', 'at'])
+          && validName(request.resource.data.name)
+          && request.resource.data.kind in ['market', 'restaurant', 'bakery', 'warehouse', 'office']
+          && (request.resource.data.get('lat', null) == null
+              || (request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+                  && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180));
+        allow delete: if canWrite(cid);
+      }
+
       // Other tenant data (operational, non-accounting).
       match /{coll}/{docId} {
         allow read: if isMember(cid);
         allow create, update, delete: if canWrite(cid)
           && coll in ['workspaces', 'stages', 'agents', 'servers', 'bridges', 'designs',
-                      'campaigns', 'activity', 'settings', 'store', 'branches', 'connections',
+                      'campaigns', 'activity', 'settings', 'store', 'connections',
                       'dashboards'];
       }
     }

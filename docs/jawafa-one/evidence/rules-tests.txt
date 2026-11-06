@@ -1,4 +1,4 @@
-# ran 2026-11-06T18:20:55Z · commit base c35a912 + working tree · Firestore emulator (firebase-tools 13.35.1)
+# ran 2026-11-06T18:48:25Z · Firestore emulator
 ok 1 - TEN-01 a user can create a company only as its sole owner
 ok 2 - TEN-02 company A data is not readable or writable by company B owner (API level)
 ok 3 - TEN-03 unauthenticated access is denied everywhere
@@ -14,6 +14,7 @@ ok 12 - SOC-01 social links accept only the matching platform host over https
 ok 13 - STORE-01 Android live-store collections stay readable only by the original owner
 ok 14 - PROF-01 profiles are private to their user
 ok 15 - PLAN-01 companies start free and no client can upgrade itself to Premium Plus
-# tests 15
-# pass 15
+ok 16 - BR-01 branches: writers add validated branches, read-only roles and other companies cannot
+# tests 16
+# pass 16
 # fail 0

@@ -49,7 +49,7 @@ try {
   // 1. Signed-out preview: every view navigable, demo data clearly labelled.
   const a = await open();
   check('E2E-01', (await a.page.evaluate(() => window.__jawafaState.cloud)) === 'ready', 'Firebase SDK loaded and emulator connected');
-  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'members', 'plans'];
+  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans'];
   const bad = [];
   for (const v of views) {
     await nav(a.page, v); await a.page.waitForTimeout(150);
@@ -68,6 +68,30 @@ try {
   const ans = await a.page.locator('.msg.bot').last().textContent();
   check('E2E-05', /CH-7781/.test(ans) && /DEMO/.test(ans), 'assistant answers from dataset and cites DEMO source');
   await a.page.screenshot({ path: `${out}/02-assistant.png` });
+
+  // Search, English, light theme, CSV, no-data mode (signed out).
+  await a.page.locator('#q').fill('المخزون'); await a.page.keyboard.press('Enter');
+  await a.page.waitForFunction(() => !document.querySelector('section.view[data-view="inventory"]').hidden, null, { timeout: 5000 }).then(() => true, () => false)
+    .then(ok => check('E2E-19', ok, 'global search: typing «المخزون» + Enter opens the inventory screen'));
+  await a.page.locator('#lang-btn').click(); await a.page.waitForTimeout(300);
+  const en = await a.page.evaluate(() => ({ dir: document.documentElement.dir, nav: document.getElementById('nav').textContent, head: document.querySelector('section.view:not([hidden]) h1')?.textContent }));
+  check('E2E-20', en.dir === 'ltr' && /Inventory/.test(en.nav) && /Inventory/.test(en.head || ''), 'English mode: dir=ltr, navigation and headings in English (' + en.head + ')');
+  await a.page.screenshot({ path: `${out}/06-inventory-english.png` });
+  await a.page.locator('#lang-btn').click(); await a.page.waitForTimeout(200);
+  await a.page.locator('#theme-btn').click(); await a.page.waitForTimeout(200);
+  const theme = await a.page.evaluate(() => ({ t: document.documentElement.dataset.theme, bg: getComputedStyle(document.body).backgroundColor, fg: getComputedStyle(document.body).color }));
+  const lum = (c) => { const [r, g, b] = c.match(/\d+/g).map(Number).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (Math.max(lum(theme.bg), lum(theme.fg)) + 0.05) / (Math.min(lum(theme.bg), lum(theme.fg)) + 0.05);
+  check('E2E-21', theme.t === 'light' && ratio >= 7, `light theme applied; body text contrast ${ratio.toFixed(1)}:1 (≥ 7 required)`);
+  await nav(a.page, 'home'); await a.page.screenshot({ path: `${out}/07-home-light.png` });
+  await a.page.locator('#theme-btn').click();
+  const csv = await a.page.evaluate(() => window.__jawafaToCsv('DEMO', ['a', 'b'], [['=1+1', -140], ['x,y', 'ok']]));
+  check('E2E-22', csv.startsWith('\ufeff') && csv.split('\r\n')[0].includes('DEMO') && csv.includes(`"'=1+1"`) && csv.includes(',-140') && csv.includes('"x,y"'), 'CSV export: BOM, source line, formula injection neutralised, numbers kept');
+  await nav(a.page, 'home');
+  await a.page.getByRole('button', { name: 'إخفاء البيانات التجريبية' }).first().click(); await a.page.waitForTimeout(300);
+  const nodata = await a.page.evaluate(() => ({ kpis: document.querySelectorAll('.kpi').length, blocked: /LIVE: BLOCKED/.test(document.querySelector('section.view[data-view="home"]').textContent), status: document.getElementById('status-data').textContent }));
+  check('E2E-23', nodata.kpis === 0 && nodata.blocked && /LIVE/.test(nodata.status), 'demo hidden → no figures shown, "LIVE: BLOCKED" panel instead');
+  await a.page.getByRole('button', { name: 'عرض بيانات تجريبية' }).first().click(); await a.page.waitForTimeout(200);
 
   // 2. Owner signs in, creates company A, sets social links, invites an auditor.
   await signIn(a.page, 'owner.a@example.com', 'ownerA');
@@ -94,6 +118,22 @@ try {
   await a.page.getByRole('button', { name: 'إرسال الدعوة' }).click();
   await waitState(a.page, () => window.__jawafaState.companies[0]?.pendingInvites?.['auditor.a@example.com'] === 'auditor');
   check('E2E-09', true, 'owner invited auditor.a@example.com as auditor (email normalised)');
+  await nav(a.page, 'branches'); await a.page.waitForTimeout(200);
+  await a.page.locator('input[name="bname"]').fill('أسواق جوافة — الزرقاء');
+  await a.page.locator('select[name="kind"]').selectOption('market');
+  await a.page.locator('input[name="city"]').fill('الزرقاء');
+  await a.page.locator('input[name="lat"]').fill('32.0608'); await a.page.locator('input[name="lng"]').fill('36.0942');
+  await a.page.getByRole('button', { name: 'إضافة' }).click();
+  await waitState(a.page, () => window.__jawafaState.branches.length === 1);
+  check('E2E-24', await a.page.locator('section.view[data-view="branches"] td a[href*="32.0608,36.0942"]').count() === 1, 'branch saved to Firestore and listed with a Google Maps link');
+  await a.page.screenshot({ path: `${out}/08-branches.png` });
+  await nav(a.page, 'audit');
+  await waitState(a.page, () => ['company.create', 'member.invite', 'branch.create'].every(x => window.__jawafaState.audit.some(e => e.action === x)));
+  const auditRows = await a.page.waitForFunction(() => { const t = document.querySelector('section.view[data-view="audit"] tbody')?.textContent || ''; return ['company.create', 'member.invite', 'branch.create'].every(x => t.includes(x)); }, null, { timeout: 5000 }).then(() => true, () => false);
+  check('E2E-25', auditRows, 'audit viewer lists company.create, member.invite and branch.create');
+  await a.page.screenshot({ path: `${out}/09-audit.png` });
+  const prof = await a.page.evaluate(async () => { const d = await window.firebase.app().firestore().collection('profiles').doc(window.__jawafaState.user.uid).get(); return d.exists ? d.data().lastCompanyId === window.__jawafaState.companyId : false; });
+  check('E2E-26', prof, 'user profile stores the last selected company in Firestore');
   await nav(a.page, 'agents'); await a.page.waitForTimeout(300);
   await a.page.locator('#msg-from').selectOption('agent-999');
   await a.page.locator('#msg-to').selectOption(['agent-777', 'agent-666']);
@@ -120,6 +160,9 @@ try {
     try { await fs.collection('companies').doc(id).collection('workspaces').add({ name: 'x' }); return 'allowed'; } catch (e) { return e.code; }
   });
   check('E2E-13', denied === 'permission-denied', 'auditor direct API write rejected by server: ' + denied);
+  await nav(b.page, 'branches'); await b.page.waitForTimeout(400);
+  const ro = await b.page.evaluate(() => ({ form: !!document.querySelector('section.view[data-view="branches"] input[name="bname"]'), rows: document.querySelectorAll('section.view[data-view="branches"] tbody tr').length }));
+  check('E2E-27', !ro.form && ro.rows === 1, 'auditor sees the company branch but no add form');
 
   // 4. A stranger cannot read company A, even by id through the API.
   const c = await open({ width: 390, height: 844 });

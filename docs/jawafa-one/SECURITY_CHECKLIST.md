@@ -10,6 +10,9 @@
 | Plan (free / Premium Plus) not client-writable | PASS | PLAN-01, E2E-15 |
 | Agent messages immutable, forward-only, never deleted; audit log append-only | PASS | MSG-01, AUD-01 |
 | Social links: https + exact platform host (rules + client) | PASS | SOC-01, CORE-02, E2E-07 |
+| Branch records validated (fields, type, coordinates) and writable only by writer roles | PASS | BR-01, E2E-27 |
+| CSV export neutralises spreadsheet formulas (=,+,-,@) in text cells | PASS | E2E-22 |
+| Android signing key never in repo; CI decodes it to a temp file and deletes it | PASS (review) | jawafa-one-apps.yml |
 | No private keys/passwords in `dashboard/one` | PASS (static scan) | The Firebase web config in `dashboard/firebase-config.js` is a public project identifier; access is decided by rules |
 | No SQL/accounting write path in the new app | PASS (static) | No SQL client or Jawafa_DB endpoint exists in dashboard/one or apps/* |
 | DOM built with `textContent`/elements, no `innerHTML` from data | PASS (review) | Only static SVG strings use innerHTML |
