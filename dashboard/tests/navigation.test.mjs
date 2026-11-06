@@ -59,3 +59,7 @@ test('inline scripts and integrations parse as valid JavaScript', () => {
   new Script(luqta, {filename:'luqta-integration.js'});
   new Script(api, {filename:'luqta-api.js'});
 });
+
+test('central dashboard declares mobile viewport to avoid desktop-scale rendering on phones', () => {
+  assert.match(index, /<meta\s+name="viewport"\s+content="width=device-width,\s*initial-scale=1"\s*>/);
+});
