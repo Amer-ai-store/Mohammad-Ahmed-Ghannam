@@ -15,6 +15,6 @@ Rule: no integration is LIVE without a documented test in the target environment
 | Facebook / Instagram / TikTok | TEST_PASSED (links only) | Validated links in company profile | Graph / TikTok APIs + app review for posting/insights |
 | TrustSoft cameras | BLOCKED | Legacy read-only TrustSoft status module | Authorised camera/event API |
 | Premium Plus billing | NOT_STARTED | Plan field locked to backend | Payment provider + Admin-SDK billing function |
-| Windows app | BUILT_NOT_TESTED | apps/desktop, exe built | Run on Windows; code-signing cert |
-| Android app | IN_PROGRESS | apps/android TWA + CI job | Run CI; `/.well-known/assetlinks.json` on amer-ai-store.github.io (user-site repo) for full-screen |
+| Windows app | BUILT_NOT_TESTED | Installer + portable built on windows-latest (run 42271347513) | Run on Windows; optional code-signing cert |
+| Android app | BUILT_NOT_TESTED | Debug APK built in CI run 42271347513; release signing pipeline ready | Owner: signing secrets + assetlinks.json (DEPLOY.md §5); install on a phone |
 | iOS app | BLOCKED | PWA installable from Safari | Mac + Xcode + Apple Developer account |

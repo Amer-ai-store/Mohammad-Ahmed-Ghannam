@@ -56,7 +56,9 @@ const NAV = [
   ["sep", "", "الإدارة", "Administration"],
   ["connections", "🔗", "الربط والتكاملات", "Integrations"],
   ["company", "🏢", "الشركة", "Company"],
+  ["branches", "🏬", "الفروع والمستودعات", "Branches & warehouses"],
   ["members", "👥", "المستخدمون والصلاحيات", "Users & roles"],
+  ["audit", "🧾", "سجل التدقيق", "Audit log"],
   ["plans", "★", "الخطط · Premium Plus", "Plans · Premium Plus"],
 ];
 const BOTTOM = ["home", "agents", "inventory", "sales", "company"];
@@ -93,7 +95,7 @@ function show(view) {
 // ---------- state ----------
 const state = {
   cloud: "loading", // loading | ready | unconfigured | failed
-  user: null, companies: [], companyId: null, invites: [], messages: [], tasks: [],
+  user: null, profile: null, companies: [], companyId: null, invites: [], messages: [], tasks: [], branches: [], audit: [],
   demo: store.get("jawafa-one-demo", "1") === "1",
   localRouter: C.createRouter(),
 };
@@ -103,7 +105,7 @@ const dataset = (() => { let cache; return () => (state.demo ? (cache ||= C.demo
 
 // ---------- Firebase ----------
 let fb, auth, fs;
-const unsubs = { companies: null, invites: null, messages: null, tasks: null };
+const unsubs = { companies: null, invites: null, messages: null, tasks: null, branches: null, audit: null };
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error(src)); document.head.append(s); }); }
 
 async function initCloud() {
@@ -141,12 +143,15 @@ function stopAll() { for (const k of Object.keys(unsubs)) { if (unsubs[k]) unsub
 function onUser(user) {
   stopAll();
   state.user = user && !user.isAnonymous ? { uid: user.uid, email: C.normalizeEmail(user.email), name: user.displayName || "", photo: user.photoURL || "" } : null;
-  state.companies = []; state.invites = []; state.messages = []; state.tasks = []; state.companyId = null;
+  state.companies = []; state.invites = []; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.companyId = null; state.profile = null;
   if (!state.user) { render(); return; }
+  // The profile remembers the last company across devices; localStorage is only a fallback.
+  const me = state.user;
+  fs.collection("profiles").doc(me.uid).get().then(d => { if (state.user === me) { state.profile = d.exists ? d.data() : {}; if (!state.companyId && state.profile.lastCompanyId && state.companies.some(c => c.id === state.profile.lastCompanyId)) selectCompany(state.profile.lastCompanyId); } }).catch(() => { state.profile = {}; });
   unsubs.companies = fs.collection("companies").where("memberIds", "array-contains", state.user.uid).onSnapshot(snap => {
     state.companies = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => S(a.name).localeCompare(S(b.name)));
     if (!state.companies.some(c => c.id === state.companyId)) {
-      const saved = store.get("jawafa-one-company:" + state.user.uid, "");
+      const saved = (state.profile && state.profile.lastCompanyId) || store.get("jawafa-one-company:" + state.user.uid, "");
       selectCompany(state.companies.some(c => c.id === saved) ? saved : state.companies[0]?.id || null);
     } else render();
   }, err => { toast(T("تعذّر قراءة الشركات: ", "Could not read companies: ") + S(err.code, 60)); });
@@ -156,12 +161,17 @@ function onUser(user) {
 }
 
 function selectCompany(id) {
-  if (unsubs.messages) unsubs.messages(); if (unsubs.tasks) unsubs.tasks();
-  unsubs.messages = unsubs.tasks = null;
-  state.companyId = id; state.messages = []; state.tasks = [];
+  for (const k of ["messages", "tasks", "branches", "audit"]) { if (unsubs[k]) unsubs[k](); unsubs[k] = null; }
+  state.companyId = id; state.messages = []; state.tasks = []; state.branches = []; state.audit = [];
   if (id && state.user) {
     store.set("jawafa-one-company:" + state.user.uid, id);
+    if (!state.profile || state.profile.lastCompanyId !== id) {
+      state.profile = { ...(state.profile || {}), lastCompanyId: id };
+      fs.collection("profiles").doc(state.user.uid).set({ email: state.user.email, name: S(state.user.name, 80), lastCompanyId: id, updatedAt: Date.now() }, { merge: true }).catch(() => {});
+    }
     const ref = fs.collection("companies").doc(id);
+    unsubs.branches = ref.collection("branches").orderBy("name").onSnapshot(s => { state.branches = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    unsubs.audit = ref.collection("audit").orderBy("at", "desc").limit(100).onSnapshot(s => { state.audit = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     unsubs.messages = ref.collection("agentMessages").orderBy("at", "desc").limit(50).onSnapshot(s => { state.messages = s.docs.map(d => d.data()); render(); }, () => {});
     unsubs.tasks = ref.collection("tasks").orderBy("at", "desc").limit(50).onSnapshot(s => { state.tasks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
   }
@@ -294,6 +304,76 @@ function answer(q) {
 }
 const chat = [];
 
+// ---------- CSV export ----------
+// Excel-friendly (UTF-8 BOM). The first line states the data source so a DEMO export can never be
+// mistaken for real figures.
+function csvCell(v) { if (typeof v === "number") return Number.isFinite(v) ? String(v) : ""; const t = v == null ? "" : String(v); return /[",\n\r]/.test(t) || /^[=+\-@]/.test(t) ? '"' + (/^[=+\-@]/.test(t) ? "'" : "") + t.replace(/"/g, '""') + '"' : t; }
+function toCsv(source, headers, rows) {
+  return "\ufeff" + [[T("مصدر البيانات", "Data source"), source], headers, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n");
+}
+function downloadCsv(name, source, headers, rows) {
+  const blob = new Blob([toCsv(source, headers, rows)], { type: "text/csv;charset=utf-8" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: `${name}-${source}-${new Date().toISOString().slice(0, 10)}.csv` });
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+window.__jawafaToCsv = toCsv;
+const csvBtn = (fn) => el("button", { class: "ghost", onclick: fn }, "⬇ CSV");
+
+// ---------- branches ----------
+const BRANCH_KINDS = { market: ["سوق", "Market"], restaurant: ["مطعم", "Restaurant"], bakery: ["فرن", "Bakery"], warehouse: ["مستودع", "Warehouse"], office: ["إدارة", "Office"] };
+async function addBranch(f) {
+  const name = f.bname.value.trim(), kind = f.kind.value, city = f.city.value.trim();
+  const lat = f.lat.value === "" ? null : Number(f.lat.value), lng = f.lng.value === "" ? null : Number(f.lng.value);
+  if (!name || name.length > 80) { toast(T("اسم الفرع مطلوب (حتى 80 حرفًا).", "Branch name required (≤80).")); return false; }
+  if (!BRANCH_KINDS[kind]) return false;
+  if ((lat !== null && !(lat >= -90 && lat <= 90)) || (lng !== null && !(lng >= -180 && lng <= 180)) || ((lat === null) !== (lng === null))) { toast(T("الإحداثيات غير صحيحة.", "Invalid coordinates.")); return false; }
+  try {
+    await fs.collection("companies").doc(state.companyId).collection("branches").add({ name, kind, city: S(city, 80), lat, lng, by: state.user.uid, at: Date.now() });
+    audit("branch.create", name); toast(T("أُضيف الفرع.", "Branch added.")); return true;
+  } catch (e) { fail(e); return false; }
+}
+async function deleteBranch(b) {
+  if (!confirm(T("حذف الفرع «" + b.name + "»؟", "Delete branch \"" + b.name + "\"?"))) return;
+  try { await fs.collection("companies").doc(state.companyId).collection("branches").doc(b.id).delete(); audit("branch.delete", b.name); } catch (e) { fail(e); }
+}
+function renderBranches(v) {
+  if (!state.user) return needSignIn(v, T("الفروع والمستودعات", "Branches & warehouses"));
+  if (!company()) { v.replaceChildren(sectionHead(T("الفروع والمستودعات", "Branches & warehouses")), el("p", null, el("a", { href: "#company" }, T("أنشئ شركة أو اقبل دعوة أولًا.", "Create a company or accept an invitation first.")))); return; }
+  const w = C.can(role(), "write");
+  const form = w ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await addBranch(e.target)) e.target.reset(); } },
+    el("h3", null, T("إضافة فرع أو مستودع", "Add branch or warehouse")),
+    el("div", { class: "cols-2" },
+      el("label", { class: "small" }, T("الاسم", "Name"), el("input", { name: "bname", maxlength: "80", required: true })),
+      el("label", { class: "small" }, T("النوع", "Type"), el("select", { name: "kind" }, ...Object.entries(BRANCH_KINDS).map(([k, l]) => el("option", { value: k }, T(l[0], l[1]))))),
+      el("label", { class: "small" }, T("المدينة", "City"), el("input", { name: "city", maxlength: "80" })),
+      el("div", { class: "cols-2" },
+        el("label", { class: "small" }, T("خط العرض", "Latitude"), el("input", { name: "lat", type: "number", step: "any", class: "ltr" })),
+        el("label", { class: "small" }, T("خط الطول", "Longitude"), el("input", { name: "lng", type: "number", step: "any", class: "ltr" })))),
+    el("button", { class: "primary", type: "submit" }, T("إضافة", "Add"))) : el("div", { class: "panel muted small" }, T("دورك للقراءة فقط.", "Your role is read only."));
+  const rows = state.branches.map(b => el("tr", null, el("td", null, S(b.name, 80)), el("td", null, T(...(BRANCH_KINDS[b.kind] || [b.kind, b.kind]))), el("td", null, S(b.city, 80)),
+    el("td", { class: "ltr" }, b.lat != null ? `${b.lat}, ${b.lng}` : "—"),
+    el("td", null, b.lat != null ? el("a", { href: `https://www.google.com/maps?q=${b.lat},${b.lng}`, target: "_blank", rel: "noopener noreferrer" }, "Google Maps") : ""),
+    el("td", null, w ? el("button", { class: "ghost", onclick: () => deleteBranch(b) }, T("حذف", "Delete")) : "")));
+  v.replaceChildren(sectionHead(T("الفروع والمستودعات", "Branches & warehouses"), badge("demo", "UNVERIFIED"), csvBtn(() => downloadCsv("branches", "UNVERIFIED", [T("الاسم", "Name"), T("النوع", "Type"), T("المدينة", "City"), "lat", "lng"], state.branches.map(b => [b.name, b.kind, b.city, b.lat, b.lng])))),
+    el("div", { class: "banner info" }, T("بيانات الفروع يدخلها أعضاء الشركة وتُحفظ في Firestore الخاص بشركتك. وسمها UNVERIFIED لأنها غير مطابقة مع مصدر رسمي. صلاحيات على مستوى الفرع: لم تُنفّذ بعد.", "Branch data is entered by company members and stored in your company's Firestore. Labelled UNVERIFIED because it is not matched against an official source. Branch-level permissions: not implemented yet.")),
+    form, el("div", { style: "margin-top:1rem" }, table([T("الاسم", "Name"), T("النوع", "Type"), T("المدينة", "City"), T("الإحداثيات", "Coordinates"), "", ""], rows)));
+}
+
+// ---------- audit log viewer ----------
+function renderAudit(v) {
+  if (!state.user) return needSignIn(v, T("سجل التدقيق", "Audit log"));
+  if (!company()) { v.replaceChildren(sectionHead(T("سجل التدقيق", "Audit log")), el("p", null, el("a", { href: "#company" }, T("أنشئ شركة أو اقبل دعوة أولًا.", "Create a company or accept an invitation first.")))); return; }
+  const q = (v.querySelector("#audit-q")?.value || "").trim().toLowerCase();
+  const list = state.audit.filter(a => !q || [a.action, a.detail, a.email].join(" ").toLowerCase().includes(q));
+  const input = el("input", { id: "audit-q", type: "search", value: q, placeholder: T("تصفية...", "Filter..."), style: "width:auto", oninput: () => renderAudit(v) });
+  v.replaceChildren(sectionHead(T("سجل التدقيق", "Audit log"), badge("live", T("إلحاق فقط", "append-only")), input,
+      csvBtn(() => downloadCsv("audit", "FIRESTORE", [T("الوقت", "Time"), T("المستخدم", "User"), T("الإجراء", "Action"), T("التفاصيل", "Detail")], list.map(a => [new Date(a.at).toISOString(), a.email, a.action, a.detail])))),
+    el("div", { class: "banner info" }, T("لا يمكن لأي عضو تعديل أو حذف سجل — مفروض في قواعد Firestore. يعرض آخر 100 حدث.", "No member can edit or delete an entry — enforced by Firestore rules. Shows the latest 100 events.")),
+    table([T("الوقت", "Time"), T("المستخدم", "User"), T("الإجراء", "Action"), T("التفاصيل", "Detail")],
+      list.map(a => el("tr", null, el("td", null, fmtTime(a.at)), el("td", { class: "ltr" }, S(a.email, 120)), el("td", { class: "ltr" }, S(a.action, 60)), el("td", null, S(a.detail, 200))))));
+  const n = v.querySelector("#audit-q"); if (q && n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+}
+
 // ---------- rendering ----------
 function sectionHead(title, ...extra) { return el("div", { class: "toolbar", style: "justify-content:space-between" }, el("h1", { style: "margin:0;font-size:1.4rem" }, title), el("div", { class: "toolbar", style: "margin:0" }, ...extra)); }
 function demoToggle() {
@@ -380,7 +460,7 @@ function renderSales(v) {
   const inv = d.invoices.filter(i => !branch || i.branch === branch).sort((a, b) => b.at - a.at).slice(0, 60);
   const sel = el("select", { id: "sales-branch", style: "width:auto", onchange: () => renderSales(v) }, el("option", { value: "" }, T("كل الفروع", "All branches")),
     ...d.branches.filter(b => b.kind !== "warehouse").map(b => el("option", { value: b.id, selected: b.id === branch }, b.name)));
-  v.replaceChildren(sectionHead(T("المبيعات", "Sales"), SOURCE_BADGE[d.source](), sel, demoToggle()),
+  v.replaceChildren(sectionHead(T("المبيعات", "Sales"), SOURCE_BADGE[d.source](), sel, csvBtn(() => downloadCsv("sales", d.source, ["no", "branch", "total", "discountPct", "user", "status", "time"], d.invoices.filter(i => !branch || i.branch === branch).map(i => [i.no, bn(i.branch), i.total, i.discountPct, i.user, i.status, new Date(i.at).toISOString()]))), demoToggle()),
     el("div", { class: "panel" }, el("h3", null, T("المبيعات اليومية — 14 يومًا", "Daily sales — 14 days")), lineChart(C.dailySales({ ...d, invoices: d.invoices.filter(i => !branch || i.branch === branch) }, 14))),
     el("div", { class: "panel", style: "margin-top:1rem" }, el("h3", null, T("أحدث الفواتير", "Latest invoices")),
       table([T("رقم", "No."), T("الفرع", "Branch"), T("المجموع", "Total"), T("الخصم", "Discount"), T("المستخدم", "User"), T("الحالة", "Status"), T("الوقت", "Time")],
@@ -394,7 +474,8 @@ function renderInventory(v) {
   const bn = (id) => d.branches.find(b => b.id === id)?.name || id;
   const rows = d.stock.filter(s => !onlyLow || s.qty < s.reorder).sort((a, b) => a.qty - b.qty);
   v.replaceChildren(sectionHead(T("المخزون والمستودعات", "Inventory & warehouses"), SOURCE_BADGE[d.source](),
-      el("label", { class: "small" }, el("input", { id: "inv-low", type: "checkbox", style: "width:auto;min-height:auto", checked: onlyLow, onchange: () => renderInventory(v) }), " ", T("تحت حد الطلب فقط", "Below reorder only")), demoToggle()),
+      el("label", { class: "small" }, el("input", { id: "inv-low", type: "checkbox", style: "width:auto;min-height:auto", checked: onlyLow, onchange: () => renderInventory(v) }), " ", T("تحت حد الطلب فقط", "Below reorder only")),
+      csvBtn(() => downloadCsv("inventory", d.source, ["sku", "item", "location", "qty", "reorder"], rows.map(s => [s.sku, s.name, bn(s.branch), s.qty, s.reorder]))), demoToggle()),
     table([T("الصنف", "Item"), "SKU", T("الموقع", "Location"), T("الرصيد", "Qty"), T("حد الطلب", "Reorder"), T("الحالة", "State")],
       rows.map(s => el("tr", null, el("td", null, s.name), el("td", { class: "ltr" }, s.sku), el("td", null, bn(s.branch)), el("td", { class: "num" }, num(s.qty)), el("td", { class: "num" }, num(s.reorder)),
         el("td", null, s.qty < 0 ? badge("blocked", T("رصيد سالب", "negative")) : s.qty < s.reorder ? badge("demo", T("منخفض", "low")) : badge("live", T("كافٍ", "ok")))))));
@@ -421,7 +502,8 @@ function renderInvestigations(v) {
   const d = dataset();
   if (!d) { v.replaceChildren(sectionHead(T("التحقيقات وكشف التلاعب", "Investigations & anomaly detection")), noData()); return; }
   const f = C.detectAnomalies(d);
-  v.replaceChildren(sectionHead(T("التحقيقات وكشف التلاعب", "Investigations & anomaly detection"), SOURCE_BADGE[d.source](), demoToggle()),
+  v.replaceChildren(sectionHead(T("التحقيقات وكشف التلاعب", "Investigations & anomaly detection"), SOURCE_BADGE[d.source](),
+      csvBtn(() => downloadCsv("findings", d.source, ["type", "title", "ref", "confidence", "classification", "detail"], f.map(x => [x.type, x.title, x.ref, x.confidence, C.FINDING_CLASS[x.classification], x.detail]))), demoToggle()),
     el("div", { class: "banner info" }, T("كل نتيجة مؤشر للتحقق وليست اتهامًا لأي شخص. على البيانات التجريبية لا تُصنَّف أي نتيجة «مثبتة»؛ الإثبات يتطلب بيانات LIVE وأدلة مرفقة.", "Each result is a lead, never an accusation. On demo data nothing is classified as proven; proof needs LIVE data and attached evidence.")),
     el("div", { class: "list" }, ...f.map(x => el("div", { class: "item" },
       el("div", { class: "row" }, el("b", null, x.title), el("span", { class: "toolbar", style: "margin:0" }, badge(x.classification === "proven" ? "live" : "demo", C.FINDING_CLASS[x.classification]), SOURCE_BADGE[x.source]())),
@@ -430,7 +512,7 @@ function renderInvestigations(v) {
 }
 
 function branchMap(d, h) {
-  const W = 600, H = h || 320, P = 60;
+  const W = 600, H = h || 320, P = (h || 320) < 260 ? 90 : 70;
   const lats = d.branches.map(b => b.lat), lngs = d.branches.map(b => b.lng);
   const [a0, a1, o0, o1] = [Math.min(...lats), Math.max(...lats), Math.min(...lngs), Math.max(...lngs)];
   const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
@@ -609,7 +691,7 @@ function renderUser() {
   $("status-data").textContent = state.demo ? T("البيانات المعروضة: تجريبية DEMO — ليست بيانات حقيقية", "Shown data: DEMO — not real") : T("البيانات التشغيلية: لا يوجد مصدر LIVE", "Operational data: no LIVE source");
 }
 
-const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans };
+const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit };
 let rq = false;
 function render() {
   if (rq) return; rq = true;
@@ -652,8 +734,10 @@ function setupSearch() {
 $("menu-btn").addEventListener("click", () => { const open = $("side").classList.toggle("open"); $("menu-btn").setAttribute("aria-expanded", String(open)); });
 $("theme-btn").addEventListener("click", () => {
   const dark = document.documentElement.dataset.theme !== "light";
-  document.documentElement.dataset.theme = dark ? "light" : "dark"; store.set("jawafa-one-theme", document.documentElement.dataset.theme);
+  document.documentElement.dataset.theme = dark ? "light" : "dark"; store.set("jawafa-one-theme", document.documentElement.dataset.theme); themeIcon();
 });
+function themeIcon() { const light = document.documentElement.dataset.theme === "light"; $("theme-btn").textContent = light ? "☾" : "☀"; $("theme-btn").setAttribute("aria-label", light ? T("الوضع الليلي", "Dark mode") : T("الوضع النهاري", "Light mode")); }
+themeIcon();
 $("lang-btn").addEventListener("click", () => {
   const en = lang() !== "en";
   document.documentElement.lang = en ? "en" : "ar"; document.documentElement.dir = en ? "ltr" : "rtl";

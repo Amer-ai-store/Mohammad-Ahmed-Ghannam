@@ -96,6 +96,30 @@ jobs:
           APK=$(ls apps/android/app/build/outputs/apk/debug/*.apk)
           "$ANDROID_HOME"/build-tools/35.0.0/apksigner verify --print-certs "$APK" | grep -i sha-256 || true
           sha256sum "$APK"
+      # Signed release APK + AAB (Play Store) when the owner has added the signing secrets.
+      # Without them only the debug APK is built; its debug key changes per run.
+      - name: Build signed release APK and AAB (when signing secrets exist)
+        env:
+          KEYSTORE_B64: ${{ secrets.JAWAFA_ANDROID_KEYSTORE_BASE64 }}
+          JAWAFA_KEYSTORE_PASSWORD: ${{ secrets.JAWAFA_ANDROID_KEYSTORE_PASSWORD }}
+          JAWAFA_KEY_ALIAS: ${{ secrets.JAWAFA_ANDROID_KEY_ALIAS }}
+          JAWAFA_KEY_PASSWORD: ${{ secrets.JAWAFA_ANDROID_KEY_PASSWORD }}
+          JAWAFA_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then echo "No signing secrets: skipping release build."; exit 0; fi
+          export JAWAFA_KEYSTORE_FILE="$RUNNER_TEMP/jawafa-release.jks"
+          echo "$KEYSTORE_B64" | base64 -d > "$JAWAFA_KEYSTORE_FILE"
+          gradle -p apps/android :app:assembleRelease :app:bundleRelease --no-daemon
+          "$ANDROID_HOME"/build-tools/35.0.0/apksigner verify --print-certs apps/android/app/build/outputs/apk/release/*.apk | grep -i sha-256
+          rm -f "$JAWAFA_KEYSTORE_FILE"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jawafa-one-android-release
+          path: |
+            apps/android/app/build/outputs/apk/release/*.apk
+            apps/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+          retention-days: 30
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: jawafa-one-android-debug-apk

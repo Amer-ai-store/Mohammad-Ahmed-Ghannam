@@ -4,8 +4,8 @@
 
 | Section 18 criterion | State |
 |---|---|
-| Build succeeds | Web: yes (static). EXE: yes (portable). APK: not built yet |
-| Critical tests pass | Yes on emulators (15 rules, 19 E2E, 6+3 unit); 1 pre-existing unrelated failure |
+| Build succeeds | Web: yes (static). Windows installer + portable: yes (CI). Debug APK: yes (CI). Signed release: needs owner secrets |
+| Critical tests pass | Yes on emulators, locally and in GitHub Actions (16 rules, 28 E2E, 9 unit); 1 pre-existing unrelated failure |
 | User permissions proven | On emulator only |
 | Company isolation proven | On emulator only (API-level) |
 | Secrets protected | Yes — no secrets in client code |

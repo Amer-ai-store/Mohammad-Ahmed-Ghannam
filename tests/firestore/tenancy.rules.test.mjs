@@ -182,3 +182,19 @@ test('PLAN-01 companies start free and no client can upgrade itself to Premium P
   await assertFails(updateDoc(doc(db(users.ownerA), 'companies/A'), { plan: 'premium_plus' }));
   await assertSucceeds(updateDoc(doc(f, 'companies/P'), { name: 'Still free' }));
 });
+
+test('BR-01 branches: writers add validated branches, read-only roles and other companies cannot', async () => {
+  const ok = { name: 'فرع الزرقاء', kind: 'market', city: 'الزرقاء', lat: 32.06, lng: 36.09, by: 'accA', at: 1 };
+  await assertSucceeds(setDoc(doc(db(users.accA), 'companies/A/branches/b1'), ok));
+  await assertSucceeds(setDoc(doc(db(users.gmA), 'companies/A/branches/b2'), { ...ok, lat: null, lng: null }));
+  await assertFails(setDoc(doc(db(users.audA), 'companies/A/branches/b3'), ok));
+  await assertFails(setDoc(doc(db(users.empA), 'companies/A/branches/b3'), ok));
+  await assertFails(setDoc(doc(db(users.ownerB), 'companies/A/branches/b3'), ok));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/branches/b4'), { ...ok, kind: 'casino' }));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/branches/b5'), { ...ok, lat: 123 }));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/branches/b6'), { ...ok, extra: 'x' }));
+  await assertSucceeds(getDoc(doc(db(users.audA), 'companies/A/branches/b1')));
+  await assertFails(getDoc(doc(db(users.ownerB), 'companies/A/branches/b1')));
+  await assertFails(deleteDoc(doc(db(users.audA), 'companies/A/branches/b1')));
+  await assertSucceeds(deleteDoc(doc(db(users.accA), 'companies/A/branches/b1')));
+});
