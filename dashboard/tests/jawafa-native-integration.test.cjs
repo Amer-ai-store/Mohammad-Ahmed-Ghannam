@@ -24,3 +24,20 @@ test("snapshot tracks verified v5 manifest without claiming full export acceptan
  for(const s of ['515/515','503 FULL','12 DELTA','FILES_VERIFIED / ACCEPTANCE_OPEN','NO_SYNC','GATE-15','فرق صفين'])assert.ok(view.includes(s),s);
  assert.ok(view.includes('لا يثبت اكتمال البيانات'));
 });
+
+test("historical security v147 card is integrated and public-safe",()=>{
+ const card='id="jawafa-security-v147"';
+ assert.ok(html.includes(card),"security card not mounted in native Jawafa dashboard");
+ assert.ok(html.includes('href="./jawafa-security-v147.html"'),"security report link missing");
+ const start=html.indexOf(card);
+ const end=html.indexOf('id="jawafa-continuity-entry"',start);
+ assert.ok(start>=0&&end>start,"security card not adjacent to Jawafa continuity view");
+ const dashboardCard=html.slice(start,end);
+ const report=fs.readFileSync(path.join(root,"jawafa-security-v147.html"),"utf8");
+ for(const text of ["لقطة تاريخية","ليست مراقبة مباشرة","لا يعني ذلك إثبات خلو النظام"])
+   assert.ok(report.includes(text),"missing historical caveat: "+text);
+ for(const published of [dashboardCard,report]){
+   for(const privateTerm of ["docs.google.com/document/d/","Private/Public","SQL sa","192.168.","0.0.0.0","CheqId","VoucherNo","SQLPassword_Decrypted"])
+     assert.ok(!published.includes(privateTerm),"restricted operational detail in public report: "+privateTerm);
+ }
+});
