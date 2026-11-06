@@ -1390,6 +1390,38 @@ e2e('L123 L081 the Rafiq design: user-chosen, companions, floating market, inten
   assert.equal(await page.locator('[data-testid="rafiq-hero"]').count(), 0);
 });
 
+// Screens added with the Rafiq work, usable in both designs: nearby stores on a full map, a branch's own page, and a
+// full conversation with the companion.
+e2e('L123 nearby stores, a branch page with directions and its stock, and the companion chat', async ({ open }) => {
+  const user = await stack.register('مستكشف الفروع');
+  const page = await open(user, '/nearby');
+  await id(page, 'nearby-screen').waitFor();
+  await until(async () => (await textOf(page, 'stat-branches')).includes('2'), 10000, 'two branches on the map');
+  await until(async () => /م|كم/.test(await textOf(page, 'stat-distance')), 15000, 'distance to the nearest branch');
+  await id(page, 'stores-map').waitFor();
+  // A branch's own page: distance from the shopper in Irbid, a phone to call, make it the order branch, its stock.
+  await tap(page, 'branch-details-br_amman');
+  await id(page, 'branch-screen').waitFor();
+  await see(page, 'فرع عبدون');
+  await until(async () => (await textOf(page, 'branch-distance')).includes('كم'), 15000, 'distance from Irbid to Abdoun');
+  await id(page, 'branch-call').waitFor();
+  await id(page, 'branch-directions').waitFor();
+  await tap(page, 'make-my-branch');
+  await until(async () => (await id(page, 'make-my-branch').getAttribute('aria-disabled')) === 'true', 5000, 'Abdoun is the order branch');
+  await fill(page, 'branch-search', 'سماعات');
+  await id(page, 'product-card-headphones').waitFor();
+  // The companion chat: an intent answers with real products; anything else goes to the full assistant.
+  await go(page, '/companion');
+  await id(page, 'companion-screen').waitFor();
+  await see(page, 'أنا نيرا');
+  await tap(page, 'chat-intent-breakfast');
+  await id(page, 'chat-2-labneh').waitFor();
+  await fill(page, 'companion-input', 'كم سعر الدولار اليوم');
+  await tap(page, 'companion-send');
+  await tap(page, 'handoff-4');
+  await until(async () => new URL(page.url()).pathname === '/assistant', 10000, 'handed to the assistant');
+});
+
 // L124 for the staff screens: with English chosen, the admin dashboard (every section), project management, sync,
 // the merchant dashboard and the driver screen show no staff text left in Arabic. Data such as product and customer
 // names stays as it was entered.

@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Bell, Bot, Compass, Gift, Heart, House, ListChecks, LayoutDashboard, Package, Refrigerator, ShoppingBag, Sparkles, Store, UserRound, Headset, Wallet, Wand2 } from "lucide-react-native";
+import { Bell, Bot, Compass, MapPin, Gift, Heart, House, ListChecks, LayoutDashboard, Package, Refrigerator, ShoppingBag, Sparkles, Store, UserRound, Headset, Wallet, Wand2 } from "lucide-react-native";
 import { router, usePathname, type Href } from "expo-router";
 import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 import { useStore } from "../lib/store";
@@ -22,6 +22,8 @@ const tabs = [
 const more = [
   { href: "/assistant", label: "تسوق بالمحادثة", icon: Sparkles },
   { href: "/smart-tools", label: "الأدوات الذكية", icon: Wand2 },
+  { href: "/companion", label: "رفيقك الذكي", icon: Bot },
+  { href: "/nearby", label: "المتاجر القريبة", icon: MapPin },
   { href: "/favorites", label: "اختياراتك", icon: Heart },
   { href: "/orders", label: "طلباتي", icon: Package },
   { href: "/lists", label: "قوائمي", icon: ListChecks },

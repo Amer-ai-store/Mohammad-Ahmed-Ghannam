@@ -37,7 +37,7 @@ function ClassicNearby() {
   if (!nearby.branches.length && !nearby.loading) return null;
   return (
     <>
-      <SectionTitle title="قريب منك" subtitle="الفروع الأقرب إليك وما يتوفر فيها الآن" />
+      <SectionTitle title="قريب منك" subtitle="الفروع الأقرب إليك وما يتوفر فيها الآن" action="عرض الكل" onPress={() => router.navigate("/nearby")} />
       <NearbyStores nearby={nearby} map="toggle" />
       <View style={{ marginTop: 12 }}><SocialLinks /></View>
     </>

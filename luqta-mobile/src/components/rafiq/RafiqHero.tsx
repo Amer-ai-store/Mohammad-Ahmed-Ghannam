@@ -1,11 +1,10 @@
 // The top of the home screen in the Rafiq design: pick a companion (Nira, Orion or Silk), a stage that switches
 // between "the floating market" (departments around the shopper's character) and "from my location" (a real map of
 // the store's branches), and the companion's panel with suggestions, intents and a request box.
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { router } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ArrowLeft, ArrowRight } from "lucide-react-native";
+import { ArrowLeft, ArrowRight, MessageCircle, Map as MapIcon } from "lucide-react-native";
 import { Txt } from "../ui";
 import { Mascot } from "../Robot";
 import { CompanionFace } from "./marks";
@@ -14,7 +13,9 @@ import StoresMap from "./StoresMap";
 import { NearbyStores } from "./NearbyStores";
 import { ProductTile } from "./ProductTile";
 import { SocialLinks } from "./SocialLinks";
-import { COMPANIONS, DEFAULT_COMPANION, INTENTS, companionById, findIntent, formatDistance, isCompanionId, productsForIntent, type CompanionId } from "../../lib/rafiq";
+import { CompanionPicker } from "./CompanionPicker";
+import { INTENTS, findIntent, formatDistance, productsForIntent, type CompanionId } from "../../lib/rafiq";
+import { useCompanion } from "../../lib/useCompanion";
 import { useNearby } from "../../lib/useNearby";
 import { useStore } from "../../lib/store";
 import { useI18n } from "../../lib/i18n";
@@ -23,7 +24,6 @@ import { categoryName, useCategories } from "../../lib/catalog";
 import { FEATURED_CATEGORIES } from "../../lib/designAssets";
 import type { Product } from "../../data/products";
 
-const COMPANION_KEY = "luqta-companion-v1";
 const STAGE = 300;
 type Mode = "market" | "location";
 
@@ -33,22 +33,11 @@ export function RafiqHero() {
   const store = useStore();
   const categories = useCategories();
   const nearby = useNearby();
-  const [companionId, setCompanionId] = useState<CompanionId>(DEFAULT_COMPANION);
+  const { id: companionId, companion, choose } = useCompanion();
   const [mode, setMode] = useState<Mode>("market");
   const [reply, setReply] = useState<{ text: string; products: Product[] } | null>(null);
   const [ask, setAsk] = useState("");
-  const companion = companionById(companionId);
-
-  useEffect(() => {
-    let active = true;
-    AsyncStorage.getItem(COMPANION_KEY).then((saved) => { if (active && isCompanionId(saved)) setCompanionId(saved); }).catch(() => {});
-    return () => { active = false; };
-  }, []);
-  const pick = (id: CompanionId) => {
-    setCompanionId(id);
-    setReply(null);
-    void AsyncStorage.setItem(COMPANION_KEY, id).catch(() => {});
-  };
+  const pick = (id: CompanionId) => { choose(id); setReply(null); };
   const switchMode = (next: Mode) => { setMode(next); setReply(null); };
 
   // The four pavilions: the store's featured departments first, then the rest, with their real names.
@@ -92,24 +81,7 @@ export function RafiqHero() {
 
   return (
     <View testID="rafiq-hero" style={{ gap: 12, marginBottom: 8 }}>
-      <View accessibilityRole="radiogroup" accessibilityLabel={tr("اختر رفيقك")}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, paddingVertical: 2 }}>
-          <Txt style={{ fontSize: 11, color: t.muted }}>{tr("اختر رفيقك")}</Txt>
-          {COMPANIONS.map((c) => {
-            const on = c.id === companionId;
-            return (
-              <Pressable key={c.id} testID={`companion-${c.id}`} accessibilityRole="radio" aria-checked={on} accessibilityLabel={`${tr(c.name)}، ${tr(c.trait)}`} onPress={() => pick(c.id)}
-                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, height: 52, paddingStart: 6, paddingEnd: 14, borderRadius: 14, borderWidth: 1, borderColor: on ? t.orange : t.line, backgroundColor: on ? t.secondary : t.paper }}>
-                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: "#0D1220", alignItems: "center", justifyContent: "center" }}><CompanionFace id={c.id} size={36} /></View>
-                <View>
-                  <Txt weight="medium" style={{ fontSize: 13 }}>{tr(c.name)}</Txt>
-                  <Txt style={{ fontSize: 11, color: t.muted }}>{tr(c.trait)}</Txt>
-                </View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      <CompanionPicker value={companionId} onChange={pick} />
 
       <View style={{ borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: t.line, backgroundColor: "#070A12" }}>
         {mode === "market" ? (
@@ -175,7 +147,17 @@ export function RafiqHero() {
             <Send size={20} color={t.onAccent} />
           </Pressable>
         </View>
-        <SocialLinks compact />
+        <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+          <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+            <Pressable testID="open-companion" accessibilityRole="link" accessibilityLabel={tr("محادثة كاملة مع رفيقك")} onPress={() => router.navigate("/companion")} style={({ pressed }) => ({ flexDirection: "row-reverse", alignItems: "center", gap: 6, minHeight: 38, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: t.line, backgroundColor: pressed ? t.secondary : "transparent" })}>
+              <MessageCircle size={15} color={t.primary} /><Txt weight="medium" style={{ fontSize: 12, color: t.primary }}>{tr("محادثة كاملة")}</Txt>
+            </Pressable>
+            <Pressable testID="open-nearby" accessibilityRole="link" accessibilityLabel={tr("المتاجر القريبة")} onPress={() => router.navigate("/nearby")} style={({ pressed }) => ({ flexDirection: "row-reverse", alignItems: "center", gap: 6, minHeight: 38, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: t.line, backgroundColor: pressed ? t.secondary : "transparent" })}>
+              <MapIcon size={15} color={t.primary} /><Txt weight="medium" style={{ fontSize: 12, color: t.primary }}>{tr("المتاجر القريبة")}</Txt>
+            </Pressable>
+          </View>
+          <SocialLinks compact />
+        </View>
       </View>
     </View>
   );
