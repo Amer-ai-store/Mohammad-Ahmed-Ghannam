@@ -1,0 +1,65 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "archive_runs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tenant_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "captured_at_utc",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "snapshot_shards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "table_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "source_utc",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "evidence_ledger",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "entity_key",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "observed_at_utc",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "analysis_findings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "case_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "evidence_state",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updated_at_utc",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

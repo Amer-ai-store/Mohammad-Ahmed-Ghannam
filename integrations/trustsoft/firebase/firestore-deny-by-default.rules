@@ -1,0 +1,10 @@
+// DRAFT ONLY. Do not deploy as a replacement for existing project rules.
+// Archive is blocked until verified tenant RBAC, backend service auth, and GATE-15.
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  match /trustsoft_history/{tenantId}/{documents=**} {
+   allow read, write: if false;
+  }
+ }
+}

@@ -360,9 +360,9 @@ nav.side{gap:.5rem}
 <div class="panel" data-jawafa-pane="jawafa"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
 <section class="view" data-view="jawafa-trustsoft" hidden>
 <div class="view-head"><div><span class="eyebrow">TRUSTSOFT · CENTRAL CONTROL</span><h1>لوحة TrustSoft المركزية</h1><p class="muted small">المراقبة والسيطرة والأقسام المالية داخل القيادة المركزية. حالة الخادم تظهر بعد دخول TrustSoft.</p></div></div>
-<div class="panel"><p>استخدم مفتاح إدارة TrustSoft الحالي. لا يُحفظ المفتاح في الموقع؛ تُمسح جلسة العرض عند إغلاق اللوحة أو مغادرة القسم. فتح اللوحة لا يثبت اتصال SQL.</p>
-<div class="toolbar"><button type="button" id="trustsoft-toggle" aria-expanded="false" aria-controls="trustsoft-container">فتح لوحة TrustSoft هنا</button><a href="./trustsoft/" target="_blank" rel="noopener noreferrer">فتح شاشة مستقلة داخل موقع القيادة</a></div>
-<div id="trustsoft-container" hidden><iframe id="trustsoft-frame" title="لوحة TrustSoft المركزية" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms" style="width:100%;height:1100px;border:1px solid var(--line);border-radius:12px;background:white"></iframe></div></div></section>
+<div class="panel"><p>جميع أقسام TrustSoft الاثني عشر تعمل داخل هذه الصفحة بواجهة أصلية مشتركة، وليس عبر رابط أو iframe. المصادقة عبر Cloudflare؛ المفتاح والجلسة في الذاكرة فقط. لا تعتمد أي قراءة مالية حية قبل إثبات SQL والوكيل.</p>
+<div class="toolbar"><button type="button" id="trustsoft-toggle" aria-expanded="false" aria-controls="trustsoft-container">إظهار شاشات TrustSoft</button><span class="small muted" id="trustsoft-host-status" role="status">في انتظار فتح القسم</span></div>
+<div id="trustsoft-container" hidden></div></div></section>
 
 <section class="view" data-view="jawafa-tasks" aria-labelledby="h-jawafa-tasks" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-tasks">الخطة اليومية والمهام</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-tasks">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-tasks">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-tasks">NOT_CONNECTED</span></div>
@@ -936,6 +936,8 @@ nav.side{gap:.5rem}
 
 <script src="firebase-config.js"></script>
 <script src="./aman-monitor/host-integration.js" defer></script>
+<script src="./trustsoft/analytics.js" defer></script>
+<script src="./trustsoft/app.js" defer></script>
 <script src="./trustsoft/host-integration.js" defer></script>
 <script>
 (() => {
