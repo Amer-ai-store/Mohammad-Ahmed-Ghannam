@@ -10,6 +10,7 @@ import { useI18n } from "../lib/i18n";
 import { Txt } from "./ui";
 import { designAssets } from "../lib/designAssets";
 import { Mascot } from "./Robot";
+import { RafiqMark } from "./rafiq/marks";
 import type { RobotMotion } from "../lib/robot";
 
 const tabs = [
@@ -31,11 +32,13 @@ const more = [
 ] as const;
 
 export function Logo({ small = false }: { small?: boolean }) {
-  const { colors: t } = useTheme();
+  const { colors: t, design } = useTheme();
   const { t: tr } = useI18n();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={tr("لُقطة — الرئيسية")} onPress={() => router.navigate("/")} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-      <Image testID="brand-logo" source={designAssets.logoMark} accessibilityIgnoresInvertColors resizeMode="contain" style={{ width: small ? 38 : 46, height: small ? 38 : 46 }} />
+      {design === "rafiq"
+        ? <View testID="brand-logo"><RafiqMark size={small ? 38 : 46} leaf={t.orange} gold={t.primary} /></View>
+        : <Image testID="brand-logo" source={designAssets.logoMark} accessibilityIgnoresInvertColors resizeMode="contain" style={{ width: small ? 38 : 46, height: small ? 38 : 46 }} />}
       <View>
         <Txt weight="extra" style={{ fontSize: small ? 22 : 28, lineHeight: small ? 28 : 34 }}>{tr("لُقطة")}</Txt>
         <Txt weight="bold" style={{ fontSize: small ? 10 : 11, color: t.muted, letterSpacing: 0.4 }}>Amer AI Store</Txt>

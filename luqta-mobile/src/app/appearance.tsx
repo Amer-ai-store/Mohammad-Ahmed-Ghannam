@@ -1,9 +1,9 @@
 import React from "react";
 import { Pressable, View } from "react-native";
-import { Check, Monitor, Moon, Sun, Languages, Coins } from "lucide-react-native";
+import { Check, Monitor, Moon, Sun, Languages, Coins, Palette, Sparkles } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { Card, Chip, Notice, Row, Txt } from "../components/ui";
-import { ThemeMode, useTheme } from "../lib/theme";
+import { ThemeMode, useTheme, type Design } from "../lib/theme";
 import { useI18n, type Lang } from "../lib/i18n";
 import { useMoney } from "../lib/money";
 import { useSession } from "../lib/session";
@@ -14,10 +14,15 @@ const THEMES = [
   { mode: "dark", title: "الوضع الليلي", detail: "ألوان داكنة طوال الوقت", icon: Moon },
   { mode: "system", title: "حسب إعداد الجهاز", detail: "يتغير تلقائيًا مع مظهر جهازك", icon: Monitor },
 ] as const;
+// Two designs live side by side; the shopper picks one, and the classic design stays the default.
+const DESIGNS = [
+  { design: "classic", title: "التصميم الكلاسيكي", detail: "ألوان لُقطة البنفسجية والمرجانية، كما عرفتها", icon: Palette },
+  { design: "rafiq", title: "تصميم رفيق", detail: "سوق عائم ورفيق ذكي وخريطة للفروع القريبة، بألوان خضراء وذهبية", icon: Sparkles },
+] as const;
 const LANGS: [Lang, string, string][] = [["ar", "العربية", "من اليمين إلى اليسار"], ["en", "English", "Left to right"]];
 
 export default function AppearanceScreen() {
-  const { colors: t, mode, setMode, isDark, storageError, hydrated } = useTheme();
+  const { colors: t, mode, setMode, isDark, storageError, hydrated, design, setDesign } = useTheme();
   const { t: tr, lang, setLang, displayCurrency, setDisplayCurrency } = useI18n();
   const money = useMoney();
   const { user } = useSession();
@@ -34,6 +39,10 @@ export default function AppearanceScreen() {
   );
   return (
     <Shell title="اللغة والمظهر" subtitle="يُحفظ اختيارك على هذا الجهاز وفي حسابك" robot testID="appearance">
+      <Txt weight="bold" style={{ marginBottom: 8 }}>{tr("التصميم")}</Txt>
+      <View style={{ gap: 10, marginBottom: 20 }} accessibilityRole="radiogroup">
+        {DESIGNS.map((d) => option(design === d.design, d.design, d.title, d.detail, <d.icon color={design === d.design ? t.primary : t.muted} size={22} />, () => hydrated && setDesign(d.design as Design), `design-${d.design}`))}
+      </View>
       <Txt weight="bold" style={{ marginBottom: 8 }}>{tr("المظهر")}</Txt>
       <View style={{ gap: 10 }} accessibilityRole="radiogroup">
         {THEMES.map((c) => option(mode === c.mode, c.mode, c.title, c.detail, <c.icon color={mode === c.mode ? t.primary : t.muted} size={22} />, () => hydrated && setMode(c.mode as ThemeMode), `theme-${c.mode}`))}

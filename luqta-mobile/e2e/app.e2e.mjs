@@ -1307,6 +1307,89 @@ e2e('L123 L124 L125 day and night modes, English with the page direction flipped
   await see(page, 'اللغة والمظهر');
 });
 
+// The Rafiq design lives next to the classic one: the shopper picks it, and the classic home keeps its own look with
+// a "near you" section. Location is read only with permission (granted here, at Irbid), branches come from the server
+// with real coordinates, and the map page carries them. External map tiles are blocked in tests, so the map shows its
+// offline notice; its data is checked in the page source.
+e2e('L123 L081 the Rafiq design: user-chosen, companions, floating market, intents, the branches map near the shopper, Instagram and Facebook links', async ({ open }) => {
+  await asAdmin('PATCH', '/admin/settings', { storefront: { instagram: 'https://instagram.com/luqta.store', facebook: 'https://facebook.com/LuqtaStore' } });
+  const user = await stack.register('محب رفيق');
+  // Classic stays the default: its header, the invitation to try Rafiq, and the branches near the shopper.
+  const page = await open(user, '/');
+  await id(page, 'home').waitFor();
+  await id(page, 'design-hint').waitFor();
+  assert.equal(await page.locator('[data-testid="rafiq-hero"]').count(), 0, 'classic home by default');
+  await id(page, 'nearby-branch-br_irbid').waitFor();
+  await until(async () => (await textOf(page, 'nearby')).includes('الأقرب'), 15000, 'branches sorted by distance from the shopper');
+  assert.ok((await textOf(page, 'nearby')).indexOf('فرع شارع الجامعة') < (await textOf(page, 'nearby')).indexOf('فرع عبدون'), 'Irbid first for a shopper in Irbid');
+  const directions = await id(page, 'directions-br_irbid').getAttribute('aria-label');
+  assert.match(directions, /خرائط Google/);
+  await id(page, 'nearby-products').waitFor();
+  await id(page, 'social-instagram').waitFor();
+  await id(page, 'social-facebook').waitFor();
+  await tap(page, 'show-map');
+  const classicMap = await id(page, 'stores-map').locator('iframe').getAttribute('srcdoc');
+  assert.ok(classicMap.includes('فرع شارع الجامعة') && classicMap.includes('32.5415') && classicMap.includes('"me":{"lat":32.55'), 'the map carries the branches and the shopper');
+  // The shopper chooses Rafiq in Language & appearance.
+  await go(page, '/appearance');
+  await page.getByRole('radio', { name: 'تصميم رفيق' }).click();
+  await page.getByRole('radio', { name: 'الوضع الليلي' }).click();
+  const background = () => page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="appearance"]')).backgroundColor);
+  await until(async () => (await background()) === 'rgb(7, 10, 18)', 5000, 'the Rafiq night palette');
+  await go(page, '/');
+  await id(page, 'rafiq-hero').waitFor();
+  await id(page, 'brand-logo').waitFor();
+  assert.equal(await page.locator('[data-testid="design-hint"]').count(), 0);
+  // The floating market: the store's departments as pavilions, the shopper's animated character in the middle.
+  const { categories } = await api('GET', '/categories');
+  await id(page, 'floating-market').waitFor();
+  for (const dept of ['fresh', 'electronics', 'fashion', 'home']) await id(page, `market-store-${dept}`).waitFor();
+  const character = await engineFrame(page, '[data-testid="floating-market"] [data-testid="mascot"]');
+  const a = await joints(character);
+  await page.waitForTimeout(700);
+  assert.notEqual(a, await joints(character), 'the character animates on the island');
+  // Companions: the choice changes the voice and is remembered.
+  await see(page, 'أنا نيرا');
+  await tap(page, 'companion-orion');
+  await until(async () => (await textOf(page, 'concierge-text')).includes('أوريون'), 5000, 'Orion speaks');
+  // An intent gathers real products; adding one goes to the cart on the server's catalog.
+  await tap(page, 'intent-dinner');
+  await id(page, 'concierge-pasta').waitFor();
+  await id(page, 'concierge-tomato-sauce').waitFor();
+  await tap(page, 'concierge-add-pasta');
+  await until(async () => (await textOf(page, 'concierge-text')).includes('سُجّلت'), 5000, 'the companion confirms');
+  await until(async () => /1/.test((await id(page, 'tab-cart').getAttribute('aria-label')) || ''), 5000, 'one item in the cart');
+  // A typed request in the shopper's own words.
+  await fill(page, 'concierge-ask', 'بدي هدية لأمي');
+  await tap(page, 'concierge-send');
+  await id(page, 'concierge-fragrance').waitFor();
+  await page.reload();
+  await id(page, 'rafiq-hero').waitFor();
+  await until(async () => (await id(page, 'companion-orion').getAttribute('aria-checked')) === 'true', 10000, 'the companion is remembered');
+  // A pavilion opens its department.
+  await tap(page, `market-store-${categories.find((c) => c.id === 'electronics').id}`);
+  await id(page, 'explore').waitFor();
+  await until(async () => selected(page, 'chip-electronics'));
+  // From my location: the real branches map, nearest first, choosing a branch sets it for the order.
+  await go(page, '/');
+  await tap(page, 'mode-location');
+  await until(async () => (await textOf(page, 'concierge-text')).includes('أقربها فرع شارع الجامعة'), 15000, 'the nearest branch is named');
+  const map = await id(page, 'stores-map').locator('iframe').getAttribute('srcdoc');
+  assert.ok(map.includes('فرع عبدون') && map.includes('31.9454') && map.includes('filter:invert(1)'), 'night map with both branches');
+  await tap(page, 'nearby-branch-br_amman');
+  await until(async () => (await textOf(page, 'concierge-text')).includes('فرع عبدون') && (await textOf(page, 'concierge-text')).includes('التوصيل لمنزلك'), 5000, 'the companion heads to Abdoun');
+  assert.equal(await id(page, 'nearby-branch-br_amman').getAttribute('aria-checked'), 'true');
+  await id(page, 'social-instagram').waitFor();
+  // Back to the classic design: everything returns as it was.
+  await go(page, '/appearance');
+  await page.getByRole('radio', { name: 'التصميم الكلاسيكي' }).click();
+  await page.getByRole('radio', { name: 'الوضع النهاري' }).click();
+  await until(async () => (await background()) === 'rgb(245, 242, 255)', 5000, 'the classic day palette');
+  await go(page, '/');
+  await id(page, 'home').waitFor();
+  assert.equal(await page.locator('[data-testid="rafiq-hero"]').count(), 0);
+});
+
 // L124 for the staff screens: with English chosen, the admin dashboard (every section), project management, sync,
 // the merchant dashboard and the driver screen show no staff text left in Arabic. Data such as product and customer
 // names stays as it was entered.

@@ -782,6 +782,16 @@ export async function createCommerceServer(options = {}) {
                  if (typeof body.storefront.showAssistant !== 'boolean') fail(400, 'حالة المساعد غير صالحة');
                  design.showAssistant = body.storefront.showAssistant;
                }
+               // The store's Instagram and Facebook pages, shown to shoppers as "follow us". Only the official hosts over
+               // HTTPS are accepted, saved without query or fragment; an empty value removes the link.
+               for (const [key, hosts, message] of [['instagram', ['instagram.com', 'www.instagram.com'], 'رابط إنستغرام يجب أن يبدأ بـ https://instagram.com/'], ['facebook', ['facebook.com', 'www.facebook.com', 'm.facebook.com', 'fb.com'], 'رابط فيسبوك يجب أن يبدأ بـ https://facebook.com/']]) {
+                 const raw = body.storefront[key];
+                 if (raw === undefined) continue;
+                 if (raw === '' || raw === null) { delete design[key]; continue; }
+                 let link = null; try { link = typeof raw === 'string' && raw.length <= 300 ? new URL(raw.trim()) : null; } catch { link = null; }
+                 if (!link || link.protocol !== 'https:' || !hosts.includes(link.hostname.toLowerCase()) || link.username || link.password || link.port || !/^\/[A-Za-z0-9._\-\/]{1,120}$/.test(link.pathname)) fail(400, message);
+                 design[key] = `https://${link.hostname.toLowerCase()}${link.pathname.replace(/\/+$/, '')}`;
+               }
                updates.storefront = design;
              }
              if (ext) ext.validateSettingsExtras(body, updates);

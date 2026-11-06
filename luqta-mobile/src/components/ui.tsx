@@ -7,9 +7,9 @@ import { Palette, useTheme, useThemedStyles } from "../lib/theme";
 import { useI18n } from "../lib/i18n";
 
 export function Txt({ weight = "regular", style, children, ...props }: TextProps & { weight?: "regular" | "medium" | "bold" | "extra" }) {
-  const { colors: t } = useTheme();
+  const { colors: t, fonts } = useTheme();
   const { align, isRTL, lang, t: tr } = useI18n();
-  const font = { regular: "Tajawal_400Regular", medium: "Tajawal_500Medium", bold: "Tajawal_700Bold", extra: "Tajawal_800ExtraBold" }[weight];
+  const font = fonts[weight];
   // Plain Arabic text written straight in a screen is looked up in the English dictionary too (Arabic stays as the
   // fallback), so screens that do not call t() themselves still switch language.
   const content = lang === "en" && typeof children === "string" ? tr(children) : children;
