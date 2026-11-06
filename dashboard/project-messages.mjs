@@ -9,14 +9,14 @@ export const HUB_KIND = "PROJECT_CHAT_MESSAGE";
 export const KNOWN_PROJECTS = ["gpt", "التقرير النهائي"];
 export function parseHubMessage(comment) {
   const raw=String(comment?.body||"").trim();
-  const fenced=raw.match(/^\x60\x60\x60(?:json)?\s*([\s\S]*?)\s*\x60\x60\x60$/i);
+  const fenced=raw.match(/(?:^|\n)\x60\x60\x60(?:json)?\s*([\s\S]*?)\s*\x60\x60\x60(?:\s|$)/i);
   if(!fenced)return null;
   let message;
   try {message=JSON.parse(fenced[1]);} catch {return null;}
   if(!message || typeof message!=="object" || Array.isArray(message) || message.kind!==HUB_KIND || message.schema!=="1.0")return null;
   const fields=["id","from_project","from_chat","to_project","to_chat","subject","body"];
   if(!fields.every(k=>typeof message[k]==="string" && message[k].trim() && message[k].length<=2500))return null;
-  if(!KNOWN_PROJECTS.includes(message.from_project)||!KNOWN_PROJECTS.includes(message.to_project))return null;
+  if(!KNOWN_PROJECTS.includes(message.to_project)||message.from_project.length>160)return null; // Sender identity is a claim in the message, not an authenticated ChatGPT project origin.
   return {id:message.id,from_project:message.from_project,from_chat:message.from_chat,to_project:message.to_project,to_chat:message.to_chat,subject:message.subject,body:message.body,reply_to:typeof message.reply_to==="string"?message.reply_to:null,comment_id:comment.id,created_at:comment.created_at||null,permalink:comment.html_url||HUB_ISSUE_URL};
 }
 export function composeHubMessage({from_project,to_project,from_chat,to_chat,subject,body,id}) {
@@ -46,7 +46,7 @@ function initMessageHub(){
       const title=el("h3",{},m.subject);
       const routing=el("p",{class:"small muted"},m.from_project+" / "+m.from_chat+" ← "+m.to_project+" / "+m.to_chat);
       const content=el("p",{},m.body);
-      const stateRow=el("p",{class:"small muted"}, "SENT (GitHub) · تعليق #"+m.comment_id+" · "+(m.created_at||"وقت غير متاح")+" · القراءة من الطرف المقابل غير مثبتة");
+      const stateRow=el("p",{class:"small muted"}, "رسالة محفوظة في GitHub · تعليق #"+m.comment_id+" · "+(m.created_at||"وقت غير متاح")+" · اسم الطرف المرسل وارد من نص الرسالة وغير موثّق؛ لا يوجد إثبات لاستلامها داخل دردشة ChatGPT الأصلية");
       const link=el("a",{href:m.permalink,target:"_blank",rel:"noopener noreferrer"},"فتح دليل الإرسال");
       article.append(title,routing,content,stateRow,link);list.append(article);
     });
