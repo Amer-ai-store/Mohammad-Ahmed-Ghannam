@@ -6,7 +6,14 @@ const path = require("node:path");
 const vm = require("node:vm");
 const page = fs.readFileSync(path.join(__dirname,"../jawafa-operations.html"),"utf8");
 const gate = fs.readFileSync(path.join(__dirname,"../jawafa-gate15.html"),"utf8");
-const script = page.match(/<script>([\s\S]*?)<\/script>/);
+// Extract the single known inline script from this static test fixture.
+// Case-fold the tag search without using an HTML-filtering regexp; this is not a sanitizer.
+const lowered = page.toLowerCase();
+const scriptStart = lowered.indexOf("<script>");
+const scriptEnd = lowered.indexOf("</script>", scriptStart + "<script>".length);
+const script = scriptStart >= 0 && scriptEnd > scriptStart
+  ? [null, page.slice(scriptStart + "<script>".length, scriptEnd)]
+  : null;
 test("dashboard JavaScript syntax is valid",()=>{
  assert.ok(script,"inline script exists");
  assert.doesNotThrow(()=>new vm.Script(script[1],{filename:"jawafa-operations.js"}));
