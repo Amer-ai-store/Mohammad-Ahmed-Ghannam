@@ -34,7 +34,7 @@
             "webRoot": "${workspaceFolder}"
         },
        .
-       . 
+       .
         {
             "request": "launch",
             "name": "Launch Program",
