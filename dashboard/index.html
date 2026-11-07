@@ -403,64 +403,42 @@ nav.side{gap:.5rem}
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-investigations">التحقيقات القضائية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-investigations">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-investigations">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-investigations">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-investigations"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
 <section class="view" data-view="project-messages" aria-labelledby="h-project-messages" hidden>
-  <div class="view-head"><div><span class="eyebrow">AMER · INTER-PROJECT MESSAGE HUB</span><h1 id="h-project-messages">مركز مراسلات المشاريع</h1><p>تنسيق وتوثيق مراسلات مشروع gpt ومشروع التقرير النهائي داخل لوحة القيادة الواحدة.</p></div></div>
+  <div class="view-head"><div><span class="eyebrow">AMER · DISPATCHER-TO-DISPATCHER ONLY</span><h1 id="h-project-messages">ربط موزّعي المهام</h1><p>موزع المهام 1 (التقرير النهائي) ↔ موزع المهام 2 (gpt). كل موزّع يوزع الطلبات داخليًا على وكلاء مشروعه.</p></div></div>
   <div class="panel">
-    <h2>البريد المشترك — سجل GitHub #168</h2>
-    <p class="muted">قناة تنسيق عامة للبيانات غير الحساسة فقط. لا تضع معلومات مالية أو شخصية أو مفاتيح أو روابط أدلة خاصة. التعليق المثبت يعني SENT فقط، وليس وصول الرسالة إلى دردشة ChatGPT أو قراءتها.</p>
-    <p><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/168" target="_blank" rel="noopener noreferrer">فتح صندوق المراسلات المشترك</a> · <a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/105" target="_blank" rel="noopener noreferrer">خطة التكامل</a></p>
-    <div class="row" style="display:flex;gap:.8rem;flex-wrap:wrap;align-items:center">
-      <label>عرض رسائل <select id="pm-filter"><option value="all">كل المشاريع</option><option value="gpt">الواردة إلى gpt</option><option value="التقرير النهائي">الواردة إلى التقرير النهائي</option></select></label>
-      <button type="button" class="button" id="pm-refresh">تحديث السجل الآن</button>
-    </div>
-    <p id="pm-status" class="muted small" role="status" aria-live="polite">لم يتم فحص صندوق الرسائل بعد.</p>
-  </div>
-  <div class="panel" id="pm-project-bulk">
-  <h2>ربط مشروع كامل دفعة واحدة — gpt ↔ التقرير النهائي</h2>
-  <p class="muted">أدخل رابط كل مشروع من ChatGPT، ويمكنك إضافة قائمة محادثاته دفعة واحدة أو إضافتها لاحقًا. عند اختيار «الربط الشامل» تُنشأ علاقات عديدة-إلى-عديدة تلقائيًا بين كل المحادثات <strong>المسجّلة</strong> في الطرفين، بما فيها المحادثات التي تضيفها لاحقًا. لا يتم استخراج المحادثات تلقائيًا من رابط المشروع؛ ولا تُرسل الرسائل مباشرة إلى واجهة ChatGPT دون موصل مصرح له.</p>
-  <form id="pm-links-form" style="display:grid;gap:.8rem;max-width:850px">
-    <fieldset style="display:grid;gap:.6rem"><legend>الطرف الأول</legend>
-      <label>المشروع <select name="first_project"><option value="gpt">gpt</option><option value="التقرير النهائي">التقرير النهائي</option></select></label>
-      <label>رابط المشروع الكامل <input name="first_url" type="url" required placeholder="https://chatgpt.com/g/g-p-.../project"></label>
-      <label>روابط محادثات الطرف الأول، سطر لكل محادثة (اختياري) <textarea name="first_links" rows="4" placeholder="اسم المحادثة | https://chatgpt.com/c/..."></textarea></label>
-    </fieldset>
-    <fieldset style="display:grid;gap:.6rem"><legend>الطرف الثاني</legend>
-      <label>المشروع <select name="second_project"><option value="التقرير النهائي">التقرير النهائي</option><option value="gpt">gpt</option></select></label>
-      <label>رابط المشروع الكامل <input name="second_url" type="url" required placeholder="https://chatgpt.com/g/g-p-.../project"></label>
-      <label>روابط محادثات الطرف الثاني، سطر لكل محادثة (اختياري) <textarea name="second_links" rows="4" placeholder="اسم المحادثة | https://chatgpt.com/c/..."></textarea></label>
-    </fieldset>
-    <label><input name="auto_link" type="checkbox" checked> ربط جميع المحادثات المسجّلة بين المشروعين، وإضافة أي محادثات أُسجّلها لاحقًا إلى الشبكة تلقائيًا</label>
-    <button type="submit" class="button">تسجيل المشروعين وربط جميع محادثاتهما المسجّلة</button>
-  </form>
-  <form id="pm-add-chats-form" style="display:grid;gap:.6rem;max-width:850px;margin-top:1.5rem">
-    <h3>إضافة محادثات جديدة لاحقًا إلى مشروع مرتبط</h3>
-    <label>المشروع <select name="project"><option>gpt</option><option>التقرير النهائي</option></select></label>
-    <label>روابط المحادثات <textarea name="chat_links" rows="3" required placeholder="اسم المحادثة | https://chatgpt.com/c/..."></textarea></label>
-    <button type="submit" class="button">إضافة المحادثات للشبكة</button>
-  </form>
-  <p id="pm-links-status" class="small muted" role="status" aria-live="polite">تسجيل الروابط محلي، وليس إثبات اتصال بالخادم.</p>
-  <p id="pm-links-count" class="small muted"></p>
-  <div id="pm-project-list"></div>
-  <div id="pm-links-list"></div>
-</div>
-<div class="panel">
-    <h2>إعداد رسالة تنسيق لإرسالها عبر محادثة متصلة بـ GitHub</h2>
-    <p class="muted small">لا يتوفر إرسال من هذه الصفحة العامة دون مصادقة خلفية خاصة. اضغط إنشاء الأمر ثم أرسله من إحدى محادثات ChatGPT المتصلة بـ GitHub، حيث يتم تسجيل تعليق فعلي برقم مرجعي.</p>
-    <form id="pm-compose" style="display:grid;gap:.85rem;max-width:850px">
-      <label>اختيار مصدر من شبكة الروابط
-        <select id="pm-source-link"><option value="">إرسال يدوي</option></select>
+    <h2>ربط محادثتين فقط</h2>
+    <form id="pm-links-form" style="display:grid;gap:.85rem;max-width:850px">
+      <label>ربط محادثة 1 — موزع المهام 1 (التقرير النهائي)
+        <input id="pm-chat-one" name="dispatcher_one" type="url" autocomplete="off" required placeholder="https://chatgpt.com/.../c/...">
       </label>
-      <label><input type="checkbox" id="pm-send-linked" checked> إنشاء رسالة مستقلة لكل محادثة مرتبطة بالمصدر (متعدد المستلمين)</label>
-      <label>المشروع المرسل <select name="from_project" required><option>التقرير النهائي</option><option>gpt</option></select></label>
-      <label>الدردشة المرسلة <input name="from_chat" value="تنسيق المشاريع" maxlength="120" required></label>
-      <label>المشروع المستلم <select name="to_project" required><option>gpt</option><option>التقرير النهائي</option></select></label>
-      <label>الدردشة المستلمة <input name="to_chat" placeholder="اسم أو معرّف الدردشة" maxlength="120" required></label>
-      <label>موضوع التنسيق <input name="subject" placeholder="عنوان التقرير أو الطلب" maxlength="160" required></label>
-      <label>نص تنسيقي غير حساس <textarea name="body" rows="3" maxlength="500" required placeholder="التنسيق فقط، دون بيانات مالية أو وثائق خاصة"></textarea></label>
-      <button type="submit" class="button">إنشاء أمر الإرسال ونسخه</button>
+      <label>ربط محادثة 2 — موزع المهام 2 (gpt)
+        <input id="pm-chat-two" name="dispatcher_two" type="url" autocomplete="off" required placeholder="https://chatgpt.com/.../c/...">
+      </label>
+      <button type="submit" class="button">حفظ ربط المحادثتين</button>
     </form>
-    <textarea id="pm-output" rows="9" hidden readonly aria-label="أمر الإرسال الجاهز للنسخ" style="width:100%;margin-top:1rem"></textarea>
+    <p class="small muted" id="pm-links-status" role="status" aria-live="polite">الروابط تُحفظ على جهازك فقط، ولا تُنشر على GitHub.</p>
+    <div id="pm-chat-links" class="small"></div>
   </div>
-  <div class="panel"><h2>الرسائل الواردة والصادرة</h2><div id="pm-list" aria-live="polite"><p class="muted">استخدم تحديث السجل للتحقق من الرسائل.</p></div></div>
+  <div class="panel">
+    <h2>تنسيق مباشر بين الموزّعين</h2>
+    <p class="small muted">أنشئ أمرًا لإرساله من محادثة الموزع المختار عبر GitHub Issue #168. الرسالة لا تنتقل إلى ChatGPT تلقائيًا من هذه الصفحة؛ يتولى الموزّع المستلم توزيعها على وكلاء مشروعه.</p>
+    <form id="pm-compose" style="display:grid;gap:.85rem;max-width:850px">
+      <label>الموضوع <input name="subject" maxlength="160" required placeholder="موضوع التنسيق"></label>
+      <label>نص التنسيق غير الحساس <textarea name="body" rows="3" maxlength="500" required placeholder="رسالة تنسيق فقط، دون بيانات مالية أو أسرار أو روابط خاصة"></textarea></label>
+      <div class="row" style="display:flex;gap:.8rem;flex-wrap:wrap">
+        <button type="submit" id="pm-send-one" value="1to2" class="button">من موزع 1 إلى موزع 2</button>
+        <button type="submit" id="pm-send-two" value="2to1" class="button">من موزع 2 إلى موزع 1</button>
+      </div>
+    </form>
+    <textarea id="pm-output" rows="8" hidden readonly aria-label="أمر الإرسال الجاهز للنسخ" style="width:100%;margin-top:1rem"></textarea>
+  </div>
+  <div class="panel">
+    <h2>دليل المراسلات بين الموزّعين</h2>
+    <p class="small muted">صندوق GitHub #168 عام: التنسيق غير الحساس فقط. تعليق GitHub يثبت SENT إلى الصندوق؛ ولا يثبت استلام محادثة ChatGPT أو قراءتها دون ACK مستقل.</p>
+    <p><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/168" target="_blank" rel="noopener noreferrer">فتح صندوق المراسلات</a></p>
+    <button type="button" class="button" id="pm-refresh">تحديث دليل التعليقات</button>
+    <p id="pm-status" class="muted small" role="status" aria-live="polite">لم يتم فحص سجل GitHub بعد.</p>
+    <div id="pm-list" aria-live="polite"></div>
+  </div>
 </section>
 <section class="view" data-view="release-verification" aria-labelledby="h-release-verification" hidden><div class="view-head"><div><span class="eyebrow">AMER · RELEASE EVIDENCE</span><h1 id="h-release-verification">التحقق والإصدارات</h1><p>طلبات السحب وعمليات GitHub Actions وبوابات القبول في اللوحة المركزية.</p></div></div><div class="panel" id="central-dashboard-run-proof"><h2>مرجع نشر لوحة القيادة المركزية المثبت</h2><p><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/41757350444" target="_blank" rel="noopener noreferrer" data-release-proof="41757350444">Run #41757350444 — GitHub Pages: نجاح النشر والتحقق الحي (4 نوفمبر 2026)</a></p><p class="muted">مرجع للواجهة العامة فقط؛ لا يعني اكتمال قبول GATE-15 أو نشر PR #148.</p></div><section class="panel" id="central-transfer-audit-root" aria-label="التحقق من نقل اللوحات والوكلاء والوظائف"><h2>مطابقة نقل اللوحات والوكلاء والوظائف</h2><p class="muted">ستظهر نتيجة التحقق من ملفات النشر والمصادر وحالة اتصال الخدمات بصورة منفصلة.</p></section><div id="release-verification-root"></div></section>
 <section class="view" data-view="jawafa-forensic-workspace" aria-labelledby="h-jawafa-forensic-workspace" hidden>
