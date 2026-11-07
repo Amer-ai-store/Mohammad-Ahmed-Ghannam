@@ -9,7 +9,7 @@ command -v firebase >/dev/null || { echo "Install the Firebase CLI first: npm i 
 command -v java >/dev/null || { echo "Java 11+ is required for the emulator tests."; exit 1; }
 
 echo "1/3 Installing test dependencies (temporary folder)…"
-TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"; rm -f tests/firestore/node_modules' EXIT
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"; rm -f tests/firestore/node_modules firestore-debug.log' EXIT
 (cd "$TMP" && npm init -y >/dev/null && npm install --silent --no-audit --no-fund @firebase/rules-unit-testing@3 firebase@10.14.1)
 ln -sfn "$TMP/node_modules" tests/firestore/node_modules
 
