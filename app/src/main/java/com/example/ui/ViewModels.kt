@@ -365,7 +365,7 @@ class MarketViewModel(
         val roundedReward = Math.round(reward * 100.0) / 100.0
         _cryptoWalletUsdt.value += roundedReward
         _walletTransactions.value = _walletTransactions.value + "Daily Check-in Reward: +$$roundedReward USDT"
-        
+
         val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         _lastCheckInDate.value = today
         return roundedReward
@@ -1423,7 +1423,7 @@ class MarketViewModel(
         viewModelScope.launch {
             val items = cartItems.value
             if (items.isEmpty()) return@launch
-            
+
             var totalSpent = 0.0
             for (item in items) {
                 totalSpent += item.price * item.quantity
@@ -1463,14 +1463,14 @@ class MarketViewModel(
                     storedOrganicItemDao.insertStoredItem(storedItem)
                 }
             }
-            
+
             val pointsToAdd = totalSpent.toInt()
             val updatedUser = user.copy(loyaltyPoints = user.loyaltyPoints + pointsToAdd)
             userDao.updateUser(updatedUser)
             _currentUser.value = updatedUser
-            
+
             cartItemDao.clearCart(user.id)
-            
+
             if (selectedCardNumber != null) {
                 _aiResponse.value = "🛒 Checkout succeeded using linked Card ****${selectedCardNumber.takeLast(4)}! Orders placed in live tracking ledger."
             } else {
