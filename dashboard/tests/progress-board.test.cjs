@@ -28,3 +28,19 @@ assert.ok(!js.includes('innerHTML'));
 assert.ok(css.includes('#central-progress-board'));
 assert.ok(!JSON.stringify(data).includes("C:\\Users\\Administrator"));
 console.log("PASS: central progress panel, snapshot schema, safe rendering, privacy checks");
+
+
+const workflowJs = fs.readFileSync(path.join(root,"workflow-map.js"),"utf8");
+assert.ok(html.includes('data-workflow-map'));
+assert.ok(html.includes('data-workflow-details'));
+assert.ok(html.includes('data-workflow-github'));
+assert.ok(html.includes('src="workflow-map.js"'));
+assert.equal(data.workflow.nodes.length,5);
+assert.ok(data.workflow.nodes.some(x=>x.status==="in_progress"));
+assert.ok(data.workflow.nodes.some(x=>x.status==="blocked"));
+assert.ok(data.workflow.nodes.every(x=>["verified","in_progress","blocked","failed","unverified"].includes(x.status)));
+assert.ok(data.workflow.nodes.every(x=>/^https:\/\/github\.com\/Amer-ai-store\/Mohammad-Ahmed-Ghannam\//.test(x.evidence_url)));
+assert.ok(workflowJs.includes("api.github.com/repos/Amer-ai-store/Mohammad-Ahmed-Ghannam/pulls/"));
+assert.ok(workflowJs.includes("تعذّر الاتصال المباشر"));
+assert.ok(!workflowJs.includes("innerHTML"));
+console.log("PASS: interactive workflow stage map, fallback and GitHub-only live state");
