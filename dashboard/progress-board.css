@@ -14,3 +14,21 @@
 #central-progress-board .cpb-links a{color:var(--info)}
 #central-progress-board ul{margin:8px 0;padding-inline-start:20px}
 @media(max-width:740px){#central-progress-board .cpb-two{grid-template-columns:1fr}}
+
+#central-progress-board .cpb-workflow{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+#central-progress-board .cpb-flow-track{display:grid;grid-template-columns:repeat(5,minmax(145px,1fr));gap:12px;overflow-x:auto;padding:12px 2px 18px}
+#central-progress-board .cpb-step{position:relative;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:start;border:2px solid var(--line);border-radius:12px;padding:13px;background:var(--surface-2);color:var(--fg);cursor:pointer;font:inherit}
+#central-progress-board .cpb-step:not(:last-child)::after{content:"←";position:absolute;inset-inline-end:-17px;top:45%;color:var(--muted);font-size:17px;z-index:1;pointer-events:none}
+#central-progress-board .cpb-step[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
+#central-progress-board .cpb-step-number{font:600 .8rem var(--font-mono);color:var(--muted)}
+#central-progress-board .cpb-step-status{border-radius:999px;padding:3px 9px;font-size:.75rem;background:var(--accent-soft)}
+#central-progress-board .cpb-step-verified{border-color:var(--ok)}
+#central-progress-board .cpb-step-in_progress{border-color:var(--info)}
+#central-progress-board .cpb-step-blocked{border-color:var(--amber)}
+#central-progress-board .cpb-step-failed{border-color:var(--coral)}
+#central-progress-board .cpb-step-subtitle{color:var(--muted);line-height:1.6}
+#central-progress-board .cpb-workflow-detail{border:1px solid var(--line);padding:14px;border-radius:10px;min-height:110px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+#central-progress-board .cpb-workflow-detail p{margin:0}
+#central-progress-board .cpb-github-live{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 0}
+#central-progress-board .cpb-github-live a,#central-progress-board .cpb-workflow-detail a{color:var(--info)}
+@media(max-width:900px){#central-progress-board .cpb-flow-track{grid-template-columns:repeat(5,minmax(180px,1fr));overflow-x:auto}}
