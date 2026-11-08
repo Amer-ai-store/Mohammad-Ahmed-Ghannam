@@ -28,6 +28,9 @@ class GeneralLedgerAuditTests(unittest.TestCase):
             self.assertEqual(r["journal_numbers_without_header"], 0)
             self.assertEqual(r["headers_without_any_lines"], 0)
             self.assertEqual(r["journal_headers"], 3)
+            self.assertEqual(r["exceptions_by_journal_type"], {"UNKNOWN": 1})
+            self.assertEqual(r["exception_direction"], {"from_more": 1})
+            self.assertEqual(r["exception_header_total_matches"], {"no_declared_total": 1})
             self.assertNotIn("49.50", str(r))
 
     def test_tolerance_and_missing_header(self):
