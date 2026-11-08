@@ -427,6 +427,13 @@ nav.side{gap:.5rem}
 <h2>مسار المهمة من الإرسال حتى إثبات التنفيذ</h2>
 <div id="cca999-flow-journeys" aria-label="مراحل انتقال المهام والتحقق"></div>
 <p class="small muted">SENT: وجود تعليق أصلي. RESPONSE: تعليق رد مرتبط بمعرّف المهمة مع هوية دردشة غير مثبتة. DELIVERED / READ / ACKNOWLEDGED / EXECUTED: تتطلب أدلة مستقلة ولا تُستنتج من GitHub العام.</p>
+<div class="panel" aria-label="وكيل المراسلات API">
+<h2>وكيل المراسلات API — استلام وتنظيم وإثبات الرد</h2>
+<p>خدمة مستقلة بصلاحيات محددة لكل محادثة. تختبر هذه البطاقة جاهزية API وقاعدة البيانات فقط؛ لا ترسل الرسائل أو تزعم تسليمها إلى دردشات ChatGPT.</p>
+<div class="toolbar"><button type="button" id="cca999-agent-api-refresh">فحص اتصال API الآن</button>
+<a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/blob/main/docs/cca999-message-agent.md" target="_blank" rel="noopener noreferrer">تعليمات ربط الوكلاء والردود</a></div>
+<p id="cca999-agent-api-status" class="muted" role="status" aria-live="polite">لم يُفحص اتصال API بعد.</p>
+</div>
 </div>
 </section>
 <section class="view" data-view="project-messages" aria-labelledby="h-project-messages" hidden>
@@ -2754,5 +2761,6 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 
 <script type="module" src="project-messages.mjs"></script>
 <script type="module" src="cca999-task-flow.mjs"></script>
+<script type="module" src="cca999-api-health.mjs"></script>
 <script type="module" src="release-verification.mjs"></script>
 <script type="module" src="central-transfer-audit.mjs"></script>
