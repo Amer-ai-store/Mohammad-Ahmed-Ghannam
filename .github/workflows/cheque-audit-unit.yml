@@ -4,6 +4,8 @@ on:
     paths:
       - 'tools/read_only_cheque_audit.py'
       - 'tools/test_read_only_cheque_audit.py'
+      - 'tools/read_only_gl_audit.py'
+      - 'tools/test_read_only_gl_audit.py'
       - '.github/workflows/cheque-audit-unit.yml'
   workflow_dispatch:
 
@@ -22,4 +24,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Test with synthetic records only
-        run: python -Werror::ResourceWarning -m unittest discover -s tools -p 'test_read_only_cheque_audit.py' -v
+        run: python -Werror::ResourceWarning -m unittest discover -s tools -p 'test_read_only_*audit.py' -v
