@@ -5,6 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./command-home.css">
+<link rel="stylesheet" href="./progress-board.css">
 <link rel="stylesheet" href="./live-execution.css">
 <link rel="stylesheet" href="./jawafa-investigation.css">
 <style>
@@ -577,6 +578,33 @@ nav.side{gap:.5rem}
       </section>
 
       <section class="view command-home" data-view="home" aria-labelledby="h-home" data-density="comfortable" data-edit-layout="false">
+        <section id="central-progress-board" aria-labelledby="cpb-heading">
+          <div class="cpb-head">
+            <div>
+              <h2 id="cpb-heading">نسبة الإنجاز والعمل الجاري والنتائج الإجمالية</h2>
+              <div class="cpb-note" data-progress-date>جارٍ قراءة تاريخ آخر تحديث موثق...</div>
+            </div>
+            <button type="button" data-progress-refresh>تحديث لقطة المؤشرات</button>
+          </div>
+          <p class="cpb-note" role="status" aria-live="polite" data-progress-state>جارٍ تحميل مؤشرات التحقق...</p>
+          <div class="cpb-two">
+            <div class="cpb-column">
+              <span>التقدم التحليلي التقديري</span>
+              <strong class="cpb-big" data-progress-percent>—</strong>
+              <progress data-progress-bar max="100" aria-label="نسبة التقدم التحليلي التقديرية"></progress>
+              <p class="cpb-note" data-progress-basis>لا يتم افتراض اكتمال دون سند.</p>
+              <p><strong>الوحدات المقبولة وفق شرط 90%:</strong> <span data-progress-acceptance>—</span></p>
+            </div>
+            <div class="cpb-column">
+              <h3>يجري العمل حاليًا</h3>
+              <ul data-progress-items><li>لا توجد بيانات عمل موثقة محمّلة.</li></ul>
+            </div>
+          </div>
+          <h3>النتائج الإجمالية المثبتة من آخر دورة</h3>
+          <div class="cpb-metrics" data-progress-totals><p class="cpb-note">لا توجد مؤشرات حديثة محمّلة.</p></div>
+          <p class="cpb-note" data-progress-safety>لا تُعرض بيانات مالية تفصيلية في اللوحة العامة.</p>
+          <div class="cpb-links" data-progress-evidence aria-label="روابط أدلة التحقق"></div>
+        </section>
         <header class="command-hero">
           <div>
             <div class="command-kicker"><span>JAWAFA · AMER AI STORE</span><span aria-hidden="true">/</span><span>UNIFIED COMMAND CENTER</span></div>
@@ -2733,6 +2761,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 <script src="jawafa-investigation.js" defer></script>
 <script src="jawafa-forensic-workspace.js" defer></script>
 <script src="command-home.js" defer></script>
+<script src="progress-board.js" defer></script>
 <script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>
 <script src="luqta-integration.js" defer></script>
