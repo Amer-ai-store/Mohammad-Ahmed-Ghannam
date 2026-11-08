@@ -6,6 +6,7 @@ on:
       - "dashboard/progress-board.json"
       - "dashboard/progress-board.js"
       - "dashboard/workflow-map.js"
+      - "dashboard/agent-live.js"
       - "dashboard/progress-board.css"
       - "dashboard/tests/progress-board.test.cjs"
       - ".github/workflows/progress-board-check.yml"
@@ -25,3 +26,4 @@ jobs:
         run: |
           node --check dashboard/progress-board.js
           node --check dashboard/workflow-map.js
+          node --check dashboard/agent-live.js
