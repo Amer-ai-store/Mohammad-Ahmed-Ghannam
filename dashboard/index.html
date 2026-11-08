@@ -402,6 +402,21 @@ nav.side{gap:.5rem}
 <section class="view" data-view="jawafa-investigations" aria-labelledby="h-jawafa-investigations" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-investigations">التحقيقات القضائية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-investigations">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-investigations">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-investigations">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-investigations"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<style>
+/* CCA999 visual journey: public metadata; unknown phases never look completed. */
+#cca999-flow-journeys{display:grid;gap:1rem;margin-top:.9rem}
+.cca999-journey-card{border:1px solid var(--line);border-radius:12px;padding:1rem;background:var(--surface-2)}
+.cca999-journey-card h3{margin:0 0 .5rem;font-size:1rem}
+.cca999-journey-stages{list-style:none;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.35rem;margin:1rem 0;padding:0}
+.cca999-stage{display:flex;flex-direction:column;gap:.2rem;min-width:0;padding:.7rem .45rem;border-radius:9px;border:1px dashed var(--line);background:var(--surface);position:relative}
+.cca999-stage:not(:last-child)::after{content:"◀";position:absolute;left:-.44rem;top:35%;color:var(--muted);z-index:1}
+.cca999-stage strong{font-size:.84rem;overflow-wrap:anywhere}
+.cca999-stage a{font-size:.75rem;overflow-wrap:anywhere}
+.cca999-stage-verified{border:1px solid var(--ok);background:var(--ok-soft)}
+.cca999-stage-unverified{opacity:.73}
+@media(max-width:800px){.cca999-journey-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.cca999-stage::after{display:none}}
+@media(max-width:380px){.cca999-journey-stages{grid-template-columns:1fr}}
+</style>
 <section class="view" data-view="cca999-task-flow" aria-labelledby="h-cca999-task-flow" hidden>
 <div class="view-head"><div><span class="eyebrow">CCA999 · TASK HANDOFF MONITOR · PUBLIC METADATA ONLY</span><h1 id="h-cca999-task-flow">انتقال المهام والاستجابة — 999 CCA N1</h1><p class="muted">لوحة فرعية داخل القيادة المركزية، تقرأ تعليقات التنسيق العامة دون الوصول إلى بيانات جوافة المالية أو محادثات ChatGPT الخاصة.</p></div></div>
 <div class="panel">
@@ -409,6 +424,8 @@ nav.side{gap:.5rem}
 <p id="cca999-flow-status" role="status" aria-live="polite" class="muted">لم تُجلب الحالة بعد.</p>
 <div id="cca999-flow-summary" class="toolbar" aria-label="ملخص حالات التسليم"></div>
 <div class="table-wrap" id="cca999-flow-table" aria-label="جدول انتقال المهام"></div>
+<h2>مسار المهمة من الإرسال حتى إثبات التنفيذ</h2>
+<div id="cca999-flow-journeys" aria-label="مراحل انتقال المهام والتحقق"></div>
 <p class="small muted">SENT: وجود تعليق أصلي. RESPONSE: تعليق رد مرتبط بمعرّف المهمة مع هوية دردشة غير مثبتة. DELIVERED / READ / ACKNOWLEDGED / EXECUTED: تتطلب أدلة مستقلة ولا تُستنتج من GitHub العام.</p>
 </div>
 </section>
