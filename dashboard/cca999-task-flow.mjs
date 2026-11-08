@@ -26,6 +26,20 @@ export function analyzeHandoffs(rows){
    state:last?'RESPONSE_IN_HUB_UNVERIFIED':'SENT_ONLY',delivered_verified:false,read_verified:false,ack_verified:false,execution_verified:false};
  });
 }
+export const JOURNEY_STAGES=Object.freeze([
+ {id:'SENT',label:'الإرسال'},
+ {id:'DELIVERED',label:'الاستلام'},
+ {id:'ACKNOWLEDGED',label:'الإقرار'},
+ {id:'EXECUTING',label:'التنفيذ'},
+ {id:'EVIDENCE',label:'إرفاق الإثبات'},
+ {id:'REVIEWED',label:'الاعتماد'}
+]);
+export function buildTaskJourney(task){
+ return JOURNEY_STAGES.map(stage=>{
+  const verified=stage.id==='SENT'&&Number.isSafeInteger(task?.comment_id)&&!!task?.proof_url;
+  return {id:stage.id,label:stage.label,status:verified?'VERIFIED':'UNVERIFIED',verified_at:verified?(task.sent_at||null):null,proof_url:verified?task.proof_url:null};
+ });
+}
 export function validatePage(rows){return Array.isArray(rows)&&rows.length<=100}
 export async function fetchHandoffs(fetcher=fetch,{maxPages=5}={}){
  const all=[];
@@ -42,10 +56,10 @@ export async function fetchHandoffs(fetcher=fetch,{maxPages=5}={}){
 const node=(tag,value,className)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=value;if(className)e.className=className;return e};
 export function initMonitor(){
  const root=document.querySelector('[data-view="cca999-task-flow"]');if(!root)return;
- const status=root.querySelector('#cca999-flow-status'),summary=root.querySelector('#cca999-flow-summary'),target=root.querySelector('#cca999-flow-table'),button=root.querySelector('#cca999-flow-refresh');
+ const status=root.querySelector('#cca999-flow-status'),summary=root.querySelector('#cca999-flow-summary'),target=root.querySelector('#cca999-flow-table'),journeys=root.querySelector('#cca999-flow-journeys'),button=root.querySelector('#cca999-flow-refresh');
  async function refresh(){
   button.disabled=true;status.textContent='جارٍ جلب التعليقات من GitHub (قراءة عامة فقط)...';
-  summary.replaceChildren();target.replaceChildren();
+  summary.replaceChildren();target.replaceChildren();journeys.replaceChildren();
   try{
    const tasks=await fetchHandoffs();
    summary.append(node('span','المهام ذات إرسال مثبت: '+tasks.length,'pill'));
@@ -63,6 +77,29 @@ export function initMonitor(){
     tr.append(name,evidence,reply,node('td','DELIVERED / READ / ACK / EXECUTION: غير مثبتة'));body.append(tr);
    }
    table.append(body);target.append(table);
+   for(const t of tasks){
+    const card=node('article',undefined,'cca999-journey-card');
+    const caption=node('h3',t.to_chat+' — '+t.subject);
+    const detail=node('p','معرّف المهمة: '+t.id,'small muted');
+    const path=node('ol',undefined,'cca999-journey-stages');
+    for(const stage of buildTaskJourney(t)){
+     const step=node('li',undefined,'cca999-stage '+(stage.status==='VERIFIED'?'cca999-stage-verified':'cca999-stage-unverified'));
+     step.append(node('strong',stage.label),node('span',stage.status==='VERIFIED'?'مثبت':'لم يثبت','small'));
+     if(stage.proof_url){
+      const proof=node('a','عرض إثبات الإرسال');
+      proof.href=stage.proof_url;proof.target='_blank';proof.rel='noopener noreferrer';
+      step.append(proof);
+     }
+     path.append(step);
+    }
+    card.append(caption,detail,path);
+    if(t.reply_count){
+     const response=node('p','رُصد '+t.reply_count+' رد مرتبط في سجل GitHub؛ مصدر الرد لا يثبت استلام محادثة ChatGPT أو تنفيذ المهمة.','small muted');
+     if(t.last_reply_url){const l=node('a','فتح آخر رد');l.href=t.last_reply_url;l.target='_blank';l.rel='noopener noreferrer';response.append(' ',l);}
+     card.append(response);
+    }
+    journeys.append(card);
+   }
    if(!tasks.length)target.append(node('p','لم يُعثر على رسائل مهام مطابقة. لا يدل ذلك على عدم إنجاز المهام خارج هذه القناة.','muted'));
    status.textContent='قراءة مباشرة لمعلومات عامة من GitHub. الرسائل المرسلة لا تعني تسليمًا إلى محادثة ChatGPT. لا توجد مصادقة تربط اسم الكاتب بهوية مستلم الدردشة.';
   }catch(error){
