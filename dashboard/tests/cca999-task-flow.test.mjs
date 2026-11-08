@@ -35,7 +35,7 @@ test('network failures fail closed',async()=>{
 
 test('visual timeline is integrated into the published central view',()=>{
  assert.match(html,/id="cca999-flow-journeys"/);
- assert.match(html,/\\.cca999-journey-stages/);
+ assert.ok(html.includes('.cca999-journey-stages'));
 });
 test('only real GitHub sending proof is verified on journey',()=>{
  const task=analyzeHandoffs([mk('CCA999-PLAN-20261108-1')])[0];
