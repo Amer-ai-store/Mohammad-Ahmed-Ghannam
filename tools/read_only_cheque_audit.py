@@ -80,7 +80,7 @@ def analyze(root):
             "distinct_missing_cheque_ids": len(set(r["CheqId"].strip() for r in exceptions)),
         },
         "exception_statuses": dict(sorted(Counter(str(r.get("statusE") or "UNKNOWN").strip() for r in exceptions).items())),
-        "exception_years": dict(sorted(Counter(r.get("MoveDate", "")[:4] or "UNKNOWN" for r in exceptions).items())),
+        "exception_years": dict(sorted(Counter(str(r.get("MoveDate") or "")[:4] or "UNKNOWN" for r in exceptions).items())),
         "limitations": [
             "Missing current cheque document does not prove deletion or fraud.",
             "Voucher masters may represent non-cheque payment methods.",
