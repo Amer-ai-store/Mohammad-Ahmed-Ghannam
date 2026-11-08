@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1 (Node.js 24)
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -25,18 +25,27 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            git diff --check "$BASE_SHA" "$HEAD_SHA"
-            git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed-files.txt
-            git diff --unified=0 "$BASE_SHA" "$HEAD_SHA" > pr.patch
+            base="$BASE_SHA"
+            head="$HEAD_SHA"
           else
-            git diff --check HEAD~1 HEAD
-            git diff --name-only HEAD~1 HEAD > changed-files.txt
-            git diff --unified=0 HEAD~1 HEAD > pr.patch
+            base="$(git rev-parse HEAD^)"
+            head="$(git rev-parse HEAD)"
           fi
+          # Record formatting problems, but always run the credential check as well.
+          whitespace_status=0
+          git diff --check "$base" "$head" > whitespace-errors.txt 2>&1 || whitespace_status=$?
+          git diff --name-only "$base" "$head" > changed-files.txt
+          git diff --unified=0 "$base" "$head" > pr.patch
+          export WHITESPACE_STATUS="$whitespace_status"
           python3 - <<'PY'
-          import re, pathlib, sys
+          import os
+          import pathlib
+          import re
+          import sys
+
           patch = pathlib.Path('pr.patch').read_text(errors='replace')
-          added = '\n'.join(line[1:] for line in patch.splitlines() if line.startswith('+') and not line.startswith('+++'))
+          added = '\n'.join(line[1:] for line in patch.splitlines()
+                            if line.startswith('+') and not line.startswith('+++'))
           patterns = {
               'GitHub access token': r'gh[pousr]_[A-Za-z0-9_]{30,}',
               'GitHub fine-grained token': r'github_pat_[A-Za-z0-9_]{30,}',
@@ -45,10 +54,23 @@ jobs:
               'AWS access key': r'AKIA[0-9A-Z]{16}',
           }
           hits = [name for name, pattern in patterns.items() if re.search(pattern, added)]
+          whitespace_status = int(os.environ['WHITESPACE_STATUS'])
+          whitespace = pathlib.Path('whitespace-errors.txt').read_text(errors='replace').strip()
           count = len(pathlib.Path('changed-files.txt').read_text().splitlines())
-          summary = f'### Free pull request review\n\nChanged files: **{count}**.\n\nWhitespace: checked by git diff --check.\n\nCredential-pattern check: **{"FAILED" if hits else "PASSED"}**.\n\nThis is static review, not an AI code review.\n'
-          with open(__import__('os').environ['GITHUB_STEP_SUMMARY'], 'a') as out: out.write(summary)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write('### Free pull request review\n\n')
+              out.write(f'Changed files: **{count}**.\n\n')
+              out.write(f'Whitespace: **{"FAILED" if whitespace_status else "PASSED"}**.\n\n')
+              if whitespace:
+                  out.write('Fix the following formatting findings in the PR source branch:\n\n')
+                  out.write('\\n'.join(['```text', whitespace[:12000], '```', '']))
+              out.write(f'\nCredential-pattern check: **{"FAILED" if hits else "PASSED"}**.\n\n')
+              out.write('This is static review, not an AI code review.\n')
+          if whitespace_status:
+              print('Whitespace check failed; run git diff --check against the PR base.', file=sys.stderr)
+              print(whitespace[:12000], file=sys.stderr)
           if hits:
               print('Potential credentials found in added lines: ' + ', '.join(hits), file=sys.stderr)
+          if whitespace_status or hits:
               sys.exit(1)
           PY
