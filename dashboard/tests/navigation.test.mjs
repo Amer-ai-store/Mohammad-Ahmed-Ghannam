@@ -61,3 +61,16 @@ test('inline scripts and integrations parse as valid JavaScript', () => {
 test('central dashboard declares mobile viewport to avoid desktop-scale rendering on phones', () => {
   assert.match(index, /<meta\s+name="viewport"\s+content="width=device-width,\s*initial-scale=1"\s*>/);
 });
+
+test('external app preview supports close and clears iframe without claiming provider logout', () => {
+  const portal = readFileSync(resolve('dashboard/appdeploy-modules.html'), 'utf8');
+  assert.match(portal, /id="closeViewer"/);
+  assert.match(portal, /closeViewer\.addEventListener\("click",clearPreview\)/);
+  assert.match(portal, /window\.addEventListener\("pagehide",clearPreview\)/);
+  assert.match(portal, /frame\.src="about:blank"/);
+  assert.match(portal, /btn\.addEventListener\("click",\(\)=>\{clearPreview\(\)/);
+  assert.match(portal, /ولا يسجّل الخروج من التطبيق الأصلي/);
+  for (const [, script] of portal.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
+    if (script.trim()) new Script(script, {filename:'appdeploy-inline.js'});
+  }
+});
