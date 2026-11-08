@@ -118,5 +118,5 @@
   if (button) button.addEventListener("click",refresh);
   document.addEventListener("visibilitychange",() => {if (!document.hidden) refresh();});
   refresh();
-  setInterval(() => {if (!document.hidden) refresh();},60000);
+  setInterval(() => {if (!document.hidden) refresh();},180000);
 })();
