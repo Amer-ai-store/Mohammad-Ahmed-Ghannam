@@ -1,0 +1,16 @@
+#central-progress-board{margin:18px 0;border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:var(--surface);color:var(--fg)}
+#central-progress-board .cpb-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}
+#central-progress-board .cpb-head h2{margin:0 0 7px;font-size:1.2rem}
+#central-progress-board .cpb-note{color:var(--muted);font-size:.83rem}
+#central-progress-board .cpb-two{display:grid;grid-template-columns:minmax(230px,.75fr) minmax(270px,1.25fr);gap:15px;margin:14px 0}
+#central-progress-board .cpb-column{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--surface-2)}
+#central-progress-board .cpb-big{font-size:2rem;font-weight:750;display:block;font-variant-numeric:tabular-nums}
+#central-progress-board progress{width:100%;height:14px;accent-color:var(--accent)}
+#central-progress-board .cpb-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin:16px 0}
+#central-progress-board .cpb-metric{display:flex;flex-direction:column;gap:5px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2)}
+#central-progress-board .cpb-label,#central-progress-board .cpb-detail{color:var(--muted);font-size:.81rem}
+#central-progress-board .cpb-value{font-size:1.4rem}
+#central-progress-board .cpb-links{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+#central-progress-board .cpb-links a{color:var(--info)}
+#central-progress-board ul{margin:8px 0;padding-inline-start:20px}
+@media(max-width:740px){#central-progress-board .cpb-two{grid-template-columns:1fr}}
