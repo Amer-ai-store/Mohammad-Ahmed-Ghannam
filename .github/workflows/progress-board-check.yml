@@ -5,6 +5,7 @@ on:
       - "dashboard/index.html"
       - "dashboard/progress-board.json"
       - "dashboard/progress-board.js"
+      - "dashboard/workflow-map.js"
       - "dashboard/progress-board.css"
       - "dashboard/tests/progress-board.test.cjs"
       - ".github/workflows/progress-board-check.yml"
@@ -21,4 +22,6 @@ jobs:
       - name: Verify snapshot and privacy
         run: node dashboard/tests/progress-board.test.cjs
       - name: Check JavaScript syntax
-        run: node --check dashboard/progress-board.js
+        run: |
+          node --check dashboard/progress-board.js
+          node --check dashboard/workflow-map.js
