@@ -618,6 +618,34 @@ nav.side{gap:.5rem}
           <h3>النتائج الإجمالية المثبتة من آخر دورة</h3>
           <div class="cpb-metrics" data-progress-totals><p class="cpb-note">لا توجد مؤشرات حديثة محمّلة.</p></div>
           <p class="cpb-note" data-progress-safety>لا تُعرض بيانات مالية تفصيلية في اللوحة العامة.</p>
+          <section id="central-agent-live" class="cpb-agent-panel" aria-labelledby="cpb-agent-title">
+            <div class="cpb-head">
+              <div><h3 id="cpb-agent-title">الوكيل أثناء تنفيذ المهام — عرض مباشر موثّق</h3>
+                <p class="cpb-note">عرض بصري لنشاط GitHub Actions الفعلي، لا بث كاميرا ولا تشغيل افتراضي لوكلاء ChatGPT.</p>
+              </div>
+              <button type="button" data-agent-refresh>فحص النشاط الآن</button>
+            </div>
+            <div class="cpb-agent-stage">
+              <div class="cpb-agent-avatar" data-agent-emblem role="img" aria-label="حالة نشاط منفذ GitHub">
+                <span class="cpb-agent-head" aria-hidden="true"><i></i><i></i></span>
+                <span class="cpb-agent-body" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="cpb-agent-pulse" aria-hidden="true"></span>
+              </div>
+              <div>
+                <strong class="cpb-agent-number" data-agent-running-count>—</strong>
+                <span>عمليات GitHub تعمل حاليًا</span>
+                <p class="cpb-note" data-agent-last-check>بانتظار الاتصال...</p>
+                <p role="status" aria-live="polite" data-agent-status>جارٍ فحص النشاط الحقيقي...</p>
+              </div>
+            </div>
+            <div class="cpb-agent-columns">
+              <div><h4>المهام الجارية وأحدث النتائج</h4><div data-agent-runs class="cpb-agent-runs"></div></div>
+              <div><h4>ما الذي ينفّذه الوكيل الآن؟</h4>
+                <div data-agent-detail class="cpb-agent-detail"><p class="cpb-note">اختر تشغيلًا موثقًا لعرض خطواته.</p></div>
+              </div>
+            </div>
+            <p class="cpb-note">تُحدَّث الحالات كل دقيقة عند فتح الصفحة. عند توقف الاتصال تتوقف الحركة ويُعرض «غير مثبت» بدل الادعاء بالتنفيذ. لا تُعرض بيانات مالية أو سجلات تنفيذ حساسة.</p>
+          </section>
           <section class="cpb-workflow" aria-labelledby="cpb-workflow-title">
             <div class="cpb-head"><div>
               <h3 id="cpb-workflow-title">مخطط مكان ومسار العمل</h3>
@@ -2788,6 +2816,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 <script src="command-home.js" defer></script>
 <script src="progress-board.js" defer></script>
 <script src="workflow-map.js" defer></script>
+<script src="agent-live.js" defer></script>
 <script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>
 <script src="luqta-integration.js" defer></script>
