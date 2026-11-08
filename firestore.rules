@@ -1,18 +1,16 @@
 rules_version = '2';
 
-// Two separate datasets live in this Firebase project:
+// Live store data, mirrored from the Android app by FirestoreSync.
+// - The app writes after anonymous sign-in.
+// - Only the owner's Google account can read it (the live dashboard).
+// Note: any installed copy of the app can write; fine for a prototype, add App Check before launch.
 //
-// 1. Live store data, mirrored from the Android app by FirestoreSync (root collections
-//    users / products / orders / chat_reports). The app writes after anonymous sign-in and
-//    only the owner's Google account can read it. Any installed copy of the app can write;
-//    fine for a prototype, add App Check before launch (see SECURITY_CHECKLIST.md).
-//
-// 2. Multi-company command center (companies/{companyId}/...). Every company is a tenant:
-//    only its members can read it, and only owner/admin/editor members can write its data.
-//    Ownership is the ownerUid field; roles[] holds one of the business roles for the others:
-//    chairman | general_manager (manage members) | procurement_manager | branch_manager |
-//    accountant (write operational data) | auditor | employee (read only, employee may post
-//    agent messages and tasks). No role grants access to Jawafa_DB: SQL stays behind the backend.
+// Multi-company command center (companies/{companyId}/..., invites, profiles). Every company is a
+// tenant: only its members can read it, and only owner/admin/editor members can write its data.
+// Ownership is the ownerUid field; roles[] holds one of the business roles for the others:
+// chairman | general_manager (manage members) | procurement_manager | branch_manager |
+// accountant (write operational data) | auditor | employee (read only, employee may post
+// agent messages and tasks). No role grants access to Jawafa_DB: SQL stays behind the backend.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
@@ -23,7 +21,7 @@ service cloud.firestore {
     }
 
     function isOwner() {
-      return signedIn()
+      return request.auth != null
         && request.auth.token.email == 'zxzx.mohammad91@gmail.com'
         && request.auth.token.email_verified == true;
     }
@@ -32,10 +30,9 @@ service cloud.firestore {
       return c in ['users', 'products', 'orders', 'chat_reports'];
     }
 
-    // ---------- 1. Android live store ----------
     match /{collection}/{docId} {
       allow read: if isOwner() && isStoreCollection(collection);
-      allow write: if signedIn() && isStoreCollection(collection);
+      allow write: if request.auth != null && isStoreCollection(collection);
     }
 
     // ---------- 2. Companies (tenants) ----------
