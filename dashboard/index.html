@@ -402,6 +402,16 @@ nav.side{gap:.5rem}
 <section class="view" data-view="jawafa-investigations" aria-labelledby="h-jawafa-investigations" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-investigations">التحقيقات القضائية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-investigations">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-investigations">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-investigations">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-investigations"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="cca999-task-flow" aria-labelledby="h-cca999-task-flow" hidden>
+<div class="view-head"><div><span class="eyebrow">CCA999 · TASK HANDOFF MONITOR · PUBLIC METADATA ONLY</span><h1 id="h-cca999-task-flow">انتقال المهام والاستجابة — 999 CCA N1</h1><p class="muted">لوحة فرعية داخل القيادة المركزية، تقرأ تعليقات التنسيق العامة دون الوصول إلى بيانات جوافة المالية أو محادثات ChatGPT الخاصة.</p></div></div>
+<div class="panel">
+<div class="toolbar"><button type="button" id="cca999-flow-refresh">تحديث من سجل المراسلات</button><a href="#project-messages" class="btn">مركز المراسلات</a><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/168" target="_blank" rel="noopener noreferrer">سجل GitHub العام</a></div>
+<p id="cca999-flow-status" role="status" aria-live="polite" class="muted">لم تُجلب الحالة بعد.</p>
+<div id="cca999-flow-summary" class="toolbar" aria-label="ملخص حالات التسليم"></div>
+<div class="table-wrap" id="cca999-flow-table" aria-label="جدول انتقال المهام"></div>
+<p class="small muted">SENT: وجود تعليق أصلي. RESPONSE: تعليق رد مرتبط بمعرّف المهمة مع هوية دردشة غير مثبتة. DELIVERED / READ / ACKNOWLEDGED / EXECUTED: تتطلب أدلة مستقلة ولا تُستنتج من GitHub العام.</p>
+</div>
+</section>
 <section class="view" data-view="project-messages" aria-labelledby="h-project-messages" hidden>
   <div class="view-head"><div><span class="eyebrow">AMER · INTER-PROJECT MESSAGE HUB</span><h1 id="h-project-messages">مركز مراسلات المشاريع</h1><p>تنسيق وتوثيق مراسلات مشروع gpt ومشروع التقرير النهائي داخل لوحة القيادة الواحدة.</p></div></div>
   <div class="panel">
@@ -978,7 +988,7 @@ nav.side{gap:.5rem}
   const NAV = [
     ["القيادة والمشاريع", [
       ["home","نظرة عامة"],["tasks","المهام","tasks"],["stages","مراحل التنفيذ","stages"],
-      ["workspaces","مساحات العمل","workspaces"],["project-messages","مركز مراسلات المشاريع"],["map","الهيكل وخريطة العمل"]
+      ["workspaces","مساحات العمل","workspaces"],["project-messages","مركز مراسلات المشاريع"],["cca999-task-flow","انتقال المهام والاستجابة"],["map","الهيكل وخريطة العمل"]
     ]],
     ["الذكاء الاصطناعي والوكلاء", [
       ["agents","فريق الوكلاء","agents"],["agent-directory","دليل الوكلاء"],
@@ -2726,5 +2736,6 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 <script src="luqta-integration.js" defer></script>
 
 <script type="module" src="project-messages.mjs"></script>
+<script type="module" src="cca999-task-flow.mjs"></script>
 <script type="module" src="release-verification.mjs"></script>
 <script type="module" src="central-transfer-audit.mjs"></script>
