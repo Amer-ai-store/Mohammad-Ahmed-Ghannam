@@ -106,5 +106,5 @@
   document.addEventListener("visibilitychange", () => {if (!document.hidden) refreshGitHub();});
   load();
   refreshGitHub();
-  setInterval(() => {if (!document.hidden) refreshGitHub();},120000);
+  setInterval(() => {if (!document.hidden) refreshGitHub();},300000);
 })();
