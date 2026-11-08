@@ -1,0 +1,25 @@
+name: Read-only cheque audit unit tests
+on:
+  pull_request:
+    paths:
+      - 'tools/read_only_cheque_audit.py'
+      - 'tools/test_read_only_cheque_audit.py'
+      - '.github/workflows/cheque-audit-unit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test with synthetic records only
+        run: python -Werror::ResourceWarning -m unittest discover -s tools -p 'test_read_only_cheque_audit.py' -v
