@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const PROJECT = "amer-ai-store";
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const ORIGIN = "https://amer-ai-store.github.io";
 const STATES = ["QUEUED", "DELIVERED", "READ", "ACKNOWLEDGED"];
 const allowedKeys = (user: any): string[] => {
@@ -153,8 +153,19 @@ Deno.serve(async (req:Request) => {
       const {data,error}=await c.from("orchestrator_bus_events")
         .select("id,state,actor,evidence,created_at").eq("message_id",m.id).order("created_at",{ascending:true}).limit(100);
       if(error)return reply({ok:false,error:"AUDIT_READ_FAILED"},503,origin);
-      return reply({ok:true,message:m,events:data||[],
-        distinction:"Confirmed API client events; ChatGPT UI delivery unverified"},200,origin);
+      const entries=data||[];
+      const verified={
+        queued:entries.some((e:any)=>e.state==="QUEUED"&&typeof e.actor==="string"&&e.actor.startsWith("auth_user:")&&e.evidence?.attestation==="AUTHENTICATED_API_CLIENT_NOT_CHATGPT_UI"),
+        delivered:entries.some((e:any)=>e.state==="DELIVERED"&&typeof e.actor==="string"&&e.actor.startsWith("auth_user:")&&e.evidence?.attestation==="RECIPIENT_APP_EXPLICIT_CONFIRMATION_NOT_CHATGPT_UI"),
+        read:entries.some((e:any)=>e.state==="READ"&&typeof e.actor==="string"&&e.actor.startsWith("auth_user:")&&e.evidence?.attestation==="RECIPIENT_APP_EXPLICIT_CONFIRMATION_NOT_CHATGPT_UI"),
+        acknowledged:entries.some((e:any)=>e.state==="ACKNOWLEDGED"&&typeof e.actor==="string"&&e.actor.startsWith("auth_user:")&&e.evidence?.attestation==="RECIPIENT_APP_EXPLICIT_CONFIRMATION_NOT_CHATGPT_UI")
+      };
+      const {data:linkedReplies,error:re}=await c.from("orchestrator_bus_messages")
+        .select("id,external_message_id,source_chat_key,destination_chat_key,status,created_at,payload")
+        .eq("project_key",PROJECT).contains("payload",{reply_to:m.id}).limit(50);
+      if(re)return reply({ok:false,error:"REPLY_AUDIT_READ_FAILED"},503,origin);
+      return reply({ok:true,message:m,events:entries,verified_api_receipts:verified,linked_replies:linkedReplies||[],
+        distinction:"Canonical status may include legacy events; only verified_api_receipts are authenticated client acknowledgements. ChatGPT UI delivery unverified"},200,origin);
     }
     return reply({ok:false,error:"UNKNOWN_OPERATION",ops:["send","inbox","received","read","ack","reply","status"]},400,origin);
   } catch {return reply({ok:false,error:"INTERNAL_ERROR"},503,origin)}
