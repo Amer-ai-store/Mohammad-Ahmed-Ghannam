@@ -63,7 +63,7 @@ jobs:
               out.write(f'Whitespace: **{"FAILED" if whitespace_status else "PASSED"}**.\n\n')
               if whitespace:
                   out.write('Fix the following formatting findings in the PR source branch:\n\n')
-                  out.write('\\n'.join(['```text', whitespace[:12000], '```', '']))
+                  out.write('\n'.join(['```text', whitespace[:12000], '```', '']))
               out.write(f'\nCredential-pattern check: **{"FAILED" if hits else "PASSED"}**.\n\n')
               out.write('This is static review, not an AI code review.\n')
           if whitespace_status:
