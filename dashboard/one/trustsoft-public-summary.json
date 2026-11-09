@@ -232,5 +232,43 @@
     "مطابقة الشيكات مع كشوف البنك الأصلية والقيود المراجعة",
     "استكمال تصدير تفاصيل سندات الاستلام الجديدة قبل إعلان وجود نقص",
     "مراجعة أمنية ومحاسبية مستقلة قبل تصنيف أي واقعة بأنها مخالفة"
+  ],
+  "relationships": [
+    {
+      "left": "Receipt.RecNo",
+      "right": "RecLine.RecNo",
+      "status": "verified",
+      "explanation": "تمت مطابقة 19,029 رأس استلام مع 200,037 سطرًا في تصدير 26 أكتوبر الكامل."
+    },
+    {
+      "left": "Receipt.RecNo",
+      "right": "InvPurchaseVouchersTransactionHistory.ReceiptNo",
+      "status": "verified_difference",
+      "explanation": "13 سندًا متغيرًا لها أحداث تاريخية؛ و4 مراجع في سجل التاريخ لا تقابل رؤوسًا في النسختين."
+    },
+    {
+      "left": "Receipt.SuppNo + Receipt.OriginalInv",
+      "right": "مفتاح فحص تكرار فاتورة المورد",
+      "status": "needs_verification",
+      "explanation": "274 مجموعة إعادة استخدام رقم مرجعي عبر سنوات، دون إثبات ازدواج دفع أو قيد."
+    },
+    {
+      "left": "Journal_GL",
+      "right": "From_gl / To_GL",
+      "status": "needs_verification",
+      "explanation": "57 فروق POS طفيفة في اللقطة، ويجب تأكيد سببها مع الترحيل ومعايير التقريب."
+    },
+    {
+      "left": "حركات الشيكات",
+      "right": "مستندات الشيكات والبنك الأصلي",
+      "status": "needs_verification",
+      "explanation": "57 حركة غير مرتبطة بمستند حالي في اللقطة؛ كشف البنك الأصلي غير مثبت."
+    },
+    {
+      "left": "JAWAFA ONE AI",
+      "right": "Jawafa_DB",
+      "status": "needs_verification",
+      "explanation": "لا توجد وصلة SQL حية معتمدة داخل التطبيق؛ المسار الحالي ملخص تاريخي بالقراءة فقط."
+    }
   ]
 }
