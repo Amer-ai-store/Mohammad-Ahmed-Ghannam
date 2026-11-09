@@ -31,7 +31,7 @@ Generated from one table; counts below are computed from these rows, not estimat
 | REQ-023 | Database Connection Center (SQL Server/PostgreSQL/MySQL/REST) | P0 | app.js integrations() status only | Secure backend + least-privilege read-only account | Authorised read, record match, latency, outage, write-block, tenant isolation tests | — | — | INTEGRATION_STATUS.md | BLOCKED |
 | REQ-024 | Store & POS Integration Center | P1 | legacy dashboard/luqta-api.js (client) | Deployed Luqta HTTPS server / POS sandbox | One connector verified against a real test environment | — | — | INTEGRATION_STATUS.md | BLOCKED |
 | REQ-025 | ChatGPT & OpenAI Integration | P1 | — | Server-side key + backend proxy | Model calls from backend with logs/costs | — | — | INTEGRATION_STATUS.md | BLOCKED |
-| REQ-026 | Gemini Integration | P1 | aas-cc/command-center/server/ai.mjs exists (not wired) | Backend per-company proxy | Gemini answers from authorised data with sources | — | — | INTEGRATION_STATUS.md | BLOCKED |
+| REQ-026 | Gemini Integration (AI agents & workspaces) | P1 | firestore.rules agents/workspaces; core.js validateAgent/buildAiRequest/aiRunnable; app.js renderAiAgents/runAgent (Firebase AI Logic 11.10.0); dashboard/one/ai-config.js | Firebase AI Logic enabled + App Check (reCAPTCHA Enterprise) enforced | Managers define agents (name, system instruction, gemini-* model, temperature 0–2); workspaces pick an active agent that must exist; runs send only agent settings + typed text; runs off without App Check; answers labelled AI | AGT-01, WS-01, CORE-09, E2E-36..40 | PASS with a stubbed model; real Gemini call and App Check not exercised | docs/jawafa-one/AI_AGENTS.md, evidence/e2e-results.json, 12-ai-agents.png | BUILT_NOT_TESTED |
 | REQ-027 | Facebook page link | P2 | app.js company profile; core.js validateSocial; rules validSocial | — | Managers add/edit https facebook.com link; shown in profile | SOC-01, E2E-07, E2E-08, CORE-02 | PASS | docs/jawafa-one/evidence/rules-tests.txt | TEST_PASSED |
 | REQ-028 | Instagram profile link | P2 | same as above | — | https instagram.com only | SOC-01, CORE-02 | PASS | docs/jawafa-one/evidence/rules-tests.txt | TEST_PASSED |
 | REQ-029 | TikTok profile link | P2 | same as above | — | https tiktok.com only | SOC-01, E2E-08 | PASS | docs/jawafa-one/evidence/rules-tests.txt | TEST_PASSED |
@@ -80,9 +80,9 @@ Generated from one table; counts below are computed from these rows, not estimat
 
 - VERIFIED: 0
 - TEST_PASSED: 38
-- BUILT_NOT_TESTED: 6
+- BUILT_NOT_TESTED: 7
 - IN_PROGRESS: 9
 - TEST_FAILED: 1
-- BLOCKED: 11
+- BLOCKED: 10
 - NOT_STARTED: 4
 - **Total: 69**

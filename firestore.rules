@@ -272,12 +272,40 @@ service cloud.firestore {
         allow delete: if isProcurer() && resource.data.status == 'draft';
       }
 
+      // ---------- AI agents and workspaces ----------
+      // An agent's instructions steer an AI model, so only owner/chairman/general manager edit
+      // agents. Writers organise workspaces and pick which agent each one uses. The model name is
+      // checked by shape only (gemini-…); whether a model exists is decided by the AI service.
+      function validAgent(d) {
+        return d.keys().hasOnly(['name', 'systemInstruction', 'model', 'temperature', 'by', 'at'])
+          && validName(d.name)
+          && d.systemInstruction is string && d.systemInstruction.size() > 0 && d.systemInstruction.size() <= 4000
+          && d.model is string && d.model.matches('gemini-[0-9a-z.-]{1,40}')
+          && (d.temperature is int || d.temperature is float) && d.temperature >= 0 && d.temperature <= 2
+          && d.by == uid() && d.at is number;
+      }
+      match /agents/{agentId} {
+        allow read: if isMember(cid);
+        allow create, update: if canManage(cid) && validAgent(request.resource.data);
+        allow delete: if canManage(cid);
+      }
+      match /workspaces/{workspaceId} {
+        allow read: if isMember(cid);
+        allow create, update: if canWrite(cid)
+          && request.resource.data.keys().hasOnly(['name', 'activeAgentId', 'by', 'at'])
+          && validName(request.resource.data.name)
+          && (!('activeAgentId' in request.resource.data) || request.resource.data.activeAgentId == null
+              || (request.resource.data.activeAgentId is string
+                  && exists(/databases/$(database)/documents/companies/$(cid)/agents/$(request.resource.data.activeAgentId))));
+        allow delete: if canWrite(cid);
+      }
+
       // Other tenant data (operational, non-accounting).
       // Branch-scoped collections are excluded here so that their own read rules apply.
       match /{coll}/{docId} {
         allow read: if isMember(cid) && !(coll in ['employees', 'purchaseOrders']);
         allow create, update, delete: if canWrite(cid)
-          && coll in ['workspaces', 'stages', 'agents', 'servers', 'bridges', 'designs',
+          && coll in ['stages', 'servers', 'bridges', 'designs',
                       'campaigns', 'activity', 'settings', 'store', 'connections',
                       'dashboards'];
       }

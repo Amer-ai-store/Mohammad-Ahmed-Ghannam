@@ -99,6 +99,33 @@
   const pendingApprovals = (role, orders) => (APPROVERS.includes(role) ? (orders || []).filter(o => o.status === "submitted") : []);
   const isDate = (d) => d === "" || (/^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d)));
 
+  // ---------- AI agents (must match firestore.rules validAgent) ----------
+  const AI_MODEL_RE = /^gemini-[0-9a-z.-]{1,40}$/;
+  /** Validates an agent form; returns { ok, value } or { ok:false, error }. */
+  function validateAgent(a) {
+    const name = String(a && a.name || "").trim();
+    const systemInstruction = String(a && a.systemInstruction || "").trim();
+    const model = String(a && a.model || "").trim();
+    const temperature = Number(a && a.temperature);
+    if (!name || name.length > 80) return { ok: false, error: "اسم الوكيل مطلوب (حتى 80 حرفًا)" };
+    if (!systemInstruction || systemInstruction.length > 4000) return { ok: false, error: "تعليمات الوكيل مطلوبة (حتى 4000 حرف)" };
+    if (!AI_MODEL_RE.test(model)) return { ok: false, error: "اسم النموذج يجب أن يبدأ بـ gemini- (أحرف صغيرة وأرقام ونقاط وشرطات)" };
+    if (!(Number.isFinite(temperature) && temperature >= 0 && temperature <= 2)) return { ok: false, error: "الحرارة رقم بين 0 و2" };
+    return { ok: true, value: { name, systemInstruction, model, temperature } };
+  }
+  /** The request sent to the model: only the agent settings and the text the member typed.
+   * No company dataset, financial record or other member data is attached. */
+  function buildAiRequest(agent, text) {
+    const t = String(text || "").trim();
+    if (!t) throw new Error("text required");
+    if (t.length > 8000) throw new Error("text too long");
+    const v = validateAgent(agent);
+    if (!v.ok) throw new Error(v.error);
+    return { model: v.value.model, systemInstruction: v.value.systemInstruction, generationConfig: { temperature: v.value.temperature }, contents: t };
+  }
+  /** Runs are allowed only on a site protected by App Check (or on the local emulator for tests). */
+  const aiRunnable = (siteKey, emulator) => !!emulator || (typeof siteKey === "string" && siteKey.trim().length > 10);
+
   // ---------- agent message router ----------
   const MSG_STATES = ["QUEUED", "DELIVERED", "READ", "ACKNOWLEDGED", "FAILED"];
   const NEXT = { QUEUED: ["DELIVERED", "FAILED"], DELIVERED: ["READ", "FAILED"], READ: ["ACKNOWLEDGED"], ACKNOWLEDGED: [], FAILED: [] };
@@ -274,6 +301,6 @@
   }
 
   return { ROLES, INVITABLE_ROLES, roleOf, can, normalizeEmail, isEmail, inviteId, validCompanyName, validateSocial,
-    branchScope, inScope, PROCURERS, APPROVERS, canManageEmployees, PO_STATES, PO_ACTION, poMoves, validateLines, poTotal, pendingApprovals, isDate,
+    branchScope, inScope, PROCURERS, APPROVERS, canManageEmployees, PO_STATES, PO_ACTION, poMoves, validateLines, poTotal, pendingApprovals, isDate, validateAgent, buildAiRequest, aiRunnable,
     MSG_STATES, canTransition, createRouter, FINDING_CLASS, classify, detectAnomalies, demoDataset, dailySales, kpis };
 });

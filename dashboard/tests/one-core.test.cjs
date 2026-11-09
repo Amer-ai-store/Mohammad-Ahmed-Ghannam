@@ -109,3 +109,20 @@ test('CORE-08 purchase orders: lines, totals and allowed moves per role', () => 
   assert.equal(C.PO_ACTION.approved, 'po.approve');
   assert.ok(C.isDate('2026-11-09')); assert.ok(C.isDate('')); assert.ok(!C.isDate('9/11/2026'));
 });
+
+test('CORE-09 AI agents: validation matches the rules and requests carry only agent settings + typed text', () => {
+  const a = { name: 'مساعد المبيعات', systemInstruction: 'أنت مساعد خبير في تحليل فواتير الإيجارات وتلخيصها للمستأجرين.', model: 'gemini-3.7-flash', temperature: '0.2' };
+  const v = C.validateAgent(a);
+  assert.ok(v.ok); assert.equal(v.value.temperature, 0.2);
+  assert.ok(!C.validateAgent({ ...a, model: 'gpt-4o' }).ok);
+  assert.ok(!C.validateAgent({ ...a, model: 'Gemini-Pro' }).ok);
+  assert.ok(!C.validateAgent({ ...a, temperature: 2.5 }).ok);
+  assert.ok(!C.validateAgent({ ...a, systemInstruction: '' }).ok);
+  const r = C.buildAiRequest(a, '  لخّص هذا العقد  ');
+  assert.deepEqual(Object.keys(r).sort(), ['contents', 'generationConfig', 'model', 'systemInstruction']);
+  assert.equal(r.contents, 'لخّص هذا العقد'); assert.equal(r.generationConfig.temperature, 0.2);
+  assert.throws(() => C.buildAiRequest(a, '   '));
+  assert.throws(() => C.buildAiRequest(a, 'x'.repeat(8001)));
+  assert.ok(!C.aiRunnable('', false)); assert.ok(!C.aiRunnable(undefined, false));
+  assert.ok(C.aiRunnable('6Lc_abcdefghijklmnop', false)); assert.ok(C.aiRunnable('', true));
+});
