@@ -98,6 +98,11 @@ const I18N = {
 function show(view) {
   view = (view || "home").replace(/^#/, "");
   if (!NAV.some(n => n[0] === view && view !== "sep")) view = "home";
+  // Clearing a private local CSV on leaving the evidence screen prevents stale sensitive rows.
+  if(current==="trustsoft-evidence" && view!==current){
+    const previous=document.querySelector('section.view[data-view="trustsoft-evidence"]');
+    if(previous){previous.replaceChildren();delete previous.dataset.oneEvidenceRendered;}
+  }
   current = view;
   for (const f of document.querySelectorAll(`section.view[data-view="${view}"] form[data-dirty]`)) f.removeAttribute("data-dirty");
   for (const s of document.querySelectorAll("section.view")) s.hidden = s.dataset.view !== view;
@@ -997,11 +1002,22 @@ function renderInvestigations(v) {
       el("div", { class: "small muted" }, T("الأدلة: لا توجد مستندات مرفقة (مصدر تجريبي).", "Evidence: none attached (demo source)."))))));
 }
 
+// Live company-state refreshes must not clear an asynchronously loaded evidence panel.
 function renderTrustsoftEvidenceView(v) {
+  if(v.dataset.oneEvidenceRendered==="true")return;
+  v.dataset.oneEvidenceRendered="true";
   renderTrustsoftEvidence(v);
 }
-function renderGithubWorkView(v) { renderGithubWork(v); }
-function renderJawafaCoverageView(v) { renderJawafaCoverage(v); }
+function renderGithubWorkView(v) {
+  if(v.dataset.oneGithubRendered==="true")return;
+  v.dataset.oneGithubRendered="true";
+  renderGithubWork(v);
+}
+function renderJawafaCoverageView(v) {
+  if(v.dataset.oneCoverageRendered==="true")return;
+  v.dataset.oneCoverageRendered="true";
+  renderJawafaCoverage(v);
+}
 
 function branchMap(d, h) {
   const W = 600, H = h || 320, P = (h || 320) < 260 ? 90 : 70;
