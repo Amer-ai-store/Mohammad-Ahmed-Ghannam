@@ -10,6 +10,8 @@ on:
       - "dashboard/tests/jawafa-db-github-work.test.mjs"
       - "dashboard/one/app.js"
       - "dashboard/one/index.html"
+      - "dashboard/index.html"
+      - "dashboard/tests/jawafa-one-central-route.test.cjs"
       - "dashboard/one/styles.css"
       - "dashboard/one/sw.js"
       - "dashboard/tests/trustsoft-evidence.test.mjs"
@@ -32,6 +34,7 @@ jobs:
         run: |
           node --test dashboard/tests/trustsoft-evidence.test.mjs
           node --test dashboard/tests/jawafa-db-github-work.test.mjs
+          node --test dashboard/tests/jawafa-one-central-route.test.cjs
       - name: JavaScript syntax
         run: |
           node --check dashboard/one/app.js
