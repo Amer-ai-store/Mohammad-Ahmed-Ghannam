@@ -140,10 +140,23 @@ jobs:
           node-version: '22'
       - name: Build installer and portable zip (unsigned)
         working-directory: apps/desktop
+        shell: pwsh
+        timeout-minutes: 25
         run: |
-          npm ci --no-audit --no-fund
+          # Electron archive downloads sometimes return transient CDN 504.
+          # Retry the lockfile-pinned install only; never bypass integrity checks.
+          $installed = $false
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            Write-Output "Installing exact npm lockfile dependencies (attempt $attempt / 3)"
+            npm ci --no-audit --no-fund
+            if ($LASTEXITCODE -eq 0) { $installed = $true; break }
+            if ($attempt -lt 3) { Start-Sleep -Seconds (10 * $attempt) }
+          }
+          if (-not $installed) { throw 'npm ci failed after three integrity-preserving attempts' }
           npm test
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop unit tests failed' }
           npm run dist:win
+          if ($LASTEXITCODE -ne 0) { throw 'Windows installer/zip build failed' }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: jawafa-one-windows
