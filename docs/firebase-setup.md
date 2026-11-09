@@ -50,3 +50,15 @@ https://console.firebase.google.com/project/ameraistore-1c81d/authentication/pro
 - الدخول برقم الهاتف يعمل عبر البريد المحفوظ في ذلك الحساب.
 - حساب المدير لا يُفتح إلا بكلمة `ADMIN_PASSWORD` من خانة الدخول، ولا يمكن تسجيل بريده كحساب عادي.
 - المستخدمون الذين أنشأتهم النسخ السابقة (دون كلمة مرور) يسجّلون من جديد بالبريد نفسه، فيُربط حسابهم القديم بنقاطه وطلباته.
+
+## الدخول بحساب Google في التطبيق (Credential Manager)
+- زر **الدخول عبر Google** في خانة تسجيل الدخول يفتح قائمة حسابات Google على الجهاز عبر Credential Manager. بعد اختيار الحساب يُسجَّل الدخول في تطبيق Firebase المسمّى `amer-live-store`، وهو نفسه الذي تستخدمه المزامنة، فتستمر المزامنة باسم الحساب.
+- أول دخول بحساب Google يُنشئ على الجهاز ملف عميل (Customer) باسم الحساب، والدخول التالي يفتح الملف نفسه. حساب المدير لا يُفتح عبر Google.
+- عند تسجيل الخروج يُنسى الحساب المختار، وتعود المزامنة إلى جلسة مجهولة.
+- رسائل الخطأ بالعربية: الإلغاء، وعدم وجود حساب Google على الجهاز، وانقطاع الاتصال، وعدم تفعيل الميزة في النسخة.
+
+### التفعيل (مرة واحدة)
+1. Firebase Console ← Authentication ← Sign-in method ← فعّل **Google**.
+2. انسخ **Web client ID** من إعدادات مزوّد Google نفسه (قسم Web SDK configuration)، وضعه في `.env` باسم `FIREBASE_WEB_CLIENT_ID`. في GitHub Actions يُقرأ من السر `FIREBASE_WEB_CLIENT_ID` إن وُجد. هذا معرّف عام وليس كلمة سر.
+3. Firebase Console ← Project settings ← تطبيق Android `com.aistudio.aicommerce.kpqzjx` ← أضف بصمتَي **SHA-1** لمفتاح التوقيع الثابت (`CN=Amer AI Store`) ولمفتاح الـ debug إن كنت تختبر نسخ debug. بدونهما ترفض Google إصدار الرمز.
+- ما دام `FIREBASE_WEB_CLIENT_ID` بقيمته المؤقتة `MY_FIREBASE_WEB_CLIENT_ID` يبقى الزر ظاهرًا، لكنه يعرض رسالة "تسجيل الدخول عبر Google غير مفعّل في هذه النسخة من التطبيق".
