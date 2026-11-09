@@ -5,6 +5,8 @@
 // records protected by firestore.rules (tested in tests/firestore).
 import { OFFICIAL_AGENTS } from "../aas/official-agent-roster.mjs";
 import { renderTrustsoftEvidence } from "./trustsoft-evidence.mjs";
+import { renderGithubWork } from "./github-work.mjs";
+import { renderJawafaCoverage } from "./jawafa-db-coverage.mjs";
 
 const C = window.JawafaCore;
 const FIREBASE_VERSION = "10.14.1";
@@ -52,6 +54,8 @@ const NAV = [
   ["finance", "🏦", "المالية والشيكات", "Finance & cheques"],
   ["investigations", "🛡", "التحقيقات", "Investigations"],
   ["trustsoft-evidence", "🧾", "تحليل TrustSoft", "TrustSoft evidence"],
+  ["jawafa-coverage", "▦", "تغطية قاعدة البيانات", "DB coverage"],
+  ["github-work", "⚙", "مستودع العمل GitHub", "GitHub work"],
   ["maps", "📍", "الخرائط", "Maps"],
   ["assistant", "✦", "المساعد الذكي", "AI assistant"],
   ["agents", "⚇", "الوكلاء", "Agents"],
@@ -996,6 +1000,8 @@ function renderInvestigations(v) {
 function renderTrustsoftEvidenceView(v) {
   renderTrustsoftEvidence(v);
 }
+function renderGithubWorkView(v) { renderGithubWork(v); }
+function renderJawafaCoverageView(v) { renderJawafaCoverage(v); }
 
 function branchMap(d, h) {
   const W = 600, H = h || 320, P = (h || 320) < 260 ? 90 : 70;
@@ -1187,7 +1193,7 @@ function renderUser() {
   $("status-data").textContent = state.demo ? T("البيانات المعروضة: تجريبية DEMO — ليست بيانات حقيقية", "Shown data: DEMO — not real") : T("البيانات التشغيلية: لا يوجد مصدر LIVE", "Operational data: no LIVE source");
 }
 
-const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, "trustsoft-evidence": renderTrustsoftEvidenceView, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals, aiagents: renderAiAgents, tasks: renderTasks, notifications: renderNotifications };
+const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, "trustsoft-evidence": renderTrustsoftEvidenceView, "github-work": renderGithubWorkView, "jawafa-coverage": renderJawafaCoverageView, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals, aiagents: renderAiAgents, tasks: renderTasks, notifications: renderNotifications };
 // Redraws a view but keeps what the user typed in forms marked dirty (see the listeners below), and
 // puts the caret back if it was inside one of those forms.
 function redrawKeepingDrafts(v) {
