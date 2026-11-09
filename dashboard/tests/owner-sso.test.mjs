@@ -141,7 +141,7 @@ test('phone registration form exposes manual country override and never defaults
   assert.match(page,/name="owner-phone-number"/);
   assert.match(page,/id="owner-phone-recaptcha"/);
   assert.match(page,/name="owner-sms-code"/);
-  assert.match(source,/startPhoneLogin\(formatPhoneNumber\(countrySelect.value,phone.value,region\)\)/);
+  assert.match(source,/startPhoneLogin\(\s*formatPhoneNumber\(countrySelect.value,phone.value,region\),stage\)/);
   assert.match(source,/auth\.signInWithPhoneNumber\(number,phoneVerifier\)/);
   assert.match(page,/id="owner-phone-status"/);
   assert.match(source,/CAPTCHA_ACTION_REQUIRED/);
