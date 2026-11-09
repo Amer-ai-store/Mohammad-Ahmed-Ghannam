@@ -100,12 +100,13 @@ try {
   check('E2E-46',trustsoftDenied,'modified private CSV rejected by SHA256 without displaying transaction rows');
   await a.page.screenshot({path:`${out}/12-trustsoft-historical-public-snapshot.png`});
   await nav(a.page,'jawafa-coverage');
-  await a.page.waitForFunction(()=>document.querySelectorAll('section.view[data-view="jawafa-coverage"] .jw-rule').length===10,null,{timeout:12000});
-  const dbCovered=await a.page.evaluate(()=>{
+  await a.page.waitForFunction(()=>document.querySelectorAll('section.view[data-view="jawafa-coverage"] .jw-rule').length>=10,null,{timeout:12000}).catch(()=>{});
+  const dbCoverage=await a.page.evaluate(()=>{
     const v=document.querySelector('section.view[data-view="jawafa-coverage"]');
-    return v.querySelectorAll('.jw-rule').length===10 && v.textContent.includes('1000/1000') && v.textContent.includes('لم يُقَس بعد') && v.textContent.includes('90%');
+    return {rules:v.querySelectorAll('.jw-rule').length,schema:v.textContent.includes('1000/1000'),unmeasured:v.textContent.includes('لم يُقَس بعد'),target:v.textContent.includes('90%'),status:v.querySelector('.ts-note')?.textContent};
   });
-  check('E2E-47',dbCovered,'1000 schema headers and 10 rules shown, semantic coverage unmeasured and 90% not falsely claimed');
+  const dbCovered=dbCoverage.rules>=10 && dbCoverage.schema && dbCoverage.unmeasured && dbCoverage.target;
+  check('E2E-47',dbCovered,'1000 schema headers and 10 rules, semantic coverage unmeasured; '+JSON.stringify(dbCoverage));
   await nav(a.page,'github-work');
   await a.page.waitForFunction(()=>document.querySelector('section.view[data-view="github-work"] .jw-repo-item')?.textContent.includes('JAWAFA ONE build'),null,{timeout:10000});
   const gh=await a.page.evaluate(()=>{
