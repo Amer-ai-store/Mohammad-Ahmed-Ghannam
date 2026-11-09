@@ -115,15 +115,46 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--require-90", action="store_true",
-                        help="Fail if frozen, accepted weighted parity is below 90 percent")
+                        help="Require >= 90% accepted workflows AND 100% of owner-used reports")
+    parser.add_argument("--reports-manifest", type=Path,
+                        help="Independent report catalog required for a release claim")
     args = parser.parse_args()
     try:
         result = evaluate(json.loads(args.manifest.read_text(encoding="utf-8")))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(json.dumps({"result": "INVALID_CATALOG", "error": str(exc)}))
         return 2
+    # A weighted 90% can never authorize release while ANY owner-used
+    # TrustSoft report is missing or unverified. This is a separate 100% gate.
+    if args.require_90:
+        if args.reports_manifest is None:
+            print(json.dumps({
+                "result": "REPORT_MANIFEST_REQUIRED_FOR_90_RELEASE_CLAIM",
+                "functional_parity": result,
+            }, ensure_ascii=False, sort_keys=True))
+            return 2
+        try:
+            from report_gate import evaluate as evaluate_reports
+            reports = evaluate_reports(json.loads(
+                args.reports_manifest.read_text(encoding="utf-8")
+            ))
+        except (OSError, ValueError) as exc:
+            print(json.dumps({"result": "INVALID_REPORT_CATALOG",
+                              "error": str(exc)}, ensure_ascii=False))
+            return 2
+        accepted = (
+            result["certification_eligible"] and
+            reports["report_release_gate_passed"]
+        )
+        print(json.dumps({
+            "result": "RELEASE_METADATA_GATES_PASSED" if accepted
+                else "ERP_RELEASE_NOT_APPROVED",
+            "functional_parity": result,
+            "owner_reports": reports,
+        }, ensure_ascii=False, sort_keys=True))
+        return 0 if accepted else 1
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
-    return 0 if not args.require_90 or result["certification_eligible"] else 1
+    return 0
 
 
 if __name__ == "__main__":
