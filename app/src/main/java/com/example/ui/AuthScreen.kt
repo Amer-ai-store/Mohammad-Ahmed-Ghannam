@@ -29,6 +29,9 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import androidx.compose.ui.res.painterResource
 import com.example.R
+import com.example.data.GoogleSignIn
+import com.example.data.GoogleSignInResult
+import kotlinx.coroutines.launch
 
 data class CountryDial(val flag: String, val code: String, val nameEn: String, val nameAr: String)
 
@@ -114,6 +117,21 @@ fun AuthScreen(viewModel: MarketViewModel) {
     var loginPassword by remember { mutableStateOf("") }
 
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    // Google sign-in (Credential Manager): runs over this Activity, then opens the account in the view model.
+    val googleScope = rememberCoroutineScope()
+    var googleLoading by remember { mutableStateOf(false) }
+    val startGoogleSignIn: () -> Unit = {
+        if (!googleLoading) {
+            googleLoading = true
+            errorMsg = null
+            googleScope.launch {
+                val result = GoogleSignIn.signIn(context)
+                googleLoading = false
+                if (result is GoogleSignInResult.Success) viewModel.completeGoogleSignIn(result.email, result.displayName)
+                else errorMsg = GoogleSignIn.message(result, lang)
+            }
+        }
+    }
 
     // Admin is not offered at sign-up: that account opens only with ADMIN_PASSWORD on the sign-in tab.
     val roles = listOf("Customer", "Merchant", "Delivery")
@@ -616,6 +634,13 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                     )
                                 }
                             }
+
+                            GoogleSignInButton(
+                                lang = lang,
+                                loading = googleLoading,
+                                enabled = !isAuthLoading,
+                                onClick = startGoogleSignIn
+                            )
                         }
                     }
                 }
@@ -739,6 +764,34 @@ fun AuthScreen(viewModel: MarketViewModel) {
                     }
                 }
             }
+        }
+    }
+}
+
+/** "Continue with Google" button for the sign-in form. */
+@Composable
+fun GoogleSignInButton(lang: String, loading: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val label = when {
+        loading -> if (lang == "ar") "جارٍ فتح حسابات Google..." else "Opening Google accounts..."
+        else -> if (lang == "ar") "الدخول عبر Google" else "Continue with Google"
+    }
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled && !loading,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .testTag("google_sign_in_button"),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryCyan.copy(alpha = 0.6f))
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (loading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Text("G", fontWeight = FontWeight.Black, fontSize = 16.sp, color = PrimaryCyan)
+            }
+            Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         }
     }
 }

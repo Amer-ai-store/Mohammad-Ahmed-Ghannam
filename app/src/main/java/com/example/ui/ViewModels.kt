@@ -34,7 +34,9 @@ class MarketViewModel(
     private val searchQueryDao: SearchQueryDao,
     private val familyShoppingListDao: FamilyShoppingListDao,
     private val storedOrganicItemDao: StoredOrganicItemDao,
-    private val authBackend: AuthBackend
+    private val authBackend: AuthBackend,
+    /** Ends a Google (Credential Manager) session on logout; a no-op where Google sign-in is not used. */
+    private val googleSignOut: suspend () -> Unit = {}
 ) : ViewModel() {
 
     private val TAG = "MarketViewModel"
@@ -880,16 +882,17 @@ class MarketViewModel(
     }
 
     /** Opens the profile for an email the auth backend accepted, creating one when this device has none yet. */
-    private suspend fun openAccount(email: String) {
+    private suspend fun openAccount(email: String, displayName: String? = null) {
         val existing = userDao.getUserByEmailIgnoreCase(email)
         if (existing?.role == "Admin") {
             // The admin account opens only through the ADMIN_PASSWORD sign-in in login().
             authBackend.signOut()
+            googleSignOut()
             triggerError(if (_appLanguage.value == "ar") "هذا الحساب يتطلب كلمة مرور المدير." else "This account needs the admin password.")
             return
         }
         val user = existing ?: UserEntity(
-            name = email.substringBefore("@"),
+            name = displayName?.trim()?.takeIf { it.isNotEmpty() }?.take(80) ?: email.substringBefore("@"),
             phoneNumber = "",
             email = normalizeEmail(email),
             role = "Customer",
@@ -954,8 +957,26 @@ class MarketViewModel(
         return true
     }
 
+    /**
+     * Opens the account for an email Google sign-in verified (see GoogleSignIn). A first sign-in creates
+     * a Customer profile on this device; the admin account is refused as in [openAccount].
+     */
+    fun completeGoogleSignIn(email: String, displayName: String?) {
+        if (email.isBlank()) return
+        viewModelScope.launch {
+            if (normalizeEmail(email) == normalizeEmail(ADMIN_EMAIL)) {
+                // The admin account opens only with ADMIN_PASSWORD, never through Google.
+                googleSignOut()
+                triggerError(if (_appLanguage.value == "ar") "هذا الحساب يتطلب كلمة مرور المدير." else "This account needs the admin password.")
+                return@launch
+            }
+            openAccount(normalizeEmail(email), displayName)
+        }
+    }
+
     fun logout() {
         authBackend.signOut()
+        viewModelScope.launch { googleSignOut() }
         pendingPassword = null
         _currentUser.value = null
         _currentRole.value = "Customer"

@@ -1473,6 +1473,11 @@ e2e('L123 L081 the Rafiq design: user-chosen, companions, floating market, inten
 // full conversation with the companion.
 e2e('L123 nearby stores, a branch page with directions and its stock, and the companion chat', async ({ open }) => {
   const user = await stack.register('مستكشف الفروع');
+  // A link picks the design (the Android smoke test opens Rafiq this way), and back to classic.
+  const linked = await open(user, '/appearance?design=rafiq');
+  await until(async () => (await id(linked, 'design-rafiq').getAttribute('aria-checked')) === 'true', 10000, 'the link chose Rafiq');
+  await go(linked, '/appearance?design=classic');
+  await until(async () => (await id(linked, 'design-classic').getAttribute('aria-checked')) === 'true', 10000, 'the link chose classic');
   const page = await open(user, '/nearby');
   await id(page, 'nearby-screen').waitFor();
   await until(async () => (await textOf(page, 'stat-branches')).includes('2'), 10000, 'two branches on the map');

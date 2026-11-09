@@ -38,9 +38,16 @@ class MainActivity : ComponentActivity() {
                 db.searchQueryDao(),
                 db.familyShoppingListDao(),
                 db.storedOrganicItemDao(),
-                authBackend
+                authBackend,
+                googleSignOut = { com.example.data.GoogleSignIn.signOut(applicationContext) }
             )
             val viewModel: MarketViewModel = viewModel(factory = viewModelFactory)
+            // Firebase keeps a Google session across launches; reopen that account once.
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                if (viewModel.currentUser.value == null) {
+                    com.example.data.GoogleSignIn.signedInEmail(applicationContext)?.let { viewModel.completeGoogleSignIn(it, null) }
+                }
+            }
             val isDark by viewModel.appDarkMode.collectAsState()
             
             MyApplicationTheme(darkTheme = isDark) {
