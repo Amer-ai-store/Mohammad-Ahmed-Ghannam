@@ -71,3 +71,41 @@ test('CORE-06 browser module app.js parses as an ES module', async () => {
   execFileSync(process.execPath, ['--check', f]);
   execFileSync(process.execPath, ['--check', join(__dirname, '../one/sw.js')]);
 });
+
+test('CORE-07 branch scope: only branch_manager/employee with a non-empty list are scoped', () => {
+  const c = { ownerUid: 'o', memberIds: ['o', 'g', 'b', 'e', 'x'], roles: { g: 'general_manager', b: 'branch_manager', e: 'employee', x: 'employee' },
+    branchScopes: { g: ['b1'], b: ['b1'], e: ['b2'], x: [], o: ['b1'] } };
+  assert.equal(C.branchScope(c, 'o'), null);
+  assert.equal(C.branchScope(c, 'g'), null);
+  assert.deepEqual(C.branchScope(c, 'b'), ['b1']);
+  assert.deepEqual(C.branchScope(c, 'e'), ['b2']);
+  assert.equal(C.branchScope(c, 'x'), null);
+  assert.ok(C.inScope(null, 'b9')); assert.ok(C.inScope(['b1'], 'b1')); assert.ok(!C.inScope(['b1'], 'b2'));
+  assert.ok(C.canManageEmployees('general_manager', null, 'b2'));
+  assert.ok(C.canManageEmployees('branch_manager', ['b1'], 'b1'));
+  assert.ok(!C.canManageEmployees('branch_manager', ['b1'], 'b2'));
+  assert.ok(!C.canManageEmployees('procurement_manager', null, 'b1'));
+  assert.ok(!C.canManageEmployees('employee', null, 'b1'));
+});
+
+test('CORE-08 purchase orders: lines, totals and allowed moves per role', () => {
+  const v = C.validateLines([{ sku: 'S-1', name: 'أرز', qty: '3', unitPrice: '1.1' }, { name: 'زيت', qty: 2, unitPrice: 7.95 }]);
+  assert.ok(v.ok); assert.equal(v.total, 19.2);
+  assert.ok(!C.validateLines([]).ok);
+  assert.ok(!C.validateLines([{ name: '', qty: 1, unitPrice: 1 }]).ok);
+  assert.ok(!C.validateLines([{ name: 'x', qty: 0, unitPrice: 1 }]).ok);
+  assert.ok(!C.validateLines([{ name: 'x', qty: 1, unitPrice: -1 }]).ok);
+  assert.deepEqual(C.poMoves('procurement_manager', null, { status: 'draft' }), ['submitted']);
+  assert.deepEqual(C.poMoves('procurement_manager', null, { status: 'submitted' }), []);
+  assert.deepEqual(C.poMoves('general_manager', null, { status: 'submitted' }), ['approved', 'rejected']);
+  assert.deepEqual(C.poMoves('general_manager', null, { status: 'approved' }), ['received']);
+  assert.deepEqual(C.poMoves('branch_manager', ['b1'], { status: 'approved', branchId: 'b1' }), ['received']);
+  assert.deepEqual(C.poMoves('branch_manager', ['b1'], { status: 'approved', branchId: 'b2' }), []);
+  assert.deepEqual(C.poMoves('accountant', null, { status: 'draft' }), []);
+  for (const s of ['rejected', 'received']) assert.deepEqual(C.poMoves('owner', null, { status: s }), []);
+  const orders = [{ status: 'submitted' }, { status: 'draft' }, { status: 'submitted' }];
+  assert.equal(C.pendingApprovals('owner', orders).length, 2);
+  assert.equal(C.pendingApprovals('procurement_manager', orders).length, 0);
+  assert.equal(C.PO_ACTION.approved, 'po.approve');
+  assert.ok(C.isDate('2026-11-09')); assert.ok(C.isDate('')); assert.ok(!C.isDate('9/11/2026'));
+});

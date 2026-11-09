@@ -1,4 +1,4 @@
-# ran 2026-11-06T18:48:34Z · node v22.23.4
+# ran 2026-11-09T00:56:40Z · node v22.23.4
 ok 1 - DESK-01 start URL must be https unless localhost
 ok 2 - DESK-02 only the app origin and Google/Firebase sign-in open inside the app
 ok 3 - DESK-03 user agent hides the Electron token
@@ -8,6 +8,8 @@ ok 6 - CORE-03 router: dedupe, forward-only states, receipts required from a rec
 ok 7 - CORE-04 anomaly engine finds seeded cases and never marks DEMO data as proven
 ok 8 - CORE-05 aggregates are derived from the dataset, not hard coded
 ok 9 - CORE-06 browser module app.js parses as an ES module
-# tests 9
-# pass 9
+ok 10 - CORE-07 branch scope: only branch_manager/employee with a non-empty list are scoped
+ok 11 - CORE-08 purchase orders: lines, totals and allowed moves per role
+# tests 11
+# pass 11
 # fail 0

@@ -56,7 +56,7 @@ try {
   // 1. Signed-out preview: every view navigable, demo data clearly labelled.
   const a = await open();
   check('E2E-01', (await a.page.evaluate(() => window.__jawafaState.cloud)) === 'ready', 'Firebase SDK loaded and emulator connected');
-  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans'];
+  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees'];
   const bad = [];
   for (const v of views) {
     await nav(a.page, v); await a.page.waitForTimeout(150);
@@ -174,6 +174,117 @@ try {
   const ro = await b.page.evaluate(() => ({ form: !!document.querySelector('section.view[data-view="branches"] input[name="bname"]'), rows: document.querySelectorAll('section.view[data-view="branches"] tbody tr').length }));
   check('E2E-27', !ro.form && ro.rows === 1, 'auditor sees the company branch but no add form');
 
+
+  // 3b. Operations (Phase 2): supplier → purchase order → approval inbox → decision in the audit log.
+  await nav(a.page, 'suppliers');
+  await a.page.locator('input[name="sname"]').fill('مورد الألبان التجريبي');
+  await a.page.locator('input[name="scat"]').fill('ألبان');
+  await a.page.getByRole('button', { name: 'إضافة' }).click();
+  await waitState(a.page, () => window.__jawafaState.suppliers.length === 1);
+  check('E2E-28', true, 'supplier saved to Firestore by the owner');
+  await nav(a.page, 'purchases'); await a.page.waitForTimeout(200);
+  const poView = a.page.locator('section.view[data-view="purchases"]');
+  await poView.locator('select[name="supplier"]').selectOption({ index: 1 });
+  await poView.locator('select[name="branch"]').selectOption({ index: 1 });
+  await a.page.getByLabel('الصنف', { exact: true }).fill('حليب 1 لتر');
+  await a.page.getByLabel('الكمية', { exact: true }).fill('10');
+  await a.page.getByLabel('سعر الوحدة', { exact: true }).fill('1.15');
+  await a.page.getByRole('button', { name: '+ سطر' }).click();
+  await a.page.getByLabel('الصنف', { exact: true }).nth(1).fill('لبنة');
+  await a.page.getByLabel('الكمية', { exact: true }).nth(1).fill('4');
+  await a.page.getByLabel('سعر الوحدة', { exact: true }).nth(1).fill('2.5');
+  const shownTotal = await a.page.locator('#po-total').textContent();
+  await a.page.getByRole('button', { name: 'حفظ كمسودة' }).click();
+  await waitState(a.page, () => window.__jawafaState.orders.length === 1);
+  const po1 = await a.page.evaluate(() => window.__jawafaState.orders[0]);
+  check('E2E-29', po1.status === 'draft' && po1.total === 21.5 && po1.lines.length === 2 && /21\.5/.test(shownTotal), `purchase order saved as draft with 2 lines, total ${po1.total} (form showed ${shownTotal.trim()})`);
+  await a.page.getByRole('button', { name: 'إرسال للموافقة' }).click();
+  await waitState(a.page, () => window.__jawafaState.orders[0]?.status === 'submitted');
+  const bell = await a.page.waitForFunction(() => document.querySelector('#bell .count')?.textContent === '1' && !document.getElementById('bell').hidden, null, { timeout: 5000 }).then(() => true, () => false);
+  check('E2E-30', bell, 'submitted order appears as 1 on the approvals bell');
+  await a.page.locator('#bell').click();
+  await a.page.waitForFunction(() => !document.querySelector('section.view[data-view="approvals"]').hidden);
+  await a.page.locator('section.view[data-view="approvals"] input[aria-label="ملاحظة القرار"]').fill('السعر مطابق');
+  await a.page.getByRole('button', { name: 'اعتماد' }).click();
+  await waitState(a.page, () => window.__jawafaState.orders[0]?.status === 'approved');
+  await waitState(a.page, () => ['po.create', 'po.submit', 'po.approve'].every(x => window.__jawafaState.audit.some(e => e.action === x)));
+  const bellGone = await a.page.waitForFunction(() => document.querySelector('#bell .count').hidden, null, { timeout: 5000 }).then(() => true, () => false);
+  check('E2E-31', bellGone, 'owner approved from the inbox; bell cleared; po.create, po.submit, po.approve in audit log');
+  const frozen = await expectDenial(() => a.page.evaluate(async () => {
+    const st = window.__jawafaState; const ref = window.firebase.app().firestore().collection('companies').doc(st.companyId).collection('purchaseOrders').doc(st.orders[0].id);
+    const out = {};
+    try { await ref.update({ total: 1, updatedAt: Date.now() }); out.edit = 'allowed'; } catch (e) { out.edit = e.code; }
+    try { await ref.update({ status: 'rejected', decidedBy: st.user.uid, decidedAt: Date.now(), updatedAt: Date.now() }); out.redecide = 'allowed'; } catch (e) { out.redecide = e.code; }
+    return out;
+  }));
+  check('E2E-32', frozen.edit === 'permission-denied' && frozen.redecide === 'permission-denied', 'approved order cannot be edited or re-decided via API: ' + JSON.stringify(frozen));
+
+  // Employees and branch scope: a second branch, two employees, a branch manager limited to branch 1.
+  await nav(a.page, 'branches'); await a.page.waitForTimeout(200);
+  await a.page.locator('input[name="bname"]').fill('أفران جوافة — عمّان');
+  await a.page.locator('select[name="kind"]').selectOption('bakery');
+  await a.page.getByRole('button', { name: 'إضافة' }).click();
+  await waitState(a.page, () => window.__jawafaState.branches.length === 2);
+  const [br1, br2] = await a.page.evaluate(() => { const b = window.__jawafaState.branches; return [b.find(x => x.kind === 'market').id, b.find(x => x.kind === 'bakery').id]; });
+  await nav(a.page, 'employees'); await a.page.waitForTimeout(200);
+  const empView = a.page.locator('section.view[data-view="employees"]');
+  for (const [name, br] of [['موظف الزرقاء', br1], ['خباز عمّان', br2]]) {
+    await empView.locator('input[name="ename"]').fill(name);
+    await empView.locator('input[name="title"]').fill('اختبار');
+    await empView.locator('select[name="branch"]').selectOption(br);
+    await empView.locator('input[name="start"]').fill('2026-11-01');
+    await a.page.getByRole('button', { name: 'إضافة' }).click();
+    await waitState(a.page, (n) => window.__jawafaState.employees.some(e => e.name === n), name);
+  }
+  await a.page.waitForFunction(() => document.querySelectorAll('section.view[data-view="employees"] tbody tr').length === 2, null, { timeout: 5000 });
+  await a.page.locator('#emp-branch').selectOption(br2);
+  const filtered = await a.page.waitForFunction(() => { const r = document.querySelectorAll('section.view[data-view="employees"] tbody tr'); return r.length === 1 && /خباز/.test(r[0].textContent); }, null, { timeout: 5000 }).then(() => true, () => false);
+  await a.page.locator('#emp-branch').selectOption('');
+  await a.page.locator('section.view[data-view="employees"] tr', { hasText: 'خباز عمّان' }).getByRole('button', { name: 'إيقاف' }).click();
+  await waitState(a.page, () => window.__jawafaState.employees.find(e => e.name === 'خباز عمّان')?.status === 'inactive');
+  check('E2E-33', filtered, 'two employees added, branch filter shows one, deactivation saved (no delete)');
+  await nav(a.page, 'members'); await a.page.waitForTimeout(200);
+  await a.page.locator('input[name="email"]').fill('bm.a@example.com');
+  await a.page.locator('select[name="role"]').selectOption('branch_manager');
+  await a.page.getByRole('button', { name: 'إرسال الدعوة' }).click();
+  await waitState(a.page, () => window.__jawafaState.companies[0]?.pendingInvites?.['bm.a@example.com'] === 'branch_manager');
+  const d = await open();
+  await signIn(d.page, 'bm.a@example.com', 'bmA');
+  await waitState(d.page, () => window.__jawafaState.invites.length === 1);
+  await nav(d.page, 'company'); await d.page.waitForTimeout(300);
+  await d.page.getByRole('button', { name: 'قبول' }).click();
+  await waitState(d.page, () => window.__jawafaState.companies.length === 1);
+  // Owner limits the branch manager to branch 1 from the users screen.
+  await nav(a.page, 'members');
+  await a.page.waitForFunction(() => document.querySelectorAll('section.view[data-view="members"] details.scope').length === 1, null, { timeout: 5000 });
+  const scopeBox = a.page.locator('section.view[data-view="members"] details.scope');
+  await scopeBox.locator('summary').click();
+  await scopeBox.locator(`input[value="${br1}"]`).check();
+  await scopeBox.getByRole('button', { name: 'حفظ' }).click();
+  // The Auth emulator assigns its own uid; read it from the branch manager's session.
+  const bmUid = await d.page.evaluate(() => window.__jawafaState.user.uid);
+  await waitState(a.page, ([u, b]) => JSON.stringify(window.__jawafaState.companies[0]?.branchScopes?.[u]) === JSON.stringify([b]), [bmUid, br1]);
+  await waitState(d.page, () => window.__jawafaState.employees.length === 1 && window.__jawafaState.orders.length === 1);
+  const seen = await d.page.evaluate(() => window.__jawafaState.employees.map(e => e.name));
+  const peek = await expectDenial(() => d.page.evaluate(async (b2) => {
+    const fs = window.firebase.app().firestore(); const id = window.__jawafaState.companyId; const out = {};
+    try { await fs.collection('companies').doc(id).collection('employees').get(); out.all = 'allowed'; } catch (e) { out.all = e.code; }
+    try { await fs.collection('companies').doc(id).collection('employees').where('branchId', '==', b2).get(); out.other = 'allowed'; } catch (e) { out.other = e.code; }
+    return out;
+  }, br2));
+  check('E2E-34', seen.length === 1 && seen[0] === 'موظف الزرقاء' && peek.all === 'permission-denied' && peek.other === 'permission-denied', `branch manager limited to branch 1 sees ${JSON.stringify(seen)}; other branch via API: ${JSON.stringify(peek)}`);
+  await nav(d.page, 'approvals'); await d.page.waitForTimeout(200);
+  const noApprove = await d.page.evaluate(() => /لا يملك صلاحية/.test(document.querySelector('section.view[data-view="approvals"]').textContent) && document.getElementById('bell').querySelector('.count').hidden);
+  await nav(d.page, 'purchases');
+  await d.page.getByRole('button', { name: 'تأكيد الاستلام' }).click();
+  await waitState(d.page, () => window.__jawafaState.orders[0]?.status === 'received');
+  await waitState(a.page, () => window.__jawafaState.audit.some(e => e.action === 'po.receive'));
+  check('E2E-35', noApprove, 'branch manager has no approval rights and no bell count, and confirms receipt of the branch-1 order (po.receive audited)');
+  await nav(a.page, 'purchases'); await a.page.waitForTimeout(300);
+  await a.page.screenshot({ path: `${out}/10-purchases.png` });
+  await nav(d.page, 'employees'); await d.page.waitForTimeout(300);
+  await d.page.screenshot({ path: `${out}/11-employees-branch-manager.png` });
+
   // 4. A stranger cannot read company A, even by id through the API.
   const c = await open({ width: 390, height: 844 });
   await signIn(c.page, 'stranger@example.com', 'strangerX');
@@ -199,7 +310,7 @@ try {
   await nav(c.page, 'company'); await c.page.waitForTimeout(400);
   await c.page.screenshot({ path: `${out}/05-company-mobile-stranger.png` });
 
-  const all = [...a.errors, ...b.errors, ...c.errors].map(e => typeof e === 'string' ? { at: 0, text: e, url: '' } : e);
+  const all = [...a.errors, ...b.errors, ...c.errors, ...d.errors].map(e => typeof e === 'string' ? { at: 0, text: e, url: '' } : e);
   const errs = all.filter(e => !/permission-denied|PERMISSION_DENIED|Missing or insufficient permissions/.test(e.text) && !isExpectedDenialNoise(e));
   const ignored = all.length - errs.length;
   check('E2E-18', errs.length === 0, 'no unexpected page/console errors' + (ignored ? ` (${ignored} expected denial log(s) ignored)` : '') + (errs.length ? ': ' + errs.slice(0, 3).map(e => e.text + ' @ ' + e.url).join(' | ') : ''));

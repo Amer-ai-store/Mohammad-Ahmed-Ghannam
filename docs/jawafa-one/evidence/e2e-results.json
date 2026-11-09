@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-11-06T18:48:56.397Z",
+  "ranAt": "2026-11-09T00:55:28.681Z",
   "environment": "Firebase Auth + Firestore emulators, Chromium (Playwright), local static server",
   "results": [
     {
@@ -10,7 +10,7 @@
     {
       "id": "E2E-02",
       "result": "PASS",
-      "detail": "14 views render after navigation"
+      "detail": "18 views render after navigation"
     },
     {
       "id": "E2E-03",
@@ -113,6 +113,46 @@
       "detail": "auditor sees the company branch but no add form"
     },
     {
+      "id": "E2E-28",
+      "result": "PASS",
+      "detail": "supplier saved to Firestore by the owner"
+    },
+    {
+      "id": "E2E-29",
+      "result": "PASS",
+      "detail": "purchase order saved as draft with 2 lines, total 21.5 (form showed 21.5 د.أ)"
+    },
+    {
+      "id": "E2E-30",
+      "result": "PASS",
+      "detail": "submitted order appears as 1 on the approvals bell"
+    },
+    {
+      "id": "E2E-31",
+      "result": "PASS",
+      "detail": "owner approved from the inbox; bell cleared; po.create, po.submit, po.approve in audit log"
+    },
+    {
+      "id": "E2E-32",
+      "result": "PASS",
+      "detail": "approved order cannot be edited or re-decided via API: {\"edit\":\"permission-denied\",\"redecide\":\"permission-denied\"}"
+    },
+    {
+      "id": "E2E-33",
+      "result": "PASS",
+      "detail": "two employees added, branch filter shows one, deactivation saved (no delete)"
+    },
+    {
+      "id": "E2E-34",
+      "result": "PASS",
+      "detail": "branch manager limited to branch 1 sees [\"موظف الزرقاء\"]; other branch via API: {\"all\":\"permission-denied\",\"other\":\"permission-denied\"}"
+    },
+    {
+      "id": "E2E-35",
+      "result": "PASS",
+      "detail": "branch manager has no approval rights and no bell count, and confirms receipt of the branch-1 order (po.receive audited)"
+    },
+    {
       "id": "E2E-14",
       "result": "PASS",
       "detail": "stranger API access to company A denied: {\"doc\":\"permission-denied\",\"msgs\":\"permission-denied\",\"plan\":\"permission-denied\"}"
@@ -140,7 +180,7 @@
     {
       "id": "PERF-01",
       "result": "PASS",
-      "detail": "time to ready (load + Firebase SDK + emulator): desktop 831 ms, mobile 546 ms"
+      "detail": "time to ready (load + Firebase SDK + emulator): desktop 789 ms, mobile 422 ms"
     }
   ]
 }

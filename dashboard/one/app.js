@@ -53,6 +53,11 @@ const NAV = [
   ["maps", "📍", "الخرائط", "Maps"],
   ["assistant", "✦", "المساعد الذكي", "AI assistant"],
   ["agents", "⚇", "الوكلاء", "Agents"],
+  ["sep", "", "العمليات", "Operations"],
+  ["approvals", "🔔", "الموافقات", "Approvals"],
+  ["purchases", "🛍", "أوامر الشراء", "Purchase orders"],
+  ["suppliers", "🚚", "الموردون", "Suppliers"],
+  ["employees", "🪪", "الموظفون", "Employees"],
   ["sep", "", "الإدارة", "Administration"],
   ["connections", "🔗", "الربط والتكاملات", "Integrations"],
   ["company", "🏢", "الشركة", "Company"],
@@ -95,7 +100,7 @@ function show(view) {
 // ---------- state ----------
 const state = {
   cloud: "loading", // loading | ready | unconfigured | failed
-  user: null, profile: null, companies: [], companyId: null, invites: [], messages: [], tasks: [], branches: [], audit: [],
+  user: null, profile: null, companies: [], companyId: null, invites: [], messages: [], tasks: [], branches: [], audit: [], employees: [], suppliers: [], orders: [], scopeKey: null,
   demo: store.get("jawafa-one-demo", "1") === "1",
   localRouter: C.createRouter(),
 };
@@ -105,7 +110,7 @@ const dataset = (() => { let cache; return () => (state.demo ? (cache ||= C.demo
 
 // ---------- Firebase ----------
 let fb, auth, fs;
-const unsubs = { companies: null, invites: null, messages: null, tasks: null, branches: null, audit: null };
+const unsubs = { companies: null, invites: null, messages: null, tasks: null, branches: null, audit: null, employees: null, suppliers: null, orders: null };
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error(src)); document.head.append(s); }); }
 
 async function initCloud() {
@@ -143,7 +148,7 @@ function stopAll() { for (const k of Object.keys(unsubs)) { if (unsubs[k]) unsub
 function onUser(user) {
   stopAll();
   state.user = user && !user.isAnonymous ? { uid: user.uid, email: C.normalizeEmail(user.email), name: user.displayName || "", photo: user.photoURL || "" } : null;
-  state.companies = []; state.invites = []; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.companyId = null; state.profile = null;
+  state.companies = []; state.invites = []; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.employees = []; state.suppliers = []; state.orders = []; state.scopeKey = null; state.companyId = null; state.profile = null;
   if (!state.user) { render(); return; }
   // The profile remembers the last company across devices; localStorage is only a fallback.
   const me = state.user;
@@ -153,7 +158,12 @@ function onUser(user) {
     if (!state.companies.some(c => c.id === state.companyId)) {
       const saved = (state.profile && state.profile.lastCompanyId) || store.get("jawafa-one-company:" + state.user.uid, "");
       selectCompany(state.companies.some(c => c.id === saved) ? saved : state.companies[0]?.id || null);
-    } else render();
+    } else {
+      // A manager may change this member's branch scope; re-query with the new filter.
+      const sc = C.branchScope(company(), state.user.uid);
+      if (state.scopeKey !== state.companyId + "|" + (sc ? sc.join(",") : "*")) subscribeOps();
+      render();
+    }
   }, err => { toast(T("تعذّر قراءة الشركات: ", "Could not read companies: ") + S(err.code, 60)); });
   if (state.user.email) unsubs.invites = fs.collection("invites").where("email", "==", state.user.email).onSnapshot(snap => {
     state.invites = snap.docs.map(d => ({ id: d.id, ...d.data() })); render();
@@ -175,6 +185,7 @@ function selectCompany(id) {
     unsubs.messages = ref.collection("agentMessages").orderBy("at", "desc").limit(50).onSnapshot(s => { state.messages = s.docs.map(d => d.data()); render(); }, () => {});
     unsubs.tasks = ref.collection("tasks").orderBy("at", "desc").limit(50).onSnapshot(s => { state.tasks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
   }
+  subscribeOps();
   render();
 }
 
@@ -355,8 +366,266 @@ function renderBranches(v) {
     el("td", null, b.lat != null ? el("a", { href: `https://www.google.com/maps?q=${b.lat},${b.lng}`, target: "_blank", rel: "noopener noreferrer" }, "Google Maps") : ""),
     el("td", null, w ? el("button", { class: "ghost", onclick: () => deleteBranch(b) }, T("حذف", "Delete")) : "")));
   v.replaceChildren(sectionHead(T("الفروع والمستودعات", "Branches & warehouses"), badge("demo", "UNVERIFIED"), csvBtn(() => downloadCsv("branches", "UNVERIFIED", [T("الاسم", "Name"), T("النوع", "Type"), T("المدينة", "City"), "lat", "lng"], state.branches.map(b => [b.name, b.kind, b.city, b.lat, b.lng])))),
-    el("div", { class: "banner info" }, T("بيانات الفروع يدخلها أعضاء الشركة وتُحفظ في Firestore الخاص بشركتك. وسمها UNVERIFIED لأنها غير مطابقة مع مصدر رسمي. صلاحيات على مستوى الفرع: لم تُنفّذ بعد.", "Branch data is entered by company members and stored in your company's Firestore. Labelled UNVERIFIED because it is not matched against an official source. Branch-level permissions: not implemented yet.")),
+    el("div", { class: "banner info" }, T("بيانات الفروع يدخلها أعضاء الشركة وتُحفظ في Firestore الخاص بشركتك. وسمها UNVERIFIED لأنها غير مطابقة مع مصدر رسمي. صلاحيات الفروع: يحدد المدير لكل مدير فرع أو موظف فروعه من شاشة المستخدمين.", "Branch data is entered by company members and stored in your company's Firestore. Labelled UNVERIFIED because it is not matched against an official source. Branch permissions: managers set each branch manager's or employee's branches on the users screen.")),
     form, el("div", { style: "margin-top:1rem" }, table([T("الاسم", "Name"), T("النوع", "Type"), T("المدينة", "City"), T("الإحداثيات", "Coordinates"), "", ""], rows)));
+}
+
+// ---------- operations: employees, suppliers, purchase orders, approvals (Phase 2) ----------
+// Records live in companies/{id}/employees|suppliers|purchaseOrders and are protected by
+// firestore.rules (tests EMP-01, SCOPE-01, SUP-01, PO-01, PO-02). Nothing here is DEMO data:
+// lists start empty and hold only what company members enter (labelled UNVERIFIED).
+const scope = () => (state.user ? C.branchScope(company(), state.user.uid) : null);
+const branchName = (id) => S(state.branches.find(b => b.id === id)?.name || id, 80);
+const supplierName = (id) => S(state.suppliers.find(s => s.id === id)?.name || id, 80);
+const PO_LABEL = { draft: ["مسودة", "Draft"], submitted: ["بانتظار الموافقة", "Awaiting approval"], approved: ["معتمد", "Approved"], rejected: ["مرفوض", "Rejected"], received: ["مستلم", "Received"] };
+const PO_BADGE = { draft: "", submitted: "demo", approved: "live", rejected: "blocked", received: "verified" };
+const poBadge = (s) => badge(PO_BADGE[s] ?? "", T(...(PO_LABEL[s] || [s, s])));
+const myApprovals = () => C.pendingApprovals(role(), state.orders);
+const needCompany = (v, title) => v.replaceChildren(sectionHead(title), el("p", null, el("a", { href: "#company" }, T("أنشئ شركة أو اقبل دعوة أولًا.", "Create a company or accept an invitation first."))));
+const scopeNote = () => scope() ? el("div", { class: "banner info" }, T("صلاحيتك محصورة في الفروع: ", "Your access is limited to branches: ") + scope().map(branchName).join("، ")) : null;
+const branchOptions = (sel, filter) => state.branches.filter(b => !filter || filter(b.id)).map(b => el("option", { value: b.id, selected: b.id === sel }, S(b.name, 80)));
+
+function subscribeOps() {
+  for (const k of ["employees", "suppliers", "orders"]) { if (unsubs[k]) unsubs[k](); unsubs[k] = null; }
+  state.employees = []; state.suppliers = []; state.orders = [];
+  const id = state.companyId;
+  if (!id || !state.user || !company()) { state.scopeKey = null; return; }
+  const sc = scope();
+  state.scopeKey = id + "|" + (sc ? sc.join(",") : "*");
+  const ref = fs.collection("companies").doc(id);
+  // Scoped members must ask only for their branches: the rules reject an unfiltered query.
+  const scoped = (q) => (sc ? q.where("branchId", "in", sc.slice(0, 30)) : q);
+  const sortAt = (a, b) => (b.at || 0) - (a.at || 0);
+  unsubs.employees = scoped(ref.collection("employees")).limit(500).onSnapshot(s => { state.employees = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => S(a.name).localeCompare(S(b.name))); render(); }, () => {});
+  unsubs.suppliers = ref.collection("suppliers").limit(500).onSnapshot(s => { state.suppliers = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => S(a.name).localeCompare(S(b.name))); render(); }, () => {});
+  unsubs.orders = scoped(ref.collection("purchaseOrders")).limit(500).onSnapshot(s => { state.orders = s.docs.map(d => ({ id: d.id, ...d.data() })).sort(sortAt); render(); }, () => {});
+}
+
+// --- employees ---
+const empForm = { editing: null };
+async function saveEmployee(f) {
+  const name = f.ename.value.trim(), branchId = f.branch.value, startDate = f.start.value;
+  if (!name || name.length > 80) { toast(T("اسم الموظف مطلوب (حتى 80 حرفًا).", "Employee name required (≤80).")); return false; }
+  if (!branchId) { toast(T("اختر الفرع. أضف فرعًا أولًا إن لم يوجد.", "Choose a branch (add one first if none).")); return false; }
+  if (!C.isDate(startDate)) { toast(T("تاريخ المباشرة غير صحيح.", "Invalid start date.")); return false; }
+  const data = { name, title: S(f.title.value.trim(), 80), branchId, phone: S(f.phone.value.trim(), 30), status: f.status.value === "inactive" ? "inactive" : "active", startDate, by: state.user.uid, at: Date.now() };
+  const col = fs.collection("companies").doc(state.companyId).collection("employees");
+  try {
+    if (empForm.editing) { await col.doc(empForm.editing).set(data); audit("employee.update", name); }
+    else { await col.add(data); audit("employee.create", name); }
+    empForm.editing = null; toast(T("حُفظ الموظف.", "Employee saved.")); return true;
+  } catch (e) { fail(e); return false; }
+}
+async function setEmployeeStatus(e, status) {
+  try { await fs.collection("companies").doc(state.companyId).collection("employees").doc(e.id).update({ status, by: state.user.uid, at: Date.now() }); audit(status === "inactive" ? "employee.deactivate" : "employee.activate", e.name); }
+  catch (err) { fail(err); }
+}
+function renderEmployees(v) {
+  const title = T("الموظفون", "Employees");
+  if (!state.user) return needSignIn(v, title);
+  if (!company()) return needCompany(v, title);
+  const r = role(), sc = scope();
+  const filter = v.querySelector("#emp-branch")?.value || "";
+  const list = state.employees.filter(e => !filter || e.branchId === filter);
+  const canAny = C.can(r, "manage") || r === "branch_manager";
+  const editing = empForm.editing ? state.employees.find(e => e.id === empForm.editing) : null;
+  const form = canAny ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await saveEmployee(e.target)) { e.target.reset(); render(); } } },
+    el("h3", null, editing ? T("تعديل موظف", "Edit employee") : T("إضافة موظف", "Add employee")),
+    el("div", { class: "cols-2" },
+      el("label", { class: "small" }, T("الاسم", "Name"), el("input", { name: "ename", maxlength: "80", required: true, value: editing ? S(editing.name, 80) : null })),
+      el("label", { class: "small" }, T("المسمى الوظيفي", "Job title"), el("input", { name: "title", maxlength: "80", value: editing ? S(editing.title, 80) : null })),
+      el("label", { class: "small" }, T("الفرع", "Branch"), el("select", { name: "branch", required: true }, el("option", { value: "" }, "—"), ...branchOptions(editing?.branchId, (id) => C.canManageEmployees(r, sc, id)))),
+      el("label", { class: "small" }, T("الهاتف", "Phone"), el("input", { name: "phone", maxlength: "30", class: "ltr", inputmode: "tel", value: editing ? S(editing.phone, 30) : null })),
+      el("label", { class: "small" }, T("تاريخ المباشرة", "Start date"), el("input", { name: "start", type: "date", class: "ltr", value: editing ? S(editing.startDate, 10) : null })),
+      el("label", { class: "small" }, T("الحالة", "Status"), el("select", { name: "status" }, el("option", { value: "active", selected: editing?.status !== "inactive" }, T("على رأس العمل", "Active")), el("option", { value: "inactive", selected: editing?.status === "inactive" }, T("موقوف", "Inactive"))))),
+    el("div", { class: "toolbar" }, el("button", { class: "primary", type: "submit" }, editing ? T("حفظ التعديل", "Save changes") : T("إضافة", "Add")),
+      editing ? el("button", { type: "button", onclick: () => { empForm.editing = null; render(); } }, T("إلغاء", "Cancel")) : null),
+    state.branches.length ? null : el("p", { class: "small muted" }, el("a", { href: "#branches" }, T("لا توجد فروع بعد — أضف فرعًا أولًا.", "No branches yet — add one first."))))
+    : el("div", { class: "panel muted small" }, T("دورك للقراءة فقط. إدارة الموظفين للمالك ورئيس المجلس والمدير العام ومدير الفرع.", "Read only. Owner, chairman, general manager and branch managers manage employees."));
+  const rows = list.map(e => el("tr", null, el("td", null, S(e.name, 80)), el("td", null, S(e.title, 80)), el("td", null, branchName(e.branchId)),
+    el("td", { class: "ltr" }, S(e.phone, 30)), el("td", { class: "ltr" }, S(e.startDate, 10) || "—"),
+    el("td", null, e.status === "inactive" ? badge("blocked", T("موقوف", "Inactive")) : badge("live", T("على رأس العمل", "Active"))),
+    el("td", null, C.canManageEmployees(r, sc, e.branchId) ? el("div", { class: "toolbar", style: "margin:0" },
+      el("button", { class: "ghost", onclick: () => { empForm.editing = e.id; render(); } }, T("تعديل", "Edit")),
+      el("button", { class: "ghost", onclick: () => setEmployeeStatus(e, e.status === "inactive" ? "active" : "inactive") }, e.status === "inactive" ? T("إعادة تفعيل", "Reactivate") : T("إيقاف", "Deactivate"))) : "")));
+  v.replaceChildren(sectionHead(title, badge("demo", "UNVERIFIED"),
+      el("select", { id: "emp-branch", style: "width:auto", "aria-label": T("تصفية حسب الفرع", "Filter by branch"), onchange: () => renderEmployees(v) }, el("option", { value: "" }, T("كل الفروع", "All branches")), ...branchOptions(filter, sc ? (id) => sc.includes(id) : null)),
+      csvBtn(() => downloadCsv("employees", "UNVERIFIED", [T("الاسم", "Name"), T("المسمى", "Title"), T("الفرع", "Branch"), T("الهاتف", "Phone"), T("المباشرة", "Start"), T("الحالة", "Status")], list.map(e => [e.name, e.title, branchName(e.branchId), e.phone, e.startDate, e.status])))),
+    el("div", { class: "banner info" }, T("سجلات الموظفين يدخلها أعضاء الشركة وتُحفظ في Firestore شركتك. لا تُحذف؛ تُوقف فقط ليبقى السجل كاملًا. غير مربوطة بقاعدة جوافة.", "Employee records are entered by company members and stored in your company's Firestore. They are never deleted, only deactivated. Not connected to the Jawafa database.")),
+    scopeNote() || "", form,
+    el("div", { style: "margin-top:1rem" }, table([T("الاسم", "Name"), T("المسمى", "Title"), T("الفرع", "Branch"), T("الهاتف", "Phone"), T("المباشرة", "Start"), T("الحالة", "Status"), ""], rows)));
+}
+
+// --- suppliers ---
+async function addSupplier(f) {
+  const name = f.sname.value.trim(), email = f.semail.value.trim();
+  if (!name || name.length > 80) { toast(T("اسم المورد مطلوب (حتى 80 حرفًا).", "Supplier name required (≤80).")); return false; }
+  if (email && !C.isEmail(email)) { toast(T("البريد غير صحيح.", "Invalid email.")); return false; }
+  try {
+    await fs.collection("companies").doc(state.companyId).collection("suppliers").add({ name, phone: S(f.sphone.value.trim(), 30), email: C.normalizeEmail(email), category: S(f.scat.value.trim(), 80), status: "active", by: state.user.uid, at: Date.now() });
+    audit("supplier.create", name); toast(T("أُضيف المورد.", "Supplier added.")); return true;
+  } catch (e) { fail(e); return false; }
+}
+async function setSupplierStatus(s, status) {
+  try { await fs.collection("companies").doc(state.companyId).collection("suppliers").doc(s.id).update({ status, by: state.user.uid, at: Date.now() }); audit("supplier." + (status === "inactive" ? "deactivate" : "activate"), s.name); }
+  catch (e) { fail(e); }
+}
+function renderSuppliers(v) {
+  const title = T("الموردون", "Suppliers");
+  if (!state.user) return needSignIn(v, title);
+  if (!company()) return needCompany(v, title);
+  const w = C.PROCURERS.includes(role());
+  const count = (id) => state.orders.filter(o => o.supplierId === id).length;
+  const form = w ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await addSupplier(e.target)) e.target.reset(); } },
+    el("h3", null, T("إضافة مورد", "Add supplier")),
+    el("div", { class: "cols-2" },
+      el("label", { class: "small" }, T("الاسم", "Name"), el("input", { name: "sname", maxlength: "80", required: true })),
+      el("label", { class: "small" }, T("الفئة", "Category"), el("input", { name: "scat", maxlength: "80" })),
+      el("label", { class: "small" }, T("الهاتف", "Phone"), el("input", { name: "sphone", maxlength: "30", class: "ltr", inputmode: "tel" })),
+      el("label", { class: "small" }, T("البريد", "Email"), el("input", { name: "semail", type: "email", maxlength: "200", class: "ltr" }))),
+    el("button", { class: "primary", type: "submit" }, T("إضافة", "Add"))) : el("div", { class: "panel muted small" }, T("إضافة الموردين للمالك ورئيس المجلس والمدير العام ومدير المشتريات.", "Owner, chairman, general manager and procurement manager add suppliers."));
+  const rows = state.suppliers.map(s => el("tr", null, el("td", null, S(s.name, 80)), el("td", null, S(s.category, 80)), el("td", { class: "ltr" }, S(s.phone, 30)), el("td", { class: "ltr" }, S(s.email, 200)),
+    el("td", null, num(count(s.id))), el("td", null, s.status === "inactive" ? badge("blocked", T("موقوف", "Inactive")) : badge("live", T("نشط", "Active"))),
+    el("td", null, w ? el("button", { class: "ghost", onclick: () => setSupplierStatus(s, s.status === "inactive" ? "active" : "inactive") }, s.status === "inactive" ? T("تفعيل", "Activate") : T("إيقاف", "Deactivate")) : "")));
+  v.replaceChildren(sectionHead(title, badge("demo", "UNVERIFIED"), csvBtn(() => downloadCsv("suppliers", "UNVERIFIED", [T("الاسم", "Name"), T("الفئة", "Category"), T("الهاتف", "Phone"), T("البريد", "Email"), T("الحالة", "Status")], state.suppliers.map(s => [s.name, s.category, s.phone, s.email, s.status])))),
+    el("div", { class: "banner info" }, T("قائمة الموردين يدخلها فريق المشتريات. عدد الأوامر محسوب من أوامر الشراء المسجلة هنا فقط، لا من قاعدة جوافة.", "Suppliers are entered by the procurement team. Order counts come only from purchase orders recorded here, not from the Jawafa database.")),
+    form, el("div", { style: "margin-top:1rem" }, table([T("الاسم", "Name"), T("الفئة", "Category"), T("الهاتف", "Phone"), T("البريد", "Email"), T("أوامر الشراء", "Orders"), T("الحالة", "Status"), ""], rows)));
+}
+
+// --- purchase orders ---
+// Form values live here so that adding or removing a line (which redraws the form) keeps them.
+const poDraft = { supplierId: "", branchId: "", notes: "", lines: [{ sku: "", name: "", qty: "1", unitPrice: "" }] };
+async function createOrder(f) {
+  const supplierId = f.supplier.value, branchId = f.branch.value;
+  if (!supplierId || !branchId) { toast(T("اختر المورد والفرع.", "Choose supplier and branch.")); return false; }
+  const v = C.validateLines(poDraft.lines);
+  if (!v.ok) { toast(v.error); return false; }
+  try {
+    const now = Date.now();
+    const ref = await fs.collection("companies").doc(state.companyId).collection("purchaseOrders").add({ supplierId, branchId, lines: v.lines, total: v.total, notes: S(f.notes.value.trim(), 500), status: "draft", createdBy: state.user.uid, at: now, updatedAt: now });
+    audit("po.create", ref.id + " · " + supplierName(supplierId) + " · " + v.total);
+    Object.assign(poDraft, { supplierId: "", branchId: "", notes: "", lines: [{ sku: "", name: "", qty: "1", unitPrice: "" }] });
+    toast(T("حُفظ أمر الشراء كمسودة.", "Purchase order saved as draft.")); return true;
+  } catch (e) { fail(e); return false; }
+}
+/** Moves an order to its next status and writes the audit entry in the same atomic batch
+ * (the rules reject a decision without it). */
+async function moveOrder(o, to, note) {
+  const u = state.user, now = Date.now();
+  const ref = fs.collection("companies").doc(state.companyId);
+  const auditRef = ref.collection("audit").doc();
+  const change = { status: to, updatedAt: now, lastAuditId: auditRef.id };
+  if (to === "submitted") Object.assign(change, { submittedBy: u.uid, submittedAt: now });
+  if (to === "approved" || to === "rejected") Object.assign(change, { decidedBy: u.uid, decidedAt: now, decisionNote: S(note || "", 500) });
+  if (to === "received") Object.assign(change, { receivedBy: u.uid, receivedAt: now });
+  const b = fs.batch();
+  b.set(auditRef, { by: u.uid, email: u.email, action: C.PO_ACTION[to], ref: o.id, detail: S(supplierName(o.supplierId) + " · " + o.total + (note ? " · " + note : ""), 300), at: now });
+  b.update(ref.collection("purchaseOrders").doc(o.id), change);
+  try { await b.commit(); toast(T("تم: ", "Done: ") + T(...PO_LABEL[to])); } catch (e) { fail(e); }
+}
+async function deleteDraft(o) {
+  if (!confirm(T("حذف المسودة؟", "Delete this draft?"))) return;
+  try { await fs.collection("companies").doc(state.companyId).collection("purchaseOrders").doc(o.id).delete(); audit("po.delete", o.id); } catch (e) { fail(e); }
+}
+function orderLines(o) {
+  const computed = C.poTotal(o.lines);
+  return el("details", null, el("summary", { class: "small" }, num((o.lines || []).length) + T(" سطر", " lines")),
+    table([T("الرمز", "SKU"), T("الصنف", "Item"), T("الكمية", "Qty"), T("سعر الوحدة", "Unit price"), T("المجموع", "Subtotal")],
+      (o.lines || []).map(l => el("tr", null, el("td", { class: "ltr" }, S(l.sku, 40)), el("td", null, S(l.name, 120)), el("td", null, num(l.qty)), el("td", null, money(l.unitPrice)), el("td", null, money(Number(l.qty) * Number(l.unitPrice)))))),
+    Math.abs(computed - Number(o.total || 0)) > 0.005 ? el("div", { class: "banner" }, T("تنبيه: الإجمالي المحفوظ لا يطابق مجموع السطور (", "Warning: stored total does not match the lines (") + money(computed) + ")") : null);
+}
+function orderActions(o) {
+  const moves = C.poMoves(role(), scope(), o);
+  const btns = moves.filter(m => m === "submitted" || m === "received").map(m => el("button", { class: "primary", onclick: () => moveOrder(o, m) }, m === "submitted" ? T("إرسال للموافقة", "Submit for approval") : T("تأكيد الاستلام", "Confirm receipt")));
+  if (moves.includes("approved")) btns.push(el("a", { class: "button", href: "#approvals" }, T("قرّر في الموافقات", "Decide in approvals")));
+  if (o.status === "draft" && C.PROCURERS.includes(role())) btns.push(el("button", { class: "ghost", onclick: () => deleteDraft(o) }, T("حذف", "Delete")));
+  return el("div", { class: "toolbar", style: "margin:0" }, ...btns);
+}
+function renderPurchases(v) {
+  const title = T("أوامر الشراء", "Purchase orders");
+  if (!state.user) return needSignIn(v, title);
+  if (!company()) return needCompany(v, title);
+  const w = C.PROCURERS.includes(role());
+  const filter = v.querySelector("#po-status")?.value || "";
+  const list = state.orders.filter(o => !filter || o.status === filter);
+  const total = C.poTotal(poDraft.lines.map(l => ({ qty: Number(l.qty) || 0, unitPrice: Number(l.unitPrice) || 0 })));
+  const lineRow = (l, i) => el("div", { class: "po-line" },
+    el("input", { "aria-label": T("الرمز", "SKU"), placeholder: T("الرمز", "SKU"), class: "ltr", maxlength: "40", value: l.sku, oninput: (e) => { l.sku = e.target.value; } }),
+    el("input", { "aria-label": T("الصنف", "Item"), placeholder: T("الصنف", "Item"), maxlength: "120", value: l.name, "data-line-name": String(i), oninput: (e) => { l.name = e.target.value; } }),
+    el("input", { "aria-label": T("الكمية", "Qty"), placeholder: T("الكمية", "Qty"), type: "number", min: "0", step: "any", class: "ltr", value: l.qty, oninput: (e) => { l.qty = e.target.value; v.querySelector("#po-total").textContent = money(C.poTotal(poDraft.lines.map(x => ({ qty: Number(x.qty) || 0, unitPrice: Number(x.unitPrice) || 0 })))); } }),
+    el("input", { "aria-label": T("سعر الوحدة", "Unit price"), placeholder: T("سعر الوحدة", "Unit price"), type: "number", min: "0", step: "any", class: "ltr", value: l.unitPrice, oninput: (e) => { l.unitPrice = e.target.value; v.querySelector("#po-total").textContent = money(C.poTotal(poDraft.lines.map(x => ({ qty: Number(x.qty) || 0, unitPrice: Number(x.unitPrice) || 0 })))); } }),
+    el("button", { type: "button", class: "ghost", "aria-label": T("حذف السطر", "Remove line"), disabled: poDraft.lines.length === 1, onclick: () => { poDraft.lines.splice(i, 1); renderPurchases(v); } }, "✕"));
+  const activeSuppliers = state.suppliers.filter(s => s.status !== "inactive");
+  const form = w ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await createOrder(e.target)) renderPurchases(v); } },
+    el("h3", null, T("أمر شراء جديد", "New purchase order")),
+    el("div", { class: "cols-2" },
+      el("label", { class: "small" }, T("المورد", "Supplier"), el("select", { name: "supplier", required: true, onchange: (e) => { poDraft.supplierId = e.target.value; } }, el("option", { value: "" }, "—"), ...activeSuppliers.map(s => el("option", { value: s.id, selected: s.id === poDraft.supplierId }, S(s.name, 80))))),
+      el("label", { class: "small" }, T("الفرع المستلم", "Receiving branch"), el("select", { name: "branch", required: true, onchange: (e) => { poDraft.branchId = e.target.value; } }, el("option", { value: "" }, "—"), ...branchOptions(poDraft.branchId)))),
+    el("div", { class: "small muted", style: "margin-top:.5rem" }, T("السطور", "Lines")),
+    ...poDraft.lines.map(lineRow),
+    el("div", { class: "toolbar" }, el("button", { type: "button", disabled: poDraft.lines.length >= 50, onclick: () => { poDraft.lines.push({ sku: "", name: "", qty: "1", unitPrice: "" }); renderPurchases(v); } }, T("+ سطر", "+ Line")),
+      el("span", null, T("الإجمالي: ", "Total: "), el("b", { id: "po-total" }, money(total)))),
+    el("label", { class: "small" }, T("ملاحظات", "Notes"), el("input", { name: "notes", maxlength: "500", value: poDraft.notes, oninput: (e) => { poDraft.notes = e.target.value; } })),
+    el("button", { class: "primary", type: "submit" }, T("حفظ كمسودة", "Save as draft")),
+    (!activeSuppliers.length || !state.branches.length) ? el("p", { class: "small muted" }, T("يلزم مورد نشط وفرع واحد على الأقل. ", "Needs an active supplier and a branch. "), el("a", { href: "#suppliers" }, T("الموردون", "Suppliers")), " · ", el("a", { href: "#branches" }, T("الفروع", "Branches"))) : null)
+    : el("div", { class: "panel muted small" }, T("إنشاء أوامر الشراء للمالك ورئيس المجلس والمدير العام ومدير المشتريات.", "Owner, chairman, general manager and procurement manager create orders."));
+  const rows = list.map(o => el("tr", null, el("td", null, fmtTime(o.at)), el("td", null, supplierName(o.supplierId)), el("td", null, branchName(o.branchId)),
+    el("td", null, money(o.total)), el("td", null, poBadge(o.status), o.decisionNote ? el("div", { class: "small muted" }, S(o.decisionNote, 120)) : null), el("td", null, orderLines(o)), el("td", null, orderActions(o))));
+  v.replaceChildren(sectionHead(title, badge("demo", "UNVERIFIED"),
+      el("select", { id: "po-status", style: "width:auto", "aria-label": T("تصفية حسب الحالة", "Filter by status"), onchange: () => renderPurchases(v) }, el("option", { value: "" }, T("كل الحالات", "All statuses")), ...C.PO_STATES.map(s => el("option", { value: s, selected: s === filter }, T(...PO_LABEL[s])))),
+      csvBtn(() => downloadCsv("purchase-orders", "UNVERIFIED", [T("التاريخ", "Date"), T("المورد", "Supplier"), T("الفرع", "Branch"), T("الإجمالي", "Total"), T("الحالة", "Status")], list.map(o => [new Date(o.at).toISOString(), supplierName(o.supplierId), branchName(o.branchId), o.total, o.status])))),
+    el("div", { class: "banner info" }, T("المسار: مسودة ← بانتظار الموافقة ← معتمد أو مرفوض ← مستلم. الأمر المعتمد لا يُعدَّل، وكل انتقال يُسجَّل في سجل التدقيق في العملية نفسها (تفرضه قواعد Firestore). هذه أوامر داخلية للمتابعة، وليست قيودًا محاسبية ولا تُكتب في قاعدة جوافة.", "Flow: draft → awaiting approval → approved or rejected → received. Approved orders cannot be edited, and every step is written to the audit log in the same operation (enforced by Firestore rules). These are internal tracking orders, not accounting entries, and nothing is written to the Jawafa database.")),
+    scopeNote() || "", form,
+    el("div", { style: "margin-top:1rem" }, table([T("التاريخ", "Date"), T("المورد", "Supplier"), T("الفرع", "Branch"), T("الإجمالي", "Total"), T("الحالة", "Status"), T("السطور", "Lines"), ""], rows)));
+}
+
+// --- approvals inbox ---
+function renderApprovals(v) {
+  const title = T("الموافقات", "Approvals");
+  if (!state.user) return needSignIn(v, title);
+  if (!company()) return needCompany(v, title);
+  const mine = myApprovals();
+  const isApprover = C.APPROVERS.includes(role());
+  const recent = state.orders.filter(o => o.decidedBy === state.user.uid).slice(0, 20);
+  const card = (o) => {
+    const note = el("input", { maxlength: "500", placeholder: T("ملاحظة القرار (اختياري)", "Decision note (optional)"), "aria-label": T("ملاحظة القرار", "Decision note") });
+    return el("div", { class: "panel", "data-po": o.id },
+      el("div", { class: "row" }, el("b", null, supplierName(o.supplierId)), poBadge(o.status)),
+      el("div", { class: "small muted" }, branchName(o.branchId) + " · " + fmtTime(o.submittedAt || o.at) + " · " + S(company().members?.[o.submittedBy]?.email || "", 120)),
+      el("div", { style: "font-size:1.3rem;font-weight:800;margin:.4rem 0" }, money(o.total)),
+      orderLines(o), o.notes ? el("p", { class: "small" }, S(o.notes, 500)) : null,
+      note,
+      el("div", { class: "toolbar" },
+        el("button", { class: "primary", onclick: () => moveOrder(o, "approved", note.value.trim()) }, T("اعتماد", "Approve")),
+        el("button", { class: "danger", onclick: () => moveOrder(o, "rejected", note.value.trim()) }, T("رفض", "Reject"))));
+  };
+  v.replaceChildren(sectionHead(title, badge(mine.length ? "demo" : "live", num(mine.length) + T(" بانتظارك", " waiting"))),
+    el("div", { class: "banner info" }, T("يظهر هنا كل أمر شراء أُرسل للموافقة، لمن يملك صلاحية القرار (المالك، رئيس المجلس، المدير العام). يُسجَّل كل قرار في سجل التدقيق غير القابل للتعديل.", "Every order sent for approval appears here for those who can decide (owner, chairman, general manager). Every decision is written to the append-only audit log.")),
+    !isApprover ? el("div", { class: "panel muted small" }, T("دورك لا يملك صلاحية اعتماد أوامر الشراء.", "Your role cannot approve purchase orders.")) :
+      mine.length ? el("div", { class: "grid" }, ...mine.map(card)) : el("div", { class: "panel muted" }, T("لا توجد طلبات بانتظار قرارك.", "Nothing is waiting for your decision.")),
+    recent.length ? el("div", { style: "margin-top:1rem" }, el("h3", null, T("قراراتك الأخيرة", "Your recent decisions")),
+      table([T("المورد", "Supplier"), T("الإجمالي", "Total"), T("القرار", "Decision"), T("الوقت", "Time")], recent.map(o => el("tr", null, el("td", null, supplierName(o.supplierId)), el("td", null, money(o.total)), el("td", null, poBadge(o.status)), el("td", null, fmtTime(o.decidedAt)))))) : "");
+}
+
+// --- member branch scope (members screen) ---
+async function setScope(uid, ids) {
+  try {
+    await fs.collection("companies").doc(state.companyId).update(new fb.firestore.FieldPath("branchScopes", uid), ids.length ? ids : fb.firestore.FieldValue.delete());
+    audit("member.scope", (company().members?.[uid]?.email || uid) + " → " + (ids.length ? ids.map(branchName).join(", ") : "*"));
+    toast(T("حُفظت فروع العضو.", "Member branches saved."));
+  } catch (e) { fail(e); }
+}
+function scopeEditor(c, uid, r) {
+  if (!(r === "branch_manager" || r === "employee")) return "";
+  const cur = (c.branchScopes && c.branchScopes[uid]) || [];
+  const manage = C.can(role(), "manage");
+  const label = cur.length ? cur.map(branchName).join("، ") : T("كل الفروع", "All branches");
+  if (!manage) return el("span", { class: "small" }, label);
+  const boxes = state.branches.map(b => el("label", { class: "small", style: "display:flex;gap:.4rem;align-items:center" }, el("input", { type: "checkbox", value: b.id, checked: cur.includes(b.id), style: "width:auto;min-height:auto" }), S(b.name, 60)));
+  return el("details", { class: "scope" }, el("summary", { class: "small" }, label),
+    boxes.length ? el("div", null, ...boxes, el("p", { class: "small muted" }, T("بدون اختيار = كل الفروع.", "None selected = all branches.")),
+      el("button", { type: "button", onclick: (e) => setScope(uid, [...e.target.closest("details").querySelectorAll("input:checked")].map(x => x.value).slice(0, 30)) }, T("حفظ", "Save")))
+      : el("p", { class: "small muted" }, T("أضف فروعًا أولًا.", "Add branches first.")));
 }
 
 // ---------- audit log viewer ----------
@@ -644,12 +913,13 @@ function renderMembers(v) {
     const m = c.members?.[uid] || {}; const r = C.roleOf(c, uid);
     return el("tr", null, el("td", { class: "ltr" }, S(m.email || uid, 120)), el("td", null, S(m.name, 80)),
       el("td", null, uid === c.ownerUid ? badge("verified", T("المالك", "Owner")) : roleSelect(uid, r)),
+      el("td", null, uid === c.ownerUid ? "" : scopeEditor(c, uid, r)),
       el("td", null, uid === c.ownerUid ? "" : uid === state.user.uid ? el("button", { onclick: () => removeMember(uid, true) }, T("مغادرة", "Leave")) : manage ? el("button", { onclick: () => removeMember(uid, false) }, T("إزالة", "Remove")) : ""));
   });
   const pending = Object.entries(c.pendingInvites || {});
   v.replaceChildren(sectionHead(T("المستخدمون والصلاحيات", "Users & roles"), badge("live", T("محمي بقواعد Firestore", "Enforced by Firestore rules"))),
     el("div", { class: "banner info" }, T("الصلاحيات تُفرض في قواعد Firestore على الخادم، وليست بإخفاء الأزرار فقط. المالك/رئيس المجلس/المدير العام: إدارة الأعضاء. مدير المشتريات/مدير الفرع/المحاسب: كتابة البيانات التشغيلية. المدقق: قراءة فقط. الموظف: قراءة + مهام ورسائل.", "Permissions are enforced by server-side Firestore rules, not by hiding buttons.")),
-    table([T("البريد", "Email"), T("الاسم", "Name"), T("الدور", "Role"), ""], rows),
+    table([T("البريد", "Email"), T("الاسم", "Name"), T("الدور", "Role"), T("الفروع", "Branches"), ""], rows),
     el("div", { class: "cols-2", style: "margin-top:1rem" },
       manage ? el("form", { class: "panel", onsubmit: (e) => { e.preventDefault(); invite(e.target.email.value, e.target.role.value); e.target.reset(); } },
         el("h3", null, T("دعوة عضو", "Invite member")),
@@ -682,6 +952,14 @@ function renderUser() {
       el("div", { class: "hide-m small" }, el("b", null, S(state.user.name || state.user.email, 40)), el("div", { class: "muted" }, role() ? T(C.ROLES[role()].ar, C.ROLES[role()].en) : "")),
       el("button", { class: "ghost small", onclick: () => auth.signOut() }, T("خروج", "Sign out")));
   }
+  const waiting = state.user && company() ? myApprovals().length : 0;
+  const bell = $("bell");
+  bell.hidden = !state.user || !company();
+  bell.querySelector(".count").textContent = waiting ? String(waiting) : "";
+  bell.querySelector(".count").hidden = !waiting;
+  bell.setAttribute("aria-label", T("الموافقات", "Approvals") + (waiting ? " (" + waiting + ")" : ""));
+  const navItem = document.querySelector('#nav a[data-nav="approvals"]');
+  if (navItem) { let n = navItem.querySelector(".count"); if (!n) { n = el("span", { class: "count" }); navItem.append(n); } n.textContent = waiting ? String(waiting) : ""; n.hidden = !waiting; }
   const pill = $("company-pill"), sel = $("company-select");
   pill.hidden = !state.user || state.companies.length === 0;
   sel.replaceChildren(...state.companies.map(c => el("option", { value: c.id, selected: c.id === state.companyId }, S(c.name, 60))));
@@ -691,7 +969,7 @@ function renderUser() {
   $("status-data").textContent = state.demo ? T("البيانات المعروضة: تجريبية DEMO — ليست بيانات حقيقية", "Shown data: DEMO — not real") : T("البيانات التشغيلية: لا يوجد مصدر LIVE", "Operational data: no LIVE source");
 }
 
-const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit };
+const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals };
 let rq = false;
 function render() {
   if (rq) return; rq = true;

@@ -1,4 +1,25 @@
-# TEST_RESULTS — run 2026-11-06 (cycle 2) on this branch
+# TEST_RESULTS
+
+## Cycle 3 — Phase 2 operations, run 2026-11-09
+
+Environment: Linux container, Node 22.23.4, Java 21, firebase-tools 13 (Firestore + Auth emulators, project `demo-jawafa-one`), Chromium via Playwright. **Not** the production Firebase project.
+
+| Suite | Command | Result | Evidence |
+|---|---|---|---|
+| Core + desktop unit | `node --test dashboard/tests/one-core.test.cjs apps/desktop/test/config.test.cjs` | 11/11 PASS (new: CORE-07 branch scope, CORE-08 purchase orders) | evidence/unit-tests.txt |
+| Firestore rules | emulators:exec firestore | 21/21 PASS (new: EMP-01, SCOPE-01, SUP-01, PO-01, PO-02) | evidence/rules-tests.txt |
+| End-to-end | emulators:exec auth,firestore | 36/36 PASS (new: E2E-28..35: supplier, order with 2 lines, submit, bell badge, approve, frozen order, employees + filter + deactivate, branch manager scope, receipt) | evidence/e2e-results.json, 10-purchases.png, 11-employees-branch-manager.png |
+| Regression (all dashboard tests) | `node --test dashboard/tests/*.cjs dashboard/tests/*.mjs` | 102/102 PASS (100 before this change + 2 new) | console |
+
+### Defect found and fixed during testing
+
+- **UX:** adding an order line redrew the form and cleared the chosen supplier, branch and notes. The form values are now kept in `poDraft`.
+
+### Not tested (and therefore not claimed)
+
+The new rules sections on the production Firebase project (they are not published until the owner publishes them in the Firebase console), push/e-mail notifications (not built), connection to Jawafa_DB (not built; REQ-057 BLOCKED).
+
+## Cycle 2 — run 2026-11-06 on this branch
 
 Environment: Linux container, Node 22.23.4, Java 21, firebase-tools 13 (Firestore + Auth emulators, project `demo-jawafa-one`), Chromium via Playwright, Electron 33.2.1. **Not** the production Firebase project.
 

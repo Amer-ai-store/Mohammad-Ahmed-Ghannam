@@ -80,6 +80,7 @@ service cloud.firestore {
         && resource.data.ownerUid in request.resource.data.memberIds
         // The plan (free / premium_plus) is set only by the billing backend (Admin SDK).
         && request.resource.data.get('plan', 'free') == resource.data.get('plan', 'free')
+        && request.resource.data.get('branchScopes', {}) is map
         && validName(request.resource.data.name)
         && validSocial(request.resource.data.get('social', {}));
 
@@ -157,9 +158,124 @@ service cloud.firestore {
         allow delete: if canWrite(cid);
       }
 
-      // Other tenant data (operational, non-accounting).
-      match /{coll}/{docId} {
+      // ---------- Phase 2: operations (employees, suppliers, purchase orders) ----------
+      // Branch scope: a member with role branch_manager or employee and a non-empty
+      // company.branchScopes[uid] list sees and writes only records of those branches.
+      // Members without a scope entry, and every other role, are company-wide.
+      function scopeOf(c) {
+        return roleIn(c) in ['branch_manager', 'employee'] && c.get('branchScopes', {}).get(uid(), []).size() > 0
+          ? c.branchScopes[uid()] : null;
+      }
+      function inScope(b) {
+        let s = scopeOf(company(cid));
+        return s == null || b in s;
+      }
+      function branchExists(b) {
+        return b is string && b.size() > 0 && exists(/databases/$(database)/documents/companies/$(cid)/branches/$(b));
+      }
+      function isProcurer() { return roleIn(company(cid)) in ['owner', 'chairman', 'general_manager', 'procurement_manager']; }
+      function isApprover() { return roleIn(company(cid)) in ['owner', 'chairman', 'general_manager']; }
+      function optStr(d, k, max) { return !(k in d) || (d[k] is string && d[k].size() <= max); }
+      // Every purchase-order decision must be written to the audit log in the same batch:
+      // the order names a fresh audit entry by this user, for this order and this action.
+      function auditedAs(poId, action) {
+        let a = request.resource.data.lastAuditId;
+        return a is string && a.size() > 0 && a.size() <= 100
+          && !exists(/databases/$(database)/documents/companies/$(cid)/audit/$(a))
+          && getAfter(/databases/$(database)/documents/companies/$(cid)/audit/$(a)).data.by == uid()
+          && getAfter(/databases/$(database)/documents/companies/$(cid)/audit/$(a)).data.ref == poId
+          && getAfter(/databases/$(database)/documents/companies/$(cid)/audit/$(a)).data.action == action;
+      }
+
+      // Employees (REQ-009): owner/chairman/GM manage all; a branch manager manages employees
+      // of the branches in scope. Everyone else reads (within scope). Never deleted: deactivate.
+      function validEmployee(d) {
+        return d.keys().hasOnly(['name', 'title', 'branchId', 'phone', 'status', 'startDate', 'by', 'at'])
+          && validName(d.name) && optStr(d, 'title', 80) && optStr(d, 'phone', 30)
+          && d.status in ['active', 'inactive']
+          && (!('startDate' in d) || d.startDate == '' || (d.startDate is string && d.startDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+          && d.by == uid() && d.at is number
+          && branchExists(d.branchId);
+      }
+      function canManageEmployees(b) {
+        return canManage(cid) || (roleIn(company(cid)) == 'branch_manager' && inScope(b));
+      }
+      match /employees/{empId} {
+        allow read: if isMember(cid) && inScope(resource.data.branchId);
+        allow create: if canManageEmployees(request.resource.data.branchId) && validEmployee(request.resource.data);
+        allow update: if canManageEmployees(resource.data.branchId)
+          && canManageEmployees(request.resource.data.branchId)
+          && validEmployee(request.resource.data);
+        allow delete: if false;
+      }
+
+      // Suppliers (REQ-013): company-wide list kept by procurement roles. Never deleted.
+      match /suppliers/{supplierId} {
         allow read: if isMember(cid);
+        allow create, update: if isProcurer()
+          && request.resource.data.keys().hasOnly(['name', 'phone', 'email', 'category', 'status', 'by', 'at'])
+          && validName(request.resource.data.name)
+          && optStr(request.resource.data, 'phone', 30) && optStr(request.resource.data, 'email', 200)
+          && optStr(request.resource.data, 'category', 80)
+          && request.resource.data.status in ['active', 'inactive']
+          && request.resource.data.by == uid();
+        allow delete: if false;
+      }
+
+      // Purchase orders (REQ-003, REQ-030):
+      //   draft -> submitted            procurement roles (draft edits allowed only while draft)
+      //   submitted -> approved|rejected owner / chairman / general manager
+      //   approved -> received          procurement roles, or the branch manager of that branch
+      // Approved, rejected and received orders cannot be edited. Orders are never deleted
+      // except an unsent draft. Each transition carries an audit entry written in the same batch.
+      function validLines(d) {
+        return d.lines is list && d.lines.size() > 0 && d.lines.size() <= 50
+          && d.total is number && d.total >= 0 && d.total <= 100000000;
+      }
+      function draftFields() {
+        return ['supplierId', 'branchId', 'lines', 'total', 'notes', 'status', 'createdBy', 'at', 'updatedAt'];
+      }
+      function transition(from, to, keys) {
+        return resource.data.status == from && request.resource.data.status == to
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+      }
+      match /purchaseOrders/{poId} {
+        allow read: if isMember(cid) && inScope(resource.data.branchId);
+        allow create: if isProcurer()
+          && request.resource.data.keys().hasOnly(draftFields())
+          && request.resource.data.status == 'draft'
+          && request.resource.data.createdBy == uid()
+          && exists(/databases/$(database)/documents/companies/$(cid)/suppliers/$(request.resource.data.supplierId))
+          && branchExists(request.resource.data.branchId)
+          && validLines(request.resource.data)
+          && optStr(request.resource.data, 'notes', 500);
+        allow update: if
+          // edit a draft
+          (isProcurer() && transition('draft', 'draft', ['supplierId', 'branchId', 'lines', 'total', 'notes', 'updatedAt'])
+            && exists(/databases/$(database)/documents/companies/$(cid)/suppliers/$(request.resource.data.supplierId))
+            && branchExists(request.resource.data.branchId)
+            && validLines(request.resource.data) && optStr(request.resource.data, 'notes', 500))
+          // submit for approval
+          || (isProcurer() && transition('draft', 'submitted', ['status', 'submittedBy', 'submittedAt', 'updatedAt', 'lastAuditId'])
+            && request.resource.data.submittedBy == uid() && auditedAs(poId, 'po.submit'))
+          // decide
+          || (isApprover() && resource.data.status == 'submitted'
+            && request.resource.data.status in ['approved', 'rejected']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedBy', 'decidedAt', 'decisionNote', 'updatedAt', 'lastAuditId'])
+            && request.resource.data.decidedBy == uid()
+            && optStr(request.resource.data, 'decisionNote', 500)
+            && auditedAs(poId, request.resource.data.status == 'approved' ? 'po.approve' : 'po.reject'))
+          // receive goods
+          || ((isProcurer() || (roleIn(company(cid)) == 'branch_manager' && inScope(resource.data.branchId)))
+            && transition('approved', 'received', ['status', 'receivedBy', 'receivedAt', 'updatedAt', 'lastAuditId'])
+            && request.resource.data.receivedBy == uid() && auditedAs(poId, 'po.receive'));
+        allow delete: if isProcurer() && resource.data.status == 'draft';
+      }
+
+      // Other tenant data (operational, non-accounting).
+      // Branch-scoped collections are excluded here so that their own read rules apply.
+      match /{coll}/{docId} {
+        allow read: if isMember(cid) && !(coll in ['employees', 'purchaseOrders']);
         allow create, update, delete: if canWrite(cid)
           && coll in ['workspaces', 'stages', 'agents', 'servers', 'bridges', 'designs',
                       'campaigns', 'activity', 'settings', 'store', 'connections',
