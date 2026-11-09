@@ -40,6 +40,9 @@ enum ErpArea {
   cheques,
   journal,
   procurement,
+  personnel,
+  permissions,
+  settings,
   inventory,
   pointOfSale,
   audit,
@@ -51,6 +54,9 @@ const areaLabels = <ErpArea, String>{
   ErpArea.cheques: 'الشيكات والبنوك',
   ErpArea.journal: 'الأستاذ العام',
   ErpArea.procurement: 'المشتريات',
+  ErpArea.personnel: 'شؤون الموظفين',
+  ErpArea.permissions: 'الصلاحيات',
+  ErpArea.settings: 'الإعدادات',
   ErpArea.inventory: 'المخزون',
   ErpArea.pointOfSale: 'المبيعات ونقاط البيع',
   ErpArea.audit: 'سجل التدقيق',
@@ -61,6 +67,9 @@ const areaIcons = <ErpArea, IconData>{
   ErpArea.cheques: Icons.account_balance_wallet_outlined,
   ErpArea.journal: Icons.account_balance_outlined,
   ErpArea.procurement: Icons.shopping_cart_outlined,
+  ErpArea.personnel: Icons.badge_outlined,
+  ErpArea.permissions: Icons.admin_panel_settings_outlined,
+  ErpArea.settings: Icons.settings_outlined,
   ErpArea.inventory: Icons.inventory_2_outlined,
   ErpArea.pointOfSale: Icons.point_of_sale_outlined,
   ErpArea.audit: Icons.verified_user_outlined,
@@ -123,6 +132,12 @@ class _ErpShellState extends State<ErpShell> {
         return const JournalDemoView();
       case ErpArea.procurement:
         return ProcurementDraftView(gateway: widget.gateway);
+      case ErpArea.personnel:
+        return ErpReferenceReadOnlyView(gateway: widget.gateway, scope: 'personnel');
+      case ErpArea.permissions:
+        return ErpReferenceReadOnlyView(gateway: widget.gateway, scope: 'permissions');
+      case ErpArea.settings:
+        return ErpReferenceReadOnlyView(gateway: widget.gateway, scope: 'settings');
       case ErpArea.inventory:
         return const PendingModuleView(
           title: 'المخزون',
@@ -538,6 +553,111 @@ class PendingModuleView extends StatelessWidget {
           const Text('حالة التنفيذ: قيد الدراسة — لا توجد معاملات أو تقارير حية.'),
         ]),
       ),
+    );
+  }
+}
+
+
+// This is an intentionally narrow, read-only reference shell. Not a full HR,
+// payroll, attendance, user-management or TrustSoft-equivalent workflow.
+class ErpReferenceReadOnlyView extends StatefulWidget {
+  final ErpGatewayClient? gateway;
+  final String scope;
+  const ErpReferenceReadOnlyView({
+    super.key, required this.gateway, required this.scope,
+  });
+
+  @override
+  State<ErpReferenceReadOnlyView> createState() =>
+      _ErpReferenceReadOnlyViewState();
+}
+
+class _ErpReferenceReadOnlyViewState extends State<ErpReferenceReadOnlyView> {
+  List<Map<String, dynamic>>? rows;
+  String? error;
+  bool loading = false;
+
+  String get title => switch (widget.scope) {
+    'personnel' => 'شؤون الموظفين',
+    'permissions' => 'الصلاحيات',
+    'settings' => 'الإعدادات',
+    _ => 'وحدة غير معروفة',
+  };
+
+  Future<void> load() async {
+    final gateway = widget.gateway;
+    if (gateway == null || loading) return;
+    setState(() { loading = true; error = null; });
+    try {
+      final Future<List<Map<String, dynamic>>> request;
+      switch (widget.scope) {
+        case 'personnel':
+          request = gateway.readPersonnel();
+        case 'permissions':
+          request = gateway.readPermissions();
+        case 'settings':
+          request = gateway.readSettings();
+        default:
+          throw const ErpGatewayError('INVALID_SCOPE');
+      }
+      final result = await request;
+      if (mounted) setState(() => rows = result);
+    } on ErpGatewayError catch (e) {
+      if (mounted) setState(() => error = e.code);
+    } catch (_) {
+      if (mounted) setState(() => error = 'API_UNAVAILABLE');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 12),
+        const Text(
+          'نموذج قراءة فقط؛ مطابقة وظائف TrustSoft لم تُعتمد بعد. '
+          'لا يوجد تعديل أو إضافة أو حذف أو رواتب فعلية.',
+        ),
+        const SizedBox(height: 12),
+        if (widget.gateway == null)
+          Text(
+            'API غير مفعل: يلزم تسجيل دخول موثق وخادم ERP مستقل.',
+            key: Key('reference_unconfigured_${widget.scope}'),
+          )
+        else ...[
+          OutlinedButton.icon(
+            key: Key('reference_refresh_${widget.scope}'),
+            onPressed: loading ? null : load,
+            icon: const Icon(Icons.refresh),
+            label: const Text('قراءة البيانات المسموح بها'),
+          ),
+          if (loading) const LinearProgressIndicator(),
+          if (error != null) Text(
+            'تعذرت القراءة: $error',
+            key: Key('reference_error_${widget.scope}'),
+          ),
+          if (rows != null) ...[
+            Text('عدد السجلات الظاهرة: ${rows!.length}'),
+            for (final row in rows!)
+              ListTile(
+                title: Text(widget.scope == 'personnel'
+                  ? '${row['employee_code']}: ${row['display_name']}'
+                  : widget.scope == 'settings'
+                    ? '${row['setting_key']}: ${row['setting_value']}'
+                    : '${row['erp_role']}: ${row['resource']}'),
+                subtitle: Text(widget.scope == 'personnel'
+                  ? '${row['department_code']} · ${row['employment_status']}'
+                  : widget.scope == 'settings'
+                    ? 'النسخة ${row['revision_no']}'
+                    : '${row['action']} · ${row['allowed']}'),
+              ),
+          ],
+        ],
+      ],
     );
   }
 }
