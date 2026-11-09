@@ -191,3 +191,8 @@ a.notif{text-decoration:none;color:var(--fg);gap:.6rem;justify-content:flex-star
 .ts-evidence .ts-table th,.ts-evidence .ts-table td{border-bottom:1px solid var(--line);padding:.5rem .65rem;text-align:start}
 .ts-evidence .ts-table thead{position:sticky;top:0;background:var(--surface-2)}
 @media(max-width:860px){.ts-evidence .ts-grid{grid-template-columns:1fr}}
+
+.ts-evidence .ts-relations{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+.ts-evidence .ts-relation{min-width:0;border:1px solid var(--line);padding:.8rem;border-radius:10px;overflow-wrap:anywhere}
+.ts-evidence .ts-relation strong{display:block;line-height:1.6}
+@media(max-width:860px){.ts-evidence .ts-relations{grid-template-columns:1fr}}
