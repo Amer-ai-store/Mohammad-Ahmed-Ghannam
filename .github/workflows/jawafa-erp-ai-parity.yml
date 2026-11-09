@@ -13,6 +13,8 @@ on:
       - 'jawafa-erp-ai/tools/test_template_inventory_audit.py'
       - 'jawafa-erp-ai/tools/compare_report_exports.py'
       - 'jawafa-erp-ai/tools/test_compare_report_exports.py'
+      - 'jawafa-erp-ai/tools/reference_ui_catalog_audit.py'
+      - 'jawafa-erp-ai/tools/test_reference_ui_catalog_audit.py'
       - 'jawafa-erp-ai/docs/trustsoft_report_catalog.json'
       - 'jawafa-erp-ai/tools/reference_schema_audit.py'
       - 'jawafa-erp-ai/tools/test_reference_schema_audit.py'
