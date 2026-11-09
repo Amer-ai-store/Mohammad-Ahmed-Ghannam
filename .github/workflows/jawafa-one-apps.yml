@@ -41,6 +41,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Fast syntax validation before emulator installation
+        run: |
+          node --check tests/e2e/jawafa-one.e2e.mjs
+          node --check dashboard/one/app.js
+          node --check dashboard/one/trustsoft-evidence.mjs
       - name: Unit tests (core logic, desktop navigation policy)
         run: |
           node --test dashboard/tests/one-core.test.cjs
