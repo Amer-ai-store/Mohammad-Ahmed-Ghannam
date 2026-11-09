@@ -87,9 +87,9 @@
     "source": "Jawafa_DB CSV export 2026-11-08 01:00",
     "verified_semantic_fk_count": 0,
     "join_checks_run": 6,
-    "matched_within_snapshot": 4,
-    "require_investigation": 2,
-    "status": "PRELIMINARY_KEY_MATCH_NOT_OFFICIAL_FOREIGN_KEY",
+    "matched_within_snapshot": 5,
+    "require_investigation": 1,
+    "status": "PRELIMINARY_KEY_MATCH_WITH_SENTINEL_FILTER_NOT_OFFICIAL_FOREIGN_KEY",
     "private_report_sha256": "c18a4d877df7d6437382ac7d80691e838260306804e07942d394651ea8a6cf7d",
     "relationships": [
       {
@@ -108,9 +108,11 @@
         "child": "PosDeletedItems",
         "source_rows": 105880,
         "distinct_references": 5384,
-        "without_parent": 1,
-        "classification": "needs_verification",
-        "caveat": "المرجع غير المطابق قد يكون قديمًا أو من نظام ترقيم مختلف؛ لا دليل حذف."
+        "without_parent": 0,
+        "classification": "snapshot_linked",
+        "caveat": "مرجع Cashno=0 قيمة افتراضية تكررت في 12,495 حدث حذف، وليس سند صندوق مفقود. تم استبعاد الصفر من اختبار وجود الصناديق، ويجب تفسير دلالته التشغيلية.",
+        "placeholder_cash_key_events": 12495,
+        "placeholder_cash_key_distinct": 1
       },
       {
         "label": "Receipt ⇄ RecLine",
@@ -130,7 +132,7 @@
         "distinct_references": 1956,
         "without_parent": 4,
         "classification": "needs_verification",
-        "caveat": "المراجع الأربعة تحتاج تعريف حركة التعديل وتاريخ المصدر."
+        "caveat": "المراجع الأربعة غير المطابقة جميعها أرقام غير افتراضية من 9 خانات ولم تُعثر في نسختَي استلام أكتوبر ونوفمبر. ترتبط ب360 حدثًا، 352 منها لمرجع واحد. يلزم المصدر الأصلي قبل وصفها بالحذف."
       },
       {
         "label": "ARP Journal ⇄ debit lines",
@@ -152,7 +154,8 @@
         "classification": "snapshot_linked",
         "caveat": "المطابقة المرجعية لا تثبت توازن قيمة القيد."
       }
-    ]
+    ],
+    "private_refinement_sha256": "ca27249d0054cf057ed378aa3fd208f31080268f9e5f4b8176180641f3a251b9"
   },
   "analysis_scope": "Every one of 17 priority CSV tables had its rows counted and six inferred join checks executed. No live SQL foreign-key metadata was used."
 }
