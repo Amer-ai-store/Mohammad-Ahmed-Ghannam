@@ -2,7 +2,7 @@
 # This deliberately does not claim AI review, use secrets, write code or deploy.
 # Issue #102 production release gates remain enforced separately.
 name: Safe code review CI (no Claude OAuth)
-
+[![Safe code review CI (no Claude OAuth)](https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/workflows/claude.yml/badge.svg)](https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/workflows/claude.yml)
 on:
   pull_request:
     branches: [main]
