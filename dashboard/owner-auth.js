@@ -13,6 +13,35 @@
   let app=null,auth=null,identity=null,initialized=false;
   let phoneVerifier=null,phoneConfirmation=null,authAccess='guest';
   const validPhone=value=>typeof value==='string'&&/^\+[1-9][0-9]{7,14}$/.test(value);
+  const asciiDigits=value=>String(value).replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-0x660))
+    .replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x6f0));
+  function formatPhoneNumber(dialCode,localPhone,region=''){
+    const countryCode=asciiDigits(dialCode).trim();
+    const raw=asciiDigits(localPhone).trim();
+    if(!/^\+[1-9][0-9]{0,3}$/.test(countryCode)||
+       !raw||/[^0-9+()\s.\-]/.test(raw))throw Error('PHONE_E164_REQUIRED');
+    let number=raw.replace(/[\s().-]/g,'');
+    if(number.startsWith('00'))number='+'+number.slice(2);
+    if(!number.startsWith('+')){
+      // Most national prefixes are trunk zero and must be removed in E.164.
+      // Italian national significant 0 is retained.
+      if(region!=='IT')number=number.replace(/^0+/, '');
+      number=countryCode+number;
+    }
+    if(!validPhone(number))throw Error('PHONE_E164_REQUIRED');
+    return number;
+  }
+  function detectRegion(languages){
+    for(const language of (Array.isArray(languages)?languages:[])){
+      if(typeof language!=='string')continue;
+      try{
+        const region=typeof Intl?.Locale==='function'?new Intl.Locale(language).region:
+          (language.match(/[-_]([A-Za-z]{2})\b/)||[])[1];
+        if(region)return region.toUpperCase();
+      }catch{}
+    }
+    return 'JO'; // Fallback only; the user can change country.
+  }
   function identityVerified(user){
     if(!user||user.isAnonymous)return false;
     if(user.emailVerified===true)return true;
@@ -159,7 +188,7 @@
     return true;
   }
   const API=Object.freeze({
-    ready,getUser,getIdToken:token,signIn,signInWithEmail,startPhoneLogin,confirmPhoneLogin,signOut,changePassword,
+    ready,getUser,getIdToken:token,signIn,signInWithEmail,startPhoneLogin,confirmPhoneLogin,formatPhoneNumber,detectRegion,signOut,changePassword,
     subscribe(listener){
       if(typeof listener!=='function')throw TypeError('callback');
       users.add(listener);
@@ -184,6 +213,27 @@
     const emailLogin=root.querySelector('#owner-email-signin-form');
     const phoneLogin=root.querySelector('#owner-phone-signin-form');
     const phoneConfirm=root.querySelector('#owner-phone-confirm-form');
+    const countrySelect=phoneLogin?.querySelector('[name=owner-country-code]');
+    const countryHint=root.querySelector('#owner-country-detection');
+    if(countrySelect){
+      const langs=typeof navigator==='undefined'?[]:
+        (Array.isArray(navigator.languages)&&navigator.languages.length?navigator.languages:[navigator.language]);
+      const detectedRegion=detectRegion(langs);
+      const options=Array.from(countrySelect.options||[]);
+      const matched=options.find(option=>option.dataset?.region===detectedRegion);
+      const fallback=options.find(option=>option.dataset?.region==='JO');
+      const selected=matched||fallback;
+      if(selected)selected.selected=true;
+      function updateCountryHint(isAuto){
+        if(!countryHint)return;
+        const current=countrySelect.selectedOptions?.[0]||selected;
+        countryHint.textContent=(isAuto?'تم تحديد':'تم اختيار')+' كود الدولة: '+
+          String(current?.textContent||'الأردن (+962)')+
+          (isAuto?' بحسب لغة الجهاز؛ تأكد من صحته قبل إرسال الرمز.':'؛ يمكنك تغييره قبل الإرسال.');
+      }
+      updateCountryHint(Boolean(matched));
+      countrySelect.addEventListener('change',()=>updateCountryHint(false));
+    }
     const passwordForm=root.querySelector('#owner-password-form');
     const google=root.querySelector('#owner-google-security');
     const result=root.querySelector('#owner-password-result');
@@ -228,10 +278,11 @@
       event.preventDefault();
       const phone=phoneLogin.querySelector('[name=owner-phone-number]');
       const button=phoneLogin.querySelector('button[type=submit]');
-      if(!phone||!button)return;
+      if(!phone||!button||!countrySelect)return;
       button.disabled=true;
       try{
-        await startPhoneLogin(phone.value);
+        const region=countrySelect.selectedOptions?.[0]?.dataset?.region||'JO';
+        await startPhoneLogin(formatPhoneNumber(countrySelect.value,phone.value,region));
         if(phoneConfirm)phoneConfirm.hidden=false;
         setMessage('طلب رمز التحقق من Firebase. أدخله هنا فقط، ولا تشاركه في المحادثة.');
       }catch(error){
