@@ -32,7 +32,8 @@ test("1000 exported schema headers are not misrepresented as 90% semantic covera
  assert.equal(d.data_mutated,false);
 });
 test("read-only business rules are explicit and not falsely marked as SQL-enforced",()=>{
- assert.equal(RULES.length,10);
+ assert.equal(RULES.length,11);
+ assert.ok(RULES.some(r=>r.id==="R-11"&&r.tables.includes("PosDeletedItems")));
  assert.ok(RULES.every(r=>["partial","needs_verification","blocked","app_readonly"].includes(r.state)));
  assert.ok(RULES.some(r=>r.id==="R-10"&&r.state==="app_readonly"));
 });
