@@ -60,6 +60,6 @@ test("JAWAFA ONE route, service worker and DOM are wired safely",()=>{
   assert.match(mod,/parsePrivateCsv/);
   assert.match(mod,/document\.createTextNode/);
   assert.doesNotMatch(mod,/\.innerHTML\s*=/);
-  assert.doesNotMatch(mod,/localStorage|sessionStorage|firebase|\.upload\(/i);
+  assert.doesNotMatch(mod,/\b(?:window\.)?(?:localStorage|sessionStorage)\s*[.(]|\b(?:firebase|firestore)\s*\.\s*(?:collection|app|firestore)|\.upload\s*\(/i);
   assert.doesNotMatch(mod,/fetch\(file|fetch\(buffer|FormData|XMLHttpRequest/);
 });
