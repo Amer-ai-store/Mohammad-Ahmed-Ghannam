@@ -10,7 +10,9 @@ INSERT INTO erp.api_memberships (tenant_id, oidc_subject, erp_role, is_active) V
   ('11111111-1111-4111-8111-111111111111', 'member-A', 'accountant', true),
   ('22222222-2222-4222-8222-222222222222', 'member-B', 'auditor', true),
   ('11111111-1111-4111-8111-111111111111', 'viewer-A', 'viewer', true),
-  ('11111111-1111-4111-8111-111111111111', 'inactive-A', 'supervisor', false);
+  ('11111111-1111-4111-8111-111111111111', 'inactive-A', 'supervisor', false),
+  ('11111111-1111-4111-8111-111111111111', 'hr-A', 'hr_manager', true),
+  ('11111111-1111-4111-8111-111111111111', 'supervisor-A', 'supervisor', true);
 INSERT INTO erp.cheques
   (cheque_id, tenant_id, reference_no, direction, amount_fils, created_by) VALUES
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -61,4 +63,30 @@ INSERT INTO erp.purchase_invoice_lines
   '11111111-1111-4111-8111-111111111111',
   '30000000-0000-4000-8000-000000000003',
   1,'SYNTHETIC-STOCK',1000,90000,10250);
+-- Fictional personnel directory (NO real employee records or payroll identifiers).
+INSERT INTO erp.personnel_directory
+ (employee_id,tenant_id,employee_code,display_name,department_code,employment_status) VALUES
+ ('aaaaaaaa-0000-4000-8000-000000000011',
+  '11111111-1111-4111-8111-111111111111','EMP-A','Fictional Employee A','OPS','active'),
+ ('bbbbbbbb-0000-4000-8000-000000000022',
+  '22222222-2222-4222-8222-222222222222','EMP-B','Fictional Employee B','HR','on_leave');
+
+-- Explicit per-company grants, default deny for absent and false entries.
+INSERT INTO erp.role_permissions
+ (tenant_id,erp_role,resource,action,allowed,policy_reference) VALUES
+ ('11111111-1111-4111-8111-111111111111','hr_manager','personnel','read',true,'ci-only'),
+ ('11111111-1111-4111-8111-111111111111','supervisor','personnel','read',true,'ci-only'),
+ ('11111111-1111-4111-8111-111111111111','supervisor','settings','read',true,'ci-only'),
+ ('11111111-1111-4111-8111-111111111111','supervisor','permissions','read',true,'ci-only'),
+ ('22222222-2222-4222-8222-222222222222','auditor','personnel','read',false,'ci-only'),
+ ('22222222-2222-4222-8222-222222222222','auditor','settings','read',true,'ci-only');
+
+INSERT INTO erp.setting_revisions
+ (revision_id,tenant_id,setting_key,revision_no,setting_value,recorded_by) VALUES
+ ('aaaaaaaa-0000-4000-8000-000000000033',
+  '11111111-1111-4111-8111-111111111111','locale',1,'en','ci-only'),
+ ('aaaaaaaa-0000-4000-8000-000000000044',
+  '11111111-1111-4111-8111-111111111111','locale',2,'ar','ci-only'),
+ ('bbbbbbbb-0000-4000-8000-000000000055',
+  '22222222-2222-4222-8222-222222222222','locale',1,'en','ci-only');
 COMMIT;
