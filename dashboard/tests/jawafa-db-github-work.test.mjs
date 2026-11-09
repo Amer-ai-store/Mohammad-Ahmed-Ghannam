@@ -18,10 +18,10 @@ test("1000 exported schema headers are not misrepresented as 90% semantic covera
  assert.equal(d.schema_columns_total,15566);
  assert.equal(d.priority_tables.length,17);
  assert.equal(d.priority_relation_snapshot.relationships.length,6);
- assert.equal(d.priority_relation_snapshot.matched_within_snapshot,4);
- assert.equal(d.priority_relation_snapshot.require_investigation,2);
+ assert.equal(d.priority_relation_snapshot.matched_within_snapshot,5);
+ assert.equal(d.priority_relation_snapshot.require_investigation,1);
  assert.equal(d.priority_relation_snapshot.verified_semantic_fk_count,0);
- assert.ok(d.priority_relation_snapshot.relationships.some(r=>r.parent==="Cash" && r.without_parent===1));
+ assert.ok(d.priority_relation_snapshot.relationships.some(r=>r.parent==="Cash" && r.without_parent===0 && r.placeholder_cash_key_events===12495));
  assert.ok(d.priority_relation_snapshot.relationships.some(r=>r.child==="InvPurchaseVouchersTransactionHistory" && r.without_parent===4));
 
  assert.equal(d.target_percent,90);
