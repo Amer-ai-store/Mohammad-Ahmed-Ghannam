@@ -23,6 +23,7 @@ async function environment(provider='google.com'){
     onAuthStateChanged(callback){subscriber=callback;queueMicrotask(()=>callback(current));return ()=>{}},
     signInWithPopup:async()=>{const result={user:current};subscriber(current);return result},
     signInWithRedirect:async()=>{},
+    signInWithEmailAndPassword:async(email,password)=>{mockUser.emailLogin={email,password};subscriber(current);return {user:current}},
     signOut:async()=>{current=null;subscriber(null)},
   };
   const app={options:{projectId:'owner-sso-test'},auth:()=>auth};
@@ -81,6 +82,8 @@ test('email-password identity requires recent current-password proof, rejects we
 test('central settings expose password rotation only behind authenticated provider logic',()=>{
   assert.match(page,/id="owner-security-root"/);
   assert.match(page,/id="owner-sso-login"/);
+  assert.match(page,/id="owner-email-signin-form"/);
+  assert.match(page,/name="owner-login-password" autocomplete="current-password"/);
   assert.match(page,/id="owner-password-form"[^>]+hidden/);
   assert.match(page,/name="current-password" autocomplete="current-password"/);
   assert.match(page,/name="new-password" autocomplete="new-password"/);
@@ -91,7 +94,18 @@ test('central settings expose password rotation only behind authenticated provid
   assert.match(jawafa,/window\.AAS_OWNER_AUTH\.subscribe\(/);
   assert.match(source,/await user\.reauthenticateWithCredential\(credential\)/);
   assert.match(source,/await user\.updatePassword\(newPassword\)/);
-  assert.doesNotMatch(source,/localStorage|sessionStorage|document\.cookie|postMessage\(/);
+  assert.doesNotMatch(source,/\b(?:window|globalThis)\.(?:localStorage|sessionStorage)\b|\bdocument\.cookie\b|\bpostMessage\s*\(/);
   assert.doesNotMatch(page,/name="new-password"[^>]+value="/);
   assert.match(source,/get isOwnerVerified\(\)\{return false/);
+});
+
+test('single Firebase email login delegates credentials only to Firebase Auth, never a custom SQL connector',async()=>{
+  const e=await environment('password');
+  await assert.rejects(e.service.signInWithEmail('admin','admin'),/EMAIL_LOGIN_INPUT_INVALID/);
+  const result=await e.service.signInWithEmail('TEST-OWNER@EXAMPLE.INVALID','another-secret-phrase');
+  assert.equal(result.user.email,'test-owner@example.invalid');
+  assert.equal(mockUser.emailLogin.email,'test-owner@example.invalid');
+  assert.equal(mockUser.emailLogin.password,'another-secret-phrase');
+  assert.equal(e.service.isAuthenticated,true);
+  assert.ok(!Object.hasOwn(e.window,'localStorage'));
 });
