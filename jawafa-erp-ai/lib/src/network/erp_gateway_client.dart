@@ -41,6 +41,44 @@ class ErpRemoteCheque {
   }
 }
 
+class ErpRemotePurchaseInvoice {
+  final String id;
+  final String supplierId;
+  final String originalNumber;
+  final String normalizedNumber;
+  final String totalFils;
+  final String currencyCode;
+  final int lineCount;
+  final String taxFils;
+  final bool linesMatchTotal;
+
+  const ErpRemotePurchaseInvoice({
+    required this.id,
+    required this.supplierId,
+    required this.originalNumber,
+    required this.normalizedNumber,
+    required this.totalFils,
+    required this.currencyCode,
+    required this.lineCount,
+    required this.taxFils,
+    required this.linesMatchTotal,
+  });
+
+  factory ErpRemotePurchaseInvoice.fromJson(Map<String, dynamic> json) {
+    return ErpRemotePurchaseInvoice(
+      id: json['purchase_invoice_id'] as String,
+      supplierId: json['supplier_id'] as String,
+      originalNumber: json['original_invoice_number'] as String,
+      normalizedNumber: json['invoice_number_key'] as String,
+      totalFils: json['total_fils'] as String,
+      currencyCode: json['currency_code'] as String,
+      lineCount: json['line_count'] as int,
+      taxFils: json['tax_fils'] as String,
+      linesMatchTotal: json['draft_total_matches_lines'] as bool,
+    );
+  }
+}
+
 /// Strictly read-only API adapter for Windows, Android and iOS.
 ///
 /// No database URL, SQL password, writes, refresh-token storage, or hidden
@@ -78,6 +116,16 @@ class ErpGatewayClient {
     if (rows is! List) throw const ErpGatewayError('INVALID_RESPONSE');
     return List.unmodifiable(rows.map((row) =>
         ErpRemoteCheque.fromJson(Map<String, dynamic>.from(row as Map))));
+  }
+
+  Future<List<ErpRemotePurchaseInvoice>> readPurchaseInvoices() async {
+    final result = await _get('/v1/purchase-invoices');
+    final rows = result['items'];
+    if (rows is! List) throw const ErpGatewayError('INVALID_RESPONSE');
+    return List.unmodifiable(rows.map((row) =>
+        ErpRemotePurchaseInvoice.fromJson(
+          Map<String, dynamic>.from(row as Map),
+        )));
   }
 
   Future<List<Map<String, dynamic>>> readChequeEvents(String chequeId) async {
