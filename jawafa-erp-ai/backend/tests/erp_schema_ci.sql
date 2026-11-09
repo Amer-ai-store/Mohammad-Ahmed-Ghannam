@@ -39,6 +39,19 @@ VALUES
 ('ffffffff-ffff-4fff-8fff-ffffffffffff','11111111-1111-4111-8111-111111111111',
 'dddddddd-dddd-4ddd-8ddd-dddddddddddd','DEMO-201',2,0,1000500);
 
+-- Deliberately unbalanced second tenant DRAFT proves the read-only view
+-- distinguishes balancing from mere persistence; no journal is posted.
+INSERT INTO erp.journal_headers (journal_id,tenant_id,journal_ref,journal_date,created_by)
+VALUES ('44444444-4444-4444-8444-444444444444',
+'22222222-2222-4222-8222-222222222222','DEMO-J2',current_date,'makerB');
+INSERT INTO erp.journal_lines
+ (journal_line_id,tenant_id,journal_id,account_code,line_no,debit_fils,credit_fils)
+VALUES
+ ('55555555-5555-4555-8555-555555555555','22222222-2222-4222-8222-222222222222',
+ '44444444-4444-4444-8444-444444444444','DEMO-101',1,6000,0),
+ ('66666666-6666-4666-8666-666666666666','22222222-2222-4222-8222-222222222222',
+ '44444444-4444-4444-8444-444444444444','DEMO-201',2,0,5000);
+
 -- Reader cannot change data. Tenant context must be set by an authenticated
 -- server; a client-controllable session variable is NOT secure isolation.
 CREATE ROLE erp_ci_reader NOLOGIN;
@@ -54,6 +67,8 @@ BEGIN
   IF (SELECT count(*) FROM erp.cheque_events) != 1 THEN
     RAISE EXCEPTION 'TENANT_A_EVENT_RLS_FAILED';
   END IF;
+  IF (SELECT count(*) FROM erp.journal_draft_balance WHERE balanced_for_review) != 1
+  THEN RAISE EXCEPTION 'TENANT_A_BALANCED_DRAFT_VIEW_FAILED'; END IF;
 END $$;
 SET erp.tenant_id='22222222-2222-4222-8222-222222222222';
 DO $$
@@ -62,6 +77,9 @@ BEGIN
      (SELECT count(*) FROM erp.cheque_events) != 0 THEN
     RAISE EXCEPTION 'TENANT_B_READER_RLS_FAILED';
   END IF;
+  IF (SELECT count(*) FROM erp.journal_draft_balance) != 1 OR
+     (SELECT count(*) FROM erp.journal_draft_balance WHERE balanced_for_review) != 0
+  THEN RAISE EXCEPTION 'TENANT_B_UNBALANCED_DRAFT_VIEW_FAILED'; END IF;
 END $$;
 SET erp.tenant_id='';
 DO $$
@@ -83,6 +101,17 @@ END $$;
 RESET ROLE;
 
 -- Triggers reject mutation even when tests use a privileged migrator.
+DO $
+BEGIN
+  BEGIN
+    UPDATE erp.cheques SET amount_fils = 2
+      WHERE cheque_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    RAISE EXCEPTION 'CHEQUE_AMOUNT_MUTATION_UNEXPECTEDLY_SUCCEEDED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM NOT LIKE 'IMMUTABLE_ERP_AUDIT%' THEN RAISE; END IF;
+  END;
+END $;
+
 DO $$
 BEGIN
   BEGIN
