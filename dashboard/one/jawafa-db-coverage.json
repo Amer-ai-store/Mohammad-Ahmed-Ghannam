@@ -109,10 +109,11 @@
         "source_rows": 105880,
         "distinct_references": 5384,
         "without_parent": 0,
-        "classification": "snapshot_linked",
+        "classification": "placeholder_filtered",
         "caveat": "مرجع Cashno=0 قيمة افتراضية تكررت في 12,495 حدث حذف، وليس سند صندوق مفقود. تم استبعاد الصفر من اختبار وجود الصناديق، ويجب تفسير دلالته التشغيلية.",
         "placeholder_cash_key_events": 12495,
-        "placeholder_cash_key_distinct": 1
+        "placeholder_cash_key_distinct": 1,
+        "semantic_acceptance_verified": false
       },
       {
         "label": "Receipt ⇄ RecLine",
