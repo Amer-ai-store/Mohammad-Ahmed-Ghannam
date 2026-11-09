@@ -1,0 +1,45 @@
+name: JAWAFA ERP AI — isolated PostgreSQL schema acceptance
+on:
+  pull_request:
+    paths:
+      - 'jawafa-erp-ai/backend/**'
+      - '.github/workflows/jawafa-erp-ai-database.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-erp-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jawafa_erp_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-never-production
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jawafa_erp_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGDATABASE: jawafa_erp_ci
+      PGUSER: postgres
+      PGPASSWORD: ci-only-never-production
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check disposable PostgreSQL service
+        run: |
+          psql --version
+          pg_isready -h localhost -p 5432 -U postgres
+      - name: Migrate only NEW synthetic ERP database
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0001_erp_initial.sql
+      - name: Validate row security, financial immutability and tenant FK
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_schema_ci.sql
