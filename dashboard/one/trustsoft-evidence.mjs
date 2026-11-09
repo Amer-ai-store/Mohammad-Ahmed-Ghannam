@@ -1,6 +1,7 @@
 // TrustSoft forensic export evidence in JAWAFA ONE AI.
 // Public GitHub Pages: aggregate-only, dated snapshot; NEVER a live SQL feed.
 // Private CSV files: selected locally, validated by SHA-256, never sent/stored.
+import { assessPrivateEvidence } from "./jawafa-db-coverage.mjs";
 export const TRUSTSOFT_SUMMARY_URL = "./trustsoft-public-summary.json";
 export const AUDIT_STATES = Object.freeze({
   verified:"مثبت من التصدير", verified_difference:"فارق مثبت - سببه غير مثبت",
@@ -94,6 +95,15 @@ function installPrivateReader(target,registry){
       const csv=parsePrivateCsv(new TextDecoder("utf-8",{fatal:true}).decode(buffer));
       if(csv.rows.length!==entry.rows)throw Error("ROW_COUNT_MISMATCH");
       status.textContent="بصمة الملف وعدد الأسطر مطابقان. عرض محلي مؤقت لـ"+csv.rows.length+" سجلًا.";
+      const assessment=assessPrivateEvidence(entry.id,csv.headers,csv.rows);
+      const evaluation=make(details,"section","ts-private-assessment");
+      make(evaluation,"b","", "نتيجة قواعد التحقق المحلية: "+assessment.reason);
+      if(Array.isArray(assessment.counts)){
+        const list=make(evaluation,"ul","ts-next");
+        for(const [name,count] of assessment.counts)make(list,"li","",name+": "+count.toLocaleString("ar-JO"));
+      }
+      make(evaluation,"p","ts-note","هذه قراءة تحليلية محلية وليست تعديلًا أو قرارًا محاسبيًا ولا تُرسل إلى أي خادم.");
+
       const cap=make(details,"p","ts-note","الجدول للقراءة فقط، وأقصى عرض 50 صفًا. أغلق الصفحة أو اضغط «مسح العرض المحلي» لإزالة البيانات من الشاشة.");
       const wrapper=make(details,"div","ts-scroll");
       const table=make(wrapper,"table","ts-table");
