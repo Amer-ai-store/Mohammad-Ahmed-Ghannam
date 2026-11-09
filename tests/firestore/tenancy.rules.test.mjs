@@ -367,3 +367,26 @@ test('WS-01 workspaces: writers set the active agent, which must exist in the sa
   await assertSucceeds(updateDoc(doc(db(users.gmA), 'companies/A/workspaces/ws2'), { activeAgentId: 'agent_abc123' }));
   await assertFails(getDoc(doc(db(users.ownerB), 'companies/A/workspaces/ws1')));
 });
+
+// ---------- Phase 3: task board ----------
+const task = (u, over) => ({ title: 'جرد الرفوف', status: 'todo', by: u, at: 1, assigneeUid: 'empA', dueDate: '2026-11-20', priority: 'high', branchId: 'b1', ...over });
+
+test('TASK-01 tasks: validated fields, assignee must be a member, creator fixed', async () => {
+  await assertSucceeds(setDoc(doc(db(users.accA), 'companies/A/tasks/k1'), task('accA')));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { assigneeUid: 'ownerB' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { status: 'archived' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { priority: 'urgent' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { dueDate: '20/11/2026' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { branchId: 'ghost' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { title: '' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('gmA')));
+  await assertFails(setDoc(doc(db(users.audA), 'companies/A/tasks/k2'), task('audA')));
+  await assertFails(setDoc(doc(db(users.ownerB), 'companies/A/tasks/k2'), task('ownerB', { assigneeUid: null, branchId: null })));
+  // The assignee moves it along; an unrelated member cannot; nobody rewrites the creator.
+  await assertSucceeds(updateDoc(doc(db(users.empA), 'companies/A/tasks/k1'), { status: 'doing', updatedAt: 2 }));
+  await assertFails(updateDoc(doc(db(users.pmA), 'companies/A/tasks/k1'), { status: 'done', updatedAt: 3 }));
+  await assertSucceeds(updateDoc(doc(db(users.gmA), 'companies/A/tasks/k1'), { status: 'done', doneAt: 3, updatedAt: 3 }));
+  await assertFails(updateDoc(doc(db(users.gmA), 'companies/A/tasks/k1'), { by: 'gmA' }));
+  await assertFails(deleteDoc(doc(db(users.empA), 'companies/A/tasks/k1')));
+  await assertSucceeds(deleteDoc(doc(db(users.gmA), 'companies/A/tasks/k1')));
+});

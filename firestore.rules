@@ -137,11 +137,29 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // Tasks: every member except auditors may create and update; managers may delete.
+      // Tasks: every member except auditors may create; fields are validated; the assignee must be a
+      // member. Only managers, the creator or the assignee update a task, and the creator never changes.
+      // Managers may delete.
+      function taskRole() {
+        return roleIn(company(cid)) in ['owner', 'chairman', 'general_manager',
+          'procurement_manager', 'branch_manager', 'accountant', 'employee'];
+      }
+      function validTask(d) {
+        return d.keys().hasOnly(['title', 'status', 'by', 'at', 'assigneeUid', 'dueDate', 'priority', 'branchId', 'updatedAt', 'doneAt'])
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+          && (!('status' in d) || d.status in ['todo', 'doing', 'done'])
+          && (!('assigneeUid' in d) || d.assigneeUid == null || d.assigneeUid in company(cid).memberIds)
+          && (!('dueDate' in d) || d.dueDate == '' || (d.dueDate is string && d.dueDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+          && (!('priority' in d) || d.priority in ['low', 'normal', 'high'])
+          && (!('branchId' in d) || d.branchId == null || branchExists(d.branchId));
+      }
       match /tasks/{taskId} {
         allow read: if isMember(cid);
-        allow create, update: if roleIn(company(cid)) in ['owner', 'chairman', 'general_manager',
-          'procurement_manager', 'branch_manager', 'accountant', 'employee'];
+        allow create: if taskRole() && validTask(request.resource.data)
+          && request.resource.data.get('by', uid()) == uid();
+        allow update: if taskRole() && validTask(request.resource.data)
+          && (canManage(cid) || resource.data.get('by', '') == uid() || resource.data.get('assigneeUid', '') == uid())
+          && request.resource.data.get('by', '') == resource.data.get('by', '');
         allow delete: if canManage(cid);
       }
 

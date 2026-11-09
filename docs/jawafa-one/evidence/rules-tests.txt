@@ -1,4 +1,4 @@
-# ran 2026-11-09T02:04:12Z · Firestore emulator
+# ran 2026-11-09T03:12:41Z · Firestore emulator
 ok 1 - TEN-01 a user can create a company only as its sole owner
 ok 2 - TEN-02 company A data is not readable or writable by company B owner (API level)
 ok 3 - TEN-03 unauthenticated access is denied everywhere
@@ -22,6 +22,7 @@ ok 20 - PO-01 purchase orders: draft -> submitted -> approved -> received, each 
 ok 21 - PO-02 rejection, scoped visibility, reuse of audit entries and cross-company denial
 ok 22 - AGT-01 agents: only owner/chairman/GM write; fields validated; members read; other companies denied
 ok 23 - WS-01 workspaces: writers set the active agent, which must exist in the same company
-# tests 23
-# pass 23
+ok 24 - TASK-01 tasks: validated fields, assignee must be a member, creator fixed
+# tests 24
+# pass 24
 # fail 0

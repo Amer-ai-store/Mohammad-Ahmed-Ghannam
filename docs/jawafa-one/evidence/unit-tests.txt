@@ -1,4 +1,4 @@
-# ran 2026-11-09T02:04:23Z · node v22.23.4
+# ran 2026-11-09T03:12:51Z · node v22.23.4
 ok 1 - DESK-01 start URL must be https unless localhost
 ok 2 - DESK-02 only the app origin and Google/Firebase sign-in open inside the app
 ok 3 - DESK-03 user agent hides the Electron token
@@ -11,6 +11,8 @@ ok 9 - CORE-06 browser module app.js parses as an ES module
 ok 10 - CORE-07 branch scope: only branch_manager/employee with a non-empty list are scoped
 ok 11 - CORE-08 purchase orders: lines, totals and allowed moves per role
 ok 12 - CORE-09 AI agents: validation matches the rules and requests carry only agent settings + typed text
-# tests 12
-# pass 12
+ok 13 - CORE-10 tasks and notifications: overdue, edit rights, ordered notification list
+ok 14 - CORE-11 supplier performance comes only from recorded orders
+# tests 14
+# pass 14
 # fail 0
