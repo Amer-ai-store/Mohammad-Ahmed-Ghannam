@@ -37,4 +37,28 @@ INSERT INTO erp.journal_lines
   ('ffffffff-ffff-4fff-8fff-ffffffffffff',
    '11111111-1111-4111-8111-111111111111',
    'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'SYN-201', 2, 0, 100250);
+-- Fully synthetic purchase data; never sourced from TrustSoft or Jawafa_DB.
+INSERT INTO erp.suppliers (supplier_id, tenant_id, supplier_code, legal_name) VALUES
+ ('10000000-0000-4000-8000-000000000001',
+  '11111111-1111-4111-8111-111111111111','SYN-A','Synthetic Supplier A'),
+ ('20000000-0000-4000-8000-000000000002',
+  '22222222-2222-4222-8222-222222222222','SYN-B','Synthetic Supplier B');
+INSERT INTO erp.purchase_invoices
+ (purchase_invoice_id,tenant_id,supplier_id,original_invoice_number,
+  invoice_date,total_fils,created_by) VALUES
+ ('30000000-0000-4000-8000-000000000003',
+  '11111111-1111-4111-8111-111111111111',
+  '10000000-0000-4000-8000-000000000001',
+  ' inv-١٢٣ ',date '2026-11-01',100250,'synthetic-maker'),
+ ('40000000-0000-4000-8000-000000000004',
+  '22222222-2222-4222-8222-222222222222',
+  '20000000-0000-4000-8000-000000000002',
+  'INV-124',date '2026-11-01',555000,'synthetic-maker');
+INSERT INTO erp.purchase_invoice_lines
+ (line_id,tenant_id,purchase_invoice_id,line_no,item_reference,
+  quantity_milliunits,net_fils,tax_fils) VALUES
+ ('50000000-0000-4000-8000-000000000005',
+  '11111111-1111-4111-8111-111111111111',
+  '30000000-0000-4000-8000-000000000003',
+  1,'SYNTHETIC-STOCK',1000,90000,10250);
 COMMIT;
