@@ -166,7 +166,7 @@ class _ErpShellState extends State<ErpShell> {
             if (wide)
               SizedBox(
                 width: 250,
-                child: ColoredBox(
+                child: Material(
                   color: Colors.white,
                   child: navEntries(mobile: false),
                 ),
