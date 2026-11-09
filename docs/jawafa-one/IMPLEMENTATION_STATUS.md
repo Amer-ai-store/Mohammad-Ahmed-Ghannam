@@ -5,15 +5,15 @@ Counts are computed from [REQUIREMENTS_MATRIX.md](REQUIREMENTS_MATRIX.md) (69 re
 | Status | Count | % of 69 |
 |---|---|---|
 | VERIFIED | 0 | 0.0% |
-| TEST_PASSED | 39 | 56.5% |
+| TEST_PASSED | 40 | 58.0% |
 | BUILT_NOT_TESTED | 7 | 10.1% |
 | IN_PROGRESS | 8 | 11.6% |
-| TEST_FAILED | 1 | 1.4% |
+| TEST_FAILED | 0 | 0.0% |
 | BLOCKED | 10 | 14.5% |
 | NOT_STARTED | 4 | 5.8% |
 
 - Implemented (any code exists: TEST_PASSED + BUILT_NOT_TESTED + IN_PROGRESS + TEST_FAILED): **55 / 69**
-- Tested with a passing automated test: **39 / 69**
+- Tested with a passing automated test: **40 / 69**
 - Verified in the target (production) environment: **0 / 69**
 - Remaining (NOT_STARTED + BLOCKED): **14 / 69**
 
@@ -51,5 +51,5 @@ Cycle 2 added: branch management, audit-log viewer, user profiles in Firestore, 
 This document is a **snapshot of 69 requirement statuses** in `REQUIREMENTS_MATRIX.md`, not a claim of a successful live deployment. The matrix is the source of truth and the automated guard `node tools/check-jawafa-one-requirements.cjs` fails if counts drift. Historical phase-2 CI evidence and implementation statements have not been silently promoted to production VERIFIED.
 
 - Main includes PR #208 (agents/workspaces) and PR #212 (tasks, notifications, supplier performance); their presence in code is not a live agent execution or external integration acceptance.
-- REQ-063 remains `TEST_FAILED` in the source matrix until the current `dashboard/tests/aas-roster.test.cjs` is rerun and the matrix is updated with evidence. The assertion currently references the actual navigation label; an old known-issues description may be stale.
+- REQ-063 was updated to `TEST_PASSED` only after GitHub Actions run [42569460477](https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/42569460477) verified the current `dashboard/tests/aas-roster.test.cjs`. This fixes the historical stale-report failure; no live runtime acceptance is inferred.
 - The existing Firestore store write exposure and missing production SQL/Gemini/POS evidence remain release blockers. **Production release: NOT READY.**
