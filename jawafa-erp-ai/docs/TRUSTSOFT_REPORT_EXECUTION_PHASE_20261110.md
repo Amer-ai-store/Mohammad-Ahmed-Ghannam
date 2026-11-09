@@ -52,3 +52,31 @@ The older `dbo.List_Report` snapshot has 3,846 user/form configuration entries a
 5. Run independent old/new report comparisons with immutable evidence and reviewer acceptance for every report.
 
 **Current release acceptance: BLOCKED.** New source code and synthetic tests are not proof of 90% TrustSoft functional parity, 100% owner report coverage or security acceptance. No private source was mutated.
+
+
+## Initial UI/report-preference name-correlation attempt
+
+A separate **read-only**, limited aggregation was performed against source
+`dbo.List_Report.csv` from the authorized 2026-11-09 metadata export. It
+read report preference/configuration columns only, not `User_Id` or financial
+transaction records. Nonfinancial aggregate counts:
+
+| Metadata field | Distinct nonempty values | Exact normalized name matches against the 188 .rpt basenames |
+|---|---:|---:|
+| `ReportNo` | 9 | Not compared (numeric identifiers) |
+| `FORM_No` | 8 | Not compared (numeric identifiers) |
+| `CTRNAME` | 337 | **0** |
+| `ReportName` | 38 | **0** |
+| `ReportNameE` | 2 | **0** |
+
+Normalization for name comparison used lowercase and removed non-letter/non-number
+characters. These are **zero direct string matches**, NOT proof that no
+template is used, that `List_Report` contains all reports, or that any report
+has been replicated. The `CTRNAME` values include controls of report UI
+forms, not just report names; some report labels in the export have uncertain
+character encoding and should not be promoted to names until checked in the
+application. Further approved runtime UI/menu inspection and/or vendor
+documentation is the next necessary evidence.
+
+This aggregation did not read salaries, personal identities, bank information,
+voucher amounts, or modified source records.
