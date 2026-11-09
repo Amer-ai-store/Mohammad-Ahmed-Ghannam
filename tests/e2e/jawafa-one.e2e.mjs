@@ -82,11 +82,11 @@ try {
     buffer:Buffer.from('RecNo,Tax\\n123,99\\n','utf8')
   });
   await a.page.waitForFunction(() => document.querySelector('section.view[data-view="trustsoft-evidence"]').textContent.includes('البصمة لا تطابق'),null,{timeout:5000});
-  const denied=await a.page.evaluate(()=>{
+  const trustsoftDenied=await a.page.evaluate(()=>{
     const v=document.querySelector('section.view[data-view="trustsoft-evidence"]');
     return v.textContent.includes('البصمة لا تطابق') && v.querySelector('.ts-private-results').children.length===0;
   });
-  check('E2E-46',denied,'modified private CSV rejected by SHA256 without displaying transaction rows');
+  check('E2E-46',trustsoftDenied,'modified private CSV rejected by SHA256 without displaying transaction rows');
   await a.page.screenshot({path:`${out}/12-trustsoft-historical-public-snapshot.png`});
   check('E2E-02', bad.length === 0, `${views.length} views render after navigation` + (bad.length ? ' — failed: ' + bad.join(',') : ''));
   await nav(a.page, 'home'); await a.page.waitForTimeout(300);
