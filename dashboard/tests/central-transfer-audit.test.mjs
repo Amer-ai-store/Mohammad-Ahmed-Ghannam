@@ -25,7 +25,7 @@ test('canonical dashboard routes all 14 AAS screens and 17 Jawafa panes',()=>{
   assert.equal(nav.length,report.public_inventory.main_groups);
   // Snapshot inventory describes the previously published dashboard. Count
   // proposed views only for structural CI; do not claim them as published.
-  const proposedViews=['project-messages','cca999-task-flow']
+  const proposedViews=['project-messages','cca999-task-flow','jawafa-one']
     .filter(id=>navRoutes.includes(id)&&viewSet.has(id)).length;
   assert.equal(viewSet.size,report.public_inventory.main_native_views+proposedViews);
   assert.equal(navRoutes.length,report.public_inventory.main_navigation_destinations+proposedViews);
@@ -36,6 +36,8 @@ test('canonical dashboard routes all 14 AAS screens and 17 Jawafa panes',()=>{
   assert.ok(jawafaRoutes.every(x=>navRoutes.includes(x)&&viewSet.has(x)),'Jawafa pages must be rooted in real screens');
   assert.equal(jawafaRoutes.length,report.public_inventory.jawafa_existing_panes);
   assert.ok(index.includes('id="trustsoft-frame"'));
+  assert.ok(index.includes('id="jawafa-one-frame"'));
+  assert.ok(index.includes('data-view="jawafa-one"'));
   assert.ok(index.includes('trustsoft/host-integration.js'));
   assert.ok(index.includes('aas-integration.js'));
 });
