@@ -169,3 +169,25 @@ details.scope summary{cursor:pointer}
 @media (max-width:860px){.task-board{grid-template-columns:1fr}}
 .task-card.late{border-color:var(--red)}
 a.notif{text-decoration:none;color:var(--fg);gap:.6rem;justify-content:flex-start}
+
+/* TrustSoft offline-export evidence: public aggregates, private local-only CSV reading. */
+.ts-evidence{display:grid;gap:1rem}
+.ts-evidence h2,.ts-evidence h3{margin:.15rem 0 .5rem}
+.ts-evidence .ts-note{color:var(--muted);font-size:.91rem;line-height:1.7;overflow-wrap:anywhere}
+.ts-evidence .ts-warning{padding:.75rem 1rem;border-inline-start:4px solid var(--amber);background:var(--surface-2);border-radius:8px;font-weight:700}
+.ts-evidence .ts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.ts-evidence .ts-panel{min-width:0;padding:1rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.ts-evidence .ts-heading{margin:.5rem 0;color:var(--fg);font-weight:700}
+.ts-evidence .ts-status{display:inline-flex;margin:.4rem 0;padding:.2rem .65rem;border-radius:100px;border:1px solid var(--line-2);background:var(--surface-2);font-size:.8rem}
+.ts-evidence .ts-facts{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:.45rem .8rem;margin:.7rem 0}
+.ts-evidence .ts-facts dt{min-width:0;color:var(--muted)}
+.ts-evidence .ts-facts dd{margin:0;font-variant-numeric:tabular-nums;font-weight:800;text-align:end;color:var(--fg)}
+.ts-evidence .ts-registry,.ts-evidence .ts-next{padding-inline-start:1.4rem}
+.ts-evidence .ts-registry li{overflow-wrap:anywhere;margin:.4rem 0}
+.ts-evidence .ts-file-input{display:block;width:100%;max-width:100%;margin:.8rem 0}
+.ts-evidence .ts-clear{margin:.3rem 0 .7rem}
+.ts-evidence .ts-scroll{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.ts-evidence .ts-table{border-collapse:collapse;white-space:nowrap;font-size:.82rem}
+.ts-evidence .ts-table th,.ts-evidence .ts-table td{border-bottom:1px solid var(--line);padding:.5rem .65rem;text-align:start}
+.ts-evidence .ts-table thead{position:sticky;top:0;background:var(--surface-2)}
+@media(max-width:860px){.ts-evidence .ts-grid{grid-template-columns:1fr}}
