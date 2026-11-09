@@ -1,0 +1,85 @@
+{
+  "schema": "jawafa.db.coverage.v1",
+  "source": "offline-export-2026-11-08-0100",
+  "generated_at": "2026-11-09",
+  "scope": "1000 available dbo CSV files; may not represent the complete live SQL catalog",
+  "target_percent": 90,
+  "percent_goal_achieved": false,
+  "live_sql": false,
+  "data_mutated": false,
+  "stages": [
+    {
+      "id": "schema",
+      "name_ar": "فهرسة رؤوس ملفات التصدير",
+      "name_en": "Export schema headers",
+      "numerator": 1000,
+      "denominator": 1000,
+      "measurement": "successful CSV header parsing",
+      "verified": true,
+      "limitation": "ليس تحليلًا لدلالات الأعمدة أو للمحتوى"
+    },
+    {
+      "id": "focus",
+      "name_ar": "تحديد الجداول ذات الأولوية",
+      "name_en": "Priority table discovery",
+      "numerator": 17,
+      "denominator": 17,
+      "measurement": "priority tables found in export",
+      "verified": true,
+      "limitation": "وجود الجدول لا يثبت صحة بياناته"
+    },
+    {
+      "id": "semantic",
+      "name_ar": "التحليل الدلالي الشامل",
+      "name_en": "Semantic analysis",
+      "numerator": null,
+      "denominator": 1000,
+      "measurement": "independently validated business meaning and provenance per table",
+      "verified": false,
+      "limitation": "غير مقاس؛ يمنع عرض نسبة إكمال مصطنعة"
+    },
+    {
+      "id": "integrations",
+      "name_ar": "تغطية قواعد الربط الحي والواجهات",
+      "name_en": "Live integration acceptance",
+      "numerator": 0,
+      "denominator": null,
+      "measurement": "live SQL authenticated read-only tests with backend isolation",
+      "verified": false,
+      "limitation": "لا يوجد جسر SQL إنتاجي مثبت لهذا التطبيق"
+    }
+  ],
+  "schema_columns_total": 15566,
+  "priority_tables": [
+    "Receipt",
+    "RecLine",
+    "InvPurchaseVouchersTransactionHistory",
+    "Journal_GL",
+    "ARPJournal_GL",
+    "ARPDocuments",
+    "ARPFrom_gl",
+    "ARPTo_GL",
+    "SlipInfo",
+    "SlipItems",
+    "Cash",
+    "TransactionHistory",
+    "ItemsTransActions",
+    "Items",
+    "InvoiceMain",
+    "MPOSSales",
+    "PosDeletedItems"
+  ],
+  "audit_catalog": {
+    "path_private": "JawafaDB_ExportSchema_1000_Private.json",
+    "sha256": "d295796f1c01fef46cc64063c1948f875bef6740043d4d598c1ef40e49ba42c4",
+    "public_content": "metadata count only; no field names, row IDs or financial values"
+  },
+  "acceptance": [
+    "Each table must have field definitions and document-level source validation",
+    "Critical keys and history joins require row-level evidence and no false orphan conclusions",
+    "Business and tax rules require signed-off scope and test cases",
+    "JAWAFA ONE screens must be tested with authorized data while financial records remain immutable",
+    "Live SQL reader must be verified with least privilege and private authenticated gateway",
+    "No production 90% declaration without independent review and evidence hashes"
+  ]
+}
