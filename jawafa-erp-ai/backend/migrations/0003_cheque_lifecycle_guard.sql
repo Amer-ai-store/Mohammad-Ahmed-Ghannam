@@ -39,6 +39,11 @@ BEGIN
    LIMIT 1;
   IF NOT FOUND THEN v_expected := 'draft'; END IF;
 
+  -- The audit timestamp is authoritative DATABASE time, never caller time.
+  -- This prevents client-provided historical/backdated event timestamps.
+  NEW.event_time := clock_timestamp();
+  NEW.recorded_at := NEW.event_time;
+
   IF NEW.state_before IS DISTINCT FROM v_expected THEN
     RAISE EXCEPTION 'ERP_CHEQUE_STALE_OR_INVALID_PREVIOUS_STATE';
   END IF;
