@@ -43,5 +43,9 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0001_erp_initial.sql
       - name: Create tenant-safe journal balance view (new ERP only)
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0002_journal_draft_balance.sql
+      - name: Install cheque event guard and read-only state projection (new ERP only)
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0003_cheque_lifecycle_guard.sql
       - name: Validate row security, financial immutability and tenant FK
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_schema_ci.sql
+      - name: Verify synthetic cheque lifecycle and denied mutations
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_cheque_lifecycle_ci.sql
