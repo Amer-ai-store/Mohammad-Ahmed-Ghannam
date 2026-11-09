@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '24'
       - name: Node tests — native navigation and private-link fail-closed guard
-        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs dashboard/tests/central-transfer-audit.test.mjs dashboard/tests/jawafa-forensic-workspace.test.mjs dashboard/tests/cca999-task-flow.test.mjs dashboard/tests/cca999-api-health.test.mjs
+        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs dashboard/tests/central-transfer-audit.test.mjs dashboard/tests/jawafa-forensic-workspace.test.mjs dashboard/tests/cca999-task-flow.test.mjs dashboard/tests/cca999-api-health.test.mjs dashboard/tests/owner-sso.test.mjs
       - name: Publication preflight — reject private links in entire dashboard artifact
         shell: bash
         run: |
@@ -99,6 +99,7 @@ jobs:
               && grep -Fq 'id="release-verification-root"' /tmp/live-dashboard.html \
               && grep -Fq 'id="central-transfer-audit-root"' /tmp/live-dashboard.html \
               && grep -Fq 'id="jawafa-forensic-workspace-root"' /tmp/live-dashboard.html \
+              && grep -Fq 'id="owner-security-root"' /tmp/live-dashboard.html \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}release-verification.mjs?verify=${GITHUB_SHA}" -o /tmp/live-verification.mjs \
               && grep -Fq 'export const REPO=' /tmp/live-verification.mjs \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}data/jawafa-investigation-reports.json?verify=${GITHUB_SHA}" -o /tmp/live-manifest.json \
@@ -106,6 +107,7 @@ jobs:
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}central-transfer-audit.mjs?verify=${GITHUB_SHA}" -o /tmp/live-transfer-code.mjs \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}data/jawafa-forensic-workspace-public.json?verify=${GITHUB_SHA}" -o /tmp/live-forensic-metadata.json \
               && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}jawafa-forensic-workspace.js?verify=${GITHUB_SHA}" -o /tmp/live-forensic-workspace.js \
+              && curl -fsSL --max-time 15 -H 'Cache-Control: no-cache' "${BASE}owner-auth.js?verify=${GITHUB_SHA}" -o /tmp/live-owner-auth.js \
               && python3 - <<'PY'
           import json
           with open("/tmp/live-manifest.json") as f: doc=json.load(f)
