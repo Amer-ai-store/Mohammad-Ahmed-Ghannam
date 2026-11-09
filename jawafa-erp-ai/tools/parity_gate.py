@@ -17,6 +17,14 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 ID = re.compile(r"^[A-Z][A-Z0-9-]*$")
 REQUIRED_PROOF = ("reference_evidence_sha256", "implementation_evidence_sha256",
                   "comparison_evidence_sha256", "independent_approval_ref")
+# The owner explicitly requires personnel + permissions/settings in the baseline.
+# This fixed minimum cannot be erased by editing mandatory_modules in JSON.
+BASELINE_REQUIRED_MODULES = frozenset({
+    "cheques", "bank_reconciliation", "general_ledger", "accounts_receivable",
+    "procurement", "inventory", "sales_pos", "tax", "investments",
+    "security", "branches", "statutory_reports", "personnel",
+    "permissions_settings",
+})
 
 
 class InvalidCatalog(ValueError):
@@ -81,6 +89,8 @@ def evaluate(catalog: dict) -> dict:
             not isinstance(m, str) or not m.strip() for m in required
         ):
             raise InvalidCatalog("FROZEN_CATALOG_MISSING_MANDATORY_MODULES")
+        if not BASELINE_REQUIRED_MODULES.issubset(set(required)):
+            raise InvalidCatalog("FROZEN_CATALOG_WEAKENS_OWNER_MODULE_BASELINE")
         if not set(required).issubset({e["module"] for e in entries}):
             raise InvalidCatalog("FROZEN_CATALOG_OMITS_MANDATORY_MODULE")
     score = (accepted_weight * 100 / total) if frozen else None
