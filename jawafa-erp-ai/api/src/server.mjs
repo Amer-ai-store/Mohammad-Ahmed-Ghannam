@@ -56,7 +56,9 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
       const events = pathname.match(/^\/v1\/cheques\/([0-9a-f-]{36})\/events$/i);
       const isList = pathname === '/v1/cheques';
       const isJournal = pathname === '/v1/journals/draft-balances';
-      if (!one && !events && !isList && !isJournal) {
+      const isPurchases = pathname === '/v1/purchase-invoices';
+      const isSuppliers = pathname === '/v1/suppliers';
+      if (!one && !events && !isList && !isJournal && !isPurchases && !isSuppliers) {
         return send(404, { error: 'NOT_FOUND' }, cors);
       }
       if ((one && !UUID.test(one[1])) || (events && !UUID.test(events[1]))) {
@@ -114,6 +116,23 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
             WHERE tenant_id = $1 AND cheque_id = $2
             ORDER BY event_time, event_id LIMIT 100`,
           [tenantId, events[1]],
+        );
+      } else if (isPurchases) {
+        result = await db.query(
+          `SELECT purchase_invoice_id, supplier_id, original_invoice_number,
+                  invoice_number_key, total_fils::text, currency_code, line_count,
+                  net_fils::text, tax_fils::text, lines_gross_fils::text,
+                  draft_total_matches_lines
+             FROM erp.purchase_invoice_draft_checks
+            WHERE tenant_id = $1 ORDER BY invoice_number_key LIMIT 100`,
+          [tenantId],
+        );
+      } else if (isSuppliers) {
+        result = await db.query(
+          `SELECT supplier_id, supplier_code, legal_name
+             FROM erp.suppliers WHERE tenant_id = $1
+            ORDER BY supplier_code LIMIT 100`,
+          [tenantId],
         );
       } else {
         result = await db.query(
