@@ -87,7 +87,7 @@ try {
       hasPrivateRows:!!v.querySelector('.ts-private-results table')};
   });
   check('E2E-45',trustsoft.cards===7&&trustsoft.links===6&&trustsoft.has25&&trustsoft.hasLive&&!trustsoft.hasPrivateRows,
-    'TrustSoft seven aggregate findings, six links; no private rows or false LIVE claim');
+    'TrustSoft seven aggregate findings, six links; no private rows or false LIVE claim: '+JSON.stringify(trustsoft));
   await a.page.locator('section.view[data-view="trustsoft-evidence"] .ts-file-input').setInputFiles({
     name:'Receipt_All_54_Snapshot_Changes_Private.csv',mimeType:'text/csv',
     buffer:Buffer.from('RecNo,Tax\\n123,99\\n','utf8')
