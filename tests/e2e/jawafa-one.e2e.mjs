@@ -56,7 +56,18 @@ try {
   // 1. Signed-out preview: every view navigable, demo data clearly labelled.
   const a = await open();
   check('E2E-01', (await a.page.evaluate(() => window.__jawafaState.cloud)) === 'ready', 'Firebase SDK loaded and emulator connected');
-  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'trustsoft-evidence', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees', 'aiagents', 'notifications', 'tasks'];
+  // Intercept public GitHub API in E2E only: deterministic, no credentials or external dependency.
+  await a.page.route((url)=>url.hostname==="api.github.com" && url.pathname.startsWith("/repos/Amer-ai-store/Mohammad-Ahmed-Ghannam/"),route=>{
+    const url=new URL(route.request().url());
+    const gh="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam";
+    const body=url.pathname.includes("/actions/runs")
+      ? {workflow_runs:[{id:771,name:"JAWAFA ONE build",html_url:gh+"/actions/runs/771",status:"in_progress",conclusion:null,run_number:771,updated_at:"2026-11-09T08:00:00Z"}]}
+      : url.pathname.endsWith("/pulls")
+        ? [{number:214,title:"TrustSoft evidence",html_url:gh+"/pull/214",state:"open",draft:false,updated_at:"2026-11-09T08:00:00Z"}]
+        : [{number:300,title:"Safe test item",html_url:gh+"/issues/300",state:"open",updated_at:"2026-11-09T08:00:00Z"}];
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(body)});
+  });
+  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'trustsoft-evidence', 'jawafa-coverage', 'github-work', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees', 'aiagents', 'notifications', 'tasks'];
   const bad = [];
   for (const v of views) {
     await nav(a.page, v); await a.page.waitForTimeout(150);
@@ -88,6 +99,23 @@ try {
   });
   check('E2E-46',trustsoftDenied,'modified private CSV rejected by SHA256 without displaying transaction rows');
   await a.page.screenshot({path:`${out}/12-trustsoft-historical-public-snapshot.png`});
+  await nav(a.page,'jawafa-coverage');
+  await a.page.waitForFunction(()=>document.querySelectorAll('section.view[data-view="jawafa-coverage"] .jw-rule').length===10,null,{timeout:12000});
+  const dbCovered=await a.page.evaluate(()=>{
+    const v=document.querySelector('section.view[data-view="jawafa-coverage"]');
+    return v.querySelectorAll('.jw-rule').length===10 && v.textContent.includes('1000/1000') && v.textContent.includes('لم يُقَس بعد') && v.textContent.includes('90%');
+  });
+  check('E2E-47',dbCovered,'1000 schema headers and 10 rules shown, semantic coverage unmeasured and 90% not falsely claimed');
+  await nav(a.page,'github-work');
+  await a.page.waitForFunction(()=>document.querySelector('section.view[data-view="github-work"] .jw-repo-item')?.textContent.includes('JAWAFA ONE build'),null,{timeout:10000});
+  const gh=await a.page.evaluate(()=>{
+    const v=document.querySelector('section.view[data-view="github-work"]');
+    return v.querySelectorAll('.jw-repo-item').length===3
+      && v.textContent.includes('يعمل الآن') && v.textContent.includes('TrustSoft evidence')
+      && v.textContent.includes('Safe test item');
+  });
+  check('E2E-48',gh,'GitHub Actions, PR and Issue statuses render from verified-format API responses');
+  await a.page.screenshot({path:`${out}/13-github-work-status.png`});
   check('E2E-02', bad.length === 0, `${views.length} views render after navigation` + (bad.length ? ' — failed: ' + bad.join(',') : ''));
   await nav(a.page, 'home'); await a.page.waitForTimeout(300);
   const demoBadges = await a.page.locator('.badge.demo').count();
