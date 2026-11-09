@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'src/domain/cheque.dart';
 import 'src/domain/journal.dart';
 import 'src/network/erp_gateway_client.dart';
+import 'src/ui/erp_visual_system.dart';
 
 void main() => runApp(const JawafaErpApp());
 
@@ -15,18 +16,7 @@ class JawafaErpApp extends StatelessWidget {
     return MaterialApp(
       title: 'JAWAFA ERP AI',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF157B67),
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF4F8F6),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF103C38),
-          foregroundColor: Colors.white,
-        ),
-      ),
+      theme: buildErpTheme(),
       home: Directionality(
         textDirection: TextDirection.rtl,
         child: ErpShell(gateway: gateway),
@@ -85,37 +75,126 @@ class ErpShell extends StatefulWidget {
 
 class _ErpShellState extends State<ErpShell> {
   ErpArea selected = ErpArea.overview;
+  ErpDepartment? activeDepartment;
+
+  static const departmentPages = <ErpDepartment, List<ErpArea>>{
+    ErpDepartment.accounting: [ErpArea.journal, ErpArea.cheques, ErpArea.reports],
+    ErpDepartment.procurementInventory: [ErpArea.procurement, ErpArea.inventory],
+    ErpDepartment.sales: [ErpArea.pointOfSale],
+    ErpDepartment.hr: [ErpArea.personnel],
+    ErpDepartment.shared: [
+      ErpArea.permissions, ErpArea.settings, ErpArea.audit,
+    ],
+  };
 
   void select(ErpArea area, {bool closeDrawer = false}) {
-    setState(() => selected = area);
+    setState(() {
+      selected = area;
+      activeDepartment = null;
+    });
     if (closeDrawer) Navigator.maybePop(context);
+  }
+
+  void selectDepartment(ErpDepartment department, {bool closeDrawer = false}) {
+    setState(() {
+      activeDepartment = department;
+      selected = ErpArea.overview;
+    });
+    if (closeDrawer) Navigator.maybePop(context);
+  }
+
+  void searchDepartments() {
+    showSearch<void>(
+      context: context,
+      delegate: ErpDepartmentSearch(onSelected: (department) {
+        selectDepartment(department);
+      }),
+    );
   }
 
   Widget navEntries({required bool mobile}) {
     return ListView(
+      key: Key(mobile ? 'erp_mobile_nav' : 'erp_desktop_nav'),
       children: [
-        const SizedBox(height: 24),
-        const ListTile(
-          leading: Icon(Icons.shield_outlined, color: Color(0xFF157B67)),
-          title: Text('JAWAFA ERP AI', style: TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text('نظام مستقل · نسخة تأسيسية'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(15, 20, 15, 16),
+          child: ErpPanel(
+            padding: const EdgeInsets.all(12),
+            child: Row(children: [
+              const Icon(Icons.shopping_basket_outlined,
+                color: ErpPalette.green, size: 32),
+              const SizedBox(width: 10),
+              const Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('JAWAFA ERP AI', style:
+                    TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  Text('نظام موارد المؤسسات الذكي',
+                    style: TextStyle(fontSize: 11, color: ErpPalette.muted)),
+                ],
+              )),
+            ]),
+          ),
+        ),
+        ListTile(
+          key: const Key('menu_overview'),
+          leading: const Icon(Icons.dashboard_outlined,
+            color: ErpPalette.cyan),
+          selected: selected == ErpArea.overview && activeDepartment == null,
+          title: const Text('لوحة القيادة'),
+          onTap: () => select(ErpArea.overview, closeDrawer: mobile),
         ),
         const Divider(),
-        for (final entry in areaLabels.entries)
-          ListTile(
-            key: Key('menu_${entry.key.name}'),
-            selected: selected == entry.key,
-            selectedTileColor: const Color(0xFFE3F3EB),
-            leading: Icon(areaIcons[entry.key]),
-            title: Text(entry.value),
-            onTap: () => select(entry.key, closeDrawer: mobile),
+        for (final department in ErpDepartment.values)
+          ExpansionTile(
+            key: Key('group_${department.name}'),
+            initiallyExpanded: department == ErpDepartment.accounting,
+            leading: Icon(erpDepartmentSpecs[department]!.icon,
+              color: erpDepartmentSpecs[department]!.accent),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+            title: Text(erpDepartmentSpecs[department]!.name,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            subtitle: Text(erpDepartmentSpecs[department]!.agent,
+              style: const TextStyle(color: ErpPalette.muted, fontSize: 10)),
+            onExpansionChanged: (expanded) {
+              if (expanded) {
+                setState(() {
+                  activeDepartment = department;
+                  selected = ErpArea.overview;
+                });
+              }
+            },
+            children: [
+              ListTile(
+                key: Key('menu_department_${department.name}'),
+                contentPadding: const EdgeInsetsDirectional.only(start: 28, end: 12),
+                dense: true,
+                leading: const Icon(Icons.grid_view_outlined, size: 18),
+                title: const Text('نظرة عامة للقسم'),
+                onTap: () => selectDepartment(department, closeDrawer: mobile),
+              ),
+              for (final area in departmentPages[department]!)
+                ListTile(
+                  key: Key('menu_${area.name}'),
+                  dense: true,
+                  selected: selected == area && activeDepartment == null,
+                  selectedTileColor: ErpPalette.raised,
+                  contentPadding:
+                    const EdgeInsetsDirectional.only(start: 28, end: 12),
+                  leading: Icon(areaIcons[area], size: 19),
+                  title: Text(areaLabels[area]!,
+                    style: const TextStyle(fontSize: 12)),
+                  onTap: () => select(area, closeDrawer: mobile),
+                ),
+              const SizedBox(height: 6),
+            ],
           ),
         const Divider(),
         const Padding(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(14),
           child: Text(
-            'دراسة TrustSoft بالقراءة فقط. لا اتصال مالي أو بنكي حي.',
-            style: TextStyle(color: Color(0xFF6A7471), fontSize: 12),
+            'شاشات TrustSoft قيد الدراسة · لا اتصال مالي إنتاجي.',
+            style: TextStyle(fontSize: 11, color: ErpPalette.muted),
           ),
         ),
       ],
@@ -123,9 +202,12 @@ class _ErpShellState extends State<ErpShell> {
   }
 
   Widget currentContent() {
+    if (activeDepartment != null) {
+      return ErpDepartmentLanding(department: activeDepartment!);
+    }
     switch (selected) {
       case ErpArea.overview:
-        return const OverviewView();
+        return ErpOverviewDashboard(onDepartmentSelected: selectDepartment);
       case ErpArea.cheques:
         return ChequeDemoView(gateway: widget.gateway);
       case ErpArea.journal:
@@ -133,11 +215,14 @@ class _ErpShellState extends State<ErpShell> {
       case ErpArea.procurement:
         return ProcurementDraftView(gateway: widget.gateway);
       case ErpArea.personnel:
-        return ErpReferenceReadOnlyView(gateway: widget.gateway, scope: 'personnel');
+        return ErpReferenceReadOnlyView(
+          gateway: widget.gateway, scope: 'personnel');
       case ErpArea.permissions:
-        return ErpReferenceReadOnlyView(gateway: widget.gateway, scope: 'permissions');
+        return ErpReferenceReadOnlyView(
+          gateway: widget.gateway, scope: 'permissions');
       case ErpArea.settings:
-        return ErpReferenceReadOnlyView(gateway: widget.gateway, scope: 'settings');
+        return ErpReferenceReadOnlyView(
+          gateway: widget.gateway, scope: 'settings');
       case ErpArea.inventory:
         return const PendingModuleView(
           title: 'المخزون',
@@ -146,17 +231,19 @@ class _ErpShellState extends State<ErpShell> {
       case ErpArea.pointOfSale:
         return const PendingModuleView(
           title: 'المبيعات ونقاط البيع',
-          details: 'الفواتير والخصومات والإلغاء والمردود والصناديق والضريبة.',
+          details: 'الفواتير والخصومات والإلغاء والمردود والصناديق والضريبة، '
+            'بما فيها صلاحيات الكاشير الخاصة بهذا القسم.',
         );
       case ErpArea.audit:
         return const PendingModuleView(
           title: 'التدقيق والرقابة',
-          details: 'سجل أحداث غير قابل للتعديل، وفصل الصلاحيات وأدلة قبل/بعد.',
+          details: 'سجل أحداث غير قابل للتعديل وفصل الصلاحيات وأدلة قبل/بعد.',
         );
       case ErpArea.reports:
         return const PendingModuleView(
           title: 'التقارير المحاسبية والتشغيلية',
-          details: 'الميزان، الأستاذ، التدفق النقدي، الموردون، المخزون والشيكات.',
+          details: 'الميزان والأستاذ والتدفق النقدي والشيكات؛ '
+            'التقارير الأصلية قيد حصر وظائف TrustSoft.',
         );
     }
   }
@@ -165,43 +252,84 @@ class _ErpShellState extends State<ErpShell> {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, size) {
       final wide = size.maxWidth >= 780;
+      final title = activeDepartment == null
+          ? areaLabels[selected]!
+          : erpDepartmentSpecs[activeDepartment]!.name;
       return Scaffold(
         appBar: AppBar(
-          title: Text('JAWAFA ERP AI • ${areaLabels[selected]}'),
-          actions: const [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Center(child: Text('FOUNDATION · 0.1', style: TextStyle(fontSize: 11))),
+          title: Text('JAWAFA ERP AI • $title',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+              key: const Key('erp_module_search'),
+              onPressed: searchDepartments,
+              icon: const Icon(Icons.search),
+              tooltip: 'البحث عن مجموعة',
+            ),
+            const Padding(
+              padding: EdgeInsetsDirectional.only(end: 12),
+              child: Center(child: ErpNonLiveBadge()),
             ),
           ],
         ),
-        drawer: wide ? null : Drawer(child: navEntries(mobile: true)),
+        drawer: wide ? null : Drawer(
+          backgroundColor: ErpPalette.background,
+          child: SafeArea(child: navEntries(mobile: true)),
+        ),
+        bottomNavigationBar: wide ? null : NavigationBar(
+          key: const Key('erp_mobile_departments'),
+          height: 70,
+          backgroundColor: ErpPalette.surface,
+          selectedIndex: activeDepartment?.index ?? 0,
+          onDestinationSelected: (index) =>
+              selectDepartment(ErpDepartment.values[index]),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: [
+            for (final department in ErpDepartment.values)
+              NavigationDestination(
+                icon: Icon(erpDepartmentSpecs[department]!.icon),
+                label: switch (department) {
+                  ErpDepartment.accounting => 'المحاسبة',
+                  ErpDepartment.procurementInventory => 'المشتريات',
+                  ErpDepartment.sales => 'المبيعات',
+                  ErpDepartment.hr => 'الموظفون',
+                  ErpDepartment.shared => 'الإعدادات',
+                },
+              ),
+          ],
+        ),
         body: Row(
           children: [
             if (wide)
               SizedBox(
-                width: 250,
+                width: 260,
                 child: Material(
-                  color: Colors.white,
+                  color: ErpPalette.background,
                   child: navEntries(mobile: false),
                 ),
               ),
             Expanded(
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(wide ? 20 : 12),
                   child: ListView(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF2D8),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'نسخة تجريبية مستقلة: جميع الأرقام والعمليات المعروضة محاكاة محلية. لا يتم إنشاء قيود مالية فعلية ولا ربط Jawafa_DB.',
-                          key: Key('demo_banner'),
-                        ),
+                      ErpPanel(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                        child: const Row(children: [
+                          Icon(Icons.info_outline,
+                            color: ErpPalette.amber, size: 19),
+                          SizedBox(width: 8),
+                          Expanded(child: Text(
+                            'نسخة تجريبية مستقلة: جميع الأرقام والعمليات '
+                            'المعروضة محاكاة محلية. لا يتم إنشاء قيود مالية '
+                            'فعلية ولا ربط Jawafa_DB.',
+                            key: Key('demo_banner'),
+                            style: TextStyle(fontSize: 11,
+                              color: ErpPalette.muted),
+                          )),
+                        ]),
                       ),
                       const SizedBox(height: 18),
                       currentContent(),
@@ -214,6 +342,52 @@ class _ErpShellState extends State<ErpShell> {
         ),
       );
     });
+  }
+}
+
+class ErpDepartmentSearch extends SearchDelegate<void> {
+  final ValueChanged<ErpDepartment> onSelected;
+  ErpDepartmentSearch({required this.onSelected})
+    : super(searchFieldLabel: 'البحث في المجموعات الرئيسية');
+
+  @override
+  List<Widget> buildActions(BuildContext context) => [
+    IconButton(
+      onPressed: () { query = ''; },
+      icon: const Icon(Icons.clear),
+    ),
+  ];
+
+  @override
+  Widget buildLeading(BuildContext context) => IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () => close(context, null),
+  );
+
+  @override
+  Widget buildResults(BuildContext context) => buildSuggestions(context);
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final items = erpDepartmentSpecs.entries.where((entry) =>
+      entry.value.name.contains(query.trim()) ||
+      entry.value.agent.contains(query.trim())).toList();
+    return ListView(
+      children: [
+        for (final entry in items)
+          ListTile(
+            leading: Icon(entry.value.icon, color: entry.value.accent),
+            title: Text(entry.value.name),
+            subtitle: Text(entry.value.agent),
+            onTap: () {
+              close(context, null);
+              onSelected(entry.key);
+            },
+          ),
+        if (items.isEmpty)
+          const ListTile(title: Text('لم يتم العثور على مجموعة مطابقة')),
+      ],
+    );
   }
 }
 
