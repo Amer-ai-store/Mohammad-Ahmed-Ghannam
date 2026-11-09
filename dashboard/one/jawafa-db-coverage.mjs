@@ -73,6 +73,20 @@ export async function renderJawafaCoverage(target){
    add(card,"p","ts-note",stage.measurement);
    add(card,"p","ts-warning",stage.limitation);
   }
+  if(data.priority_relation_snapshot && Array.isArray(data.priority_relation_snapshot.relationships)){
+    const src=data.priority_relation_snapshot;
+    const box=add(root,"section","ts-panel");
+    add(box,"h3","","المطابقات المرجعية المجرّبة فعليًا");
+    add(box,"p","ts-note","تم اختبار "+src.join_checks_run+" علاقات على تصدير 8 نوفمبر؛ "+src.matched_within_snapshot+" متطابقة في اللقطة و"+src.require_investigation+" تحتاج تحققًا. ليست مفاتيح SQL الرسمية ولا توازنًا محاسبيًا مثبتًا.");
+    const grid=add(box,"div","jw-rules");
+    for(const rel of src.relationships){
+      const c=add(grid,"article","jw-rule");
+      add(c,"b","",rel.label);
+      add(c,"span","ts-status",rel.classification==="snapshot_linked"?"مفتاح مرتبط في اللقطة":"يحتاج مراجعة");
+      add(c,"p","ts-note","سجلات الجدول المرتبط: "+rel.source_rows.toLocaleString("ar-JO")+" · مراجع مختلفة: "+rel.distinct_references.toLocaleString("ar-JO")+" · مراجع دون مقابل: "+rel.without_parent.toLocaleString("ar-JO"));
+      add(c,"p","ts-note",rel.caveat);
+    }
+  }
   const rules=add(root,"section","ts-panel");
   add(rules,"h3","","قواعد التحقق والشاشات المرتبطة — لا كتابة لقاعدة TrustSoft");
   const list=add(rules,"div","jw-rules");
