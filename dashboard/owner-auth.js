@@ -63,6 +63,14 @@
       throw e;
     }
   }
+  async function signInWithEmail(email,password){
+    await ready;
+    if(typeof email!=='string'||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())||
+       typeof password!=='string'||!password.length)
+      throw Error('EMAIL_LOGIN_INPUT_INVALID');
+    // Firebase validates credentials; username "admin" alone never grants access.
+    return auth.signInWithEmailAndPassword(email.trim().toLowerCase(),password);
+  }
   async function signOut(){
     await ready;
     await auth.signOut();
@@ -87,7 +95,7 @@
     return true;
   }
   const API=Object.freeze({
-    ready,getUser,getIdToken:token,signIn,signOut,changePassword,
+    ready,getUser,getIdToken:token,signIn,signInWithEmail,signOut,changePassword,
     subscribe(listener){
       if(typeof listener!=='function')throw TypeError('callback');
       users.add(listener);
@@ -107,6 +115,7 @@
     const email=root.querySelector('#owner-sso-email');
     const login=root.querySelector('#owner-sso-login');
     const logout=root.querySelector('#owner-sso-logout');
+    const emailLogin=root.querySelector('#owner-email-signin-form');
     const passwordForm=root.querySelector('#owner-password-form');
     const google=root.querySelector('#owner-google-security');
     const result=root.querySelector('#owner-password-result');
@@ -117,6 +126,7 @@
       const pwd=verified&&(user.providerData||[]).some(p=>p?.providerId==='password');
       if(email)email.textContent=authenticated?String(user.email||'UID موجود'):'لا توجد جلسة مالك';
       if(login)login.hidden=authenticated;
+      if(emailLogin)emailLogin.hidden=authenticated;
       if(logout)logout.hidden=!authenticated;
       if(passwordForm)passwordForm.hidden=!pwd;
       if(google)google.hidden=!verified||pwd;
@@ -130,6 +140,17 @@
       try{await signIn();}
       catch(e){setMessage('لم ينجح الدخول: '+String(e?.code||'AUTH_FAILED').slice(0,70));}
       finally{login.disabled=false;}
+    });
+    emailLogin?.addEventListener('submit',async e=>{
+      e.preventDefault();
+      const email=emailLogin.querySelector('[name=owner-login-email]');
+      const password=emailLogin.querySelector('[name=owner-login-password]');
+      const button=emailLogin.querySelector('button[type=submit]');
+      if(!email||!password||!button)return;
+      button.disabled=true;
+      try{await signInWithEmail(email.value,password.value);}
+      catch(err){setMessage('لم ينجح تسجيل الدخول بالبريد وكلمة المرور: '+String(err?.code||err?.message||'AUTH_FAILED').slice(0,90));}
+      finally{password.value='';button.disabled=false;}
     });
     logout?.addEventListener('click',async()=>{
       logout.disabled=true;
