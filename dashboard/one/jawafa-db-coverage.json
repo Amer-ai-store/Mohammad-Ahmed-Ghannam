@@ -81,5 +81,78 @@
     "JAWAFA ONE screens must be tested with authorized data while financial records remain immutable",
     "Live SQL reader must be verified with least privilege and private authenticated gateway",
     "No production 90% declaration without independent review and evidence hashes"
-  ]
+  ],
+  "priority_relation_snapshot": {
+    "inspected_on": "2026-11-09",
+    "source": "Jawafa_DB CSV export 2026-11-08 01:00",
+    "verified_semantic_fk_count": 0,
+    "join_checks_run": 6,
+    "matched_within_snapshot": 4,
+    "require_investigation": 2,
+    "status": "PRELIMINARY_KEY_MATCH_NOT_OFFICIAL_FOREIGN_KEY",
+    "private_report_sha256": "c18a4d877df7d6437382ac7d80691e838260306804e07942d394651ea8a6cf7d",
+    "relationships": [
+      {
+        "label": "POS sales header ⇄ item lines",
+        "parent": "SlipInfo",
+        "child": "SlipItems",
+        "source_rows": 6230,
+        "distinct_references": 1920,
+        "without_parent": 0,
+        "classification": "snapshot_linked",
+        "caveat": "يجب تأكيد صيغة مفتاح (SlipID,cashno) لكل فرع وفترة."
+      },
+      {
+        "label": "Cash ⇄ POS deletion events",
+        "parent": "Cash",
+        "child": "PosDeletedItems",
+        "source_rows": 105880,
+        "distinct_references": 5384,
+        "without_parent": 1,
+        "classification": "needs_verification",
+        "caveat": "المرجع غير المطابق قد يكون قديمًا أو من نظام ترقيم مختلف؛ لا دليل حذف."
+      },
+      {
+        "label": "Receipt ⇄ RecLine",
+        "parent": "Receipt",
+        "child": "RecLine",
+        "source_rows": 76,
+        "distinct_references": 8,
+        "without_parent": 0,
+        "classification": "snapshot_linked",
+        "caveat": "تفاصيل RecLine تصدير تفاضلي (76)؛ لا يدعم تعميم اكتمال جميع التفاصيل."
+      },
+      {
+        "label": "Receipt ⇄ Purchase history",
+        "parent": "Receipt",
+        "child": "InvPurchaseVouchersTransactionHistory",
+        "source_rows": 23033,
+        "distinct_references": 1956,
+        "without_parent": 4,
+        "classification": "needs_verification",
+        "caveat": "المراجع الأربعة تحتاج تعريف حركة التعديل وتاريخ المصدر."
+      },
+      {
+        "label": "ARP Journal ⇄ debit lines",
+        "parent": "ARPJournal_GL",
+        "child": "ARPFrom_gl",
+        "source_rows": 299707,
+        "distinct_references": 7651,
+        "without_parent": 0,
+        "classification": "snapshot_linked",
+        "caveat": "السنة المحاسبية ونوع القيد غير مدمجين في الفحص الأولي للمفتاح."
+      },
+      {
+        "label": "ARP Journal ⇄ credit lines",
+        "parent": "ARPJournal_GL",
+        "child": "ARPTo_GL",
+        "source_rows": 49441,
+        "distinct_references": 7651,
+        "without_parent": 0,
+        "classification": "snapshot_linked",
+        "caveat": "المطابقة المرجعية لا تثبت توازن قيمة القيد."
+      }
+    ]
+  },
+  "analysis_scope": "Every one of 17 priority CSV tables had its rows counted and six inferred join checks executed. No live SQL foreign-key metadata was used."
 }
