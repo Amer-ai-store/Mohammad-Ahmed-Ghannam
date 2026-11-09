@@ -41,4 +41,18 @@ void main() {
     expect(find.byKey(const Key('journal_result')), findsOneWidget);
     expect(find.textContaining('متوازن'), findsOneWidget);
   });
+  for (final scope in ['personnel','permissions','settings']) {
+    testWidgets('reference $scope is read-only and requires configured identity',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ErpReferenceReadOnlyView(gateway: null, scope: scope),
+        ),
+      ));
+      expect(find.byKey(Key('reference_unconfigured_$scope')), findsOneWidget);
+      expect(find.textContaining('مطابقة وظائف TrustSoft لم تُعتمد'), findsOneWidget);
+      expect(find.byKey(Key('reference_refresh_$scope')), findsNothing);
+    });
+  }
+
 }
