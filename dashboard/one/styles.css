@@ -152,3 +152,15 @@ td.num{font-variant-numeric:tabular-nums}
   .statusbar{padding-bottom:4.5rem}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Phase 2: operations */
+button.danger{background:var(--red-soft);border-color:var(--red);color:#fecaca;font-weight:700}
+a.button{display:inline-flex;align-items:center;min-height:40px;padding:.5rem .9rem;border:1px solid var(--line-2);border-radius:10px;color:var(--fg);text-decoration:none}
+.bell{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:40px;border-radius:10px;text-decoration:none;color:var(--fg)}
+.bell[hidden]{display:none}
+.count{display:inline-flex;align-items:center;justify-content:center;min-width:1.2rem;height:1.2rem;padding:0 .3rem;border-radius:999px;background:var(--red);color:#fff;font-size:.7rem;font-weight:800;margin-inline-start:auto}
+.count[hidden]{display:none}
+.bell .count{position:absolute;top:-2px;inset-inline-end:-2px}
+.po-line{display:grid;grid-template-columns:1fr 2fr 1fr 1fr auto;gap:.4rem;margin:.3rem 0}
+@media (max-width:600px){.po-line{grid-template-columns:1fr 1fr}.po-line input[data-line-name]{grid-column:1/-1}}
+details.scope summary{cursor:pointer}
+:root[data-theme="light"] button.danger{color:#b91c1c}

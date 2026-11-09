@@ -53,6 +53,52 @@
     return { ok: true, value: u };
   }
 
+  // ---------- branch scope & operations (must match firestore.rules) ----------
+  /** Branch ids a member is limited to, or null when company-wide. Only branch_manager and
+   * employee can be scoped, and only with a non-empty company.branchScopes[uid] list. */
+  function branchScope(company, uid) {
+    const r = roleOf(company, uid);
+    const s = company && company.branchScopes && company.branchScopes[uid];
+    return (r === "branch_manager" || r === "employee") && Array.isArray(s) && s.length ? s.slice() : null;
+  }
+  const inScope = (scope, branchId) => scope == null || scope.includes(branchId);
+  const PROCURERS = ["owner", "chairman", "general_manager", "procurement_manager"];
+  const APPROVERS = ["owner", "chairman", "general_manager"];
+  const canManageEmployees = (role, scope, branchId) => !!(role && (ROLES[role]?.manage || (role === "branch_manager" && inScope(scope, branchId))));
+
+  const PO_STATES = ["draft", "submitted", "approved", "rejected", "received"];
+  const PO_ACTION = { submitted: "po.submit", approved: "po.approve", rejected: "po.reject", received: "po.receive" };
+  /** Status changes the given role may make on an order. */
+  function poMoves(role, scope, order) {
+    if (!role || !order) return [];
+    const s = order.status;
+    if (s === "draft") return PROCURERS.includes(role) ? ["submitted"] : [];
+    if (s === "submitted") return APPROVERS.includes(role) ? ["approved", "rejected"] : [];
+    if (s === "approved") return PROCURERS.includes(role) || (role === "branch_manager" && inScope(scope, order.branchId)) ? ["received"] : [];
+    return [];
+  }
+  const round2 = (n) => Math.round(n * 100) / 100;
+  /** Validates order lines; returns { ok, lines, total } or { ok:false, error }. */
+  function validateLines(lines) {
+    if (!Array.isArray(lines) || lines.length === 0) return { ok: false, error: "أضف سطرًا واحدًا على الأقل" };
+    if (lines.length > 50) return { ok: false, error: "50 سطرًا كحد أقصى" };
+    const out = [];
+    for (const [i, l] of lines.entries()) {
+      const name = String(l.name || "").trim(), sku = String(l.sku || "").trim();
+      const qty = Number(l.qty), unitPrice = Number(l.unitPrice);
+      if (!name || name.length > 120) return { ok: false, error: `السطر ${i + 1}: اسم الصنف مطلوب` };
+      if (sku.length > 40) return { ok: false, error: `السطر ${i + 1}: رمز الصنف طويل` };
+      if (!(Number.isFinite(qty) && qty > 0 && qty <= 1e6)) return { ok: false, error: `السطر ${i + 1}: الكمية غير صحيحة` };
+      if (!(Number.isFinite(unitPrice) && unitPrice >= 0 && unitPrice <= 1e7)) return { ok: false, error: `السطر ${i + 1}: سعر الوحدة غير صحيح` };
+      out.push({ sku, name, qty, unitPrice });
+    }
+    return { ok: true, lines: out, total: poTotal(out) };
+  }
+  const poTotal = (lines) => round2((lines || []).reduce((t, l) => t + Number(l.qty || 0) * Number(l.unitPrice || 0), 0));
+  /** Orders waiting for this user's decision. */
+  const pendingApprovals = (role, orders) => (APPROVERS.includes(role) ? (orders || []).filter(o => o.status === "submitted") : []);
+  const isDate = (d) => d === "" || (/^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d)));
+
   // ---------- agent message router ----------
   const MSG_STATES = ["QUEUED", "DELIVERED", "READ", "ACKNOWLEDGED", "FAILED"];
   const NEXT = { QUEUED: ["DELIVERED", "FAILED"], DELIVERED: ["READ", "FAILED"], READ: ["ACKNOWLEDGED"], ACKNOWLEDGED: [], FAILED: [] };
@@ -228,5 +274,6 @@
   }
 
   return { ROLES, INVITABLE_ROLES, roleOf, can, normalizeEmail, isEmail, inviteId, validCompanyName, validateSocial,
+    branchScope, inScope, PROCURERS, APPROVERS, canManageEmployees, PO_STATES, PO_ACTION, poMoves, validateLines, poTotal, pendingApprovals, isDate,
     MSG_STATES, canTransition, createRouter, FINDING_CLASS, classify, detectAnomalies, demoDataset, dailySales, kpis };
 });
