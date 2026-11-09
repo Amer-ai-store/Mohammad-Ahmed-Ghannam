@@ -1034,7 +1034,8 @@ nav.side{gap:.5rem}
           </form>
           <a id="owner-google-security" class="btn" href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" hidden>تغيير كلمة مرور حساب Google من صفحة الأمان الرسمية</a>
           <p id="owner-password-result" role="status" aria-live="polite"></p>
-          <p class="small muted">كل شاشة خاصة ترسل رمز Firebase صالحًا إلى خادمها المُصرَّح به عند الطلب؛ الخادم يتحقق من المالك والصلاحيات. لا يُعاد استخدام كلمة مرور SQL، ولا تُشارك رموز الدخول مع نطاقات خارجية.</p>
+          <p class="small muted">شاشات القيادة وجوافة ضمن هذا الموقع تعيد استخدام جلسة Firebase نفسها، وتجدد الرمز عند الطلب. لا تُخزَّن كلمة مرور SQL أو يُنشر رمز الدخول.</p>
+          <p class="small muted">حالة الربط بين النطاقات: جسر AAS الخاص وبوابة TrustSoft يحتاجان اعتماد الخادم للتحقق من Firebase قبل إلغاء شاشة الدخول المنفصلة. هذا الربط لم يُقبل إنتاجيًا بعد. <a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/219" target="_blank" rel="noopener noreferrer">متابعة الربط الموحد الآمن #219</a>.</p>
         </section>
       </section>
     </main>
