@@ -79,3 +79,11 @@ test("JAWAFA ONE nav, sw and evidence reader run without unapproved write routes
  assert.match(local,/assessPrivateEvidence\(entry\.id,csv\.headers,csv\.rows\)/);
  assert.doesNotMatch(local,/\.innerHTML\s*=/);
 });
+
+test("asynchronous analysis views remain stable on company state redraw, and private CSV clears on exit",()=>{
+ assert.match(app,/oneEvidenceRendered/);
+ assert.match(app,/oneCoverageRendered/);
+ assert.match(app,/oneGithubRendered/);
+ assert.match(app,/previous\.replaceChildren\(\)/);
+ assert.match(app,/delete previous\.dataset\.oneEvidenceRendered/);
+});
