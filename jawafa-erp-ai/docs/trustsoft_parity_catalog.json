@@ -25,7 +25,7 @@
     "personnel",
     "permissions_settings"
   ],
-  "notes": "Incomplete candidate list; personnel and permissions/settings are mandatory. No frozen denominator, approved weights or TrustSoft behavior comparison. No source parity is claimed. TESTED denotes isolated synthetic tests only.",
+  "notes": "Incomplete unfrozen reference catalog. No 90% claim. Every owner-used critical workflow and security control must be accepted without exception; all owner's TrustSoft reports separately require 100% acceptance. Source behavior is not yet certified.",
   "workflows": [
     {
       "id": "CHQ-REG",
@@ -236,5 +236,7 @@
       "comparison_evidence_sha256": null,
       "independent_approval_ref": null
     }
-  ]
+  ],
+  "owner_workflow_inventory_complete": false,
+  "owner_workflow_inventory_approval_ref": null
 }
