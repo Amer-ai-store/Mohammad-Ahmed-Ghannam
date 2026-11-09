@@ -349,6 +349,8 @@ try {
   const bellBm = await d.page.waitForFunction(() => document.querySelector('#bell .count')?.textContent === '1', null, { timeout: 8000 }).then(() => true, () => false);
   await d.page.locator('#bell').click();
   await d.page.waitForFunction(() => !document.querySelector('section.view[data-view="notifications"]').hidden);
+  // The view is shown at once and drawn on the next frame; wait for the item itself.
+  await d.page.waitForFunction(() => !!document.querySelector('section.view[data-view="notifications"] a.notif'), null, { timeout: 5000 }).catch(() => {});
   const note = await d.page.evaluate(() => document.querySelector('section.view[data-view="notifications"] a.notif')?.dataset.kind);
   check('E2E-42', bellBm && note === 'overdue', 'branch manager\'s bell shows 1 and the notification center lists the overdue task');
   await d.page.locator('section.view[data-view="notifications"] a.notif').click();
