@@ -11,6 +11,33 @@
   const SDK_VERSION='10.14.1';
   const users=new Set();
   let app=null,auth=null,identity=null,initialized=false;
+  let phoneVerifier=null,phoneConfirmation=null,authAccess='guest';
+  const validPhone=value=>typeof value==='string'&&/^\+[1-9][0-9]{7,14}$/.test(value);
+  function identityVerified(user){
+    if(!user||user.isAnonymous)return false;
+    if(user.emailVerified===true)return true;
+    return validPhone(user.phoneNumber)&&
+      (user.providerData||[]).some(p=>p?.providerId==='phone');
+  }
+  const listeners=new Set();
+  function emitAccess(){
+    document.documentElement.dataset.aasAccess=authAccess;
+    window.dispatchEvent(new Event('aas:auth-access-changed'));
+    for(const f of listeners){try{f(authAccess)}catch{}}
+  }
+  async function checkRole(user){
+    if(!identityVerified(user)){authAccess='guest';emitAccess();return}
+    authAccess='viewer';emitAccess();
+    // This UI flag is an advisory from Firebase's signed token; every protected
+    // API must independently verify JWT and its owner UID/custom claim.
+    try{
+      const data=await user.getIdTokenResult();
+      if(identity!==user)return;
+      const claims=data?.claims||{};
+      authAccess=(claims.jawafaOwner===true||claims.aasOwner===true)?'owner':'viewer';
+    }catch{authAccess='viewer'}
+    emitAccess();
+  }
   function sdk(name){
     const expected='https://cdn.jsdelivr.net/npm/firebase@'+SDK_VERSION+'/firebase-'+name+'-compat.js';
     return new Promise((resolve,reject)=>{
@@ -35,6 +62,8 @@
     return new Promise((resolve,reject)=>{
       auth.onAuthStateChanged(user=>{
         identity=user&&!user.isAnonymous?user:null;
+        if(!identity)phoneConfirmation=null;
+        void checkRole(identity);
         for(const listener of users){try{listener(identity)}catch{}}
         if(!initialized){initialized=true;resolve(auth);}
       },err=>{if(!initialized)reject(err);});
@@ -48,7 +77,7 @@
   async function token(forceRefresh=false){
     const user=await getUser();
     if(!user)throw Error('OWNER_SIGN_IN_REQUIRED');
-    if(user.emailVerified!==true)throw Error('EMAIL_VERIFICATION_REQUIRED');
+    if(!identityVerified(user))throw Error('VERIFIED_LOGIN_REQUIRED');
     return user.getIdToken(forceRefresh===true);
   }
   async function signIn(){
@@ -71,8 +100,42 @@
     // Firebase validates credentials; username "admin" alone never grants access.
     return auth.signInWithEmailAndPassword(email.trim().toLowerCase(),password);
   }
+  async function startPhoneLogin(phone){
+    await ready;
+    const number=typeof phone==='string'?phone.trim():'';
+    if(!validPhone(number))throw Error('PHONE_E164_REQUIRED');
+    phoneConfirmation=null;
+    if(phoneVerifier){try{phoneVerifier.clear()}catch{}phoneVerifier=null}
+    const verifier=new window.firebase.auth.RecaptchaVerifier('owner-phone-recaptcha',{
+      size:'normal','expired-callback':()=>{phoneConfirmation=null}
+    });
+    phoneVerifier=verifier;
+    try{
+      await verifier.render();
+      const confirmation=await auth.signInWithPhoneNumber(number,verifier);
+      if(typeof confirmation?.confirm!=='function')throw Error('PHONE_AUTH_INVALID_RESPONSE');
+      phoneConfirmation=confirmation;
+      return {sent:true};
+    }catch(err){
+      phoneConfirmation=null;
+      try{verifier.clear()}catch{}
+      phoneVerifier=null;
+      throw err;
+    }
+  }
+  async function confirmPhoneLogin(code){
+    await ready;
+    if(!phoneConfirmation)throw Error('REQUEST_SMS_FIRST');
+    if(typeof code!=='string'||!/^[0-9]{6}$/.test(code.trim()))
+      throw Error('SMS_CODE_INVALID_FORMAT');
+    const credential=await phoneConfirmation.confirm(code.trim());
+    phoneConfirmation=null;
+    if(!identityVerified(credential?.user))throw Error('PHONE_IDENTITY_UNVERIFIED');
+    return credential;
+  }
   async function signOut(){
     await ready;
+    phoneConfirmation=null;
     await auth.signOut();
   }
   async function changePassword(currentPassword,newPassword,confirmPassword){
@@ -95,7 +158,7 @@
     return true;
   }
   const API=Object.freeze({
-    ready,getUser,getIdToken:token,signIn,signInWithEmail,signOut,changePassword,
+    ready,getUser,getIdToken:token,signIn,signInWithEmail,startPhoneLogin,confirmPhoneLogin,signOut,changePassword,
     subscribe(listener){
       if(typeof listener!=='function')throw TypeError('callback');
       users.add(listener);
@@ -103,7 +166,9 @@
       return ()=>users.delete(listener);
     },
     get projectId(){return app?.options?.projectId||null;},
-    get isAuthenticated(){return Boolean(identity&&identity.emailVerified);},
+    get isAuthenticated(){return identityVerified(identity);},
+    get accessRole(){return authAccess;},
+    onAccessChange(listener){if(typeof listener!=='function')throw TypeError('listener');listeners.add(listener);listener(authAccess);return ()=>listeners.delete(listener);},
     get isOwnerVerified(){return false;} // Backend authorization only.
   });
   window.AAS_OWNER_AUTH=API;
@@ -116,24 +181,28 @@
     const login=root.querySelector('#owner-sso-login');
     const logout=root.querySelector('#owner-sso-logout');
     const emailLogin=root.querySelector('#owner-email-signin-form');
+    const phoneLogin=root.querySelector('#owner-phone-signin-form');
+    const phoneConfirm=root.querySelector('#owner-phone-confirm-form');
     const passwordForm=root.querySelector('#owner-password-form');
     const google=root.querySelector('#owner-google-security');
     const result=root.querySelector('#owner-password-result');
     const setMessage=text=>{if(status)status.textContent=text;};
     const render=user=>{
       const authenticated=Boolean(user&&!user.isAnonymous);
-      const verified=authenticated&&user.emailVerified===true;
+      const verified=identityVerified(user);
       const pwd=verified&&(user.providerData||[]).some(p=>p?.providerId==='password');
-      if(email)email.textContent=authenticated?String(user.email||'UID موجود'):'لا توجد جلسة مالك';
+      if(email)email.textContent=authenticated?String(user.email||user.phoneNumber||'UID موجود'):'لا توجد جلسة مالك';
       if(login)login.hidden=authenticated;
       if(emailLogin)emailLogin.hidden=authenticated;
+      if(phoneLogin)phoneLogin.hidden=authenticated;
+      if(phoneConfirm&&authenticated)phoneConfirm.hidden=true;
       if(logout)logout.hidden=!authenticated;
       if(passwordForm)passwordForm.hidden=!pwd;
-      if(google)google.hidden=!verified||pwd;
+      if(google)google.hidden=!verified||pwd||!user?.email;
       if(result)result.textContent='';
       setMessage(!authenticated?'غير مسجل الدخول. جميع المسارات الخاصة محجوبة.':
-        !verified?'سجلت الدخول؛ يجب توثيق البريد قبل استخدام البيانات الخاصة.':
-        'جلسة Firebase موثقة لهذا الحساب. صلاحية المالك لدى الخادم تُختبر مستقلًا عند كل طلب.');
+        !verified?'سجلت الدخول؛ يجب توثيق هوية الحساب قبل استخدام البيانات الخاصة.':
+        'تم تأكيد الهوية في Firebase. الصلاحيات تبدأ بمستخدم عادي؛ إدارة المالك تتطلب اعتماد هوية UID على الخادم.');
     };
     login?.addEventListener('click',async()=>{
       login.disabled=true;setMessage('جارٍ فتح تسجيل الدخول الرسمي...');
@@ -151,6 +220,42 @@
       try{await signInWithEmail(email.value,password.value);}
       catch(err){setMessage('لم ينجح تسجيل الدخول بالبريد وكلمة المرور: '+String(err?.code||err?.message||'AUTH_FAILED').slice(0,90));}
       finally{password.value='';button.disabled=false;}
+    });
+    phoneLogin?.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const phone=phoneLogin.querySelector('[name=owner-phone-number]');
+      const button=phoneLogin.querySelector('button[type=submit]');
+      if(!phone||!button)return;
+      button.disabled=true;
+      try{
+        await startPhoneLogin(phone.value);
+        if(phoneConfirm)phoneConfirm.hidden=false;
+        setMessage('طلب رمز التحقق من Firebase. أدخله هنا فقط، ولا تشاركه في المحادثة.');
+      }catch(error){
+        const code=String(error?.code||error?.message||'PHONE_AUTH_FAILED');
+        const translations={
+          'PHONE_E164_REQUIRED':'أدخل رقمًا دوليًا مثل +9627XXXXXXXX.',
+          'auth/operation-not-allowed':'خدمة دخول الهاتف تحتاج تفعيل Phone في Firebase Authentication.',
+          'auth/unauthorized-domain':'يجب اعتماد نطاق موقع اللوحة في Firebase.',
+          'auth/invalid-app-credential':'فشل reCAPTCHA أو إعداد نطاق Firebase.',
+          'auth/too-many-requests':'تكررت الطلبات؛ تمت حمايتها من Firebase.'
+        };
+        setMessage(translations[code]||'تعذر إرسال رمز SMS: '+code.slice(0,90));
+      }finally{button.disabled=false}
+    });
+    phoneConfirm?.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const code=phoneConfirm.querySelector('[name=owner-sms-code]');
+      const button=phoneConfirm.querySelector('button[type=submit]');
+      if(!code||!button)return;
+      button.disabled=true;
+      try{
+        await confirmPhoneLogin(code.value);
+        code.value='';
+        setMessage('تم التحقق من الهاتف. صلاحية المالك لا تنتقل تلقائيًا من أسبقية التسجيل.');
+      }catch(err){
+        setMessage('تعذر تأكيد رمز الهاتف: '+String(err?.code||err?.message||'SMS_FAILED').slice(0,85));
+      }finally{code.value='';button.disabled=false}
     });
     logout?.addEventListener('click',async()=>{
       logout.disabled=true;
