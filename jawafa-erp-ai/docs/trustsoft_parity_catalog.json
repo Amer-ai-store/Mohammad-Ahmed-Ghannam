@@ -21,9 +21,11 @@
     "investments",
     "security",
     "branches",
-    "statutory_reports"
+    "statutory_reports",
+    "personnel",
+    "permissions_settings"
   ],
-  "notes": "Incomplete candidate list. No frozen denominator, approved weights, TrustSoft behavior comparison or production acceptance. TESTED denotes synthetic independent ERP tests only.",
+  "notes": "Incomplete candidate list; personnel and permissions/settings are mandatory. No frozen denominator, approved weights or TrustSoft behavior comparison. No source parity is claimed. TESTED denotes isolated synthetic tests only.",
   "workflows": [
     {
       "id": "CHQ-REG",
@@ -172,6 +174,61 @@
       "id": "REP-STAT",
       "module": "statutory_reports",
       "name": "Financial and statutory report reconciliation",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "HR-MASTER",
+      "module": "personnel",
+      "name": "Employee master, department and employment state (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "HR-ATTEND",
+      "module": "personnel",
+      "name": "Employee attendance, shifts and leave workflows (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "HR-PAY",
+      "module": "personnel",
+      "name": "Payroll, allowances, deductions and payroll-to-ledger control (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "SEC-UI",
+      "module": "permissions_settings",
+      "name": "Screen/action permissions, user groups, branch constraints and negative-denial tests (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "CFG-CONST",
+      "module": "permissions_settings",
+      "name": "System constants, document sequences, tax and peripheral configuration (candidate, unverified)",
       "status": "DISCOVERED",
       "weight": null,
       "reference_evidence_sha256": null,
