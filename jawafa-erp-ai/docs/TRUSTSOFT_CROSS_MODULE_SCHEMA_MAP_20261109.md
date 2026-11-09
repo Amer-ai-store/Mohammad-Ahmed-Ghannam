@@ -70,3 +70,20 @@ All counts are export metadata, **not current real-time database evidence**, nor
 3. Independently test each suspected join and direction, source posting state machine, report filters and exceptions using controlled test data.
 4. Build matching behavior in the **new ERP** and verify both positive/negative flows against TrustSoft; never copy confidential/vendor source code.
 5. Count parity only from independently accepted weighted workflows with evidence hashes. Current parity remains **UNMEASURED**.
+
+## 7. Executed header-only audit against two private exports
+
+The source-compatible `tools/reference_schema_audit.py` was executed **on the authorized server**, not just tested on synthetic CI data. Only the inventory CSV and first-row headers of the selected 18 CSV files were parsed; the outputs were saved privately outside the original exports, with no SQL connection and no source file mutation.
+
+| Snapshot | Inventory entries | Selected header files | Candidate column pairs present | Verified SQL FKs |
+|---|---:|---:|---:|---:|
+| 2026-11-08 | 1,024 | 18 | 11/11 | 0 |
+| 2026-11-09 | 1,024 | 18 | 11/11 | 0 |
+
+**Header differences across these 18 selected tables: 0**, verified by a read-only comparison of sorted column names. This does not claim unchanged data, business rules, stored procedures, constraints or screen behavior.
+
+Private output SHA256s (metadata reports; raw outputs retained outside GitHub):
+- 2026-11-08: `9afd0263cc1b958ed35cb369d3f6b42b309f40af968bd11ff814a22a9c751372`
+- 2026-11-09: `264a5f8350c9a4dacf3180d97f264e5517f02d5a698f675a5aaa23a556c3acec`
+
+**Classification:** source headers DISCOVERED; semantic joins, referential consistency, function equivalence and the 90% TrustSoft target remain **UNMEASURED / NOT VERIFIED**. No user identities, report preference rows, transaction amounts or private connection information were published.
