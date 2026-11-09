@@ -1008,6 +1008,16 @@ nav.side{gap:.5rem}
             <button type="button" id="owner-sso-login" class="primary">دخول المالك عبر Google</button>
             <button type="button" id="owner-sso-logout" hidden>تسجيل الخروج من جميع شاشات هذه اللوحة</button>
           </div>
+          <form id="owner-email-signin-form" autocomplete="off">
+            <h3>تسجيل دخول واحد بالبريد وكلمة المرور (للحسابات المفعّلة في Firebase)</h3>
+            <label class="field">بريد الحساب المعتمد
+              <input type="email" name="owner-login-email" autocomplete="username" maxlength="160" required>
+            </label>
+            <label class="field">كلمة مرور Firebase الحالية
+              <input type="password" name="owner-login-password" autocomplete="current-password" required>
+            </label>
+            <button class="primary" type="submit">تسجيل الدخول لجميع شاشات اللوحة</button>
+          </form>
           <form id="owner-password-form" autocomplete="off" hidden>
             <h3>تغيير كلمة مرور حساب Firebase بالبريد وكلمة المرور</h3>
             <p class="small muted">يتطلب إدخال كلمة المرور الحالية لإعادة إثبات الهوية. لن تُحفَظ كلمات المرور في اللوحة أو GitHub.</p>
