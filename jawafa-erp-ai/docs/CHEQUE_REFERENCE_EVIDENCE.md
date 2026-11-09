@@ -14,7 +14,12 @@ This is an **aggregated, read-only** profile. No cheque IDs, cheque numbers, acc
 | Distinct nonzero cheque IDs in movements | 8,057 | Current export only |
 | Movement-side IDs lacking a document in the export | 56 | Needs source and period confirmation; not a deletion finding |
 | Document-side IDs without a movement in the export | 129 | Needs lifecycle and export scope confirmation |
-| Distinct bilingual movement-status pairs | 15 | Exact meaning and transitions **unverified** |
+| Distinct descriptive event-text pairs | 15 | These are **not necessarily 15 distinct cheque states**; eleven are dynamic, cheque-specific deletion messages |
+| Generalized event type: paid outgoing cheque | 8,034 | Audit-description classification, not bank-cleared proof |
+| Generalized event type: due-date edit | 110 | Requires before/after chronology |
+| Generalized event type: paid cheque | 85 | Must reconcile with bank source |
+| Generalized event type: cheque deposit | 9 | Not proof of bank acceptance |
+| Free-text deletion descriptions containing cheque-specific data | 11 | **Never publish raw text; deletion reason and authorization need source review** |
 | IDs with multiple movement events | 170 | 151 have 2, 16 have 3, 3 have 4 |
 | Movement groups with non-monotonic date *strings* when ordered by `SeqId` | 20 | Preliminary string/order comparison, **not** evidence of backdating; requires date parsing and sequence rules |
 | Duplicate SeqId within one cheque ID group | 0 | Based on the available CSV |
@@ -36,11 +41,11 @@ These are **field and data observations**, not verified primary/foreign key decl
 
 ## Reimplementation status
 
-`lib/src/domain/cheque.dart` currently provides a **synthetic 7-state model**, designed for initial separation-of-duties and audit tests. **It does not yet match the 15 observed TrustSoft movement status pairs.** No mappings, migration, reconciliation, bank effects, or tax results are certified as equivalent.
+`lib/src/domain/cheque.dart` currently provides a **synthetic 7-state model**, designed for initial separation-of-duties and audit tests. **It is not certified as equivalent to TrustSoft's real cheque state machine: the 15 unique event labels comprise four generic event descriptions plus 11 cheque-specific deletion descriptions, not 15 verified states.** No mappings, migration, reconciliation, bank effects, or tax results are certified as equivalent.
 
 ### Required evidence before labeling the cheque lifecycle `MATCHED`
 
-1. Reconcile all 15 source movement status pairs to their real meaning using approved user procedures and historical event sequences.
+1. Map the **five observed audit-description categories** to verified TrustSoft procedures. Eleven descriptions are cheque-specific free text and must be handled as audit events, not enumerated financial states. Determine the true state machine separately from cheque master fields and validated source UI behavior.
 2. Resolve the 56 movement-only and 129 document-only cheque IDs, accounting for record type, date, branch, authorization, and export completeness.
 3. Determine whether `SeqId` controls movement chronology; parse timestamps into a consistent timezone before interpreting the 20 observed order differences.
 4. Map cheque deposit, delivery, bank return, replacement, cancellation, approval, and account movements to original vouchers and general ledger postings.
