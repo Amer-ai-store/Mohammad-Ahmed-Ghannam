@@ -1,0 +1,236 @@
+{
+  "schema": "jawafa.trustsoft.audit.public-summary.v1",
+  "source_class": "OFFLINE_VERIFIED_EXPORT_AGGREGATES_NO_LIVE_SQL",
+  "classification": "PUBLIC_AGGREGATE_ONLY_NO_IDENTIFIERS_NO_AMOUNTS",
+  "assessed_at": "2026-11-09",
+  "snapshots": [
+    "2026-10-26 16:40 (historical full export)",
+    "2026-11-08 01:00 (newer export with delta RecLine)"
+  ],
+  "owner_requested_slice": "25% requested analytical slice; NOT a verified completeness metric",
+  "analysis_completion_verified": false,
+  "original_financial_records_modified": false,
+  "provenance": {
+    "source": "TrustSoft / Jawafa_DB CSV exports on JAWAFFASVR; private evidence manifests verified by SHA256, never mirrored here",
+    "detail_access": "Private ACL-protected reports available on authorized server only; optional local browser import, not uploaded",
+    "live_db_connected": false,
+    "bank_originals_reconciled": false,
+    "individual_user_attribution_verified": false
+  },
+  "findings": [
+    {
+      "id": "export-coverage",
+      "status": "verified",
+      "area": "سلامة نسخة الاستلام",
+      "headline": "مقارنة رؤوس الاستلام والتفاصيل",
+      "facts": [
+        [
+          "رؤوس استلام 26 أكتوبر",
+          19029
+        ],
+        [
+          "رؤوس استلام 8 نوفمبر",
+          19105
+        ],
+        [
+          "رؤوس جديدة",
+          76
+        ],
+        [
+          "رؤوس قديمة غابت",
+          0
+        ],
+        [
+          "تفاصيل 26 أكتوبر",
+          200037
+        ]
+      ],
+      "caveat": "الملف الجديد RecLine تفاضلي؛ لا يجوز عدّ غياب الأسطر القديمة حذفًا."
+    },
+    {
+      "id": "historical-changes",
+      "status": "verified_difference",
+      "area": "تغييرات الاستلام",
+      "headline": "الفروق بين اللقطتين بعد توحيد تنسيق التوقيت",
+      "facts": [
+        [
+          "رؤوس قديمة تغيرت",
+          54
+        ],
+        [
+          "رؤوس ذات حقول مالية تغيرت",
+          13
+        ],
+        [
+          "انتقلت إلى Posted=True",
+          45
+        ],
+        [
+          "انتقلت إلى Verified=True",
+          43
+        ]
+      ],
+      "caveat": "فرق اللقطتين مثبت، أما سببه ومشروعية الإجراء فلا يُثبتان بهذه المقارنة."
+    },
+    {
+      "id": "audit-events",
+      "status": "correlated",
+      "area": "سجل تعديلات المشتريات",
+      "headline": "ربط السجلات المالية المتغيرة بالأحداث التاريخية",
+      "facts": [
+        [
+          "سندات ذات قيم مالية متغيرة",
+          13
+        ],
+        [
+          "أحداث في الفترة",
+          326
+        ],
+        [
+          "مستخدمون مختلفون في الأحداث",
+          3
+        ],
+        [
+          "سندات تتضمن تعديل تكلفة",
+          8
+        ],
+        [
+          "سندات تتضمن تعديل خصومات",
+          7
+        ],
+        [
+          "سندات تتضمن تعديل ضريبة",
+          1
+        ]
+      ],
+      "caveat": "وجود الأحداث في فترة التغيّر لا يثبت أن مستخدمًا بعينه غيّر الحقل المالي المحدد."
+    },
+    {
+      "id": "invoice-reuse",
+      "status": "needs_verification",
+      "area": "أرقام فواتير الموردين",
+      "headline": "إعادة استخدام أرقام الفواتير بين سنوات مختلفة",
+      "facts": [
+        [
+          "مجموعات أرقام متكررة",
+          274
+        ],
+        [
+          "سجلات ضمن المجموعات",
+          650
+        ],
+        [
+          "مجموعات تكرار داخل نفس السنة",
+          0
+        ]
+      ],
+      "caveat": "جميع المجموعات متعددة السنوات. إعادة استخدام الرقم لا تثبت ازدواج القيد أو الصرف."
+    },
+    {
+      "id": "missing-history",
+      "status": "needs_verification",
+      "area": "مرجعيات سجل التاريخ",
+      "headline": "مراجع تاريخية لا تقابل رأس استلام في اللقطتين",
+      "facts": [
+        [
+          "مراجع تحتاج تحققًا",
+          4
+        ],
+        [
+          "أحداث مرتبطة بها",
+          360
+        ]
+      ],
+      "caveat": "عدم وجود المرجع في تصديرين لا يثبت حذفه من قاعدة الإنتاج؛ يلزم تحديد مصدره وحالة التصدير."
+    },
+    {
+      "id": "incremental-lines",
+      "status": "needs_verification",
+      "area": "تغطية تفاصيل الاستلام الجديدة",
+      "headline": "الفصل بين التصدير التفاضلي والكامل",
+      "facts": [
+        [
+          "رؤوس جديدة",
+          76
+        ],
+        [
+          "رؤوس جديدة لها تفاصيل في RecLine التفاضلي",
+          8
+        ],
+        [
+          "رؤوس جديدة غير ممثلة بالتفاضلي",
+          68
+        ]
+      ],
+      "caveat": "عدم التمثيل في ملف التصدير التفاضلي ليس فقدانًا مثبتًا لتفاصيل السند الأصلي."
+    },
+    {
+      "id": "independent-audits",
+      "status": "needs_verification",
+      "area": "مطابقة GL والشيكات",
+      "headline": "استثناءات منفصلة تستلزم أدلة أصلية",
+      "facts": [
+        [
+          "فروقات POS/GL تحتاج تفسيرًا",
+          57
+        ],
+        [
+          "حركات شيكات غير مرتبطة في اللقطة",
+          57
+        ]
+      ],
+      "caveat": "المجموعتان مختلفتان؛ لا توحيدان أو تثبتان مخالفات. غياب تسوية البنك الأصلية يمنع إثبات المصير البنكي."
+    }
+  ],
+  "evidence_files": [
+    {
+      "id": "receipt54",
+      "title": "54 اختلافًا بين نسختي رؤوس الاستلام",
+      "file": "Receipt_All_54_Snapshot_Changes_Private.csv",
+      "sha256": "a86906b74961bc37401cfbc11aaff5dae201b46ce4e78679483cfa2484adaade",
+      "rows": 54
+    },
+    {
+      "id": "financial13",
+      "title": "13 سندًا: وصلات سجل التاريخ",
+      "file": "Receipt_13_FinancialChanges_History_Linkage_Private.csv",
+      "sha256": "f3752b600f6717a10f488da34243c4430121ac4606d23d10696f3a0ddb854203",
+      "rows": 13
+    },
+    {
+      "id": "window13",
+      "title": "13 سندًا: ارتباط أحداث فترة المقارنة",
+      "file": "Receipt_13_FinancialChanges_WindowCorrelation_Private.csv",
+      "sha256": "2d31e150ff60f71a42f74bc1a1f164d903133ad3746ad7bf11b71f6e6896f44f",
+      "rows": 13
+    },
+    {
+      "id": "types13",
+      "title": "13 سندًا: أنواع أحداث التعديل",
+      "file": "Receipt_13_FinancialChanges_AuditEventTypes_Private.csv",
+      "sha256": "b16370c2d3901f20ccf7ed8b9ae967eab48a6ce72ca9b46432d1728e4a635e4c",
+      "rows": 13
+    },
+    {
+      "id": "crossyear650",
+      "title": "650 سجلًا: إعادة استخدام رقم فاتورة المورد",
+      "file": "Receipt_SupplierInvoice_CrossYear_650_Private.csv",
+      "sha256": "49d67359dc4ea4c7107035de69add8cb4b44d1b36ecb02fb5ea8dcf2568b896e",
+      "rows": 650
+    },
+    {
+      "id": "history360",
+      "title": "360 حدثًا: مراجع استلام غير متطابقة",
+      "file": "PurchaseHistory_UnmatchedReceipt_360_Private.csv",
+      "sha256": "743deed8a2a5e9abe18929112fedf5738cb2ee0bdfac0ba09904ad0ffc9d8b70",
+      "rows": 360
+    }
+  ],
+  "verification_next": [
+    "مقارنة نسخة المصدر الأصلية وتصاريح الوصول على SQL بالقراءة فقط",
+    "تفسير حدث التغيير على مستوى حقل/سطر/مستخدم باستخدام سجلات TrustSoft الأصلية",
+    "مطابقة الشيكات مع كشوف البنك الأصلية والقيود المراجعة",
+    "استكمال تصدير تفاصيل سندات الاستلام الجديدة قبل إعلان وجود نقص",
+    "مراجعة أمنية ومحاسبية مستقلة قبل تصنيف أي واقعة بأنها مخالفة"
+  ]
+}
