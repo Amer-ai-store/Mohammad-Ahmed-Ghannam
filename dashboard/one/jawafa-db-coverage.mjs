@@ -11,7 +11,8 @@ export const RULES=Object.freeze([
  {id:"R-07",tables:["Items","ItemsTransActions","RecLine"],title:"تتبع الصنف والكميات والوحدات والمردودات",state:"needs_verification",requires:"الوحدات والتجميع وتحويل الكمية ورصيد أول المدة والباركود."},
  {id:"R-08",tables:["InvoiceMain","ARPJournal_GL"],title:"الضريبة والنسب التعاقدية للاستثمارات",state:"needs_verification",requires:"الربط بالعقد والفرع والفترة وتعريف الضريبة قبل الحساب."},
  {id:"R-09",tables:["TransactionHistory"],title:"سجل تدقيق غير قابل للمحو",state:"blocked",requires:"سجل أحداث مستقل append-only واحتفاظ تاريخي وتوقيت مرجعي."},
- {id:"R-10",tables:["Receipt","Journal_GL"],title:"منع التعديل المالي من التطبيق",state:"app_readonly",requires:"طبقة API وSQL SELECT فقط مع اختبار منع الكتابة على الخادم."}
+ {id:"R-10",tables:["Receipt","Journal_GL"],title:"منع التعديل المالي من التطبيق",state:"app_readonly",requires:"طبقة API وSQL SELECT فقط مع اختبار منع الكتابة على الخادم."},
+ {id:"R-11",tables:["Cash","PosDeletedItems"],title:"تفسير Cashno=0 في حذف أصناف POS",state:"needs_verification",requires:"12,495 حدثًا برمز صفر؛ ليس مرجع صندوق مفقودًا، ويلزم تعريفه من إعدادات TrustSoft وسياسة صلاحيات الحذف."}
 ]);
 const VALID_STATES=Object.freeze({
  partial:"مطبق جزئيًا على نسخ التصدير",
@@ -82,7 +83,7 @@ export async function renderJawafaCoverage(target){
     for(const rel of src.relationships){
       const c=add(grid,"article","jw-rule");
       add(c,"b","",rel.label);
-      add(c,"span","ts-status",rel.classification==="snapshot_linked"?"مفتاح مرتبط في اللقطة":"يحتاج مراجعة");
+      add(c,"span","ts-status",rel.classification==="snapshot_linked"?"مفتاح مرتبط في اللقطة":rel.classification==="placeholder_filtered"?"صفر افتراضي مستثنى — يحتاج تفسيرًا":"يحتاج مراجعة");
       add(c,"p","ts-note","سجلات الجدول المرتبط: "+rel.source_rows.toLocaleString("ar-JO")+" · مراجع مختلفة: "+rel.distinct_references.toLocaleString("ar-JO")+" · مراجع دون مقابل: "+rel.without_parent.toLocaleString("ar-JO"));
       add(c,"p","ts-note",rel.caveat);
     }
