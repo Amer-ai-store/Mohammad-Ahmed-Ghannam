@@ -122,10 +122,7 @@ class _ErpShellState extends State<ErpShell> {
       case ErpArea.journal:
         return const JournalDemoView();
       case ErpArea.procurement:
-        return const PendingModuleView(
-          title: 'دورة المشتريات',
-          details: 'المورد ← أمر الشراء ← الاستلام ← الفاتورة ← المردود ← الترحيل.',
-        );
+        return ProcurementDraftView(gateway: widget.gateway);
       case ErpArea.inventory:
         return const PendingModuleView(
           title: 'المخزون',
@@ -435,6 +432,91 @@ class _JournalDemoViewState extends State<JournalDemoView> {
           key: const Key('journal_result'),
         ),
     ]);
+  }
+}
+
+class ProcurementDraftView extends StatefulWidget {
+  final ErpGatewayClient? gateway;
+  const ProcurementDraftView({super.key, this.gateway});
+
+  @override
+  State<ProcurementDraftView> createState() => _ProcurementDraftViewState();
+}
+
+class _ProcurementDraftViewState extends State<ProcurementDraftView> {
+  bool loading = false;
+  String? errorCode;
+  List<ErpRemotePurchaseInvoice>? purchaseInvoices;
+
+  Future<void> refreshReadOnly() async {
+    final gateway = widget.gateway;
+    if (gateway == null || loading) return;
+    setState(() {
+      loading = true;
+      errorCode = null;
+    });
+    try {
+      final result = await gateway.readPurchaseInvoices();
+      if (!mounted) return;
+      setState(() => purchaseInvoices = result);
+    } on ErpGatewayError catch (error) {
+      if (!mounted) return;
+      setState(() => errorCode = error.code);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('الموردون وفواتير المشتريات',
+            style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 6),
+        const Text(
+          'فحص مسودات الفواتير ومطابقة إجمالي البنود والضريبة. '
+          'تُمنع الفواتير المكررة للمورد نفسه في قاعدة ERP الجديدة. '
+          'هذا القسم للقراءة فقط، ولا يرحّل قيودًا.',
+        ),
+        const SizedBox(height: 14),
+        if (widget.gateway == null)
+          const Text(
+            'API غير متصل: يلزم اعتماد تسجيل الدخول وخادم ERP مستقل.',
+            key: Key('procurement_unconfigured'),
+          )
+        else ...[
+          OutlinedButton.icon(
+            key: const Key('procurement_refresh'),
+            onPressed: loading ? null : refreshReadOnly,
+            icon: const Icon(Icons.refresh_outlined),
+            label: const Text('قراءة مسودات فواتير المشتريات'),
+          ),
+          if (loading) const LinearProgressIndicator(),
+          if (errorCode != null)
+            Text('تعذرت القراءة: $errorCode',
+                key: const Key('procurement_api_error')),
+          if (purchaseInvoices != null) ...[
+            Text('عدد المسودات المعروضة: ${purchaseInvoices!.length}'),
+            for (final invoice in purchaseInvoices!)
+              Card(
+                child: ListTile(
+                  title: Text('فاتورة: ${invoice.originalNumber}'),
+                  subtitle: Text(
+                    'القيمة: ${invoice.totalFils} فلس · '
+                    'الضريبة: ${invoice.taxFils} فلس · '
+                    'البنود: ${invoice.lineCount}',
+                  ),
+                  trailing: Text(invoice.linesMatchTotal
+                      ? 'المجموع مطابق'
+                      : 'تحتاج تدقيقًا'),
+                ),
+              ),
+          ],
+        ],
+      ],
+    );
   }
 }
 
