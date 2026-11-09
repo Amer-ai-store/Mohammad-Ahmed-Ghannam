@@ -5,15 +5,20 @@ import unittest
 from parity_gate import InvalidCatalog, evaluate
 
 HASH = "a" * 64
+EXTRA_MODULES = (
+    "bank_reconciliation", "accounts_receivable", "procurement", "inventory",
+    "sales_pos", "tax", "investments", "security", "branches",
+    "statutory_reports", "personnel", "permissions_settings",
+)
 
 
 def candidate():
-    return {
+    data = {
         "schema_version": 1,
         "reference_product": "TrustSoft",
         "catalog_frozen": False,
         "catalog_approval_ref": None,
-        "mandatory_modules": ["cheques", "general_ledger"],
+        "mandatory_modules": ["cheques", "general_ledger", *EXTRA_MODULES],
         "workflows": [
             {"id": "CHQ-1", "module": "cheques", "name": "Cheque lifecycle",
              "status": "TESTED", "weight": None},
@@ -22,13 +27,23 @@ def candidate():
         ],
     }
 
+    for index, module in enumerate(EXTRA_MODULES):
+        data["workflows"].append({
+            "id": f"BASE-{index + 1}", "module": module,
+            "name": f"Synthetic {module} workflow", "status": "DISCOVERED",
+            "weight": None,
+        })
+    return data
+
 
 def freeze():
     data = candidate()
     data["catalog_frozen"] = True
     data["catalog_approval_ref"] = "independent-catalog-approval-001"
-    data["workflows"][0]["weight"] = 9
-    data["workflows"][1]["weight"] = 1
+    for entry in data["workflows"]:
+        entry["weight"] = 1
+    # 117 accepted / (117 + 13 mandatory other workflows) = 90%.
+    data["workflows"][0]["weight"] = 117
     return data
 
 
@@ -105,6 +120,27 @@ class ParityGateTests(unittest.TestCase):
                 data["workflows"][0]["weight"] = bad
                 with self.assertRaisesRegex(InvalidCatalog, "UNFROZEN_WEIGHT"):
                     evaluate(data)
+
+    def test_frozen_catalog_cannot_drop_hr_and_settings(self):
+        for missing in ("personnel", "permissions_settings"):
+            with self.subTest(module=missing):
+                data = freeze()
+                data["mandatory_modules"].remove(missing)
+                data["workflows"] = [
+                    e for e in data["workflows"] if e["module"] != missing
+                ]
+                with self.assertRaisesRegex(
+                    InvalidCatalog, "WEAKENS_OWNER_MODULE_BASELINE"
+                ):
+                    evaluate(data)
+
+    def test_missing_hr_workflow_cannot_pass_even_if_named_mandatory(self):
+        data = freeze()
+        data["workflows"] = [
+            e for e in data["workflows"] if e["module"] != "personnel"
+        ]
+        with self.assertRaisesRegex(InvalidCatalog, "OMITS_MANDATORY"):
+            evaluate(data)
 
     def test_reject_non_trustsoft_reference(self):
         data = candidate()
