@@ -1018,6 +1018,54 @@ nav.side{gap:.5rem}
             </label>
             <button class="primary" type="submit">تسجيل الدخول لجميع شاشات اللوحة</button>
           </form>
+          <form id="owner-phone-signin-form" autocomplete="off">
+            <h3>تسجيل الدخول برقم الهاتف ورمز SMS</h3>
+            <p class="small muted">يُختار مفتاح الدولة تلقائيًا حسب لغة الجهاز عند الإمكان، ويمكن تغييره يدويًا. لا ترسل رمز SMS في المحادثة.</p>
+            <label class="field" for="owner-country-code">الدولة ومفتاح الاتصال
+              <select id="owner-country-code" name="owner-country-code" autocomplete="tel-country-code" required>
+                <option value="+962" data-region="JO">الأردن (+962)</option>
+                <option value="+970" data-region="PS">فلسطين (+970)</option>
+                <option value="+966" data-region="SA">السعودية (+966)</option>
+                <option value="+971" data-region="AE">الإمارات (+971)</option>
+                <option value="+965" data-region="KW">الكويت (+965)</option>
+                <option value="+974" data-region="QA">قطر (+974)</option>
+                <option value="+973" data-region="BH">البحرين (+973)</option>
+                <option value="+968" data-region="OM">عُمان (+968)</option>
+                <option value="+20" data-region="EG">مصر (+20)</option>
+                <option value="+964" data-region="IQ">العراق (+964)</option>
+                <option value="+963" data-region="SY">سوريا (+963)</option>
+                <option value="+961" data-region="LB">لبنان (+961)</option>
+                <option value="+967" data-region="YE">اليمن (+967)</option>
+                <option value="+218" data-region="LY">ليبيا (+218)</option>
+                <option value="+216" data-region="TN">تونس (+216)</option>
+                <option value="+213" data-region="DZ">الجزائر (+213)</option>
+                <option value="+212" data-region="MA">المغرب (+212)</option>
+                <option value="+249" data-region="SD">السودان (+249)</option>
+                <option value="+90" data-region="TR">تركيا (+90)</option>
+                <option value="+44" data-region="GB">المملكة المتحدة (+44)</option>
+                <option value="+1" data-region="US">الولايات المتحدة (+1)</option>
+                <option value="+1" data-region="CA">كندا (+1)</option>
+                <option value="+49" data-region="DE">ألمانيا (+49)</option>
+                <option value="+33" data-region="FR">فرنسا (+33)</option>
+                <option value="+39" data-region="IT">إيطاليا (+39)</option>
+                <option value="+91" data-region="IN">الهند (+91)</option>
+              </select>
+            </label>
+            <p id="owner-country-detection" class="small muted" role="status">الأردن (+962) هو الخيار الافتراضي حتى يتحدد إعداد لغة الجهاز.</p>
+            <label class="field" for="owner-phone-number">رقم الهاتف المحلي
+              <input id="owner-phone-number" type="tel" name="owner-phone-number" autocomplete="tel-national" inputmode="tel" placeholder="07XXXXXXXX" maxlength="24" required>
+            </label>
+            <div id="owner-phone-recaptcha" aria-label="التحقق من عدم استخدام روبوت"></div>
+            <button type="submit" class="primary">إرسال رمز التحقق</button>
+          </form>
+          <form id="owner-phone-confirm-form" autocomplete="off" hidden>
+            <h3>التحقق من رمز SMS</h3>
+            <label class="field" for="owner-sms-code">الرمز الذي وصل إلى هاتفك
+              <input id="owner-sms-code" name="owner-sms-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required>
+            </label>
+            <button type="submit" class="primary">تأكيد الرمز والدخول</button>
+          </form>
+          <p class="small muted">الحساب الجديد يُعامل كمستخدم عادي، بصلاحية النظرة العامة فقط بعد اعتماد صلاحيات الخادم. لا تُمنح ملكية النظام تلقائيًا لأول شخص يدخل رقم هاتفه؛ يلزم اعتماد رقم المالك من حساب إداري موثوق.</p>
           <form id="owner-password-form" autocomplete="off" hidden>
             <h3>تغيير كلمة مرور حساب Firebase بالبريد وكلمة المرور</h3>
             <p class="small muted">يتطلب إدخال كلمة المرور الحالية لإعادة إثبات الهوية. لن تُحفَظ كلمات المرور في اللوحة أو GitHub.</p>
