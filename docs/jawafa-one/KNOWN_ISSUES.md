@@ -1,6 +1,6 @@
 # KNOWN_ISSUES
 
-1. **Pre-existing failing test** `dashboard/tests/aas-roster.test.cjs` #11 expects the nav label `دليل الوكلاء والمستشارين`; the legacy NAV now says `دليل الوكلاء`. Fails identically without this change. Not modified (outside scope).
+1. **Resolved historic roster test mismatch (2026-11-09)**: the current `dashboard/tests/aas-roster.test.cjs` passes in [GitHub Actions run 42569460477](https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/42569460477). This is a source/CI test pass, not production verification.
 2. All operational figures are **DEMO**; no LIVE data source exists.
 3. Gemini/OpenAI not connected; the assistant only answers 4 question types locally and refuses the rest.
 4. Android: debug APK is built in CI but not installed on a device yet; a stable signed release needs the owner's signing secrets (DEPLOY.md step 5).
