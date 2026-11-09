@@ -40,7 +40,11 @@ def freeze():
     data = candidate()
     data["catalog_frozen"] = True
     data["catalog_approval_ref"] = "independent-catalog-approval-001"
+    data["owner_workflow_inventory_complete"] = True
+    data["owner_workflow_inventory_approval_ref"] = "verified-owner-used-workflow-inventory"
     for entry in data["workflows"]:
+        entry["owner_required"] = False
+        entry["security_critical"] = False
         entry["weight"] = 1
     # 117 accepted / (117 + 13 mandatory other workflows) = 90%.
     data["workflows"][0]["weight"] = 117
@@ -140,6 +144,34 @@ class ParityGateTests(unittest.TestCase):
             e for e in data["workflows"] if e["module"] != "personnel"
         ]
         with self.assertRaisesRegex(InvalidCatalog, "OMITS_MANDATORY"):
+            evaluate(data)
+
+    def test_frozen_catalog_missing_complete_owner_inventory_is_rejected(self):
+        data = freeze()
+        data["owner_workflow_inventory_complete"] = False
+        with self.assertRaisesRegex(InvalidCatalog, "OWNER_WORKFLOW_INVENTORY_NOT_COMPLETE"):
+            evaluate(data)
+
+    def test_owner_required_journal_blocks_even_at_90_percent(self):
+        data = freeze()
+        approve(data["workflows"][0])
+        data["workflows"][1]["owner_required"] = True
+        outcome = evaluate(data)
+        self.assertEqual(outcome["parity_percent"], 90)
+        self.assertFalse(outcome["certification_eligible"])
+        self.assertEqual(outcome["unaccepted_owner_critical_workflows"], ["GL-1"])
+
+    def test_security_critical_workflow_blocks_release(self):
+        data = freeze()
+        approve(data["workflows"][0])
+        data["workflows"][1]["security_critical"] = True
+        result = evaluate(data)
+        self.assertEqual(result["result"], "OWNER_REQUIRED_WORKFLOWS_INCOMPLETE")
+
+    def test_missing_critical_classification_cannot_silently_pass(self):
+        data = freeze()
+        del data["workflows"][0]["owner_required"]
+        with self.assertRaisesRegex(InvalidCatalog, "MISSING_OWNER_CRITICAL_CLASSIFICATION"):
             evaluate(data)
 
     def test_reject_non_trustsoft_reference(self):
