@@ -56,7 +56,7 @@ try {
   // 1. Signed-out preview: every view navigable, demo data clearly labelled.
   const a = await open();
   check('E2E-01', (await a.page.evaluate(() => window.__jawafaState.cloud)) === 'ready', 'Firebase SDK loaded and emulator connected');
-  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees', 'aiagents'];
+  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees', 'aiagents', 'notifications', 'tasks'];
   const bad = [];
   for (const v of views) {
     await nav(a.page, v); await a.page.waitForTimeout(150);
@@ -202,7 +202,10 @@ try {
   await waitState(a.page, () => window.__jawafaState.orders[0]?.status === 'submitted');
   const bell = await a.page.waitForFunction(() => document.querySelector('#bell .count')?.textContent === '1' && !document.getElementById('bell').hidden, null, { timeout: 5000 }).then(() => true, () => false);
   check('E2E-30', bell, 'submitted order appears as 1 on the approvals bell');
+  // The bell opens the notification center; its approval item leads to the approvals inbox.
   await a.page.locator('#bell').click();
+  await a.page.waitForFunction(() => !document.querySelector('section.view[data-view="notifications"]').hidden);
+  await a.page.locator('section.view[data-view="notifications"] a.notif[data-kind="approval"]').click();
   await a.page.waitForFunction(() => !document.querySelector('section.view[data-view="approvals"]').hidden);
   await a.page.locator('section.view[data-view="approvals"] input[aria-label="ملاحظة القرار"]').fill('السعر مطابق');
   await a.page.getByRole('button', { name: 'اعتماد' }).click();
@@ -330,6 +333,43 @@ try {
   await nav(b.page, 'aiagents'); await b.page.waitForTimeout(300);
   const audView = await b.page.evaluate(() => { const v = document.querySelector('section.view[data-view="aiagents"]'); return { form: !!v.querySelector('input[name="aname"]'), ws: !!v.querySelector('input[name="wname"]'), agents: window.__jawafaState.agentsAi.length }; });
   check('E2E-40', !audView.form && !audView.ws && audView.agents === 1, 'auditor reads the agent but gets no agent or workspace form');
+
+  // 3d. Phase 3: task board, notification center, supplier performance.
+  const bmId = await d.page.evaluate(() => window.__jawafaState.user.uid);
+  await nav(a.page, 'tasks'); await a.page.waitForTimeout(200);
+  const tv = a.page.locator('section.view[data-view="tasks"]');
+  await tv.locator('input[name="ttitle"]').fill('جرد رفوف الزرقاء');
+  await tv.locator('select[name="tassignee"]').selectOption(bmId);
+  await tv.locator('input[name="tdue"]').fill('2026-01-15');
+  await tv.locator('select[name="tprio"]').selectOption('high');
+  await tv.getByRole('button', { name: 'إضافة المهمة' }).click();
+  await waitState(a.page, () => window.__jawafaState.tasks.some(t => t.title === 'جرد رفوف الزرقاء'));
+  const late = await a.page.waitForFunction(() => { const c = document.querySelector('section.view[data-view="tasks"] [data-col="todo"] .task-card.late'); return !!c && /متأخرة/.test(c.textContent); }, null, { timeout: 5000 }).then(() => true, () => false);
+  check('E2E-41', late, 'task assigned to the branch manager with a past due date appears in "للتنفيذ" marked overdue');
+  const bellBm = await d.page.waitForFunction(() => document.querySelector('#bell .count')?.textContent === '1', null, { timeout: 8000 }).then(() => true, () => false);
+  await d.page.locator('#bell').click();
+  await d.page.waitForFunction(() => !document.querySelector('section.view[data-view="notifications"]').hidden);
+  // The view is shown at once and drawn on the next frame; wait for the item itself.
+  await d.page.waitForFunction(() => !!document.querySelector('section.view[data-view="notifications"] a.notif'), null, { timeout: 5000 }).catch(() => {});
+  const note = await d.page.evaluate(() => document.querySelector('section.view[data-view="notifications"] a.notif')?.dataset.kind);
+  check('E2E-42', bellBm && note === 'overdue', 'branch manager\'s bell shows 1 and the notification center lists the overdue task');
+  await d.page.locator('section.view[data-view="notifications"] a.notif').click();
+  await d.page.waitForFunction(() => !document.querySelector('section.view[data-view="tasks"]').hidden);
+  await d.page.locator('section.view[data-view="tasks"] .task-card', { hasText: 'جرد رفوف الزرقاء' }).getByRole('button', { name: '→ قيد التنفيذ' }).click();
+  await waitState(d.page, () => window.__jawafaState.tasks.find(t => t.title === 'جرد رفوف الزرقاء')?.status === 'doing');
+  await d.page.locator('section.view[data-view="tasks"] .task-card', { hasText: 'جرد رفوف الزرقاء' }).getByRole('button', { name: '→ منجزة' }).click();
+  await waitState(a.page, () => window.__jawafaState.tasks.find(t => t.title === 'جرد رفوف الزرقاء')?.status === 'done');
+  const bmBellClear = await d.page.waitForFunction(() => document.querySelector('#bell .count').hidden, null, { timeout: 5000 }).then(() => true, () => false);
+  await nav(b.page, 'tasks'); await b.page.waitForTimeout(300);
+  const audTask = await b.page.evaluate(() => ({ form: !!document.querySelector('section.view[data-view="tasks"] input[name="ttitle"]'), moves: document.querySelectorAll('section.view[data-view="tasks"] .task-card button').length }));
+  const audDenied = await expectDenial(() => b.page.evaluate(async () => { const st = window.__jawafaState; const t = st.tasks.find(x => x.title === 'جرد رفوف الزرقاء'); try { await window.firebase.app().firestore().collection('companies').doc(st.companyId).collection('tasks').doc(t.id).update({ status: 'todo', updatedAt: Date.now() }); return 'allowed'; } catch (e) { return e.code; } }));
+  await waitState(a.page, () => ['task.create', 'task.doing', 'task.done'].every(x => window.__jawafaState.audit.some(e => e.action === x)));
+  check('E2E-43', bmBellClear && !audTask.form && audTask.moves === 0 && audDenied === 'permission-denied', 'assignee moved the task to done (audited), bell cleared; auditor has no form or moves and is denied via API: ' + audDenied);
+  await nav(a.page, 'tasks'); await a.page.waitForTimeout(300);
+  await a.page.screenshot({ path: `${out}/13-tasks.png` });
+  await nav(a.page, 'suppliers'); await a.page.waitForTimeout(300);
+  const supRow = await a.page.evaluate(() => document.querySelector('section.view[data-view="suppliers"] tbody tr')?.textContent || '');
+  check('E2E-44', /21\.5/.test(supRow) && /0%/.test(supRow), 'supplier performance from recorded orders: approved spend 21.5, rejection 0% (' + supRow.replace(/\s+/g, ' ').slice(0, 120) + ')');
 
   // 4. A stranger cannot read company A, even by id through the API.
   const c = await open({ width: 390, height: 844 });

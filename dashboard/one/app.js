@@ -55,6 +55,8 @@ const NAV = [
   ["agents", "⚇", "الوكلاء", "Agents"],
   ["aiagents", "✧", "وكلاء الذكاء الاصطناعي", "AI agents"],
   ["sep", "", "العمليات", "Operations"],
+  ["notifications", "🛎", "التنبيهات", "Notifications"],
+  ["tasks", "✓", "المهام", "Tasks"],
   ["approvals", "🔔", "الموافقات", "Approvals"],
   ["purchases", "🛍", "أوامر الشراء", "Purchase orders"],
   ["suppliers", "🚚", "الموردون", "Suppliers"],
@@ -189,7 +191,7 @@ function selectCompany(id) {
     const byName = (a, b) => S(a.name).localeCompare(S(b.name));
     unsubs.agentsAi = ref.collection("agents").limit(200).onSnapshot(s => { state.agentsAi = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => typeof a.systemInstruction === "string").sort(byName); render(); }, () => {});
     unsubs.workspaces = ref.collection("workspaces").limit(200).onSnapshot(s => { state.workspaces = s.docs.map(d => ({ id: d.id, ...d.data() })).sort(byName); render(); }, () => {});
-    unsubs.tasks = ref.collection("tasks").orderBy("at", "desc").limit(50).onSnapshot(s => { state.tasks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    unsubs.tasks = ref.collection("tasks").orderBy("at", "desc").limit(300).onSnapshot(s => { state.tasks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
   }
   subscribeOps();
   render();
@@ -481,7 +483,9 @@ function renderSuppliers(v) {
   if (!state.user) return needSignIn(v, title);
   if (!company()) return needCompany(v, title);
   const w = C.PROCURERS.includes(role());
-  const count = (id) => state.orders.filter(o => o.supplierId === id).length;
+  const stats = C.supplierStats(state.orders);
+  const st = (id) => stats[id] || { orders: 0, spend: 0, rejectionRate: null, avgApprovalHours: null, avgDeliveryHours: null };
+  const hrs = (h) => (h == null ? "—" : num(h) + T(" س", " h"));
   const form = w ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await addSupplier(e.target)) e.target.reset(); } },
     el("h3", null, T("إضافة مورد", "Add supplier")),
     el("div", { class: "cols-2" },
@@ -491,11 +495,12 @@ function renderSuppliers(v) {
       el("label", { class: "small" }, T("البريد", "Email"), el("input", { name: "semail", type: "email", maxlength: "200", class: "ltr" }))),
     el("button", { class: "primary", type: "submit" }, T("إضافة", "Add"))) : el("div", { class: "panel muted small" }, T("إضافة الموردين للمالك ورئيس المجلس والمدير العام ومدير المشتريات.", "Owner, chairman, general manager and procurement manager add suppliers."));
   const rows = state.suppliers.map(s => el("tr", null, el("td", null, S(s.name, 80)), el("td", null, S(s.category, 80)), el("td", { class: "ltr" }, S(s.phone, 30)), el("td", { class: "ltr" }, S(s.email, 200)),
-    el("td", null, num(count(s.id))), el("td", null, s.status === "inactive" ? badge("blocked", T("موقوف", "Inactive")) : badge("live", T("نشط", "Active"))),
+    el("td", null, num(st(s.id).orders)), el("td", null, money(st(s.id).spend)), el("td", null, st(s.id).rejectionRate == null ? "—" : st(s.id).rejectionRate + "%"),
+    el("td", null, hrs(st(s.id).avgApprovalHours)), el("td", null, hrs(st(s.id).avgDeliveryHours)), el("td", null, s.status === "inactive" ? badge("blocked", T("موقوف", "Inactive")) : badge("live", T("نشط", "Active"))),
     el("td", null, w ? el("button", { class: "ghost", onclick: () => setSupplierStatus(s, s.status === "inactive" ? "active" : "inactive") }, s.status === "inactive" ? T("تفعيل", "Activate") : T("إيقاف", "Deactivate")) : "")));
   v.replaceChildren(sectionHead(title, badge("demo", "UNVERIFIED"), csvBtn(() => downloadCsv("suppliers", "UNVERIFIED", [T("الاسم", "Name"), T("الفئة", "Category"), T("الهاتف", "Phone"), T("البريد", "Email"), T("الحالة", "Status")], state.suppliers.map(s => [s.name, s.category, s.phone, s.email, s.status])))),
-    el("div", { class: "banner info" }, T("قائمة الموردين يدخلها فريق المشتريات. عدد الأوامر محسوب من أوامر الشراء المسجلة هنا فقط، لا من قاعدة جوافة.", "Suppliers are entered by the procurement team. Order counts come only from purchase orders recorded here, not from the Jawafa database.")),
-    form, el("div", { style: "margin-top:1rem" }, table([T("الاسم", "Name"), T("الفئة", "Category"), T("الهاتف", "Phone"), T("البريد", "Email"), T("أوامر الشراء", "Orders"), T("الحالة", "Status"), ""], rows)));
+    el("div", { class: "banner info" }, T("قائمة الموردين يدخلها فريق المشتريات. مؤشرات الأداء (عدد الأوامر، والمصروف المعتمد، ونسبة الرفض، ومتوسط زمن الموافقة من الإرسال إلى القرار، ومتوسط زمن التوريد من الاعتماد إلى الاستلام) محسوبة من أوامر الشراء المسجلة هنا فقط، لا من قاعدة جوافة.", "Suppliers are entered by the procurement team. Performance figures (orders, approved spend, rejection rate, average approval time from submission to decision, average delivery time from approval to receipt) come only from purchase orders recorded here, not from the Jawafa database.")),
+    form, el("div", { style: "margin-top:1rem" }, table([T("الاسم", "Name"), T("الفئة", "Category"), T("الهاتف", "Phone"), T("البريد", "Email"), T("أوامر الشراء", "Orders"), T("المصروف المعتمد", "Approved spend"), T("نسبة الرفض", "Rejection"), T("زمن الموافقة", "Approval time"), T("زمن التوريد", "Delivery time"), T("الحالة", "Status"), ""], rows)));
 }
 
 // --- purchase orders ---
@@ -763,6 +768,75 @@ function renderAiAgents(v) {
     table([T("الاسم", "Name"), T("النموذج", "Model"), T("الحرارة", "Temp."), T("التعليمات", "Instruction"), ""], agentRows),
     el("h3", { style: "margin-top:1rem" }, T("مساحات العمل", "Workspaces")), wsForm || "",
     table([T("مساحة العمل", "Workspace"), T("الوكيل النشط", "Active agent")], wsRows));
+}
+
+// ---------- task board & notifications (phase 3) ----------
+// Tasks are companies/{id}/tasks (rules TASK-01). Notifications are computed in the browser from
+// data the member can already read (approvals, tasks assigned to them, invitations); nothing is sent
+// outside the app.
+const TASK_LABEL = { todo: ["للتنفيذ", "To do"], doing: ["قيد التنفيذ", "In progress"], done: ["منجزة", "Done"] };
+const PRIO_LABEL = { low: ["منخفضة", "Low"], normal: ["عادية", "Normal"], high: ["عالية", "High"] };
+const memberName = (uid) => { const m = company()?.members?.[uid]; return S(m?.name || m?.email || uid || "—", 80); };
+const myNotifications = () => (state.user ? C.notificationsFor({ role: role(), uid: state.user.uid, orders: state.orders, tasks: state.tasks, invites: state.invites, today: C.todayIso() }) : []);
+const taskView = { mine: false };
+async function addTask(f) {
+  const title = f.ttitle.value.trim(), due = f.tdue.value;
+  if (!title || title.length > 200) { toast(T("عنوان المهمة مطلوب (حتى 200 حرف).", "Task title required (≤200).")); return false; }
+  if (!C.isDate(due)) { toast(T("تاريخ الاستحقاق غير صحيح.", "Invalid due date.")); return false; }
+  const now = Date.now();
+  const data = { title, status: "todo", by: state.user.uid, at: now, updatedAt: now, assigneeUid: f.tassignee.value || null, dueDate: due, priority: C.TASK_PRIORITY.includes(f.tprio.value) ? f.tprio.value : "normal", branchId: f.tbranch.value || null };
+  try { await fs.collection("companies").doc(state.companyId).collection("tasks").add(data); audit("task.create", title + (data.assigneeUid ? " → " + memberName(data.assigneeUid) : "")); toast(T("أُضيفت المهمة.", "Task added.")); return true; }
+  catch (e) { fail(e); return false; }
+}
+async function moveTask(t, status) {
+  const change = { status, updatedAt: Date.now() };
+  if (status === "done") change.doneAt = Date.now();
+  try { await fs.collection("companies").doc(state.companyId).collection("tasks").doc(t.id).update(change); audit("task." + status, S(t.title, 120)); }
+  catch (e) { fail(e); }
+}
+function taskCard(t, today) {
+  const late = C.isOverdue(t, today);
+  const can = C.canEditTask(role(), state.user.uid, t);
+  const moves = C.TASK_STATES.filter(s => s !== (t.status || "todo"));
+  return el("div", { class: "item task-card" + (late ? " late" : ""), "data-task": t.id },
+    el("div", { class: "row" }, el("b", null, S(t.title, 200)), t.priority === "high" ? badge("blocked", T(...PRIO_LABEL.high)) : null, late ? badge("blocked", T("متأخرة", "Overdue")) : null),
+    el("div", { class: "small muted" }, T("المكلَّف: ", "Assignee: ") + (t.assigneeUid ? memberName(t.assigneeUid) : "—") + (t.dueDate ? " · " + T("الاستحقاق: ", "Due: ") + S(t.dueDate, 10) : "") + (t.branchId ? " · " + branchName(t.branchId) : "")),
+    can ? el("div", { class: "toolbar", style: "margin:.3rem 0 0" }, ...moves.map(s => el("button", { class: "ghost small", onclick: () => moveTask(t, s) }, "→ " + T(...TASK_LABEL[s])))) : null);
+}
+function renderTasks(v) {
+  const title = T("المهام", "Tasks");
+  if (!state.user) return needSignIn(v, title);
+  if (!company()) return needCompany(v, title);
+  const r = role(), today = C.todayIso();
+  const list = state.tasks.filter(t => !taskView.mine || t.assigneeUid === state.user.uid);
+  const late = list.filter(t => C.isOverdue(t, today)).length;
+  const form = C.can(r, "tasks") ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await addTask(e.target)) e.target.reset(); } },
+    el("h3", null, T("مهمة جديدة", "New task")),
+    el("div", { class: "cols-2" },
+      el("label", { class: "small" }, T("العنوان", "Title"), el("input", { name: "ttitle", maxlength: "200", required: true })),
+      el("label", { class: "small" }, T("المكلَّف", "Assignee"), el("select", { name: "tassignee" }, el("option", { value: "" }, "—"), ...(company().memberIds || []).map(uid => el("option", { value: uid }, memberName(uid))))),
+      el("label", { class: "small" }, T("تاريخ الاستحقاق", "Due date"), el("input", { name: "tdue", type: "date", class: "ltr" })),
+      el("label", { class: "small" }, T("الأولوية", "Priority"), el("select", { name: "tprio" }, ...C.TASK_PRIORITY.map(p => el("option", { value: p, selected: p === "normal" }, T(...PRIO_LABEL[p]))))),
+      el("label", { class: "small" }, T("الفرع (اختياري)", "Branch (optional)"), el("select", { name: "tbranch" }, el("option", { value: "" }, "—"), ...branchOptions()))),
+    el("button", { class: "primary", type: "submit" }, T("إضافة المهمة", "Add task")))
+    : el("div", { class: "panel muted small" }, T("دورك للقراءة فقط.", "Your role is read only."));
+  const col = (s) => el("div", { class: "panel task-col", "data-col": s }, el("h3", null, T(...TASK_LABEL[s]), " ", badge("", num(list.filter(t => (t.status || "todo") === s).length))),
+    el("div", { class: "list" }, ...list.filter(t => (t.status || "todo") === s).sort((a, b) => S(a.dueDate || "9999").localeCompare(S(b.dueDate || "9999"))).map(t => taskCard(t, today))));
+  v.replaceChildren(sectionHead(title, badge("live", "Firestore"), late ? badge("blocked", num(late) + T(" متأخرة", " overdue")) : null,
+      el("label", { class: "small" }, el("input", { id: "task-mine", type: "checkbox", style: "width:auto;min-height:auto", checked: taskView.mine, onchange: (e) => { taskView.mine = e.target.checked; renderTasks(v); } }), " ", T("مهامي فقط", "My tasks only")),
+      csvBtn(() => downloadCsv("tasks", "FIRESTORE", [T("العنوان", "Title"), T("الحالة", "Status"), T("المكلَّف", "Assignee"), T("الاستحقاق", "Due"), T("الأولوية", "Priority")], list.map(t => [t.title, t.status, t.assigneeUid ? memberName(t.assigneeUid) : "", t.dueDate || "", t.priority || ""])))),
+    el("div", { class: "banner info" }, T("يحرّك المهمة المكلَّف بها أو منشئها أو المدير، وتفرض ذلك قواعد Firestore. كل تغيير يُسجَّل في سجل التدقيق.", "The assignee, the creator or a manager moves a task (enforced by Firestore rules). Every change is in the audit log.")),
+    form, el("div", { class: "task-board", style: "margin-top:1rem" }, ...C.TASK_STATES.map(col)));
+}
+function renderNotifications(v) {
+  const title = T("التنبيهات", "Notifications");
+  if (!state.user) return needSignIn(v, title);
+  const items = myNotifications();
+  const KIND = { overdue: ["blocked", "متأخرة", "Overdue"], approval: ["demo", "موافقة", "Approval"], invite: ["verified", "دعوة", "Invite"], task: ["live", "مهمة", "Task"] };
+  v.replaceChildren(sectionHead(title, badge(items.length ? "demo" : "live", num(items.length))),
+    el("div", { class: "banner info" }, T("التنبيهات محسوبة من بياناتك في التطبيق: أوامر الشراء بانتظار قرارك، والمهام المسندة إليك والمتأخرة، والدعوات. لا تُرسل إشعارات خارج التطبيق بعد.", "Computed from your data in the app: orders awaiting your decision, tasks assigned to you and overdue, invitations. No push or e-mail notifications yet.")),
+    items.length ? el("div", { class: "list" }, ...items.map(n => el("a", { class: "item row notif", href: n.href, "data-kind": n.kind }, badge(KIND[n.kind][0], T(KIND[n.kind][1], KIND[n.kind][2])), el("span", null, T(n.ar, n.en)))))
+      : el("div", { class: "panel muted" }, T("لا توجد تنبيهات.", "No notifications.")));
 }
 
 // ---------- audit log viewer ----------
@@ -1090,11 +1164,12 @@ function renderUser() {
       el("button", { class: "ghost small", onclick: () => auth.signOut() }, T("خروج", "Sign out")));
   }
   const waiting = state.user && company() ? myApprovals().length : 0;
+  const notes = myNotifications().length;
   const bell = $("bell");
-  bell.hidden = !state.user || !company();
-  bell.querySelector(".count").textContent = waiting ? String(waiting) : "";
-  bell.querySelector(".count").hidden = !waiting;
-  bell.setAttribute("aria-label", T("الموافقات", "Approvals") + (waiting ? " (" + waiting + ")" : ""));
+  bell.hidden = !state.user;
+  bell.querySelector(".count").textContent = notes ? String(notes) : "";
+  bell.querySelector(".count").hidden = !notes;
+  bell.setAttribute("aria-label", T("التنبيهات", "Notifications") + (notes ? " (" + notes + ")" : ""));
   const navItem = document.querySelector('#nav a[data-nav="approvals"]');
   if (navItem) { let n = navItem.querySelector(".count"); if (!n) { n = el("span", { class: "count" }); navItem.append(n); } n.textContent = waiting ? String(waiting) : ""; n.hidden = !waiting; }
   const pill = $("company-pill"), sel = $("company-select");
@@ -1106,7 +1181,7 @@ function renderUser() {
   $("status-data").textContent = state.demo ? T("البيانات المعروضة: تجريبية DEMO — ليست بيانات حقيقية", "Shown data: DEMO — not real") : T("البيانات التشغيلية: لا يوجد مصدر LIVE", "Operational data: no LIVE source");
 }
 
-const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals, aiagents: renderAiAgents };
+const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals, aiagents: renderAiAgents, tasks: renderTasks, notifications: renderNotifications };
 // Redraws a view but keeps what the user typed in forms marked dirty (see the listeners below), and
 // puts the caret back if it was inside one of those forms.
 function redrawKeepingDrafts(v) {
