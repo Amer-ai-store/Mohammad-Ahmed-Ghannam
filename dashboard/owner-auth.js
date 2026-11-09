@@ -21,8 +21,9 @@
   }
   const listeners=new Set();
   function emitAccess(){
-    document.documentElement.dataset.aasAccess=authAccess;
-    window.dispatchEvent(new Event('aas:auth-access-changed'));
+    if(document.documentElement?.dataset)document.documentElement.dataset.aasAccess=authAccess;
+    if(typeof window.dispatchEvent==='function'&&typeof Event==='function')
+      window.dispatchEvent(new Event('aas:auth-access-changed'));
     for(const f of listeners){try{f(authAccess)}catch{}}
   }
   async function checkRole(user){
@@ -186,6 +187,8 @@
     const passwordForm=root.querySelector('#owner-password-form');
     const google=root.querySelector('#owner-google-security');
     const result=root.querySelector('#owner-password-result');
+    const viewerLogout=document.getElementById('aas-viewer-signout');
+    viewerLogout?.addEventListener('click',()=>{void signOut()});
     const setMessage=text=>{if(status)status.textContent=text;};
     const render=user=>{
       const authenticated=Boolean(user&&!user.isAnonymous);
