@@ -91,6 +91,49 @@ void main() {
     }
   });
 
+  test('read-only purchase invoices parse exact fils, tax and draft status', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) {
+      expect(request.method, 'GET');
+      expect(request.uri.path, '/v1/purchase-invoices');
+      expect(request.headers.value('x-erp-tenant-id'), tenant);
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(jsonEncode({
+        'items': [{
+          'purchase_invoice_id': '30000000-0000-4000-8000-000000000003',
+          'supplier_id': '10000000-0000-4000-8000-000000000001',
+          'original_invoice_number': 'inv-١٢٣',
+          'invoice_number_key': 'INV-123',
+          'total_fils': '100250',
+          'currency_code': 'JOD',
+          'line_count': 1,
+          'tax_fils': '10250',
+          'draft_total_matches_lines': true,
+        }],
+      }));
+      request.response.close();
+    });
+    final client = ErpGatewayClient(
+      baseUri: Uri.parse('http://127.0.0.1:${server.port}'),
+      tenantId: tenant,
+      syntheticLoopbackHttpOnly: true,
+      accessTokenProvider: () async => 'synthetic-test-token',
+    );
+    try {
+      final invoices = await client.readPurchaseInvoices();
+      expect(invoices.length, 1);
+      expect(invoices.single.originalNumber, 'inv-١٢٣');
+      expect(invoices.single.normalizedNumber, 'INV-123');
+      expect(invoices.single.totalFils, '100250');
+      expect(invoices.single.taxFils, '10250');
+      expect(invoices.single.linesMatchTotal, isTrue);
+      expect(() => invoices.clear(), throwsUnsupportedError);
+    } finally {
+      client.close();
+      await server.close(force: true);
+    }
+  });
+
   test('unauthorized API response does not reveal private response contents', () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     server.listen((request) {
