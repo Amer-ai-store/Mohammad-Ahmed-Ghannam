@@ -1,0 +1,16 @@
+{
+  "name": "jawafa-erp-ai-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "start": "node src/server.mjs",
+    "check": "node --check src/server.mjs && node --check src/auth.mjs && node --check test/integration.test.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "jose": "6.0.12",
+    "pg": "8.16.3"
+  }
+}

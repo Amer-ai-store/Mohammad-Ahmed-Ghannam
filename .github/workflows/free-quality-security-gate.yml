@@ -1,5 +1,6 @@
 # Zero paid-API review gate for public PRs. Not an LLM review or a substitute for independent acceptance.
 # Reuses the repository's existing CodeQL default setup and independent security-scan workflow.
+# Quality and security checks also run on draft PRs; draft status still blocks merging/release.
 name: Free quality and security checks
 
 on:
@@ -18,7 +19,6 @@ concurrency:
 jobs:
   quality:
     name: Free static quality and unit tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -49,7 +49,6 @@ jobs:
 
   security:
     name: Free Semgrep security analysis
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -75,7 +74,9 @@ jobs:
   gate:
     name: free-pr-gate
     needs: [quality, security]
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    # Superseded PR runs are cancelled intentionally; do not turn cancellation into a red gate.
+    # Genuine quality/security failures still reach the gate and fail it.
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
