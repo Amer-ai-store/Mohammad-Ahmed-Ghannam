@@ -51,7 +51,14 @@ def evaluate(catalog: dict) -> dict:
         raise InvalidCatalog("FROZEN_CATALOG_MISSING_APPROVAL")
     if frozen and not catalog["catalog_approval_ref"].strip():
         raise InvalidCatalog("FROZEN_CATALOG_MISSING_APPROVAL")
+    if frozen:
+        if catalog.get("owner_workflow_inventory_complete") is not True:
+            raise InvalidCatalog("OWNER_WORKFLOW_INVENTORY_NOT_COMPLETE")
+        owner_approval = catalog.get("owner_workflow_inventory_approval_ref")
+        if not isinstance(owner_approval, str) or not owner_approval.strip():
+            raise InvalidCatalog("OWNER_WORKFLOW_INVENTORY_MISSING_APPROVAL")
     seen = set()
+    missing_owner_required = []
     total = accepted_weight = 0
     for entry in entries:
         if not isinstance(entry, dict):
@@ -67,6 +74,13 @@ def evaluate(catalog: dict) -> dict:
         status = entry.get("status")
         if status not in STATES:
             raise InvalidCatalog(f"{key}:UNKNOWN_STATUS")
+        if frozen:
+            if type(entry.get("owner_required")) is not bool or type(
+                entry.get("security_critical")
+            ) is not bool:
+                raise InvalidCatalog(f"{key}:MISSING_OWNER_CRITICAL_CLASSIFICATION")
+            if (entry["owner_required"] or entry["security_critical"]) and status != "ACCEPTED":
+                missing_owner_required.append(key)
         weight = entry.get("weight")
         if frozen:
             if type(weight) is not int or weight <= 0:
@@ -94,13 +108,18 @@ def evaluate(catalog: dict) -> dict:
         if not set(required).issubset({e["module"] for e in entries}):
             raise InvalidCatalog("FROZEN_CATALOG_OMITS_MANDATORY_MODULE")
     score = (accepted_weight * 100 / total) if frozen else None
-    ready = frozen and score >= 90
+    ready = frozen and score >= 90 and not missing_owner_required
     return {
         "result": "VERIFIED_METADATA_THRESHOLD" if ready else (
-            "BELOW_90_PERCENT" if frozen else "UNMEASURED"
+            ("OWNER_REQUIRED_WORKFLOWS_INCOMPLETE" if missing_owner_required
+             else "BELOW_90_PERCENT") if frozen else "UNMEASURED"
         ),
         "parity_percent": round(score, 3) if score is not None else None,
         "catalog_frozen": frozen,
+        "owner_workflow_inventory_complete": catalog.get(
+            "owner_workflow_inventory_complete"
+        ) is True,
+        "unaccepted_owner_critical_workflows": missing_owner_required,
         "workflow_count": len(entries),
         "accepted_workflow_count": sum(e["status"] == "ACCEPTED" for e in entries),
         "certification_eligible": bool(ready),
