@@ -31,6 +31,23 @@ This is an **aggregated, read-only** profile. No cheque IDs, cheque numbers, acc
 
 The private reports are stored at `JawafaAudit_Private/20261109` on the authorized server, not deployed on a public website or in the app.
 
+## Cross-snapshot document/movement mapping — newly verified
+
+A second **FULL** export dated 2026-10-26 was independently compared with the 2026-11-09 FULL export. These are distinct cheque IDs, not monetary totals.
+
+| Evidence | 26 October | 9 November |
+|---|---:|---:|
+| Document IDs in `ARPDocuments` | 8,093 | 8,130 |
+| Movement-linked IDs in `CheqMovement` | 8,033 | 8,057 |
+| Movement-linked IDs with no document counterpart in that snapshot | 56 | 56 |
+| Document IDs without a movement counterpart in that snapshot | 116 | 129 |
+
+**Delta:** 37 new document IDs and 24 new movement-linked IDs were recorded. No previously exported document or movement ID was absent from the later complete export. None of the 56 current movement-only IDs was found in the 26 October document snapshot, and none of the 129 current document-only IDs was found in the earlier movement snapshot.
+
+**Caution:** The 56 unmatched movement-side keys persist across both complete exports, which warrants investigating record types and joins; it is **not proof that cheque records were deleted or that a crime occurred**. Missing movement history may also be legitimate for the cheque's stage or source-table coverage. An official SQL foreign-key inspection, document-type codes, vouchers and bank originals are still required.
+
+**Private evidence SHA256:** `Jawafa_Cheque_CrossSnapshot_20261109_Private.json` — `48e2ad05cf7fa670de14894858eaa75e2e2b7fd946f8077f1607cff03c5e242e`. The detailed report is held on the authorized private server, not in this repository.
+
 ## Exact source fields inspected
 
 - `ARPDocuments.CheqId`, `DocumentNo`, `DocumentType`, `DueDate`, `DocumentValue`, `Status`, `CheckStatus`, `Returned`, `InDeposit`, `deleted`, `replaced`, `Delivered`, `Transfered`, `InBankTransNo`, `InDepositTransNo`.
