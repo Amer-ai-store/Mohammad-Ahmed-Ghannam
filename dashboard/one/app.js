@@ -971,6 +971,25 @@ function renderUser() {
 }
 
 const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals };
+// Redraws a view but keeps what the user typed in forms marked dirty (see the listeners below).
+function redrawKeepingDrafts(v) {
+  const forms = () => [...v.querySelectorAll("form")];
+  const drafts = forms().map((f, i) => f.hasAttribute("data-dirty")
+    ? { i, vals: [...f.elements].filter(e => e.name).map(e => [e.name, e.type === "checkbox" ? e.checked : e.value]) } : null).filter(Boolean);
+  RENDER[current](v);
+  const now = forms();
+  for (const d of drafts) {
+    const f = now[d.i]; if (!f) continue;
+    for (const [name, val] of d.vals) {
+      const e = f.elements.namedItem(name);
+      if (!e || typeof e.value === "undefined" || e instanceof RadioNodeList) continue;
+      if (e.type === "checkbox") e.checked = val;
+      else if (e.tagName === "SELECT") { if ([...e.options].some(o => o.value === val)) e.value = val; }
+      else e.value = val;
+    }
+    f.setAttribute("data-dirty", "1");
+  }
+}
 let rq = false;
 function render() {
   if (rq) return; rq = true;
@@ -978,9 +997,9 @@ function render() {
     rq = false;
     renderUser();
     const v = document.querySelector(`section.view[data-view="${current}"]`);
-    // Keep focus inside forms when a live snapshot arrives, and never redraw over a form the
-    // user has started filling in (its values would be lost between typing and pressing save).
-    if (v && !v.querySelector("form[data-dirty]") && !(v.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.id !== "sales-branch" && document.activeElement.id !== "inv-low") && Object.hasOwn(RENDER, current)) RENDER[current](v);
+    // Keep focus inside forms when a live snapshot arrives. A form the user has started filling in
+    // is redrawn with fresh data (e.g. new options) and its typed values are put back afterwards.
+    if (v && !(v.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.id !== "sales-branch" && document.activeElement.id !== "inv-low") && Object.hasOwn(RENDER, current)) redrawKeepingDrafts(v);
     $("banner").replaceChildren(...(state.demo && ["home", "sales", "inventory", "finance", "investigations", "maps"].includes(current)
       ? [el("div", { class: "banner" }, el("b", null, T("بيانات تجريبية: ", "Demo data: ")), T("الأرقام في هذه الشاشة مولّدة للمعاينة فقط، وليست من قاعدة جوافة أو أي شركة.", "Figures on this screen are generated for preview only, not from Jawafa or any company."))] : []));
   });
@@ -1025,7 +1044,7 @@ $("lang-btn").addEventListener("click", () => {
 });
 $("company-select").addEventListener("change", (e) => selectCompany(e.target.value));
 window.addEventListener("hashchange", () => show(location.hash.slice(1)));
-// Dirty-form tracking for render(): typing marks the form; submitting or resetting it releases it.
+// Dirty-form tracking for render(): typing marks the form (its values survive redraws); submitting or resetting releases it.
 document.addEventListener("input", (e) => { const f = e.target && e.target.form; if (f) f.setAttribute("data-dirty", "1"); }, true);
 document.addEventListener("change", (e) => { const f = e.target && e.target.form; if (f && e.target.id !== "sales-branch") f.setAttribute("data-dirty", "1"); }, true);
 document.addEventListener("submit", (e) => { e.target.removeAttribute("data-dirty"); }, true);
