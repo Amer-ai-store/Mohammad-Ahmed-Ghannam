@@ -137,6 +137,19 @@ export function renderTrustsoftEvidence(target){
       make(root,"p","ts-warning","نطاق الـ25% محدد من صاحب المشروع وليس نسبة تقدم تم قياسها أو اعتمادها.");
       const dates=make(root,"p","ts-note","لقطتا المصدر: "+data.snapshots.join(" / "));
       evidenceCards(root,data);
+      if (Array.isArray(data.relationships)) {
+        const relationships=make(root,"section","ts-panel");
+        make(relationships,"h3","","خريطة علاقات جداول TrustSoft وحدود الإثبات");
+        make(relationships,"p","ts-note","هذه خريطة مستخلصة من التصديرات المتاحة وليست تعريفًا رسميًا شاملًا لمفاتيح SQL.");
+        const list=make(relationships,"div","ts-relations");
+        for(const relation of data.relationships){
+          if (!Object.hasOwn(AUDIT_STATES,relation.status)) continue;
+          const card=make(list,"div","ts-relation");
+          make(card,"strong","",relation.left+" ↔ "+relation.right);
+          make(card,"span","ts-status",AUDIT_STATES[relation.status]);
+          make(card,"p","ts-note",relation.explanation);
+        }
+      }
       const next=make(root,"div","ts-panel");
       make(next,"h3","","الإثبات المطلوب قبل الإغلاق");
       const ol=make(next,"ol","ts-next");
