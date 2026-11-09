@@ -20,6 +20,21 @@ VALUES ('00000000-0000-4000-8000-000000000001',
         'TEST-A-REGISTER','draft','registered','clerk-A',NULL,'demo',
         now()-interval '10 seconds');
 
+-- A caller-provided timestamp 10s in the past MUST NOT become audit time.
+DO $
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM erp.cheque_events e
+    WHERE e.command_id='TEST-A-REGISTER'
+      AND (
+        e.event_time < clock_timestamp() - interval '5 seconds'
+        OR e.event_time IS DISTINCT FROM e.recorded_at
+      )
+  ) THEN
+    RAISE EXCEPTION 'CLIENT_BACKDATED_AUDIT_TIME_ACCEPTED';
+  END IF;
+END $;
+
 -- Forbidden deposit by the original maker (checker cannot be same maker).
 DO $$
 BEGIN
