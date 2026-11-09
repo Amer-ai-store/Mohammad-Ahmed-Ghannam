@@ -551,10 +551,10 @@ function renderPurchases(v) {
   const list = state.orders.filter(o => !filter || o.status === filter);
   const total = C.poTotal(poDraft.lines.map(l => ({ qty: Number(l.qty) || 0, unitPrice: Number(l.unitPrice) || 0 })));
   const lineRow = (l, i) => el("div", { class: "po-line" },
-    el("input", { "aria-label": T("الرمز", "SKU"), placeholder: T("الرمز", "SKU"), class: "ltr", maxlength: "40", value: l.sku, oninput: (e) => { l.sku = e.target.value; } }),
-    el("input", { "aria-label": T("الصنف", "Item"), placeholder: T("الصنف", "Item"), maxlength: "120", value: l.name, "data-line-name": String(i), oninput: (e) => { l.name = e.target.value; } }),
-    el("input", { "aria-label": T("الكمية", "Qty"), placeholder: T("الكمية", "Qty"), type: "number", min: "0", step: "any", class: "ltr", value: l.qty, oninput: (e) => { l.qty = e.target.value; v.querySelector("#po-total").textContent = money(C.poTotal(poDraft.lines.map(x => ({ qty: Number(x.qty) || 0, unitPrice: Number(x.unitPrice) || 0 })))); } }),
-    el("input", { "aria-label": T("سعر الوحدة", "Unit price"), placeholder: T("سعر الوحدة", "Unit price"), type: "number", min: "0", step: "any", class: "ltr", value: l.unitPrice, oninput: (e) => { l.unitPrice = e.target.value; v.querySelector("#po-total").textContent = money(C.poTotal(poDraft.lines.map(x => ({ qty: Number(x.qty) || 0, unitPrice: Number(x.unitPrice) || 0 })))); } }),
+    el("input", { name: "line-sku-" + i, "aria-label": T("الرمز", "SKU"), placeholder: T("الرمز", "SKU"), class: "ltr", maxlength: "40", value: l.sku, oninput: (e) => { l.sku = e.target.value; } }),
+    el("input", { name: "line-name-" + i, "aria-label": T("الصنف", "Item"), placeholder: T("الصنف", "Item"), maxlength: "120", value: l.name, "data-line-name": String(i), oninput: (e) => { l.name = e.target.value; } }),
+    el("input", { name: "line-qty-" + i, "aria-label": T("الكمية", "Qty"), placeholder: T("الكمية", "Qty"), type: "number", min: "0", step: "any", class: "ltr", value: l.qty, oninput: (e) => { l.qty = e.target.value; v.querySelector("#po-total").textContent = money(C.poTotal(poDraft.lines.map(x => ({ qty: Number(x.qty) || 0, unitPrice: Number(x.unitPrice) || 0 })))); } }),
+    el("input", { name: "line-price-" + i, "aria-label": T("سعر الوحدة", "Unit price"), placeholder: T("سعر الوحدة", "Unit price"), type: "number", min: "0", step: "any", class: "ltr", value: l.unitPrice, oninput: (e) => { l.unitPrice = e.target.value; v.querySelector("#po-total").textContent = money(C.poTotal(poDraft.lines.map(x => ({ qty: Number(x.qty) || 0, unitPrice: Number(x.unitPrice) || 0 })))); } }),
     el("button", { type: "button", class: "ghost", "aria-label": T("حذف السطر", "Remove line"), disabled: poDraft.lines.length === 1, onclick: () => { poDraft.lines.splice(i, 1); renderPurchases(v); } }, "✕"));
   const activeSuppliers = state.suppliers.filter(s => s.status !== "inactive");
   const form = w ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await createOrder(e.target)) renderPurchases(v); } },
@@ -971,12 +971,18 @@ function renderUser() {
 }
 
 const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals };
-// Redraws a view but keeps what the user typed in forms marked dirty (see the listeners below).
+// Redraws a view but keeps what the user typed in forms marked dirty (see the listeners below), and
+// puts the caret back if it was inside one of those forms.
 function redrawKeepingDrafts(v) {
+  const view = Object.hasOwn(RENDER, current) ? RENDER[current] : null;
+  if (typeof view !== "function") return;
   const forms = () => [...v.querySelectorAll("form")];
+  const active = document.activeElement;
+  const activeForm = active && active.form && v.contains(active) ? forms().indexOf(active.form) : -1;
+  const focus = activeForm >= 0 && active.name ? { form: activeForm, name: active.name, start: active.selectionStart, end: active.selectionEnd } : null;
   const drafts = forms().map((f, i) => f.hasAttribute("data-dirty")
     ? { i, vals: [...f.elements].filter(e => e.name).map(e => [e.name, e.type === "checkbox" ? e.checked : e.value]) } : null).filter(Boolean);
-  RENDER[current](v);
+  view(v);
   const now = forms();
   for (const d of drafts) {
     const f = now[d.i]; if (!f) continue;
@@ -989,6 +995,13 @@ function redrawKeepingDrafts(v) {
     }
     f.setAttribute("data-dirty", "1");
   }
+  if (focus) {
+    const e = now[focus.form] && now[focus.form].elements.namedItem(focus.name);
+    if (e && typeof e.focus === "function" && !(e instanceof RadioNodeList)) {
+      e.focus();
+      try { if (focus.start != null) e.setSelectionRange(focus.start, focus.end); } catch {}
+    }
+  }
 }
 let rq = false;
 function render() {
@@ -997,9 +1010,11 @@ function render() {
     rq = false;
     renderUser();
     const v = document.querySelector(`section.view[data-view="${current}"]`);
-    // Keep focus inside forms when a live snapshot arrives. A form the user has started filling in
-    // is redrawn with fresh data (e.g. new options) and its typed values are put back afterwards.
-    if (v && !(v.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.id !== "sales-branch" && document.activeElement.id !== "inv-low") && Object.hasOwn(RENDER, current)) redrawKeepingDrafts(v);
+    // Fields outside a form (filters, free text) are not redrawn while focused; form fields are redrawn
+    // with their typed values and caret restored, so live data (new options, rows) still appears.
+    const ae = document.activeElement;
+    const typingOutsideForm = v && v.contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && !ae.form && ae.id !== "sales-branch" && ae.id !== "inv-low";
+    if (v && !typingOutsideForm) redrawKeepingDrafts(v);
     $("banner").replaceChildren(...(state.demo && ["home", "sales", "inventory", "finance", "investigations", "maps"].includes(current)
       ? [el("div", { class: "banner" }, el("b", null, T("بيانات تجريبية: ", "Demo data: ")), T("الأرقام في هذه الشاشة مولّدة للمعاينة فقط، وليست من قاعدة جوافة أو أي شركة.", "Figures on this screen are generated for preview only, not from Jawafa or any company."))] : []));
   });
