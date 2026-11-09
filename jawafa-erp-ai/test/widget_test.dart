@@ -22,6 +22,16 @@ void main() {
     expect(find.textContaining('دون حفظ'), findsOneWidget);
   });
 
+  testWidgets('procurement tab is read-only and clearly unconfigured without login',
+      (tester) async {
+    await tester.pumpWidget(const JawafaErpApp());
+    await tester.tap(find.byKey(const Key('menu_procurement')));
+    await tester.pump();
+    expect(find.byKey(const Key('procurement_unconfigured')), findsOneWidget);
+    expect(find.textContaining('لا يرحّل قيودًا'), findsOneWidget);
+    expect(find.byKey(const Key('procurement_refresh')), findsNothing);
+  });
+
   testWidgets('journal validation gives a test-only balanced verdict', (tester) async {
     await tester.pumpWidget(const JawafaErpApp());
     await tester.tap(find.byKey(const Key('menu_journal')));
