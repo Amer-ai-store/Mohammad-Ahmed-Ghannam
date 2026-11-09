@@ -235,6 +235,10 @@ try {
     await empView.locator('input[name="start"]').fill('2026-11-01');
     await a.page.getByRole('button', { name: 'إضافة' }).click();
     await waitState(a.page, (n) => window.__jawafaState.employees.some(e => e.name === n), name);
+    // The app clears the form only after the save resolves (which can be after the snapshot); wait for that
+    // and for the redraw, so the next employee is not typed into a form that is about to be reset.
+    await a.page.waitForFunction(() => document.querySelector('section.view[data-view="employees"] input[name="ename"]')?.value === '', null, { timeout: 5000 });
+    await a.page.waitForTimeout(150);
   }
   await a.page.waitForFunction(() => document.querySelectorAll('section.view[data-view="employees"] tbody tr').length === 2, null, { timeout: 5000 });
   await a.page.locator('#emp-branch').selectOption(br2);
