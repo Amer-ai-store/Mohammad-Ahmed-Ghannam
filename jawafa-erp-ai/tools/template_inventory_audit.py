@@ -36,6 +36,7 @@ def inspect_entry(entry: object) -> dict:
     path = PureWindowsPath(value)
     if (
         path.is_absolute()
+        or path.root  # Rooted Windows path without a drive is also unsafe.
         or path.drive
         or len(path.parts) < 2
         or any(part in (".", "..") for part in path.parts)
