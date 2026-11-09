@@ -1,2 +1,3 @@
 - name: Buildalon unity-uwp-builder
   uses: buildalon/unity-uwp-builder@v1.0.4
+[![.github/workflows/main.yml](https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/workflows/main.yml/badge.svg)](https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/workflows/main.yml)
