@@ -999,6 +999,33 @@ nav.side{gap:.5rem}
           <label class="field">الفرع الافتراضي<input id="set-branch" type="text" class="ltr" maxlength="120"></label>
           <div class="toolbar"><button class="primary" type="submit" data-write>حفظ الإعدادات</button></div>
         </form>
+        <section class="panel" id="owner-security-root" aria-labelledby="owner-security-heading">
+          <h2 id="owner-security-heading">أمان حساب المالك — تسجيل موحّد وتغيير كلمة المرور</h2>
+          <p class="small muted">المعرّف الإداري المعروض: <strong>admin</strong> (اسم عرض فقط، وليس كلمة مرور أو تصريحًا تلقائيًا). سجّل الدخول مرة واحدة إلى Firebase بحساب Google المعتمد؛ تُعاد الاستفادة من الجلسة داخل شاشات اللوحة نفسها.</p>
+          <p id="owner-sso-status" role="status" aria-live="polite">جارٍ فحص حالة المصادقة...</p>
+          <p>الحساب المتصل: <span id="owner-sso-email" class="ltr">—</span></p>
+          <div class="toolbar">
+            <button type="button" id="owner-sso-login" class="primary">دخول المالك عبر Google</button>
+            <button type="button" id="owner-sso-logout" hidden>تسجيل الخروج من جميع شاشات هذه اللوحة</button>
+          </div>
+          <form id="owner-password-form" autocomplete="off" hidden>
+            <h3>تغيير كلمة مرور حساب Firebase بالبريد وكلمة المرور</h3>
+            <p class="small muted">يتطلب إدخال كلمة المرور الحالية لإعادة إثبات الهوية. لن تُحفَظ كلمات المرور في اللوحة أو GitHub.</p>
+            <label class="field">كلمة المرور الحالية
+              <input type="password" name="current-password" autocomplete="current-password" required>
+            </label>
+            <label class="field">كلمة المرور الجديدة (14 محرفًا على الأقل)
+              <input type="password" name="new-password" autocomplete="new-password" minlength="14" required>
+            </label>
+            <label class="field">تأكيد كلمة المرور الجديدة
+              <input type="password" name="confirm-password" autocomplete="new-password" minlength="14" required>
+            </label>
+            <button class="primary" type="submit">تغيير كلمة المرور والتحقق من التنفيذ</button>
+          </form>
+          <a id="owner-google-security" class="btn" href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" hidden>تغيير كلمة مرور حساب Google من صفحة الأمان الرسمية</a>
+          <p id="owner-password-result" role="status" aria-live="polite"></p>
+          <p class="small muted">كل شاشة خاصة ترسل رمز Firebase صالحًا إلى خادمها المُصرَّح به عند الطلب؛ الخادم يتحقق من المالك والصلاحيات. لا يُعاد استخدام كلمة مرور SQL، ولا تُشارك رموز الدخول مع نطاقات خارجية.</p>
+        </section>
       </section>
     </main>
   </div>
@@ -1013,6 +1040,7 @@ nav.side{gap:.5rem}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="firebase-config.js"></script>
+<script src="owner-auth.js"></script>
 <script src="./aman-monitor/host-integration.js" defer></script>
 <script src="./trustsoft/host-integration.js" defer></script>
 <script>
@@ -1936,8 +1964,14 @@ nav.side{gap:.5rem}
       liveBox(el("p", { class: "small muted" }, "لم تُضبط إعدادات Firebase بعد. اتبع الدليل docs/firebase-setup.md ثم ضع إعدادات تطبيق الويب في dashboard/firebase-config.js."));
       return;
     }
-    try { for (const m of ["app", "auth", "firestore"]) await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-${m}-compat.js`); }
-    catch { liveBox(el("p", { class: "small", style: "color:var(--coral)" }, "تعذّر تحميل مكتبة Firebase. تحقق من الاتصال ثم أعد تحميل الصفحة.")); return; }
+    try {
+      // Central owner session loads app+auth once for every dashboard screen.
+      if(window.AAS_OWNER_AUTH) await window.AAS_OWNER_AUTH.ready;
+      else for (const m of ["app", "auth"]) await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-${m}-compat.js`);
+      if(typeof window.firebase?.firestore!=="function")
+        await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-firestore-compat.js`);
+    }
+    catch { liveBox(el("p", { class: "small", style: "color:var(--coral)" }, "تعذّر تحميل مكتبة Firebase أو تهيئة جلسة المالك؛ لا تُعرض بيانات حية.")); return; }
     const fb = window.firebase;
     const app = fb.apps.length ? fb.app() : fb.initializeApp(cfg);
     const auth = app.auth(), firestore = app.firestore();
