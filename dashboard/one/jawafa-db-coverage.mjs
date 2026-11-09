@@ -101,7 +101,7 @@ export async function renderJawafaCoverage(target){
   add(checks,"h3","","اختبارات القبول قبل إعلان 90%");
   const ol=add(checks,"ol","ts-next");
   for(const str of data.acceptance)add(ol,"li","",str);
- }catch{
-  status.textContent="تعذر التحقق من مصدر القياس؛ لا تعرض نسبة تقدم تخمينية.";
+ }catch(error){
+  status.textContent="تعذر التحقق من مصدر القياس أو عرض روابطه ("+(error instanceof Error?error.name:"غير معروف")+"). لا تعرض نسبة تقدم تخمينية.";
  }
 }
