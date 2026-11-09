@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            base="$BASE_SHA"
+            base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
             head="$HEAD_SHA"
           else
             base="$(git rev-parse HEAD^)"
