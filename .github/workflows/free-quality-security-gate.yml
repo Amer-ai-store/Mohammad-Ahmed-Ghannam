@@ -74,7 +74,9 @@ jobs:
   gate:
     name: free-pr-gate
     needs: [quality, security]
-    if: ${{ always() }}
+    # Superseded PR runs are cancelled intentionally; do not turn cancellation into a red gate.
+    # Genuine quality/security failures still reach the gate and fail it.
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
