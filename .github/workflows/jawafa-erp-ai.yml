@@ -3,12 +3,21 @@ name: JAWAFA ERP AI — independent Windows Android iOS genesis
 on:
   pull_request:
     paths:
-      - 'jawafa-erp-ai/**'
+      # Rebuild mobile and Windows only when Flutter code or its toolchain changes.
+      # ERP SQL migrations have their own PostgreSQL acceptance workflow.
+      - 'jawafa-erp-ai/lib/**'
+      - 'jawafa-erp-ai/test/**'
+      - 'jawafa-erp-ai/pubspec.yaml'
+      - 'jawafa-erp-ai/analysis_options.yaml'
       - '.github/workflows/jawafa-erp-ai.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: jawafa-erp-flutter-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
