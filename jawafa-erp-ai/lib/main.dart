@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'src/domain/cheque.dart';
 import 'src/domain/journal.dart';
+import 'src/network/erp_gateway_client.dart';
 
 void main() => runApp(const JawafaErpApp());
 
 class JawafaErpApp extends StatelessWidget {
-  const JawafaErpApp({super.key});
+  final ErpGatewayClient? gateway;
+  const JawafaErpApp({super.key, this.gateway});
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +27,9 @@ class JawafaErpApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const Directionality(
+      home: Directionality(
         textDirection: TextDirection.rtl,
-        child: ErpShell(),
+        child: ErpShell(gateway: gateway),
       ),
     );
   }
@@ -66,7 +68,8 @@ const areaIcons = <ErpArea, IconData>{
 };
 
 class ErpShell extends StatefulWidget {
-  const ErpShell({super.key});
+  final ErpGatewayClient? gateway;
+  const ErpShell({super.key, this.gateway});
   @override
   State<ErpShell> createState() => _ErpShellState();
 }
@@ -115,7 +118,7 @@ class _ErpShellState extends State<ErpShell> {
       case ErpArea.overview:
         return const OverviewView();
       case ErpArea.cheques:
-        return const ChequeDemoView();
+        return ChequeDemoView(gateway: widget.gateway);
       case ErpArea.journal:
         return const JournalDemoView();
       case ErpArea.procurement:
@@ -277,7 +280,8 @@ String chequeActionArabic(ChequeAction action) => switch (action) {
 };
 
 class ChequeDemoView extends StatefulWidget {
-  const ChequeDemoView({super.key});
+  final ErpGatewayClient? gateway;
+  const ChequeDemoView({super.key, this.gateway});
   @override
   State<ChequeDemoView> createState() => _ChequeDemoViewState();
 }
@@ -290,6 +294,28 @@ class _ChequeDemoViewState extends State<ChequeDemoView> {
     amountFils: 1250000,
   );
   String? message;
+  List<ErpRemoteCheque>? serverCheques;
+  String? serverError;
+  bool loadingServer = false;
+
+  Future<void> loadServerCheques() async {
+    final gateway = widget.gateway;
+    if (gateway == null) return;
+    setState(() {
+      loadingServer = true;
+      serverError = null;
+    });
+    try {
+      final records = await gateway.readCheques();
+      if (!mounted) return;
+      setState(() => serverCheques = records);
+    } on ErpGatewayError catch (error) {
+      if (!mounted) return;
+      setState(() => serverError = error.code);
+    } finally {
+      if (mounted) setState(() => loadingServer = false);
+    }
+  }
 
   void simulate(ChequeAction action) {
     try {
@@ -320,6 +346,32 @@ class _ChequeDemoViewState extends State<ChequeDemoView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('دورة الشيكات — محاكاة', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 12),
+        if (widget.gateway == null)
+          const Text(
+            'اتصال API غير مفعل: يلزم مزود هوية معتمد وخادم ERP مستقل. المحاكاة أدناه لا تحفظ بيانات.',
+            key: Key('gateway_not_configured'),
+          )
+        else ...[
+          OutlinedButton.icon(
+            key: const Key('gateway_read_cheques'),
+            onPressed: loadingServer ? null : loadServerCheques,
+            icon: const Icon(Icons.cloud_download_outlined),
+            label: const Text('قراءة شيكات الشركة من API (بدون تعديل)'),
+          ),
+          if (loadingServer) const LinearProgressIndicator(),
+          if (serverError != null)
+            Text('تعذرت القراءة: $serverError', key: const Key('gateway_error')),
+          if (serverCheques != null) ...[
+            Text('نتائج قراءة API: ${serverCheques!.length}'),
+            for (final record in serverCheques!)
+              ListTile(
+                title: Text(record.reference),
+                subtitle: Text('${record.state} · ${record.amountFils} فلس'),
+                trailing: const Icon(Icons.lock_outline),
+              ),
+          ],
+        ],
         const SizedBox(height: 12),
         Card(
           child: Padding(
