@@ -142,8 +142,66 @@ test('phone registration form exposes manual country override and never defaults
   assert.match(page,/id="owner-phone-recaptcha"/);
   assert.match(page,/name="owner-sms-code"/);
   assert.match(source,/startPhoneLogin\(formatPhoneNumber\(countrySelect.value,phone.value,region\)\)/);
-  assert.match(source,/await auth\.signInWithPhoneNumber\(number,verifier\)/);
+  assert.match(source,/auth\.signInWithPhoneNumber\(number,phoneVerifier\)/);
+  assert.match(page,/id="owner-phone-status"/);
+  assert.match(source,/CAPTCHA_ACTION_REQUIRED/);
+  assert.match(source,/SMS_REQUEST_TIMEOUT_UNKNOWN/);
   assert.match(source,/authAccess='viewer'/);
   assert.match(source,/claims\.jawafaOwner===true\|\|claims\.aasOwner===true/);
   assert.doesNotMatch(source,/firstRegistrant|firstPhoneIsOwner|anyPhoneIsOwner/);
+});
+
+test('SMS request cannot run until reCAPTCHA is completed, and reports each real stage',async()=>{
+  const e=await environment('phone');
+  let captchaOptions=null,renders=0,sent=0,cleared=0;
+  e.window.firebase.auth.RecaptchaVerifier=class{
+    constructor(container,options){
+      assert.equal(container,'owner-phone-recaptcha');
+      captchaOptions=options;
+    }
+    async render(){renders++;return 31;}
+    clear(){cleared++;}
+  };
+  e.auth.signInWithPhoneNumber=async(number,verifier)=>{
+    assert.equal(number,'+962791234567');assert.ok(verifier);
+    sent++;return {confirm:async code=>({user:{phoneNumber:number,providerData:[{providerId:'phone'}]}})};
+  };
+  const stages=[];
+  const first=await e.service.startPhoneLogin('+962791234567',x=>stages.push(x));
+  assert.equal(first.sent,false);
+  assert.equal(sent,0,'do not call backend before user completes captcha');
+  assert.equal(renders,1);
+  assert.ok(stages.includes('CAPTCHA_ACTION_REQUIRED'));
+  captchaOptions.callback('recaptcha-ok');
+  assert.ok(stages.includes('CAPTCHA_PASSED'));
+  const second=await e.service.startPhoneLogin('+962791234567',x=>stages.push(x));
+  assert.equal(second.sent,true);assert.equal(sent,1);
+  assert.ok(stages.includes('SMS_REQUESTING'));
+  assert.ok(stages.includes('SMS_REQUEST_ACCEPTED'));
+  assert.equal(cleared,0);
+  assert.ok(typeof captchaOptions['expired-callback']==='function');
+});
+test('SMS code is not accepted before a real Firebase confirmation',async()=>{
+  const e=await environment('phone');
+  await assert.rejects(e.service.confirmPhoneLogin('000000'),/REQUEST_SMS_FIRST/);
+});
+test('captcha expiration and changing phone cannot reuse a prior verified captcha',async()=>{
+  const e=await environment('phone');
+  const challenge=[];
+  let sends=0,rendered=0;
+  e.window.firebase.auth.RecaptchaVerifier=class {
+    constructor(container,options){challenge.push(options)}
+    async render(){rendered++;return rendered;}
+    clear(){}
+  };
+  e.auth.signInWithPhoneNumber=async()=>{sends++;return {confirm:async()=>({})}};
+  const steps=[];
+  await e.service.startPhoneLogin('+962791234567',stage=>steps.push(stage));
+  challenge[0].callback('solved');
+  challenge[0]['expired-callback']();
+  const one=await e.service.startPhoneLogin('+962791234567',stage=>steps.push(stage));
+  assert.equal(one.sent,false);assert.equal(sends,0);
+  challenge[0].callback('solved');
+  const two=await e.service.startPhoneLogin('+962791234568',stage=>steps.push(stage));
+  assert.equal(two.sent,false);assert.equal(rendered,2);assert.equal(sends,0);
 });
