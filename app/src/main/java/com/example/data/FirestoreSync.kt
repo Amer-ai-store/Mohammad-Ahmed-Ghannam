@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.Context
 import android.util.Log
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -24,10 +25,13 @@ object FirestoreSync {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     @Volatile private var started = false
 
+    /** The Firebase app the live store syncs with. Google sign-in uses this same app. */
+    fun firebaseApp(context: Context): FirebaseApp? = FirebaseSetup.app(context, APP_NAME)
+
     @Synchronized
     fun start(context: Context, db: AppDatabase) {
         if (started) return
-        val app = FirebaseSetup.app(context, APP_NAME)
+        val app = firebaseApp(context)
         if (app == null) {
             Log.i(TAG, "Firebase keys are not set or setup failed; live store sync is off.")
             return

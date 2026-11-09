@@ -40,9 +40,10 @@ jobs:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
         run: |
           cp .env.example .env
-          for k in FIREBASE_API_KEY FIREBASE_APP_ID FIREBASE_PROJECT_ID; do
+          for k in FIREBASE_API_KEY FIREBASE_APP_ID FIREBASE_PROJECT_ID FIREBASE_WEB_CLIENT_ID; do
             v="${!k}"
             if [ -n "$v" ]; then
               grep -v "^$k=" .env > .env.tmp && mv .env.tmp .env
