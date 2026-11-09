@@ -140,6 +140,35 @@ test('service database login cannot write or bypass SQL row security',async()=>{
     await assert.rejects(c.query('DELETE FROM erp.cheques'),(e)=>e.code==='42501');
   }finally{c.release();}
 });
+test('supplier invoice and draft totals are read-only, company-scoped and normalized',async()=>{
+  const aToken=await token('member-A');
+  const a=await call('/v1/purchase-invoices',{jwt:aToken,tenant:A});
+  assert.equal(a.status,200);
+  assert.equal(a.body.items.length,1);
+  assert.equal(a.body.items[0].invoice_number_key,'INV-123');
+  assert.equal(a.body.items[0].total_fils,'100250');
+  assert.equal(a.body.items[0].net_fils,'90000');
+  assert.equal(a.body.items[0].tax_fils,'10250');
+  assert.equal(a.body.items[0].draft_total_matches_lines,true);
+  const supplier=await call('/v1/suppliers',{jwt:aToken,tenant:A});
+  assert.equal(supplier.status,200);
+  assert.equal(supplier.body.items.length,1);
+  assert.equal(supplier.body.items[0].supplier_code,'SYN-A');
+  const b=await call('/v1/purchase-invoices',{
+    jwt:await token('member-B'),tenant:B,
+  });
+  assert.equal(b.status,200);
+  assert.equal(b.body.items.length,1);
+  assert.equal(b.body.items[0].draft_total_matches_lines,false);
+  assert.equal((await call('/v1/purchase-invoices',{jwt:aToken,tenant:B})).status,403);
+  assert.equal((await call('/v1/purchase-invoices',{
+    jwt:await token('viewer-A'),tenant:A,
+  })).status,403);
+  assert.equal((await call('/v1/purchase-invoices',{
+    jwt:aToken,tenant:A,method:'PATCH',
+  })).status,405);
+});
+
 test('missing production configuration and plaintext remote data reject',()=>{
   assert.throws(()=>createOidcVerifier({
     issuer:ISSUER,audience:AUDIENCE,jwksUrl,
