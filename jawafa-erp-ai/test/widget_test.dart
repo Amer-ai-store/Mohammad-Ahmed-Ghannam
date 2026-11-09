@@ -25,6 +25,11 @@ void main() {
   testWidgets('procurement tab is read-only and clearly unconfigured without login',
       (tester) async {
     await tester.pumpWidget(const JawafaErpApp());
+    await tester.ensureVisible(
+      find.byKey(const Key('group_procurementInventory')));
+    await tester.tap(find.byKey(const Key('group_procurementInventory')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('menu_procurement')));
     await tester.tap(find.byKey(const Key('menu_procurement')));
     await tester.pump();
     expect(find.byKey(const Key('procurement_unconfigured')), findsOneWidget);
@@ -54,5 +59,47 @@ void main() {
       expect(find.byKey(Key('reference_refresh_$scope')), findsNothing);
     });
   }
+
+  testWidgets('approved dark ERP dashboard has five owner-required departments',
+      (tester) async {
+    await tester.pumpWidget(const JawafaErpApp());
+    expect(find.byKey(const Key('erp_desktop_nav')), findsOneWidget);
+    expect(find.byKey(const Key('erp_module_search')), findsOneWidget);
+    expect(find.text('لا توجد بيانات حية'), findsNWidgets(4));
+    for (final department in [
+      'accounting', 'procurementInventory', 'sales', 'hr', 'shared',
+    ]) {
+      expect(find.byKey(Key('group_$department')), findsOneWidget);
+    }
+  });
+
+  testWidgets('department overview preserves accounting and HR workflows',
+      (tester) async {
+    await tester.pumpWidget(const JawafaErpApp());
+    await tester.ensureVisible(find.byKey(const Key('group_accounting')));
+    await tester.ensureVisible(find.byKey(const Key('menu_department_accounting')));
+    await tester.tap(find.byKey(const Key('menu_department_accounting')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('landing_accounting')), findsOneWidget);
+    expect(find.text('المدير المالي'), findsWidgets);
+    expect(find.text('سندات القبض والصرف'), findsOneWidget);
+    expect(find.text('ترحيل الموظفين'), findsOneWidget);
+  });
+
+  testWidgets('mobile navigation displays exactly five responsive ERP sections',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pumpWidget(const JawafaErpApp());
+    expect(find.byKey(const Key('erp_mobile_departments')), findsOneWidget);
+    await tester.tap(find.text('الموظفون'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('landing_hr')), findsOneWidget);
+    expect(find.text('مدير شؤون الموظفين'), findsWidgets);
+  });
 
 }
