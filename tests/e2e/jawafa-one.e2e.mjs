@@ -56,13 +56,38 @@ try {
   // 1. Signed-out preview: every view navigable, demo data clearly labelled.
   const a = await open();
   check('E2E-01', (await a.page.evaluate(() => window.__jawafaState.cloud)) === 'ready', 'Firebase SDK loaded and emulator connected');
-  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees', 'aiagents', 'notifications', 'tasks'];
+  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'trustsoft-evidence', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees', 'aiagents', 'notifications', 'tasks'];
   const bad = [];
   for (const v of views) {
     await nav(a.page, v); await a.page.waitForTimeout(150);
     const ok = await a.page.evaluate((v) => { const s = document.querySelector(`section.view[data-view="${v}"]`); return s && !s.hidden && s.textContent.trim().length > 20; }, v);
     if (!ok) bad.push(v);
   }
+  // Public TrustSoft findings are a dated snapshot, not live SQL.
+  await nav(a.page,'trustsoft-evidence');
+  await a.page.waitForFunction(() => {
+    const v=document.querySelector('section.view[data-view="trustsoft-evidence"]');
+    return v && !v.hidden && v.textContent.includes('326') && v.querySelectorAll('.ts-grid article').length===7;
+  },null,{timeout:12000});
+  const trustsoft = await a.page.evaluate(() => {
+    const v=document.querySelector('section.view[data-view="trustsoft-evidence"]');
+    return {cards:v.querySelectorAll('.ts-grid article').length,links:v.querySelectorAll('.ts-relation').length,
+      has25:v.textContent.includes('25%'),hasLive:v.textContent.includes('لا يوجد اتصال LIVE'),
+      hasPrivateRows:!!v.querySelector('.ts-private-results table')};
+  });
+  check('E2E-45',trustsoft.cards===7&&trustsoft.links===6&&trustsoft.has25&&trustsoft.hasLive&&!trustsoft.hasPrivateRows,
+    'TrustSoft seven aggregate findings, six links; no private rows or false LIVE claim');
+  await a.page.locator('section.view[data-view="trustsoft-evidence"] .ts-file-input').setInputFiles({
+    name:'Receipt_All_54_Snapshot_Changes_Private.csv',mimeType:'text/csv',
+    buffer:Buffer.from('RecNo,Tax\\n123,99\\n','utf8')
+  });
+  await a.page.waitForFunction(() => document.querySelector('section.view[data-view="trustsoft-evidence"]').textContent.includes('البصمة لا تطابق'),null,{timeout:5000});
+  const denied=await a.page.evaluate(()=>{
+    const v=document.querySelector('section.view[data-view="trustsoft-evidence"]');
+    return v.textContent.includes('البصمة لا تطابق') && v.querySelector('.ts-private-results').children.length===0;
+  });
+  check('E2E-46',denied,'modified private CSV rejected by SHA256 without displaying transaction rows');
+  await a.page.screenshot({path:`${out}/12-trustsoft-historical-public-snapshot.png`});
   check('E2E-02', bad.length === 0, `${views.length} views render after navigation` + (bad.length ? ' — failed: ' + bad.join(',') : ''));
   await nav(a.page, 'home'); await a.page.waitForTimeout(300);
   const demoBadges = await a.page.locator('.badge.demo').count();
