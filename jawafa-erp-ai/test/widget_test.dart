@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const JawafaErpApp());
     expect(find.text('JAWAFA ERP AI'), findsWidgets);
     expect(find.byKey(const Key('demo_banner')), findsOneWidget);
-    expect(find.textContaining('لا اتصال مالي أو بنكي حي'), findsOneWidget);
+    expect(find.textContaining('لا يتم إنشاء قيود مالية فعلية'), findsOneWidget);
   });
 
   testWidgets('cheque state machine UI functions without persistence', (tester) async {
