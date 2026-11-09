@@ -300,12 +300,16 @@ try {
   await aiView.locator('textarea[name="instr"]').fill('أنت مساعد خبير في تحليل فواتير الإيجارات وتلخيصها للمستأجرين.');
   await aiView.getByRole('button', { name: 'إضافة الوكيل' }).click();
   await waitState(a.page, () => window.__jawafaState.agentsAi.length === 1);
+  // Let the agent form finish its own reset and redraw before using the workspace form.
+  await a.page.waitForFunction(() => document.querySelector('section.view[data-view="aiagents"] input[name="aname"]')?.value === '', null, { timeout: 5000 });
+  await a.page.waitForTimeout(150);
   const ag = await a.page.evaluate(() => window.__jawafaState.agentsAi[0]);
   check('E2E-36', ag.model === 'gemini-3.7-flash' && ag.temperature === 0.2 && /فواتير الإيجارات/.test(ag.systemInstruction), 'agent saved with name, system instruction, model gemini-3.7-flash and temperature 0.2');
   await aiView.locator('input[name="wname"]').fill('شاشة عقود الإيجار');
   await aiView.locator('select[name="wagent"]').selectOption(ag.id);
   await aiView.getByRole('button', { name: 'إضافة مساحة' }).click();
-  await waitState(a.page, (id) => window.__jawafaState.workspaces.some(w => w.name === 'شاشة عقود الإيجار' && w.activeAgentId === id), ag.id);
+  await waitState(a.page, (id) => window.__jawafaState.workspaces.some(w => w.name === 'شاشة عقود الإيجار' && w.activeAgentId === id), ag.id)
+    .catch(async (e) => { console.log('DEBUG workspace', JSON.stringify(await a.page.evaluate(() => ({ ws: window.__jawafaState.workspaces, toast: document.getElementById('toast').textContent, wname: document.querySelector('section.view[data-view="aiagents"] input[name="wname"]')?.value, wagent: document.querySelector('section.view[data-view="aiagents"] select[name="wagent"]')?.value })))); throw e; });
   const badRef = await expectDenial(() => a.page.evaluate(async () => { try { await window.firebase.app().firestore().collection('companies').doc(window.__jawafaState.companyId).collection('workspaces').add({ name: 'x', activeAgentId: 'ghost' }); return 'allowed'; } catch (e) { return e.code; } }));
   check('E2E-37', badRef === 'permission-denied', 'workspace "شاشة عقود الإيجار" uses the agent; a workspace pointing to a missing agent is rejected: ' + badRef);
   await a.page.waitForTimeout(300);
