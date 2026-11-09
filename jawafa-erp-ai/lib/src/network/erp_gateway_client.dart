@@ -128,6 +128,31 @@ class ErpGatewayClient {
         )));
   }
 
+  Future<List<Map<String, dynamic>>> readPersonnel() =>
+      _readReferenceDirectory('/v1/personnel');
+
+  Future<List<Map<String, dynamic>>> readPermissions() =>
+      _readReferenceDirectory('/v1/permissions');
+
+  Future<List<Map<String, dynamic>>> readSettings() =>
+      _readReferenceDirectory('/v1/settings');
+
+  /// Minimal allowlisted, read-only metadata. Never stores employee identity
+  /// documents, payroll, service credentials or mutable configuration.
+  Future<List<Map<String, dynamic>>> _readReferenceDirectory(String path) async {
+    final result = await _get(path);
+    final rows = result['items'];
+    if (rows is! List) throw const ErpGatewayError('INVALID_RESPONSE');
+    try {
+      return List.unmodifiable(rows.map((row) =>
+          Map<String, dynamic>.unmodifiable(
+            Map<String, dynamic>.from(row as Map),
+          )));
+    } catch (_) {
+      throw const ErpGatewayError('INVALID_RESPONSE');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> readChequeEvents(String chequeId) async {
     if (!RegExp(r'^[0-9a-f-]{36}$', caseSensitive: false).hasMatch(chequeId)) {
       throw const ErpGatewayError('INVALID_CHEQUE_ID');
