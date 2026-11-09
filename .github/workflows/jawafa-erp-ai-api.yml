@@ -50,6 +50,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0002_journal_draft_balance.sql
           psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0003_cheque_lifecycle_guard.sql
           psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0004_api_tenant_memberships.sql
+          psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0005_supplier_invoice_guards.sql
           psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
       - name: Install pinned API dependencies
         working-directory: jawafa-erp-ai/api
