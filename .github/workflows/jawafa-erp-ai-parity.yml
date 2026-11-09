@@ -1,0 +1,30 @@
+name: JAWAFA ERP AI — TrustSoft parity evidence integrity (nonproduction)
+on:
+  pull_request:
+    branches:
+      - main
+      - feature/jawafa-erp-ai-new-app-genesis-20261109
+    paths:
+      - 'jawafa-erp-ai/tools/parity_gate.py'
+      - 'jawafa-erp-ai/tools/test_parity_gate.py'
+      - 'jawafa-erp-ai/docs/trustsoft_parity_catalog.json'
+      - '.github/workflows/jawafa-erp-ai-parity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parity-metadata-audit:
+    name: Validate catalog and report unmeasured parity without inventing acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Run zero-dependency parity gate regression tests
+        run: python3 -m unittest discover -s jawafa-erp-ai/tools -p 'test_parity_gate.py' -v
+      - name: Audit candidate reference catalog (UNMEASURED is honest and valid)
+        run: |
+          python3 jawafa-erp-ai/tools/parity_gate.py --manifest jawafa-erp-ai/docs/trustsoft_parity_catalog.json
+          echo '### TrustSoft functional parity is not certified by passing this metadata check.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Only independently approved source comparisons on a frozen complete catalog can qualify for a production claim.' >> "$GITHUB_STEP_SUMMARY"
