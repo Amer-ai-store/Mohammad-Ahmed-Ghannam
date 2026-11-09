@@ -155,4 +155,49 @@ void main() {
       await server.close(force: true);
     }
   });
+  test('personnel, permissions and settings use explicit GET-only routes', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final seen = <String>[];
+    server.listen((request) {
+      seen.add('${request.method} ${request.uri.path}');
+      expect(request.headers.value('x-erp-tenant-id'), tenant);
+      expect(request.headers.value(HttpHeaders.authorizationHeader),
+          'Bearer synthetic-test-token');
+      request.response.headers.contentType = ContentType.json;
+      final List<Map<String, Object>> items;
+      switch (request.uri.path) {
+        case '/v1/personnel':
+          items = [{'employee_code':'EMP-A','display_name':'Fictional A'}];
+        case '/v1/permissions':
+          items = [{'erp_role':'hr_manager','resource':'personnel','allowed':true}];
+        case '/v1/settings':
+          items = [{'setting_key':'locale','setting_value':'ar','revision_no':2}];
+        default:
+          items = [];
+      }
+      request.response.write(jsonEncode({'items': items}));
+      request.response.close();
+    });
+    final client = ErpGatewayClient(
+      baseUri: Uri.parse('http://127.0.0.1:${server.port}'),
+      tenantId: tenant, syntheticLoopbackHttpOnly: true,
+      accessTokenProvider: () async => 'synthetic-test-token',
+    );
+    try {
+      final employees = await client.readPersonnel();
+      expect(employees.single['employee_code'], 'EMP-A');
+      expect(() => employees.clear(), throwsUnsupportedError);
+      final permissionRows = await client.readPermissions();
+      expect(permissionRows.single['allowed'], isTrue);
+      expect(() => permissionRows.single['allowed'] = false,
+          throwsUnsupportedError);
+      final settings = await client.readSettings();
+      expect(settings.single['setting_value'], 'ar');
+      expect(seen, ['GET /v1/personnel','GET /v1/permissions','GET /v1/settings']);
+    } finally {
+      client.close();
+      await server.close(force: true);
+    }
+  });
+
 }
