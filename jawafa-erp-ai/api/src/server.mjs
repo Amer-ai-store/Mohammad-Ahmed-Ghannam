@@ -1,0 +1,195 @@
+import http from 'node:http';
+import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+import pg from 'pg';
+import { createOidcVerifier } from './auth.mjs';
+
+const { Pool } = pg;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ALLOWED_FINANCE_ROLES = new Set(['accountant', 'supervisor', 'auditor']);
+
+function reply(res, status, data, requestId, origin) {
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store, private',
+    'x-content-type-options': 'nosniff',
+    'x-request-id': requestId,
+    ...(origin ? { 'access-control-allow-origin': origin, vary: 'Origin' } : {}),
+  });
+  res.end(JSON.stringify(data));
+}
+
+/** Read-only JAWAFA ERP API: never expose pg connection to Flutter clients. */
+export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
+  if (!pool || typeof verifyToken !== 'function') {
+    throw new Error('DATABASE_POOL_AND_VERIFIER_REQUIRED');
+  }
+  const origins = new Set(allowedOrigins);
+  return http.createServer(async (req, res) => {
+    const requestId = randomUUID();
+    let db;
+    let inTransaction = false;
+    const send = (status, body, origin) => reply(res, status, body, requestId, origin);
+    try {
+      const origin = req.headers.origin;
+      const cors = typeof origin === 'string' && origins.has(origin) ? origin : undefined;
+      if (origin && !cors) return send(403, { error: 'ORIGIN_NOT_ALLOWED' });
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204, {
+          'access-control-allow-origin': cors ?? 'null',
+          'access-control-allow-methods': 'GET, OPTIONS',
+          'access-control-allow-headers': 'authorization, x-erp-tenant-id',
+          'cache-control': 'no-store',
+          'x-request-id': requestId,
+          vary: 'Origin',
+        });
+        res.end();
+        return;
+      }
+      if (req.method !== 'GET') return send(405, { error: 'METHOD_NOT_ALLOWED' }, cors);
+      const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
+      if (pathname === '/health/live') {
+        return send(200, { status: 'up', service: 'jawafa-erp-ai-api' }, cors);
+      }
+      if (pathname.length > 200) return send(404, { error: 'NOT_FOUND' }, cors);
+      const one = pathname.match(/^\/v1\/cheques\/([0-9a-f-]{36})$/i);
+      const events = pathname.match(/^\/v1\/cheques\/([0-9a-f-]{36})\/events$/i);
+      const isList = pathname === '/v1/cheques';
+      const isJournal = pathname === '/v1/journals/draft-balances';
+      if (!one && !events && !isList && !isJournal) {
+        return send(404, { error: 'NOT_FOUND' }, cors);
+      }
+      if ((one && !UUID.test(one[1])) || (events && !UUID.test(events[1]))) {
+        return send(400, { error: 'INVALID_CHEQUE_ID' }, cors);
+      }
+      let subject;
+      try {
+        ({ subject } = await verifyToken(req.headers.authorization));
+      } catch {
+        return send(401, { error: 'UNAUTHENTICATED' }, cors);
+      }
+      const tenantId = req.headers['x-erp-tenant-id'];
+      if (typeof tenantId !== 'string' || !UUID.test(tenantId)) {
+        return send(400, { error: 'VALID_TENANT_ID_REQUIRED' }, cors);
+      }
+      db = await pool.connect();
+      await db.query('BEGIN READ ONLY');
+      inTransaction = true;
+      await db.query("SELECT set_config('erp.tenant_id', $1, true)", [tenantId]);
+      // The company ID is untrusted. The authenticated OIDC subject must
+      // be an active member of THAT company in the NEW ERP database.
+      const membership = await db.query(
+        `SELECT erp_role FROM erp.api_memberships
+          WHERE tenant_id = $1 AND oidc_subject = $2 AND is_active = true`,
+        [tenantId, subject],
+      );
+      if (membership.rowCount !== 1) {
+        return send(403, { error: 'TENANT_MEMBERSHIP_DENIED' }, cors);
+      }
+      if (!ALLOWED_FINANCE_ROLES.has(membership.rows[0].erp_role)) {
+        return send(403, { error: 'PERMISSION_DENIED' }, cors);
+      }
+      let result;
+      if (isList) {
+        result = await db.query(
+          `SELECT cheque_id, reference_no, direction, amount_fils::text,
+                  current_state, last_event_time, event_count
+             FROM erp.cheque_current_state
+            WHERE tenant_id = $1
+            ORDER BY reference_no, cheque_id LIMIT 100`,
+          [tenantId],
+        );
+      } else if (one) {
+        result = await db.query(
+          `SELECT cheque_id, reference_no, direction, amount_fils::text,
+                  current_state, last_event_time, event_count
+             FROM erp.cheque_current_state
+            WHERE tenant_id = $1 AND cheque_id = $2`,
+          [tenantId, one[1]],
+        );
+      } else if (events) {
+        result = await db.query(
+          `SELECT event_id, state_before, state_after, event_time, recorded_at
+             FROM erp.cheque_events
+            WHERE tenant_id = $1 AND cheque_id = $2
+            ORDER BY event_time, event_id LIMIT 100`,
+          [tenantId, events[1]],
+        );
+      } else {
+        result = await db.query(
+          `SELECT journal_id, journal_ref, line_count,
+                  debit_total_fils::text, credit_total_fils::text,
+                  balanced_for_review
+             FROM erp.journal_draft_balance
+            WHERE tenant_id = $1 ORDER BY journal_ref LIMIT 100`,
+          [tenantId],
+        );
+      }
+      if (one && result.rowCount === 0) {
+        return send(404, { error: 'NOT_FOUND' }, cors);
+      }
+      send(200, one ? { cheque: result.rows[0] } : { items: result.rows }, cors);
+    } catch {
+      // Fail closed: neither raw SQL errors, passwords nor identities leak.
+      if (!res.headersSent) send(503, { error: 'SERVICE_UNAVAILABLE' });
+    } finally {
+      if (db) {
+        if (inTransaction) {
+          try { await db.query('ROLLBACK'); } catch { /* broken connection */ }
+        }
+        db.release();
+      }
+    }
+  });
+}
+
+export function buildRuntimeConfig(env = process.env) {
+  const localTest = env.NODE_ENV === 'test' && env.ERP_ALLOW_LOCAL_PLAINTEXT_DB === '1';
+  if (!env.ERP_DATABASE_URL || !env.ERP_OIDC_ISSUER ||
+      !env.ERP_OIDC_AUDIENCE || !env.ERP_OIDC_JWKS_URL) {
+    throw new Error('ERP_API_SECRETS_OR_OIDC_CONFIGURATION_MISSING');
+  }
+  const dbUrl = new URL(env.ERP_DATABASE_URL);
+  if (!['postgres:', 'postgresql:'].includes(dbUrl.protocol)) {
+    throw new Error('ONLY_POSTGRESQL_DATABASE_IS_SUPPORTED');
+  }
+  if (localTest && !['127.0.0.1', 'localhost'].includes(dbUrl.hostname)) {
+    throw new Error('PLAINTEXT_DB_ONLY_FOR_LOOPBACK_CI');
+  }
+  const pool = new Pool({
+    connectionString: env.ERP_DATABASE_URL,
+    ssl: localTest ? false : { rejectUnauthorized: true },
+    max: 5, idleTimeoutMillis: 5000,
+    connectionTimeoutMillis: 3000, statement_timeout: 5000,
+  });
+  const verifier = createOidcVerifier({
+    issuer: env.ERP_OIDC_ISSUER, audience: env.ERP_OIDC_AUDIENCE,
+    jwksUrl: env.ERP_OIDC_JWKS_URL, allowLocalHttpJwks: localTest,
+  });
+  const allowedOrigins = (env.ERP_CORS_ALLOWED_ORIGINS ?? '')
+    .split(',').map((x) => x.trim()).filter(Boolean);
+  if (allowedOrigins.some((x) => !/^https:\/\//.test(x) &&
+      !(localTest && /^http:\/\/localhost:\d+$/.test(x)))) {
+    throw new Error('CORS_ORIGINS_HTTPS_REQUIRED');
+  }
+  return { pool, verifier, allowedOrigins };
+}
+
+export async function startFromEnvironment(env = process.env) {
+  const { pool, verifier, allowedOrigins } = buildRuntimeConfig(env);
+  const port = Number(env.PORT ?? '8080');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('INVALID_LISTEN_PORT');
+  }
+  const host = env.ERP_BIND_HOST ?? '127.0.0.1';
+  const server = createServer({ pool, verifyToken: verifier, allowedOrigins });
+  server.listen(port, host);
+  return { server, pool };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startFromEnvironment().catch(() => {
+    process.stderr.write('ERP_API_STARTUP_FAILED\n');
+    process.exitCode = 1;
+  });
+}
