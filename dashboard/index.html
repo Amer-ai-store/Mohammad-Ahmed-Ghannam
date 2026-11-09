@@ -1055,8 +1055,10 @@ nav.side{gap:.5rem}
             <label class="field" for="owner-phone-number">رقم الهاتف المحلي
               <input id="owner-phone-number" type="tel" name="owner-phone-number" autocomplete="tel-national" inputmode="tel" placeholder="07XXXXXXXX" maxlength="24" required>
             </label>
+            <p class="small muted">الخطوة 1: اضغط «تحضير التحقق»، ثم أكمل مربع «أنا لست روبوتًا» الذي سيظهر هنا. الخطوة 2: بعد اكتمال التحقق اضغط «إرسال SMS الآن». لن يبقى الزر في تحميل غير محدود.</p>
             <div id="owner-phone-recaptcha" aria-label="التحقق من عدم استخدام روبوت"></div>
-            <button type="submit" class="primary">إرسال رمز التحقق</button>
+            <p id="owner-phone-status" class="small" role="status" aria-live="polite">لم يُرسل رمز SMS بعد. تحقّق من رقمك ومفتاح الدولة.</p>
+            <button type="submit" class="primary">تحضير التحقق وإرسال رمز SMS</button>
           </form>
           <form id="owner-phone-confirm-form" autocomplete="off" hidden>
             <h3>التحقق من رمز SMS</h3>
