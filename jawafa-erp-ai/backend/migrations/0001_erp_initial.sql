@@ -79,6 +79,12 @@ BEGIN
 END;
 $$;
 
+-- Original cheque financial amount, direction, reference and maker are immutable.
+-- Corrections will require explicit, independently authorized reversing events.
+CREATE TRIGGER reject_cheque_update_delete
+BEFORE UPDATE OR DELETE ON erp.cheques
+FOR EACH ROW EXECUTE FUNCTION erp.reject_financial_mutation();
+
 CREATE TRIGGER reject_cheque_event_update_delete
 BEFORE UPDATE OR DELETE ON erp.cheque_events
 FOR EACH ROW EXECUTE FUNCTION erp.reject_financial_mutation();
