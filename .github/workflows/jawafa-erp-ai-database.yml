@@ -59,6 +59,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0005_supplier_invoice_guards.sql
       - name: Test duplicate supplier invoices, quantities and RLS without modifying originals
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_supplier_invoice_ci.sql
+      - name: Install HR directory, permissions and settings history (new ERP only)
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0006_personnel_permissions_settings.sql
+      - name: Verify personnel RLS, setting revisions, permissions and denied mutations
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_personnel_settings_ci.sql
       - name: Seed synthetic users and cheques in disposable database
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
       - name: Install pinned Node API dependencies
