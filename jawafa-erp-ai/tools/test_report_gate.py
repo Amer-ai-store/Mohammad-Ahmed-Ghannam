@@ -1,5 +1,10 @@
 """Synthetic gate tests: metadata validity is not TrustSoft report acceptance."""
 import copy
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 from report_gate import InvalidReportCatalog, evaluate
@@ -119,6 +124,43 @@ class ReportGateTests(unittest.TestCase):
         data["reports"] = [report(), copy.deepcopy(report())]
         with self.assertRaisesRegex(InvalidReportCatalog, "DUPLICATE_REPORT_ID"):
             evaluate(data)
+
+    def test_release_cli_rejects_90_percent_when_reports_not_approved(self):
+        from test_parity_gate import approve as approve_workflow, freeze as freeze_workflows
+        workflows = freeze_workflows()
+        approve_workflow(workflows["workflows"][0])
+        reports = candidate()  # Catalog intentionally incomplete.
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp)
+            (source / "workflows.json").write_text(json.dumps(workflows), encoding="utf-8")
+            (source / "reports.json").write_text(json.dumps(reports), encoding="utf-8")
+            cmd = [
+                sys.executable, str(Path(__file__).with_name("parity_gate.py")),
+                "--manifest", str(source / "workflows.json"), "--require-90",
+                "--reports-manifest", str(source / "reports.json"),
+            ]
+            process = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            self.assertEqual(process.returncode, 1, process.stderr)
+            payload = json.loads(process.stdout)
+            self.assertEqual(payload["functional_parity"]["parity_percent"], 90)
+            self.assertEqual(payload["result"], "ERP_RELEASE_NOT_APPROVED")
+            self.assertEqual(payload["owner_reports"]["result"], "UNMEASURED")
+
+    def test_release_cli_rejects_missing_report_manifest(self):
+        from test_parity_gate import approve as approve_workflow, freeze as freeze_workflows
+        workflows = freeze_workflows()
+        approve_workflow(workflows["workflows"][0])
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "workflows.json"
+            source.write_text(json.dumps(workflows), encoding="utf-8")
+            process = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("parity_gate.py")),
+                 "--manifest", str(source), "--require-90"],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(process.returncode, 2)
+            self.assertEqual(json.loads(process.stdout)["result"],
+                             "REPORT_MANIFEST_REQUIRED_FOR_90_RELEASE_CLAIM")
 
     def test_cannot_weaken_owner_report_scope(self):
         data = candidate()
