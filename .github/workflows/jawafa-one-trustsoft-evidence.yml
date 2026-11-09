@@ -4,6 +4,10 @@ on:
     paths:
       - "dashboard/one/trustsoft-public-summary.json"
       - "dashboard/one/trustsoft-evidence.mjs"
+      - "dashboard/one/jawafa-db-coverage.mjs"
+      - "dashboard/one/jawafa-db-coverage.json"
+      - "dashboard/one/github-work.mjs"
+      - "dashboard/tests/jawafa-db-github-work.test.mjs"
       - "dashboard/one/app.js"
       - "dashboard/one/index.html"
       - "dashboard/one/styles.css"
@@ -25,10 +29,14 @@ jobs:
         with:
           node-version: '24'
       - name: TrustSoft analysis, privacy and local-only import validation
-        run: node --test dashboard/tests/trustsoft-evidence.test.mjs
+        run: |
+          node --test dashboard/tests/trustsoft-evidence.test.mjs
+          node --test dashboard/tests/jawafa-db-github-work.test.mjs
       - name: JavaScript syntax
         run: |
           node --check dashboard/one/app.js
           node --check dashboard/one/trustsoft-evidence.mjs
+          node --check dashboard/one/github-work.mjs
+          node --check dashboard/one/jawafa-db-coverage.mjs
       - name: Regression checks for JAWAFA ONE pure logic
         run: node --test dashboard/tests/one-core.test.cjs
