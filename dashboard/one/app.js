@@ -90,6 +90,7 @@ function show(view) {
   view = (view || "home").replace(/^#/, "");
   if (!NAV.some(n => n[0] === view && view !== "sep")) view = "home";
   current = view;
+  for (const f of document.querySelectorAll(`section.view[data-view="${view}"] form[data-dirty]`)) f.removeAttribute("data-dirty");
   for (const s of document.querySelectorAll("section.view")) s.hidden = s.dataset.view !== view;
   for (const a of document.querySelectorAll("[data-nav]")) { if (a.dataset.nav === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
   $("side").classList.remove("open"); $("menu-btn").setAttribute("aria-expanded", "false");
@@ -439,14 +440,14 @@ function renderEmployees(v) {
       el("label", { class: "small" }, T("تاريخ المباشرة", "Start date"), el("input", { name: "start", type: "date", class: "ltr", value: editing ? S(editing.startDate, 10) : null })),
       el("label", { class: "small" }, T("الحالة", "Status"), el("select", { name: "status" }, el("option", { value: "active", selected: editing?.status !== "inactive" }, T("على رأس العمل", "Active")), el("option", { value: "inactive", selected: editing?.status === "inactive" }, T("موقوف", "Inactive"))))),
     el("div", { class: "toolbar" }, el("button", { class: "primary", type: "submit" }, editing ? T("حفظ التعديل", "Save changes") : T("إضافة", "Add")),
-      editing ? el("button", { type: "button", onclick: () => { empForm.editing = null; render(); } }, T("إلغاء", "Cancel")) : null),
+      editing ? el("button", { type: "button", onclick: () => { empForm.editing = null; v.querySelector("form")?.removeAttribute("data-dirty"); render(); } }, T("إلغاء", "Cancel")) : null),
     state.branches.length ? null : el("p", { class: "small muted" }, el("a", { href: "#branches" }, T("لا توجد فروع بعد — أضف فرعًا أولًا.", "No branches yet — add one first."))))
     : el("div", { class: "panel muted small" }, T("دورك للقراءة فقط. إدارة الموظفين للمالك ورئيس المجلس والمدير العام ومدير الفرع.", "Read only. Owner, chairman, general manager and branch managers manage employees."));
   const rows = list.map(e => el("tr", null, el("td", null, S(e.name, 80)), el("td", null, S(e.title, 80)), el("td", null, branchName(e.branchId)),
     el("td", { class: "ltr" }, S(e.phone, 30)), el("td", { class: "ltr" }, S(e.startDate, 10) || "—"),
     el("td", null, e.status === "inactive" ? badge("blocked", T("موقوف", "Inactive")) : badge("live", T("على رأس العمل", "Active"))),
     el("td", null, C.canManageEmployees(r, sc, e.branchId) ? el("div", { class: "toolbar", style: "margin:0" },
-      el("button", { class: "ghost", onclick: () => { empForm.editing = e.id; render(); } }, T("تعديل", "Edit")),
+      el("button", { class: "ghost", onclick: () => { empForm.editing = e.id; v.querySelector("form")?.removeAttribute("data-dirty"); render(); } }, T("تعديل", "Edit")),
       el("button", { class: "ghost", onclick: () => setEmployeeStatus(e, e.status === "inactive" ? "active" : "inactive") }, e.status === "inactive" ? T("إعادة تفعيل", "Reactivate") : T("إيقاف", "Deactivate"))) : "")));
   v.replaceChildren(sectionHead(title, badge("demo", "UNVERIFIED"),
       el("select", { id: "emp-branch", style: "width:auto", "aria-label": T("تصفية حسب الفرع", "Filter by branch"), onchange: () => renderEmployees(v) }, el("option", { value: "" }, T("كل الفروع", "All branches")), ...branchOptions(filter, sc ? (id) => sc.includes(id) : null)),
@@ -977,8 +978,9 @@ function render() {
     rq = false;
     renderUser();
     const v = document.querySelector(`section.view[data-view="${current}"]`);
-    // Keep focus inside forms when a live snapshot arrives.
-    if (v && !(v.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.id !== "sales-branch" && document.activeElement.id !== "inv-low") && Object.hasOwn(RENDER, current)) RENDER[current](v);
+    // Keep focus inside forms when a live snapshot arrives, and never redraw over a form the
+    // user has started filling in (its values would be lost between typing and pressing save).
+    if (v && !v.querySelector("form[data-dirty]") && !(v.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.id !== "sales-branch" && document.activeElement.id !== "inv-low") && Object.hasOwn(RENDER, current)) RENDER[current](v);
     $("banner").replaceChildren(...(state.demo && ["home", "sales", "inventory", "finance", "investigations", "maps"].includes(current)
       ? [el("div", { class: "banner" }, el("b", null, T("بيانات تجريبية: ", "Demo data: ")), T("الأرقام في هذه الشاشة مولّدة للمعاينة فقط، وليست من قاعدة جوافة أو أي شركة.", "Figures on this screen are generated for preview only, not from Jawafa or any company."))] : []));
   });
@@ -1023,6 +1025,11 @@ $("lang-btn").addEventListener("click", () => {
 });
 $("company-select").addEventListener("change", (e) => selectCompany(e.target.value));
 window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+// Dirty-form tracking for render(): typing marks the form; submitting or resetting it releases it.
+document.addEventListener("input", (e) => { const f = e.target && e.target.form; if (f) f.setAttribute("data-dirty", "1"); }, true);
+document.addEventListener("change", (e) => { const f = e.target && e.target.form; if (f && e.target.id !== "sales-branch") f.setAttribute("data-dirty", "1"); }, true);
+document.addEventListener("submit", (e) => { e.target.removeAttribute("data-dirty"); }, true);
+document.addEventListener("reset", (e) => { e.target.removeAttribute("data-dirty"); render(); }, true);
 buildNav(); setupSearch(); show(location.hash.slice(1));
 initCloud();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});

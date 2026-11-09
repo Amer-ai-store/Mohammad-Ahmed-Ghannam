@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-11-09T00:55:28.681Z",
+  "ranAt": "2026-11-09T01:07:45.789Z",
   "environment": "Firebase Auth + Firestore emulators, Chromium (Playwright), local static server",
   "results": [
     {
@@ -180,7 +180,7 @@
     {
       "id": "PERF-01",
       "result": "PASS",
-      "detail": "time to ready (load + Firebase SDK + emulator): desktop 789 ms, mobile 422 ms"
+      "detail": "time to ready (load + Firebase SDK + emulator): desktop 771 ms, mobile 546 ms"
     }
   ]
 }
