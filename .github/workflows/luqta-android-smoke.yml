@@ -23,7 +23,6 @@ jobs:
         working-directory: luqta-mobile
     env:
       PKG: com.luqta.store
-      SYSTEM_IMAGE: 'system-images;android-34;google_apis;x86_64'
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -39,7 +38,7 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@651bceb6f9ca583f16b8d75b62c36ded2ae6fc9c # v4.0.0
         with:
-          packages: 'platform-tools platforms;android-36 build-tools;36.0.0 ndk;27.1.12297006 emulator system-images;android-34;google_apis;x86_64'
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0 ndk;27.1.12297006'
       - uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
       - name: Install the app's dependencies
         run: npm ci
@@ -59,46 +58,22 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Start an Android 14 emulator
-        working-directory: .
-        run: |
-          echo no | avdmanager create avd -n smoke -k "$SYSTEM_IMAGE" -d pixel_5 --force
-          nohup "$ANDROID_HOME/emulator/emulator" -avd smoke -no-window -no-audio -no-boot-anim -no-snapshot \
-            -gpu swiftshader_indirect -camera-back none -camera-front none > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          adb wait-for-device
-          timeout 600 bash -c 'until [ "$(adb shell getprop sys.boot_completed | tr -d "\r")" = "1" ]; do sleep 5; done'
-          for scale in window_animation_scale transition_animation_scale animator_duration_scale; do adb shell settings put global "$scale" 0; done
-          adb shell input keyevent 82 || true
-      - name: Open the app in both designs and look for crashes
-        run: |
-          set -u
-          shots="$RUNNER_TEMP/smoke"; mkdir -p "$shots"; failed=0
-          adb install -r android/app/build/outputs/apk/release/app-release.apk
-          adb logcat -c
-          check() {
-            sleep 20
-            adb exec-out screencap -p > "$shots/$1.png" || true
-            if [ -z "$(adb shell pidof "$PKG" | tr -d '\r')" ]; then echo "::error::The app closed during: $1"; failed=1; fi
-            if adb logcat -d -b crash | grep -q "$PKG"; then echo "::error::Android recorded a crash during: $1"; failed=1; fi
-            echo "checked: $1"
-          }
-          open_link() { adb shell am start -W -a android.intent.action.VIEW -d "$1" "$PKG" > /dev/null; }
-          relaunch() { adb shell am force-stop "$PKG"; adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 > /dev/null; }
-          relaunch;                                   check classic-home
-          open_link 'luqta://appearance?design=rafiq'; check rafiq-appearance
-          open_link 'luqta:///';                      check rafiq-home
-          relaunch;                                   check rafiq-home-after-restart
-          adb shell wm density 480;  relaunch;        check rafiq-home-360dp
-          adb shell wm density 380;  relaunch;        check rafiq-home-454dp
-          adb shell wm density reset
-          open_link 'luqta://appearance?design=classic'; check classic-appearance
-          open_link 'luqta:///';                         check classic-home-again
-          if [ "$failed" != 0 ]; then
-            echo "----- crash buffer -----"; adb logcat -d -b crash | tail -n 200
-            echo "----- errors -----"; adb logcat -d '*:E' | grep -iE "$PKG|ReactNative|AndroidRuntime|RNSVG" | tail -n 200
-            exit 1
-          fi
-          echo "The app stayed open in every step."
+      # The standard emulator action creates the AVD, waits for boot with a time limit, and runs the smoke script.
+      - name: Run the app on an Android 14 emulator and look for crashes
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          SMOKE_SHOTS: ${{ runner.temp }}/smoke
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          force-avd-creation: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none
+          disable-animations: true
+          working-directory: luqta-mobile
+          script: bash scripts/android-smoke.sh
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
