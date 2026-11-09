@@ -101,3 +101,30 @@ unverified.
 **Existing implementation:** only synthetic isolated PostgreSQL HR and
 configuration schema, read-only API and Flutter demo screens in PR #216.
 No real employee/payroll/password data is embedded in the repo.
+
+
+## Header-only repeated-key scan (no data rows opened)
+
+Analyzed the **header lines of 130 selected export files** matching the
+HR, user/rights and settings names above. This is a name-overlap inventory,
+not foreign-key metadata or a direct SQL relationship proof.
+
+| Header key | Files containing the exact case-insensitive key |
+|---|---:|
+| `EmpId` | 55 |
+| `DeptId` | 18 |
+| `EmpNo` | 7 |
+| `UserNo` | 6 |
+| `User_Id` | 1 |
+| `Uno` | 1 |
+| `ClockNo` | 6 |
+| `DurationNo` | 6 |
+| `BranchId` | 3 |
+| `FunctionNo` / `Fno` / `nFunctNo` | 1 each |
+
+The `EmpId` matches span attendance, employment history, loan, course,
+allowance/deduction and salary-related candidate tables. These are **distinct
+column-presence counts**, not verified row joins. Identifier spelling
+variations (`EmpId`, `EmpNo`, `USER.Uno`, `UserNo`,
+`User_Id`) require type and semantic confirmation before writing import
+adapters. Nothing was posted to the original system.
