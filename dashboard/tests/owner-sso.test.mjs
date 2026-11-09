@@ -109,3 +109,41 @@ test('single Firebase email login delegates credentials only to Firebase Auth, n
   assert.equal(e.service.isAuthenticated,true);
   assert.ok(!Object.hasOwn(e.window,'localStorage'));
 });
+
+test('country dialing code auto-detection uses browser locale with Jordan as safe editable fallback',async()=>{
+  const {service}=await environment();
+  assert.equal(service.detectRegion(['ar-JO','en-US']),'JO');
+  assert.equal(service.detectRegion(['en-GB']),'GB');
+  assert.equal(service.detectRegion(['fr-CA']),'CA');
+  assert.equal(service.detectRegion(['ar']),'JO');
+  assert.equal(service.detectRegion([]),'JO');
+  assert.equal(service.detectRegion(['xx-INVALID-REGION']),'JO');
+});
+test('country calling code formats local, pasted international and Arabic digits as E.164',async()=>{
+  const {service}=await environment();
+  assert.equal(service.formatPhoneNumber('+962','0791234567','JO'),'+962791234567');
+  assert.equal(service.formatPhoneNumber('+962','٠٧٩١٢٣٤٥٦٧','JO'),'+962791234567');
+  assert.equal(service.formatPhoneNumber('+966','0551234567','SA'),'+966551234567');
+  assert.equal(service.formatPhoneNumber('+1','(415) 555-0100','US'),'+14155550100');
+  assert.equal(service.formatPhoneNumber('+962','+447123456789','JO'),'+447123456789');
+  assert.equal(service.formatPhoneNumber('+962','00962791234567','JO'),'+962791234567');
+  assert.equal(service.formatPhoneNumber('+39','0612345678','IT'),'+390612345678');
+  assert.throws(()=>service.formatPhoneNumber('+962','123'),/PHONE_E164_REQUIRED/);
+  assert.throws(()=>service.formatPhoneNumber('+962','079BAD4567'),/PHONE_E164_REQUIRED/);
+  assert.throws(()=>service.formatPhoneNumber('962','0791234567'),/PHONE_E164_REQUIRED/);
+});
+test('phone registration form exposes manual country override and never defaults to owner role',()=>{
+  assert.match(page,/name="owner-country-code"/);
+  assert.match(page,/data-region="JO">الأردن \(\+962\)/);
+  assert.match(page,/data-region="SA">السعودية \(\+966\)/);
+  assert.match(page,/data-region="GB">المملكة المتحدة \(\+44\)/);
+  assert.match(page,/id="owner-country-detection"/);
+  assert.match(page,/name="owner-phone-number"/);
+  assert.match(page,/id="owner-phone-recaptcha"/);
+  assert.match(page,/name="owner-sms-code"/);
+  assert.match(source,/startPhoneLogin\(formatPhoneNumber\(countrySelect.value,phone.value,region\)\)/);
+  assert.match(source,/await auth\.signInWithPhoneNumber\(number,verifier\)/);
+  assert.match(source,/authAccess='viewer'/);
+  assert.match(source,/claims\.jawafaOwner===true\|\|claims\.aasOwner===true/);
+  assert.doesNotMatch(source,/firstRegistrant|firstPhoneIsOwner|anyPhoneIsOwner/);
+});
