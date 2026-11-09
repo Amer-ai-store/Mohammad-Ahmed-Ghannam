@@ -67,7 +67,7 @@ try {
   await nav(a.page,'trustsoft-evidence');
   await a.page.waitForFunction(() => {
     const v=document.querySelector('section.view[data-view="trustsoft-evidence"]');
-    return v && !v.hidden && v.textContent.includes('326') && v.querySelectorAll('.ts-grid article').length===7;
+    return v && !v.hidden && v.querySelectorAll('.ts-grid article').length===7 && v.querySelectorAll('.ts-relation').length===6;
   },null,{timeout:12000});
   const trustsoft = await a.page.evaluate(() => {
     const v=document.querySelector('section.view[data-view="trustsoft-evidence"]');
