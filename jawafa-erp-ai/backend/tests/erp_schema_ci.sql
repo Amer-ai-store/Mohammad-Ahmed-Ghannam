@@ -101,7 +101,7 @@ END $$;
 RESET ROLE;
 
 -- Triggers reject mutation even when tests use a privileged migrator.
-DO $
+DO $$
 BEGIN
   BEGIN
     UPDATE erp.cheques SET amount_fils = 2
@@ -110,7 +110,7 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM NOT LIKE 'IMMUTABLE_ERP_AUDIT%' THEN RAISE; END IF;
   END;
-END $;
+END $$;
 
 DO $$
 BEGIN
