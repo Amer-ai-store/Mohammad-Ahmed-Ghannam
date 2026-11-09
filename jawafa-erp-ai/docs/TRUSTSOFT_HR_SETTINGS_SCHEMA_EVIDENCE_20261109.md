@@ -4,8 +4,8 @@
 **Not:** a direct SQL Server catalog read, verified foreign-key map, source-code
 audit or functional equivalence certification.
 
-Source inspected **read-only** on `JAWAFFASVR`:
-`C:\Export\hourly-v5\20261109-0100\inventory_tables.csv`
+Source inspected **read-only** in a private, owner-authorized export:
+`hourly-v5/20261109-0100/inventory_tables.csv` (relative evidence reference; no server path disclosed)
 and **only the header lines** of selected `data\dbo.*.csv` files.
 Inventory SHA256:
 `0e8adab1b15bbc33e198085c46d0da8a6b1fc5103e706cab95533b4bed798118`.
@@ -18,7 +18,7 @@ Inventory SHA256:
 - No source database rows, employee names, salaries, passwords, bank data,
   financial figures or settings VALUES were examined or copied.
 - An integrated-authentication SQL metadata query failed because the Windows
-  account `JAWAFFASVR\Administrator` is disabled. Do not use `sa` or
+  authenticated operating-system account was disabled. Do not use `sa` or
   bypass authentication; SQL key constraints and data types are **unverified**.
 
 ## Source table headers verified in the export
