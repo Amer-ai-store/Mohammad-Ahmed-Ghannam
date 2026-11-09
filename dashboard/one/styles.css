@@ -196,3 +196,16 @@ a.notif{text-decoration:none;color:var(--fg);gap:.6rem;justify-content:flex-star
 .ts-evidence .ts-relation{min-width:0;border:1px solid var(--line);padding:.8rem;border-radius:10px;overflow-wrap:anywhere}
 .ts-evidence .ts-relation strong{display:block;line-height:1.6}
 @media(max-width:860px){.ts-evidence .ts-relations{grid-template-columns:1fr}}
+
+/* GitHub work feed: public read-only state of repository jobs and PRs. */
+.jw-github .jw-feed{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.jw-github .jw-repo-list{padding:0;margin:0;list-style:none;max-height:490px;overflow-y:auto}
+.jw-github .jw-repo-item{display:flex;align-items:flex-start;flex-direction:column;gap:.3rem;padding:.65rem .2rem;border-bottom:1px solid var(--line)}
+.jw-github .jw-repo-link{color:var(--fg);font-weight:700;overflow-wrap:anywhere}
+.jw-github .jw-repo-link:hover{text-decoration:underline;color:var(--emerald)}
+.jw-coverage .jw-coverage-score{font-size:1.7rem;color:var(--emerald);display:block;margin:.5rem 0}
+.jw-coverage .jw-rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
+.jw-coverage .jw-rule{border:1px solid var(--line);border-radius:10px;padding:1rem;min-width:0;overflow-wrap:anywhere}
+.jw-coverage .jw-rule b{display:block;margin-bottom:.45rem}
+@media(max-width:1100px){.jw-github .jw-feed{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.jw-github .jw-feed,.jw-coverage .jw-rules{grid-template-columns:1fr}}
