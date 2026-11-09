@@ -56,7 +56,7 @@ try {
   // 1. Signed-out preview: every view navigable, demo data clearly labelled.
   const a = await open();
   check('E2E-01', (await a.page.evaluate(() => window.__jawafaState.cloud)) === 'ready', 'Firebase SDK loaded and emulator connected');
-  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees'];
+  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees', 'aiagents'];
   const bad = [];
   for (const v of views) {
     await nav(a.page, v); await a.page.waitForTimeout(150);
@@ -284,6 +284,44 @@ try {
   await a.page.screenshot({ path: `${out}/10-purchases.png` });
   await nav(d.page, 'employees'); await d.page.waitForTimeout(300);
   await d.page.screenshot({ path: `${out}/11-employees-branch-manager.png` });
+
+
+  // 3c. AI agents and workspaces: the owner defines the agent from the request, a workspace uses it,
+  // runs stay off without App Check, and a run (stubbed model on the emulator) sends only agent settings + typed text.
+  await nav(a.page, 'aiagents'); await a.page.waitForTimeout(200);
+  const aiView = a.page.locator('section.view[data-view="aiagents"]');
+  await aiView.locator('input[name="aname"]').fill('مساعد المبيعات');
+  await aiView.locator('input[name="model"]').fill('gemini-3.7-flash');
+  await aiView.locator('input[name="temp"]').fill('0.2');
+  await aiView.locator('textarea[name="instr"]').fill('أنت مساعد خبير في تحليل فواتير الإيجارات وتلخيصها للمستأجرين.');
+  await aiView.getByRole('button', { name: 'إضافة الوكيل' }).click();
+  await waitState(a.page, () => window.__jawafaState.agentsAi.length === 1);
+  const ag = await a.page.evaluate(() => window.__jawafaState.agentsAi[0]);
+  check('E2E-36', ag.model === 'gemini-3.7-flash' && ag.temperature === 0.2 && /فواتير الإيجارات/.test(ag.systemInstruction), 'agent saved with name, system instruction, model gemini-3.7-flash and temperature 0.2');
+  await aiView.locator('input[name="wname"]').fill('شاشة عقود الإيجار');
+  await aiView.locator('select[name="wagent"]').selectOption(ag.id);
+  await aiView.getByRole('button', { name: 'إضافة مساحة' }).click();
+  await waitState(a.page, (id) => window.__jawafaState.workspaces.some(w => w.name === 'شاشة عقود الإيجار' && w.activeAgentId === id), ag.id);
+  const badRef = await expectDenial(() => a.page.evaluate(async () => { try { await window.firebase.app().firestore().collection('companies').doc(window.__jawafaState.companyId).collection('workspaces').add({ name: 'x', activeAgentId: 'ghost' }); return 'allowed'; } catch (e) { return e.code; } }));
+  check('E2E-37', badRef === 'permission-denied', 'workspace "شاشة عقود الإيجار" uses the agent; a workspace pointing to a missing agent is rejected: ' + badRef);
+  await a.page.waitForTimeout(300);
+  const off = await a.page.evaluate(() => { const v = document.querySelector('section.view[data-view="aiagents"]'); const btn = [...v.querySelectorAll('button')].find(b => b.textContent.trim() === 'تشغيل'); return { disabled: btn?.disabled, blocked: /يلزم App Check/.test(v.textContent) }; });
+  check('E2E-38', off.disabled === true && off.blocked, 'without an App Check site key the Run button is disabled and marked "يلزم App Check"');
+  await a.page.evaluate(() => { window.__jawafaAiTestRun = async (req) => { window.__lastAiReq = req; return 'ملخص تجريبي من نموذج بديل للاختبار'; }; });
+  await nav(a.page, 'home'); await nav(a.page, 'aiagents'); await a.page.waitForTimeout(200);
+  await aiView.locator('#ai-text').fill('لخّص فاتورة إيجار شهر 10');
+  await aiView.getByRole('button', { name: 'تشغيل' }).click();
+  await a.page.waitForFunction(() => /ملخص تجريبي/.test(document.getElementById('ai-answer')?.textContent || ''), null, { timeout: 5000 });
+  const req = await a.page.evaluate(() => window.__lastAiReq);
+  const labelled = await a.page.evaluate(() => /ناتج ذكاء اصطناعي/.test(document.querySelector('section.view[data-view="aiagents"] .ai-answer').textContent));
+  await waitState(a.page, () => window.__jawafaState.audit.some(e => e.action === 'agent.run'));
+  const auditRun = await a.page.evaluate(() => window.__jawafaState.audit.find(e => e.action === 'agent.run').detail);
+  check('E2E-39', JSON.stringify(Object.keys(req).sort()) === '["contents","generationConfig","model","systemInstruction"]' && req.contents === 'لخّص فاتورة إيجار شهر 10' && req.model === 'gemini-3.7-flash' && req.generationConfig.temperature === 0.2 && labelled && !auditRun.includes('فاتورة إيجار شهر'),
+    'run sends only agent settings + typed text; answer labelled as AI output; audit records the run without the prompt');
+  await a.page.screenshot({ path: `${out}/12-ai-agents.png` });
+  await nav(b.page, 'aiagents'); await b.page.waitForTimeout(300);
+  const audView = await b.page.evaluate(() => { const v = document.querySelector('section.view[data-view="aiagents"]'); return { form: !!v.querySelector('input[name="aname"]'), ws: !!v.querySelector('input[name="wname"]'), agents: window.__jawafaState.agentsAi.length }; });
+  check('E2E-40', !audView.form && !audView.ws && audView.agents === 1, 'auditor reads the agent but gets no agent or workspace form');
 
   // 4. A stranger cannot read company A, even by id through the API.
   const c = await open({ width: 390, height: 844 });

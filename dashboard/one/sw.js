@@ -1,7 +1,7 @@
 // JAWAFA ONE AI service worker: caches only the static shell of this folder.
 // Firestore, Firebase Auth and any API responses are never cached (company data stays live and private).
-const CACHE = "jawafa-one-v1";
-const SHELL = ["./", "./index.html", "./styles.css", "./core.js", "./app.js", "./icon.svg", "./manifest.webmanifest", "../firebase-config.js", "../aas/official-agent-roster.mjs"];
+const CACHE = "jawafa-one-v2";
+const SHELL = ["./", "./index.html", "./styles.css", "./core.js", "./ai-config.js", "./app.js", "./icon.svg", "./manifest.webmanifest", "../firebase-config.js", "../aas/official-agent-roster.mjs"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (e) => {

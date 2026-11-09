@@ -53,6 +53,7 @@ const NAV = [
   ["maps", "📍", "الخرائط", "Maps"],
   ["assistant", "✦", "المساعد الذكي", "AI assistant"],
   ["agents", "⚇", "الوكلاء", "Agents"],
+  ["aiagents", "✧", "وكلاء الذكاء الاصطناعي", "AI agents"],
   ["sep", "", "العمليات", "Operations"],
   ["approvals", "🔔", "الموافقات", "Approvals"],
   ["purchases", "🛍", "أوامر الشراء", "Purchase orders"],
@@ -101,7 +102,7 @@ function show(view) {
 // ---------- state ----------
 const state = {
   cloud: "loading", // loading | ready | unconfigured | failed
-  user: null, profile: null, companies: [], companyId: null, invites: [], messages: [], tasks: [], branches: [], audit: [], employees: [], suppliers: [], orders: [], scopeKey: null,
+  user: null, profile: null, companies: [], companyId: null, invites: [], messages: [], tasks: [], branches: [], audit: [], employees: [], suppliers: [], orders: [], agentsAi: [], workspaces: [], scopeKey: null,
   demo: store.get("jawafa-one-demo", "1") === "1",
   localRouter: C.createRouter(),
 };
@@ -111,7 +112,7 @@ const dataset = (() => { let cache; return () => (state.demo ? (cache ||= C.demo
 
 // ---------- Firebase ----------
 let fb, auth, fs;
-const unsubs = { companies: null, invites: null, messages: null, tasks: null, branches: null, audit: null, employees: null, suppliers: null, orders: null };
+const unsubs = { companies: null, invites: null, messages: null, tasks: null, branches: null, audit: null, employees: null, suppliers: null, orders: null, agentsAi: null, workspaces: null };
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error(src)); document.head.append(s); }); }
 
 async function initCloud() {
@@ -149,7 +150,7 @@ function stopAll() { for (const k of Object.keys(unsubs)) { if (unsubs[k]) unsub
 function onUser(user) {
   stopAll();
   state.user = user && !user.isAnonymous ? { uid: user.uid, email: C.normalizeEmail(user.email), name: user.displayName || "", photo: user.photoURL || "" } : null;
-  state.companies = []; state.invites = []; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.employees = []; state.suppliers = []; state.orders = []; state.scopeKey = null; state.companyId = null; state.profile = null;
+  state.companies = []; state.invites = []; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.employees = []; state.suppliers = []; state.orders = []; state.agentsAi = []; state.workspaces = []; state.scopeKey = null; state.companyId = null; state.profile = null;
   if (!state.user) { render(); return; }
   // The profile remembers the last company across devices; localStorage is only a fallback.
   const me = state.user;
@@ -172,8 +173,9 @@ function onUser(user) {
 }
 
 function selectCompany(id) {
-  for (const k of ["messages", "tasks", "branches", "audit"]) { if (unsubs[k]) unsubs[k](); unsubs[k] = null; }
-  state.companyId = id; state.messages = []; state.tasks = []; state.branches = []; state.audit = [];
+  for (const k of ["messages", "tasks", "branches", "audit", "agentsAi", "workspaces"]) { if (unsubs[k]) unsubs[k](); unsubs[k] = null; }
+  state.companyId = id; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.agentsAi = []; state.workspaces = [];
+  aiState.answer = null; aiState.error = null; aiState.editingAgent = null;
   if (id && state.user) {
     store.set("jawafa-one-company:" + state.user.uid, id);
     if (!state.profile || state.profile.lastCompanyId !== id) {
@@ -184,6 +186,9 @@ function selectCompany(id) {
     unsubs.branches = ref.collection("branches").orderBy("name").onSnapshot(s => { state.branches = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     unsubs.audit = ref.collection("audit").orderBy("at", "desc").limit(100).onSnapshot(s => { state.audit = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     unsubs.messages = ref.collection("agentMessages").orderBy("at", "desc").limit(50).onSnapshot(s => { state.messages = s.docs.map(d => d.data()); render(); }, () => {});
+    const byName = (a, b) => S(a.name).localeCompare(S(b.name));
+    unsubs.agentsAi = ref.collection("agents").limit(200).onSnapshot(s => { state.agentsAi = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => typeof a.systemInstruction === "string").sort(byName); render(); }, () => {});
+    unsubs.workspaces = ref.collection("workspaces").limit(200).onSnapshot(s => { state.workspaces = s.docs.map(d => ({ id: d.id, ...d.data() })).sort(byName); render(); }, () => {});
     unsubs.tasks = ref.collection("tasks").orderBy("at", "desc").limit(50).onSnapshot(s => { state.tasks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
   }
   subscribeOps();
@@ -629,6 +634,137 @@ function scopeEditor(c, uid, r) {
       : el("p", { class: "small muted" }, T("أضف فروعًا أولًا.", "Add branches first.")));
 }
 
+// ---------- AI agents & workspaces (Firebase AI Logic) ----------
+// Agents and workspaces are Firestore records (rules AGT-01, WS-01). A run sends only the agent's
+// settings and the text the member typed to Gemini through Firebase AI Logic; no company dataset or
+// financial record is attached, and the prompt/answer are not stored. Runs are enabled only when
+// ai-config.js carries an App Check (reCAPTCHA Enterprise) site key, so the public site cannot be
+// used to spend the project's AI quota. Answers are labelled AI and are never treated as LIVE data.
+const AI_SDK = "11.10.0";
+const aiState = { editingAgent: null, running: false, answer: null, error: null, wsId: "", text: "" };
+let aiRunner = null;
+function aiSiteKey() { return S(window.JAWAFA_ONE_APPCHECK_SITE_KEY || "", 200); }
+async function getAiRunner() {
+  if (EMULATOR && typeof window.__jawafaAiTestRun === "function") return window.__jawafaAiTestRun; // E2E stub only
+  if (!C.aiRunnable(aiSiteKey(), false)) throw Object.assign(new Error("appcheck"), { code: "appcheck-missing" });
+  if (!aiRunner) aiRunner = (async () => {
+    const base = `https://www.gstatic.com/firebasejs/${AI_SDK}/`;
+    const [appMod, checkMod, aiMod] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-app-check.js"), import(base + "firebase-ai.js")]);
+    const app = appMod.getApps().find(a => a.name === "jawafa-one-ai") || appMod.initializeApp(window.AMER_FIREBASE_CONFIG, "jawafa-one-ai");
+    checkMod.initializeAppCheck(app, { provider: new checkMod.ReCaptchaEnterpriseProvider(aiSiteKey()), isTokenAutoRefreshEnabled: true });
+    const ai = aiMod.getAI(app, { backend: new aiMod.GoogleAIBackend() });
+    return async (req) => {
+      const model = aiMod.getGenerativeModel(ai, { model: req.model, systemInstruction: req.systemInstruction, generationConfig: req.generationConfig });
+      const res = await model.generateContent(req.contents);
+      return res.response.text();
+    };
+  })().catch((e) => { aiRunner = null; throw e; });
+  return aiRunner;
+}
+const agentsCol = () => fs.collection("companies").doc(state.companyId).collection("agents");
+const wsCol = () => fs.collection("companies").doc(state.companyId).collection("workspaces");
+async function saveAgent(f) {
+  const v = C.validateAgent({ name: f.aname.value, systemInstruction: f.instr.value, model: f.model.value, temperature: f.temp.value });
+  if (!v.ok) { toast(v.error); return false; }
+  const data = { ...v.value, by: state.user.uid, at: Date.now() };
+  try {
+    if (aiState.editingAgent) { await agentsCol().doc(aiState.editingAgent).set(data); audit("agent.update", v.value.name + " · " + v.value.model); }
+    else { await agentsCol().add(data); audit("agent.create", v.value.name + " · " + v.value.model); }
+    aiState.editingAgent = null; toast(T("حُفظ الوكيل.", "Agent saved.")); return true;
+  } catch (e) { fail(e); return false; }
+}
+async function deleteAgent(a) {
+  if (state.workspaces.some(w => w.activeAgentId === a.id)) { toast(T("الوكيل مستخدم في مساحة عمل؛ غيّر الوكيل هناك أولًا.", "The agent is used by a workspace; change it there first.")); return; }
+  if (!confirm(T("حذف الوكيل «" + a.name + "»؟", "Delete agent \"" + a.name + "\"?"))) return;
+  try { await agentsCol().doc(a.id).delete(); audit("agent.delete", a.name); } catch (e) { fail(e); }
+}
+async function addWorkspace(f) {
+  const name = f.wname.value.trim();
+  if (!name || name.length > 80) { toast(T("اسم مساحة العمل مطلوب (حتى 80 حرفًا).", "Workspace name required (≤80).")); return false; }
+  try { await wsCol().add({ name, activeAgentId: f.wagent.value || null, by: state.user.uid, at: Date.now() }); audit("workspace.create", name); return true; }
+  catch (e) { fail(e); return false; }
+}
+async function setWorkspaceAgent(w, agentId) {
+  try { await wsCol().doc(w.id).update({ activeAgentId: agentId || null, by: state.user.uid, at: Date.now() }); audit("workspace.agent", w.name + " → " + (agentId ? S(state.agentsAi.find(a => a.id === agentId)?.name || agentId, 80) : "—")); }
+  catch (e) { fail(e); }
+}
+function aiErrorText(e) {
+  const code = e && (e.code || "");
+  if (code === "appcheck-missing") return T("التشغيل غير مفعّل: يلزم ضبط App Check لهذا الموقع (انظر docs/jawafa-one/AI_AGENTS.md).", "Runs are off: App Check must be configured for this site.");
+  if (/appCheck|app-check/i.test(code + (e && e.message || ""))) return T("رفض App Check الطلب. تحقق من مفتاح reCAPTCHA Enterprise وتسجيل النطاق.", "App Check rejected the request.");
+  if (/not.?found|404/i.test(code + (e && e.message || ""))) return T("النموذج غير متاح. تحقق من اسم النموذج في إعدادات الوكيل.", "Model not available. Check the agent's model name.");
+  if (/quota|429|resource-exhausted/i.test(code + (e && e.message || ""))) return T("تجاوزت الحصة المسموحة. حاول لاحقًا.", "Quota exceeded. Try later.");
+  if (/fetch|network|Failed to load/i.test(code + (e && e.message || ""))) return T("تعذّر الاتصال بخدمة الذكاء الاصطناعي.", "Could not reach the AI service.");
+  return T("تعذّر تشغيل الوكيل: ", "Agent run failed: ") + S(code || (e && e.message), 120);
+}
+async function runAgent(text) {
+  const w = state.workspaces.find(x => x.id === aiState.wsId);
+  const a = w && state.agentsAi.find(x => x.id === w.activeAgentId);
+  if (!w || !a) { toast(T("اختر مساحة عمل لها وكيل نشط.", "Choose a workspace with an active agent.")); return; }
+  let req;
+  try { req = C.buildAiRequest(a, text); } catch (e) { toast(S(e.message, 120)); return; }
+  aiState.running = true; aiState.answer = null; aiState.error = null; render();
+  try {
+    const run = await getAiRunner();
+    const out = await run(req);
+    aiState.answer = { text: S(out, 20000), agent: a.name, model: a.model, at: Date.now() };
+    audit("agent.run", a.name + " · " + a.model + " · " + w.name);
+  } catch (e) { aiState.error = aiErrorText(e); }
+  finally { aiState.running = false; render(); }
+}
+function renderAiAgents(v) {
+  const title = T("وكلاء الذكاء الاصطناعي", "AI agents");
+  if (!state.user) return needSignIn(v, title);
+  if (!company()) return needCompany(v, title);
+  const manage = C.can(role(), "manage"), write = C.can(role(), "write");
+  const runnable = C.aiRunnable(aiSiteKey(), EMULATOR && typeof window.__jawafaAiTestRun === "function");
+  const editing = aiState.editingAgent ? state.agentsAi.find(a => a.id === aiState.editingAgent) : null;
+  const agentForm = manage ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await saveAgent(e.target)) { e.target.reset(); render(); } } },
+    el("h3", null, editing ? T("تعديل وكيل", "Edit agent") : T("وكيل جديد", "New agent")),
+    el("div", { class: "cols-2" },
+      el("label", { class: "small" }, T("الاسم", "Name"), el("input", { name: "aname", maxlength: "80", required: true, value: editing ? S(editing.name, 80) : null })),
+      el("label", { class: "small" }, T("النموذج", "Model"), el("input", { name: "model", class: "ltr", maxlength: "48", required: true, placeholder: "gemini-…", value: editing ? S(editing.model, 48) : null })),
+      el("label", { class: "small" }, T("الحرارة (0–2)", "Temperature (0–2)"), el("input", { name: "temp", type: "number", min: "0", max: "2", step: "0.1", class: "ltr", required: true, value: editing ? String(editing.temperature) : "0.2" }))),
+    el("label", { class: "small" }, T("تعليمات النظام", "System instruction"), el("textarea", { name: "instr", maxlength: "4000", rows: "4", required: true }, editing ? S(editing.systemInstruction, 4000) : "")),
+    el("div", { class: "toolbar" }, el("button", { class: "primary", type: "submit" }, editing ? T("حفظ التعديل", "Save changes") : T("إضافة الوكيل", "Add agent")),
+      editing ? el("button", { type: "button", onclick: () => { aiState.editingAgent = null; v.querySelector("form")?.removeAttribute("data-dirty"); render(); } }, T("إلغاء", "Cancel")) : null))
+    : el("div", { class: "panel muted small" }, T("إنشاء الوكلاء وتعديل تعليماتهم للمالك ورئيس المجلس والمدير العام.", "Owner, chairman and general manager create and edit agents."));
+  const agentRows = state.agentsAi.map(a => el("tr", null, el("td", null, S(a.name, 80)), el("td", { class: "ltr" }, S(a.model, 48)), el("td", null, String(a.temperature)),
+    el("td", null, el("details", null, el("summary", { class: "small" }, T("التعليمات", "Instruction")), el("p", { class: "small" }, S(a.systemInstruction, 4000)))),
+    el("td", null, manage ? el("div", { class: "toolbar", style: "margin:0" },
+      el("button", { class: "ghost", onclick: () => { aiState.editingAgent = a.id; v.querySelector("form")?.removeAttribute("data-dirty"); render(); } }, T("تعديل", "Edit")),
+      el("button", { class: "ghost", onclick: () => deleteAgent(a) }, T("حذف", "Delete"))) : "")));
+  const agentOptions = (sel) => [el("option", { value: "" }, T("— بلا وكيل —", "— no agent —")), ...state.agentsAi.map(a => el("option", { value: a.id, selected: a.id === sel }, S(a.name, 80)))];
+  const wsRows = state.workspaces.map(w => el("tr", null, el("td", null, S(w.name, 80)),
+    el("td", null, write ? el("select", { style: "width:auto", "aria-label": T("الوكيل النشط", "Active agent"), "data-ws": w.id, onchange: (e) => setWorkspaceAgent(w, e.target.value) }, ...agentOptions(w.activeAgentId))
+      : S(state.agentsAi.find(a => a.id === w.activeAgentId)?.name || "—", 80))));
+  const wsForm = write ? el("form", { class: "toolbar", onsubmit: async (e) => { e.preventDefault(); if (await addWorkspace(e.target)) e.target.reset(); } },
+    el("input", { name: "wname", maxlength: "80", required: true, placeholder: T("اسم مساحة العمل", "Workspace name"), "aria-label": T("اسم مساحة العمل", "Workspace name") }),
+    el("select", { name: "wagent", style: "width:auto", "aria-label": T("الوكيل", "Agent") }, ...agentOptions("")),
+    el("button", { type: "submit" }, T("إضافة مساحة", "Add workspace"))) : null;
+  const withAgent = state.workspaces.filter(w => state.agentsAi.some(a => a.id === w.activeAgentId));
+  if (!withAgent.some(w => w.id === aiState.wsId)) aiState.wsId = withAgent[0]?.id || "";
+  const runPanel = el("div", { class: "panel" },
+    el("h3", null, T("تشغيل الوكيل", "Run agent"), badge(runnable ? "live" : "blocked", runnable ? "Firebase AI Logic" : T("غير مفعّل — يلزم App Check", "Off — App Check required"))),
+    !withAgent.length ? el("p", { class: "muted small" }, T("أنشئ وكيلًا واربطه بمساحة عمل أولًا.", "Create an agent and attach it to a workspace first.")) :
+      el("div", null,
+        el("label", { class: "small" }, T("مساحة العمل", "Workspace"), el("select", { id: "ai-ws", onchange: (e) => { aiState.wsId = e.target.value; render(); } },
+          ...withAgent.map(w => el("option", { value: w.id, selected: w.id === aiState.wsId }, S(w.name, 80) + " · " + S(state.agentsAi.find(a => a.id === w.activeAgentId)?.name, 60))))),
+        el("label", { class: "small" }, T("نصّك (لا تلصق بيانات مالية أو شخصية حساسة)", "Your text (do not paste sensitive financial or personal data)"), el("textarea", { id: "ai-text", rows: "4", maxlength: "8000", oninput: (e) => { aiState.text = e.target.value; } }, aiState.text || "")),
+        el("button", { class: "primary", disabled: !runnable || aiState.running, onclick: () => runAgent(v.querySelector("#ai-text").value) }, aiState.running ? T("جارٍ التشغيل...", "Running...") : T("تشغيل", "Run"))),
+    aiState.error ? el("div", { class: "banner err", role: "alert" }, aiState.error) : null,
+    aiState.answer ? el("div", { class: "panel ai-answer", style: "margin-top:.75rem" },
+      el("div", { class: "row" }, badge("demo", T("ناتج ذكاء اصطناعي — راجعه قبل الاعتماد", "AI output — review before relying on it")), el("span", { class: "small muted" }, S(aiState.answer.agent, 80) + " · " + S(aiState.answer.model, 48) + " · " + fmtTime(aiState.answer.at))),
+      el("p", { style: "white-space:pre-wrap", id: "ai-answer" }, aiState.answer.text)) : null);
+  v.replaceChildren(sectionHead(title, badge("live", "Firestore")),
+    el("div", { class: "banner info" }, T("الوكيل = اسم + تعليمات نظام + نموذج Gemini + حرارة. مساحة العمل تختار وكيلها النشط. عند التشغيل يُرسل فقط إعداد الوكيل والنص الذي تكتبه إلى Gemini عبر Firebase AI Logic؛ لا تُرسل بيانات الشركة ولا قاعدة جوافة، ولا يُحفظ النص أو الرد. يُسجَّل في سجل التدقيق أن الوكيل شُغّل فقط.", "An agent = name + system instruction + Gemini model + temperature. Each workspace picks its active agent. A run sends only the agent settings and the text you type to Gemini via Firebase AI Logic; no company data or Jawafa database is sent, and neither prompt nor answer is stored. The audit log records only that the agent ran.")),
+    el("div", { class: "cols-2" }, agentForm, runPanel),
+    el("h3", { style: "margin-top:1rem" }, T("الوكلاء", "Agents")),
+    table([T("الاسم", "Name"), T("النموذج", "Model"), T("الحرارة", "Temp."), T("التعليمات", "Instruction"), ""], agentRows),
+    el("h3", { style: "margin-top:1rem" }, T("مساحات العمل", "Workspaces")), wsForm || "",
+    table([T("مساحة العمل", "Workspace"), T("الوكيل النشط", "Active agent")], wsRows));
+}
+
 // ---------- audit log viewer ----------
 function renderAudit(v) {
   if (!state.user) return needSignIn(v, T("سجل التدقيق", "Audit log"));
@@ -970,7 +1106,7 @@ function renderUser() {
   $("status-data").textContent = state.demo ? T("البيانات المعروضة: تجريبية DEMO — ليست بيانات حقيقية", "Shown data: DEMO — not real") : T("البيانات التشغيلية: لا يوجد مصدر LIVE", "Operational data: no LIVE source");
 }
 
-const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals };
+const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals, aiagents: renderAiAgents };
 let rq = false;
 function render() {
   if (rq) return; rq = true;
