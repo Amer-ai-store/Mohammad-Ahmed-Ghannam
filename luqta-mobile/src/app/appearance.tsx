@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Pressable, View } from "react-native";
 import { Check, Monitor, Moon, Sun, Languages, Coins, Palette, Sparkles } from "lucide-react-native";
+import { useLocalSearchParams } from "expo-router";
 import { Shell } from "../components/Shell";
 import { Card, Chip, Notice, Row, Txt } from "../components/ui";
 import { ThemeMode, useTheme, type Design } from "../lib/theme";
@@ -23,6 +24,11 @@ const LANGS: [Lang, string, string][] = [["ar", "العربية", "من اليم
 
 export default function AppearanceScreen() {
   const { colors: t, mode, setMode, isDark, storageError, hydrated, design, setDesign, designRecovered } = useTheme();
+  // luqta://appearance?design=rafiq|classic picks a design from a link (the Android smoke test opens both this way).
+  const params = useLocalSearchParams<{ design?: string }>();
+  useEffect(() => {
+    if (hydrated && (params.design === "classic" || params.design === "rafiq")) setDesign(params.design);
+  }, [hydrated, params.design]); // eslint-disable-line react-hooks/exhaustive-deps
   const { t: tr, lang, setLang, displayCurrency, setDisplayCurrency } = useI18n();
   const money = useMoney();
   const { user } = useSession();
