@@ -21,7 +21,7 @@ VALUES ('00000000-0000-4000-8000-000000000001',
         now()-interval '10 seconds');
 
 -- A caller-provided timestamp 10s in the past MUST NOT become audit time.
-DO $
+DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM erp.cheque_events e
@@ -33,7 +33,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'CLIENT_BACKDATED_AUDIT_TIME_ACCEPTED';
   END IF;
-END $;
+END $$;
 
 -- Forbidden deposit by the original maker (checker cannot be same maker).
 DO $$
