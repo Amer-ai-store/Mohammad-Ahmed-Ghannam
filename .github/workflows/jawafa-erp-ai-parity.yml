@@ -7,6 +7,8 @@ on:
     paths:
       - 'jawafa-erp-ai/tools/parity_gate.py'
       - 'jawafa-erp-ai/tools/test_parity_gate.py'
+      - 'jawafa-erp-ai/tools/reference_schema_audit.py'
+      - 'jawafa-erp-ai/tools/test_reference_schema_audit.py'
       - 'jawafa-erp-ai/docs/trustsoft_parity_catalog.json'
       - '.github/workflows/jawafa-erp-ai-parity.yml'
   workflow_dispatch:
@@ -22,7 +24,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Run zero-dependency parity gate regression tests
-        run: python3 -m unittest discover -s jawafa-erp-ai/tools -p 'test_parity_gate.py' -v
+        run: python3 -m unittest discover -s jawafa-erp-ai/tools -p 'test_*.py' -v
       - name: Audit candidate reference catalog (UNMEASURED is honest and valid)
         run: |
           python3 jawafa-erp-ai/tools/parity_gate.py --manifest jawafa-erp-ai/docs/trustsoft_parity_catalog.json
