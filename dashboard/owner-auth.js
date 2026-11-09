@@ -437,7 +437,7 @@
         submit.disabled=false;
       }
     });
-    subscribe(render);
+    API.subscribe(render);
     ready.catch(()=>setMessage('خدمة Firebase غير متاحة، ولم تُرسل أي كلمة مرور.'));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupPanel,{once:true});
