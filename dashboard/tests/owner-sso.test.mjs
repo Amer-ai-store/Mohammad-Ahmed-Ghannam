@@ -16,7 +16,7 @@ function mockUser(provider='google.com'){
     updatePassword:async value=>{mockUser.updated=value;}
   };
 }
-async function environment(provider='google.com'){
+async function environment(provider='google.com',mountPanel=false){
   let current=mockUser(provider),subscriber=null;
   const auth={
     setPersistence:async value=>{assert.equal(value,'LOCAL')},
@@ -33,12 +33,18 @@ async function environment(provider='google.com'){
   fbAuth.EmailAuthProvider={credential:(email,password)=>({email,password})};
   const fb={apps:[app],app:()=>app,initializeApp:()=>app,auth:fbAuth};
   const window={firebase:fb,AMER_FIREBASE_CONFIG:{projectId:'owner-sso-test',apiKey:'web-public-config'}};
-  const document={readyState:'loading',addEventListener(){}};
+  let domReady;
+  const panel={querySelector:()=>null};
+  const document={
+    readyState:'loading',
+    addEventListener(event,listener){if(event==='DOMContentLoaded')domReady=listener;},
+    getElementById(id){return mountPanel&&id==='owner-security-root'?panel:null;}
+  };
   const context={window,document,console,setTimeout,clearTimeout,Error,Promise,Set,Boolean,String};
   new Script(source,{filename:'owner-auth.js'}).runInNewContext(context);
   const service=window.AAS_OWNER_AUTH;
   await service.ready;
-  return {service,window,auth,changeUser:user=>{current=user;subscriber(user)}};
+  return {service,window,auth,mountPanel:()=>{assert.equal(typeof domReady,'function');domReady();},changeUser:user=>{current=user;subscriber(user)}};
 }
 test('central owner SSO is loaded once and identity token is memory-only',async()=>{
   const e=await environment();
@@ -52,6 +58,15 @@ test('central owner SSO is loaded once and identity token is memory-only',async(
   // Idempotency: the script does not create a second session manager.
   new Script(source).runInNewContext({window:e.window,document:{readyState:'loading',addEventListener(){}},console});
   assert.equal(e.window.AAS_OWNER_AUTH,first);
+});
+test('owner security panel mounts and subscribes after DOMContentLoaded without a ReferenceError',async()=>{
+  const e=await environment('google.com',true);
+  assert.doesNotThrow(()=>e.mountPanel());
+  assert.equal(e.service.isAuthenticated,true);
+  const notifications=[];
+  const off=e.service.subscribe(user=>notifications.push(Boolean(user)));
+  assert.equal(notifications.at(-1),true);
+  off();
 });
 test('single sign-out invalidates all central screens and emits session updates',async()=>{
   const e=await environment();
