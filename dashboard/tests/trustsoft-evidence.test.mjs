@@ -16,6 +16,9 @@ const manifest=JSON.parse(fs.readFileSync(path.join(one,"trustsoft-public-summar
 test("public summary is a dated redacted offline aggregate, never a completion claim",()=>{
   const data=validatePublicSummary(manifest);
   assert.equal(data.findings.length,7);
+  assert.equal(data.relationships.length,6);
+  assert.ok(data.relationships.every(x=>Object.hasOwn(AUDIT_STATES,x.status)));
+  assert.ok(data.relationships.some(x=>x.left==="Receipt.RecNo" && x.right==="RecLine.RecNo"));
   assert.equal(data.analysis_completion_verified,false);
   assert.match(data.owner_requested_slice,/25%/);
   assert.equal(data.provenance.live_db_connected,false);
