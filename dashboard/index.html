@@ -365,6 +365,22 @@ nav.side{gap:.5rem}
 <div class="toolbar"><button type="button" id="trustsoft-toggle" aria-expanded="false" aria-controls="trustsoft-container">فتح لوحة TrustSoft هنا</button><a href="./trustsoft/" target="_blank" rel="noopener noreferrer">فتح شاشة مستقلة داخل موقع القيادة</a></div>
 <div id="trustsoft-container" hidden><iframe id="trustsoft-frame" title="لوحة TrustSoft المركزية" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms" style="width:100%;height:1100px;border:1px solid var(--line);border-radius:12px;background:white"></iframe></div></div></section>
 
+<section class="view" data-view="jawafa-one" aria-labelledby="h-jawafa-one" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA ONE AI · SINGLE CENTRAL DASHBOARD</span>
+<h1 id="h-jawafa-one">جوافة ONE — التطبيق والتحليل ومستودع العمل</h1>
+<p class="muted small">واجهة JAWAFA ONE مدمجة في مركز القيادة المعتمد. تحليل TrustSoft من التصديرات التاريخية؛ لا اتصال SQL إنتاجي مثبت.</p></div>
+<span class="pill warn">READ ONLY · RELEASE NOT APPROVED</span></div>
+<div class="panel">
+<p class="muted small">يتضمن التطبيق شاشات تحليل TrustSoft، تغطية Jawafa_DB، وسجل نتائج GitHub Actions وطلبات الدمج والمهام. عند تعذر المصادقة داخل العرض المضمّن، افتح التطبيق في تبويب مستقل من الرابط أدناه.</p>
+<div class="toolbar"><a class="btn" href="./one/index.html#jawafa-coverage" target="_blank" rel="noopener noreferrer">فتح JAWAFA ONE مستقلًا</a>
+<a class="btn" href="./one/index.html#github-work" target="_blank" rel="noopener noreferrer">فتح مستودع العمل داخل ONE</a></div>
+<iframe id="jawafa-one-frame" title="تطبيق JAWAFA ONE AI المتكامل" loading="lazy"
+src="./one/index.html#jawafa-coverage" referrerpolicy="no-referrer"
+sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+style="width:100%;height:min(78vh,1080px);min-height:620px;border:1px solid var(--line);border-radius:12px;background:var(--surface)"
+></iframe>
+<p class="muted small">تنبيه: وجود الصفحة ضمن القيادة المركزية لا يعني إتمام الربط الحي أو القبول المحاسبي أو الأمني الإنتاجي.</p>
+</div></section>
 <section class="view" data-view="jawafa-tasks" aria-labelledby="h-jawafa-tasks" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-tasks">الخطة اليومية والمهام</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-tasks">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-tasks">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-tasks">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-tasks"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -1089,7 +1105,7 @@ nav.side{gap:.5rem}
       ["aas-commerce","لقطات تطبيق AAS"]
     ]],
     ["جوافة | المالية والتحقيق", [
-      ["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة والمهام"],
+      ["jawafa","القيادة المركزية"],["jawafa-one","JAWAFA ONE AI · التطبيق الموحد"],["jawafa-tasks","الخطة والمهام"],
       ["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
       ["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","TrustSoft"],
       ["jawafa-export","مراقبة التصدير"],["jawafa-accounting","القيود"],
