@@ -55,4 +55,4 @@ These are **field and data observations**, not verified primary/foreign key decl
 
 ## Privacy/safety
 
-Never upload private source exports to GitHub, public app assets, issue bodies, CI logs, or test fixtures. Counts can be used for development prioritization only. Financial originals must remain unchanged. 
+Never upload private source exports to GitHub, public app assets, issue bodies, CI logs, or test fixtures. Counts can be used for development prioritization only. Financial originals must remain unchanged.
