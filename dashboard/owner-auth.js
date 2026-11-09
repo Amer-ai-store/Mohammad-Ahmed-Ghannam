@@ -12,6 +12,21 @@
   const users=new Set();
   let app=null,auth=null,identity=null,initialized=false;
   let phoneVerifier=null,phoneConfirmation=null,authAccess='guest';
+  let captchaPhone=null,captchaPassed=false,phoneSending=false;
+  function withTimeout(promise,milliseconds,code){
+    let timeoutId;
+    const deadline=new Promise((_,reject)=>{
+      timeoutId=setTimeout(()=>reject(Error(code)),milliseconds);
+    });
+    return Promise.race([Promise.resolve(promise),deadline])
+      .finally(()=>clearTimeout(timeoutId));
+  }
+  function resetPhoneChallenge(){
+    phoneConfirmation=null;
+    captchaPhone=null;
+    captchaPassed=false;
+    if(phoneVerifier){try{phoneVerifier.clear()}catch{}phoneVerifier=null}
+  }
   const validPhone=value=>typeof value==='string'&&/^\+[1-9][0-9]{7,14}$/.test(value);
   const asciiDigits=value=>String(value).replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-0x660))
     .replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x6f0));
@@ -92,7 +107,7 @@
     return new Promise((resolve,reject)=>{
       auth.onAuthStateChanged(user=>{
         identity=user&&!user.isAnonymous?user:null;
-        if(!identity)phoneConfirmation=null;
+        if(!identity)resetPhoneChallenge();
         void checkRole(identity);
         for(const listener of users){try{listener(identity)}catch{}}
         if(!initialized){initialized=true;resolve(auth);}
@@ -130,28 +145,65 @@
     // Firebase validates credentials; username "admin" alone never grants access.
     return auth.signInWithEmailAndPassword(email.trim().toLowerCase(),password);
   }
-  async function startPhoneLogin(phone){
-    await ready;
+  async function startPhoneLogin(phone,onProgress=()=>{}){
+    await withTimeout(ready,12000,'FIREBASE_INITIALIZATION_TIMEOUT');
     const number=typeof phone==='string'?phone.trim():'';
     if(!validPhone(number))throw Error('PHONE_E164_REQUIRED');
-    phoneConfirmation=null;
-    if(phoneVerifier){try{phoneVerifier.clear()}catch{}phoneVerifier=null}
-    const verifier=new window.firebase.auth.RecaptchaVerifier('owner-phone-recaptcha',{
-      size:'normal','expired-callback':()=>{phoneConfirmation=null}
-    });
-    phoneVerifier=verifier;
+    if(phoneSending)throw Error('SMS_REQUEST_IN_PROGRESS');
+    if(phoneConfirmation)throw Error('SMS_CODE_ALREADY_REQUESTED');
+    if(!phoneVerifier||captchaPhone!==number){
+      resetPhoneChallenge();
+      onProgress('CAPTCHA_LOADING');
+      // The checkbox is intentionally visible, so the user can see and complete it.
+      const verifier=new window.firebase.auth.RecaptchaVerifier('owner-phone-recaptcha',{
+        size:'normal',
+        callback:()=>{
+          if(phoneVerifier!==verifier)return;
+          captchaPassed=true;
+          onProgress('CAPTCHA_PASSED');
+        },
+        'expired-callback':()=>{
+          if(phoneVerifier!==verifier)return;
+          captchaPassed=false;
+          onProgress('CAPTCHA_EXPIRED');
+        },
+        'error-callback':()=>{
+          if(phoneVerifier!==verifier)return;
+          captchaPassed=false;
+          onProgress('CAPTCHA_UNAVAILABLE');
+        }
+      });
+      phoneVerifier=verifier;captchaPhone=number;
+      try{
+        await withTimeout(verifier.render(),15000,'CAPTCHA_RENDER_TIMEOUT');
+      }catch(err){resetPhoneChallenge();throw err}
+      if(!captchaPassed)onProgress('CAPTCHA_ACTION_REQUIRED');
+      return {sent:false,next:'COMPLETE_CAPTCHA_THEN_SUBMIT'};
+    }
+    if(!captchaPassed){
+      onProgress('CAPTCHA_ACTION_REQUIRED');
+      return {sent:false,next:'COMPLETE_CAPTCHA_THEN_SUBMIT'};
+    }
+    phoneSending=true;
+    onProgress('SMS_REQUESTING');
     try{
-      await verifier.render();
-      const confirmation=await auth.signInWithPhoneNumber(number,verifier);
-      if(typeof confirmation?.confirm!=='function')throw Error('PHONE_AUTH_INVALID_RESPONSE');
+      // Network request is made ONLY after the checkbox has been solved.
+      const confirmation=await withTimeout(
+        auth.signInWithPhoneNumber(number,phoneVerifier),
+        25000,'SMS_REQUEST_TIMEOUT_UNKNOWN');
+      if(typeof confirmation?.confirm!=='function')
+        throw Error('PHONE_AUTH_INVALID_RESPONSE');
       phoneConfirmation=confirmation;
+      captchaPassed=false;
+      onProgress('SMS_REQUEST_ACCEPTED');
       return {sent:true};
     }catch(err){
-      phoneConfirmation=null;
-      try{verifier.clear()}catch{}
-      phoneVerifier=null;
+      // Timeout does not prove Firebase did not issue an SMS.
+      onProgress(err?.message==='SMS_REQUEST_TIMEOUT_UNKNOWN'?
+        'SMS_REQUEST_STATUS_UNKNOWN':'SMS_REQUEST_FAILED');
+      resetPhoneChallenge();
       throw err;
-    }
+    }finally{phoneSending=false}
   }
   async function confirmPhoneLogin(code){
     await ready;
@@ -165,7 +217,7 @@
   }
   async function signOut(){
     await ready;
-    phoneConfirmation=null;
+    resetPhoneChallenge();
     await auth.signOut();
   }
   async function changePassword(currentPassword,newPassword,confirmPassword){
@@ -279,23 +331,67 @@
       const phone=phoneLogin.querySelector('[name=owner-phone-number]');
       const button=phoneLogin.querySelector('button[type=submit]');
       if(!phone||!button||!countrySelect)return;
+      const captchaBox=root.querySelector('#owner-phone-recaptcha');
+      const phoneStatus=root.querySelector('#owner-phone-status');
+      const initialLabel='تحضير التحقق وإرسال رمز SMS';
+      const message=value=>{
+        if(phoneStatus)phoneStatus.textContent=value;
+        setMessage(value);
+      };
+      const stage=name=>{
+        const messages={
+          CAPTCHA_LOADING:'جارٍ تجهيز تحقق reCAPTCHA؛ لم يُرسل أي رمز بعد...',
+          CAPTCHA_ACTION_REQUIRED:'حدد مربع «أنا لست روبوتًا» الظاهر أسفل الرقم، ثم اضغط الزر مجددًا لإرسال SMS.',
+          CAPTCHA_PASSED:'نجح تحقق reCAPTCHA. اضغط «إرسال SMS الآن» لإرسال الرمز.',
+          CAPTCHA_EXPIRED:'انتهت صلاحية reCAPTCHA؛ أعد التحقق ثم اضغط إرسال الرمز.',
+          CAPTCHA_UNAVAILABLE:'تعذر تحميل reCAPTCHA. تحقق من إعدادات الموقع وخصوصية المتصفح.',
+          SMS_REQUESTING:'نجح reCAPTCHA. يجري طلب إرسال SMS من Firebase؛ ستظهر نتيجة العملية خلال 25 ثانية.',
+          SMS_REQUEST_ACCEPTED:'قبل Firebase طلب إرسال SMS. أدخل الرمز عند وصوله، دون مشاركته.',
+          SMS_REQUEST_STATUS_UNKNOWN:'انتهت مهلة انتظار Firebase؛ قد يكون الرمز أُرسل. تحقق من الرسائل قبل إعادة الطلب.',
+          SMS_REQUEST_FAILED:'رفض Firebase طلب إرسال SMS؛ راجع رسالة الخطأ الظاهرة.'
+        };
+        message(messages[name]||name);
+        if(name==='CAPTCHA_LOADING'||name==='CAPTCHA_ACTION_REQUIRED'||name==='CAPTCHA_EXPIRED'){
+          if(captchaBox&&typeof captchaBox.scrollIntoView==='function')
+            captchaBox.scrollIntoView({behavior:'smooth',block:'center'});
+        }
+        if(name==='CAPTCHA_PASSED')button.textContent='إرسال SMS الآن';
+        if(name==='SMS_REQUESTING')button.textContent='جارٍ إرسال الطلب...';
+      };
       button.disabled=true;
       try{
         const region=countrySelect.selectedOptions?.[0]?.dataset?.region||'JO';
-        await startPhoneLogin(formatPhoneNumber(countrySelect.value,phone.value,region));
-        if(phoneConfirm)phoneConfirm.hidden=false;
-        setMessage('طلب رمز التحقق من Firebase. أدخله هنا فقط، ولا تشاركه في المحادثة.');
+        const response=await startPhoneLogin(
+          formatPhoneNumber(countrySelect.value,phone.value,region),stage);
+        if(response.sent===true){
+          if(phoneConfirm)phoneConfirm.hidden=false;
+          message('تم قبول طلب رمز SMS من Firebase. افتح الرسائل وأدخل رمز التحقق.');
+        }else{
+          button.textContent='إرسال SMS بعد اجتياز reCAPTCHA';
+        }
       }catch(error){
         const code=String(error?.code||error?.message||'PHONE_AUTH_FAILED');
         const translations={
-          'PHONE_E164_REQUIRED':'أدخل رقمًا دوليًا مثل +9627XXXXXXXX.',
-          'auth/operation-not-allowed':'خدمة دخول الهاتف تحتاج تفعيل Phone في Firebase Authentication.',
-          'auth/unauthorized-domain':'يجب اعتماد نطاق موقع اللوحة في Firebase.',
-          'auth/invalid-app-credential':'فشل reCAPTCHA أو إعداد نطاق Firebase.',
-          'auth/too-many-requests':'تكررت الطلبات؛ تمت حمايتها من Firebase.'
+          PHONE_E164_REQUIRED:'تحقق من الدولة والرقم المكتوب.',
+          FIREBASE_INITIALIZATION_TIMEOUT:'انتهت مهلة تحميل Firebase. افحص اتصال الإنترنت ثم أعد تحميل الصفحة.',
+          CAPTCHA_RENDER_TIMEOUT:'تعذر عرض reCAPTCHA خلال 15 ثانية؛ افحص المتصفح أو جرّب Chrome دون حظر الإعلانات.',
+          SMS_REQUEST_TIMEOUT_UNKNOWN:'لم يصل تأكيد إرسال من Firebase خلال 25 ثانية؛ افحص الرسائل قبل إعادة المحاولة.',
+          'auth/operation-not-allowed':'دخول الهاتف غير مفعّل في Firebase. يلزم تفعيله من إعدادات Authentication.',
+          'auth/unauthorized-domain':'نطاق amer-ai-store.github.io غير معتمد للدخول في Firebase.',
+          'auth/invalid-app-credential':'رفض Firebase تحقق reCAPTCHA أو إعدادات نطاق التطبيق.',
+          'auth/captcha-check-failed':'فشل اختبار reCAPTCHA. حاول مجددًا بعد إعادة تحميل الصفحة.',
+          'auth/invalid-phone-number':'رقم الهاتف غير صحيح أو غير مدعوم.',
+          'auth/quota-exceeded':'انتهت حصة الرسائل أو لم يُعتمد إعداد الفوترة.',
+          'auth/billing-not-enabled':'يلزم تفعيل الفوترة على مشروع Firebase لإرسال رسائل SMS.',
+          'auth/too-many-requests':'تم تقييد إرسال الرسائل مؤقتًا بسبب تكرار المحاولات.',
+          'auth/phone-number-not-allowed':'منطقة الهاتف غير مسموحة ضمن سياسة Firebase للرسائل.'
         };
-        setMessage(translations[code]||'تعذر إرسال رمز SMS: '+code.slice(0,90));
-      }finally{button.disabled=false}
+        message(translations[code]||'تعذر طلب الرمز من Firebase: '+code.slice(0,100));
+      }finally{
+        if(!phoneConfirmation&&button.textContent==='جارٍ إرسال الطلب...')
+          button.textContent=initialLabel;
+        button.disabled=false;
+      }
     });
     phoneConfirm?.addEventListener('submit',async event=>{
       event.preventDefault();
