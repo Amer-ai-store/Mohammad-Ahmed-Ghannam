@@ -58,7 +58,11 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
       const isJournal = pathname === '/v1/journals/draft-balances';
       const isPurchases = pathname === '/v1/purchase-invoices';
       const isSuppliers = pathname === '/v1/suppliers';
-      if (!one && !events && !isList && !isJournal && !isPurchases && !isSuppliers) {
+      const isPersonnel = pathname === '/v1/personnel';
+      const isSettings = pathname === '/v1/settings';
+      const isPermissions = pathname === '/v1/permissions';
+      if (!one && !events && !isList && !isJournal && !isPurchases &&
+          !isSuppliers && !isPersonnel && !isSettings && !isPermissions) {
         return send(404, { error: 'NOT_FOUND' }, cors);
       }
       if ((one && !UUID.test(one[1])) || (events && !UUID.test(events[1]))) {
@@ -88,7 +92,22 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
       if (membership.rowCount !== 1) {
         return send(403, { error: 'TENANT_MEMBERSHIP_DENIED' }, cors);
       }
-      if (!ALLOWED_FINANCE_ROLES.has(membership.rows[0].erp_role)) {
+      // HR/settings permission checks are deliberately separate from finance.
+      // A role name by itself does NOT grant access. A tenant-specific allow
+      // row must exist, otherwise access fails closed.
+      const resource = isPersonnel ? 'personnel' :
+        isSettings ? 'settings' : isPermissions ? 'permissions' : null;
+      if (resource) {
+        const granted = await db.query(
+          `SELECT 1 FROM erp.role_permissions
+            WHERE tenant_id = $1 AND erp_role = $2 AND resource = $3
+              AND action = 'read' AND allowed = true`,
+          [tenantId, membership.rows[0].erp_role, resource],
+        );
+        if (granted.rowCount !== 1) {
+          return send(403, { error: 'PERMISSION_DENIED' }, cors);
+        }
+      } else if (!ALLOWED_FINANCE_ROLES.has(membership.rows[0].erp_role)) {
         return send(403, { error: 'PERMISSION_DENIED' }, cors);
       }
       let result;
@@ -132,6 +151,29 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
           `SELECT supplier_id, supplier_code, legal_name
              FROM erp.suppliers WHERE tenant_id = $1
             ORDER BY supplier_code LIMIT 100`,
+          [tenantId],
+        );
+      } else if (isPersonnel) {
+        // Only minimal directory fields, not payroll, ID numbers or contacts.
+        result = await db.query(
+          `SELECT employee_id, employee_code, display_name, department_code,
+                  employment_status FROM erp.personnel_directory
+             WHERE tenant_id = $1 ORDER BY employee_code LIMIT 100`,
+          [tenantId],
+        );
+      } else if (isSettings) {
+        // Explicit allowlist in the DB forbids credentials as setting keys.
+        result = await db.query(
+          `SELECT setting_key, setting_value, revision_no
+             FROM erp.current_system_settings
+            WHERE tenant_id = $1 ORDER BY setting_key LIMIT 100`,
+          [tenantId],
+        );
+      } else if (isPermissions) {
+        result = await db.query(
+          `SELECT erp_role, resource, action, allowed
+             FROM erp.role_permissions
+            WHERE tenant_id = $1 ORDER BY erp_role, resource LIMIT 100`,
           [tenantId],
         );
       } else {
