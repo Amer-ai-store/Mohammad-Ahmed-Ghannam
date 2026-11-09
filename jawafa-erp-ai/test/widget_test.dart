@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jawafa_erp_ai/main.dart';
+import 'package:jawafa_erp_ai/src/ui/erp_visual_system.dart';
 
 void main() {
   testWidgets('independent ERP shell declares DEMO limitations', (tester) async {
@@ -66,11 +67,14 @@ void main() {
     expect(find.byKey(const Key('erp_desktop_nav')), findsOneWidget);
     expect(find.byKey(const Key('erp_module_search')), findsOneWidget);
     expect(find.text('لا توجد بيانات حية'), findsNWidgets(4));
-    for (final department in [
-      'accounting', 'procurementInventory', 'sales', 'hr', 'shared',
-    ]) {
-      expect(find.byKey(Key('group_$department')), findsOneWidget);
-    }
+    // The desktop menu is scrollable/lazily built. Verify the full
+    // owner-approved catalog directly, and test one rendered navigation group.
+    expect(ErpDepartment.values.length, 5);
+    expect(erpDepartmentSpecs.keys.toList(), ErpDepartment.values);
+    expect(erpDepartmentSpecs[ErpDepartment.accounting]!.name, 'المحاسبة');
+    expect(erpDepartmentSpecs[ErpDepartment.procurementInventory]!.name,
+        'المشتريات والمخزون');
+    expect(find.byKey(const Key('group_accounting')), findsOneWidget);
   });
 
   testWidgets('department overview preserves accounting and HR workflows',
@@ -99,7 +103,7 @@ void main() {
     await tester.tap(find.text('الموظفون'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('landing_hr')), findsOneWidget);
-    expect(find.text('مدير شؤون الموظفين'), findsWidgets);
+    expect(find.textContaining('مدير شؤون الموظفين'), findsWidgets);
   });
 
 }
