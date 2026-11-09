@@ -1,2 +1,40 @@
-- name: Buildalon unity-uwp-builder
-  uses: buildalon/unity-uwp-builder@v1.0.4
+name: Main workflow configuration check
+
+on:
+  push:
+    paths:
+      - .github/workflows/main.yml
+  pull_request:
+    paths:
+      - .github/workflows/main.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: main-workflow-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-workflow:
+    name: Validate workflow YAML (no deployment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Parse workflow YAML
+        shell: bash
+        run: |
+          ruby -e 'require "yaml"; YAML.parse_file(ARGV.fetch(0)); puts "Workflow YAML syntax: OK"' .github/workflows/main.yml
+
+      - name: Check workflow file whitespace
+        shell: bash
+        run: |
+          if grep -nE '[[:blank:]]+$' .github/workflows/main.yml; then
+            echo "::error::Trailing whitespace found in workflow file"
+            exit 1
+          fi
+          echo "Workflow whitespace: OK"
