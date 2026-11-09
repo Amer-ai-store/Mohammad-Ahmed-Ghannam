@@ -138,7 +138,12 @@ export function monthlyItemMovementReport({rows, ...query}) {
 }
 
 function csvCell(value) {
-  // Formula injection defense applies even to data from an internal database.
+  // Verified typed numeric totals are not formulas, including negatives;
+  // free-form strings are escaped to prevent spreadsheet formula injection.
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value)) throw new ReportInputError('INVALID_CSV_NUMBER');
+    return '"' + String(value) + '"';
+  }
   let text = String(value ?? '');
   if (/^[\s]*[=+\-@\t\r]/.test(text)) text = "'" + text;
   return '"' + text.replaceAll('"', '""') + '"';
