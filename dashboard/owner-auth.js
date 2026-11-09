@@ -1,6 +1,7 @@
 /* Central single sign-on for same-origin command screens.
- * Firebase ID tokens are kept IN MEMORY ONLY; never save passwords, API keys,
- * bearer tokens, SQL credentials or privileged roles in localStorage or GitHub.
+ * Firebase SDK manages the browser's local auth persistence for single sign-on.
+ * App code never manually stores passwords, bearer tokens, SQL credentials
+ * or privileged roles in app localStorage, files or GitHub.
  * A verified email alone is NOT sufficient to establish owner authorization:
  * each protected backend must independently validate JWT uid/claims + allowlist.
  * Cross-origin services must perform their own secure authorization handshake.
@@ -10,7 +11,6 @@
   const SDK_VERSION='10.14.1';
   const users=new Set();
   let app=null,auth=null,identity=null,initialized=false;
-  let load=Promise.resolve();
   function sdk(name){
     const expected='https://cdn.jsdelivr.net/npm/firebase@'+SDK_VERSION+'/firebase-'+name+'-compat.js';
     return new Promise((resolve,reject)=>{
