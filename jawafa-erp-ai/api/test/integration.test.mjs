@@ -181,3 +181,67 @@ test('missing production configuration and plaintext remote data reject',()=>{
     ERP_OIDC_JWKS_URL:jwksUrl,
   }),/LOOPBACK/);
 });
+
+
+test('HR directory uses company-specific permission, not finance role alone',async()=>{
+  const hr=await call('/v1/personnel',{jwt:await token('hr-A'),tenant:A});
+  assert.equal(hr.status,200);
+  assert.equal(hr.body.items.length,1);
+  assert.equal(hr.body.items[0].employee_code,'EMP-A');
+  assert.equal(hr.body.items[0].department_code,'OPS');
+  assert.equal('salary' in hr.body.items[0],false);
+  assert.equal((await call('/v1/personnel',{
+    jwt:await token('member-A'),tenant:A,
+  })).status,403);
+  assert.equal((await call('/v1/personnel',{
+    jwt:await token('member-B'),tenant:B,
+  })).status,403); // explicit allowed=false must deny
+  assert.equal((await call('/v1/personnel',{
+    jwt:await token('hr-A'),tenant:B,
+  })).status,403); // no cross-tenant membership
+  assert.equal((await call('/v1/cheques',{
+    jwt:await token('hr-A'),tenant:A,
+  })).status,403); // HR permission must not grant finance
+  assert.equal((await call('/v1/personnel',{
+    jwt:await token('hr-A'),tenant:A,method:'PATCH',
+  })).status,405);
+});
+
+test('settings expose only latest permitted non-secret revision',async()=>{
+  const supervisor=await token('supervisor-A');
+  const settings=await call('/v1/settings',{jwt:supervisor,tenant:A});
+  assert.equal(settings.status,200);
+  assert.equal(settings.body.items.length,1);
+  assert.deepEqual(settings.body.items[0],{
+    setting_key:'locale',setting_value:'ar',revision_no:2,
+  });
+  assert.equal((await call('/v1/settings',{
+    jwt:await token('hr-A'),tenant:A,
+  })).status,403);
+  const companyB=await call('/v1/settings',{
+    jwt:await token('member-B'),tenant:B,
+  });
+  assert.equal(companyB.status,200);
+  assert.equal(companyB.body.items[0].setting_value,'en');
+  assert.equal((await call('/v1/settings',{
+    jwt:supervisor,tenant:A,method:'DELETE',
+  })).status,405);
+});
+
+test('role permissions are readable only with explicit permission',async()=>{
+  const privileged=await call('/v1/permissions',{
+    jwt:await token('supervisor-A'),tenant:A,
+  });
+  assert.equal(privileged.status,200);
+  assert.equal(privileged.body.items.length,4);
+  assert.equal('policy_reference' in privileged.body.items[0],false);
+  assert.equal((await call('/v1/permissions',{
+    jwt:await token('hr-A'),tenant:A,
+  })).status,403);
+  assert.equal((await call('/v1/permissions',{
+    jwt:await token('member-B'),tenant:B,
+  })).status,403);
+  assert.equal((await call('/v1/permissions',{
+    jwt:await token('supervisor-A'),tenant:A,method:'POST',
+  })).status,405);
+});
