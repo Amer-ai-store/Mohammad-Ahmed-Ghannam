@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'jawafa-erp-ai/backend/**'
+      - 'jawafa-erp-ai/api/**'
       - '.github/workflows/jawafa-erp-ai-database.yml'
   workflow_dispatch:
 permissions:
@@ -10,7 +11,7 @@ permissions:
 jobs:
   isolated-erp-database:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16
@@ -35,6 +36,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
       - name: Check disposable PostgreSQL service
         run: |
           psql --version
@@ -49,3 +53,18 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_schema_ci.sql
       - name: Verify synthetic cheque lifecycle and denied mutations
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_cheque_lifecycle_ci.sql
+      - name: Install read-only authenticated API membership model
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0004_api_tenant_memberships.sql
+      - name: Seed synthetic users and cheques in disposable database
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
+      - name: Install pinned Node API dependencies
+        working-directory: jawafa-erp-ai/api
+        run: npm install --no-audit --no-fund
+      - name: Check API source syntax
+        working-directory: jawafa-erp-ai/api
+        run: npm run check
+      - name: Verify OIDC JWT, tenant separation, RLS and no-write API
+        working-directory: jawafa-erp-ai/api
+        env:
+          ERP_TEST_DATABASE_URL: postgresql://erp_ci_api_login:ci-only-synthetic-never-production@localhost:5432/jawafa_erp_ci
+        run: npm test
