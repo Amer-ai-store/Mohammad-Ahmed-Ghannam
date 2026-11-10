@@ -1,6 +1,14 @@
 name: JAWAFA ERP AI — independent Windows Android iOS genesis
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'jawafa-erp-ai/lib/**'
+      - 'jawafa-erp-ai/test/**'
+      - 'jawafa-erp-ai/pubspec.yaml'
+      - 'jawafa-erp-ai/analysis_options.yaml'
+      - '.github/workflows/jawafa-erp-ai.yml'
   pull_request:
     paths:
       # Rebuild mobile and Windows only when Flutter code or its toolchain changes.
