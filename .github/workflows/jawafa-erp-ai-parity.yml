@@ -15,6 +15,9 @@ on:
       - 'jawafa-erp-ai/tools/test_compare_report_exports.py'
       - 'jawafa-erp-ai/tools/reference_ui_catalog_audit.py'
       - 'jawafa-erp-ai/tools/test_reference_ui_catalog_audit.py'
+      - 'jawafa-erp-ai/tools/monthly_reference_schema_gate.py'
+      - 'jawafa-erp-ai/tools/test_monthly_reference_schema_gate.py'
+      - 'jawafa-erp-ai/docs/reference_monthly_movement_schema_20261110.json'
       - 'jawafa-erp-ai/docs/trustsoft_report_catalog.json'
       - 'jawafa-erp-ai/tools/reference_schema_audit.py'
       - 'jawafa-erp-ai/tools/test_reference_schema_audit.py'
@@ -38,6 +41,7 @@ jobs:
         run: |
           python3 jawafa-erp-ai/tools/parity_gate.py --manifest jawafa-erp-ai/docs/trustsoft_parity_catalog.json
           python3 jawafa-erp-ai/tools/report_gate.py --manifest jawafa-erp-ai/docs/trustsoft_report_catalog.json
+          python3 jawafa-erp-ai/tools/monthly_reference_schema_gate.py --manifest jawafa-erp-ai/docs/reference_monthly_movement_schema_20261110.json
           echo '### TrustSoft functional parity and owner-used reports remain UNMEASURED.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Production release requires >=90% independently accepted weighted workflows, 100% owner-critical workflows, and 100% accepted owner-used TrustSoft reports.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Only independently approved source comparisons on a frozen complete catalog can qualify for a production claim.' >> "$GITHUB_STEP_SUMMARY"
