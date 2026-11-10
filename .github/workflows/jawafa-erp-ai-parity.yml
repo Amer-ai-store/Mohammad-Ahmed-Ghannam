@@ -17,6 +17,8 @@ on:
       - 'jawafa-erp-ai/tools/test_reference_ui_catalog_audit.py'
       - 'jawafa-erp-ai/tools/monthly_reference_schema_gate.py'
       - 'jawafa-erp-ai/tools/test_monthly_reference_schema_gate.py'
+      - 'jawafa-erp-ai/tools/intake_trustsoft_report_export.py'
+      - 'jawafa-erp-ai/tools/test_intake_trustsoft_report_export.py'
       - 'jawafa-erp-ai/docs/reference_monthly_movement_schema_20261110.json'
       - 'jawafa-erp-ai/docs/trustsoft_report_catalog.json'
       - 'jawafa-erp-ai/tools/reference_schema_audit.py'
