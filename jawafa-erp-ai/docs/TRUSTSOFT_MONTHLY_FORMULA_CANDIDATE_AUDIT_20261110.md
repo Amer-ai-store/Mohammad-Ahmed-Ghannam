@@ -11,6 +11,7 @@ The authorized server was connected, and the **existing archived export** `dbo.M
 ### Source-data profile (one historic export snapshot)
 - **97 total source rows**, **44 source columns**.
 - **0 duplicate extra rows** under the *candidate* (`MonthYear`, `ItemCode`) grain. Actual table SQL keys and grouping are still **unknown**.
+- **1 distinct nonempty MonthYear value** and **97 distinct ItemCode values** across the 97 rows. This sample covers only **one monthly period**; it cannot establish stability across seasons, years, branches, tax statuses or source-version changes.
 - For the **11 numeric fields used by the candidate formulas**, there were **0 empty/unparseable values** in this export.
 - An additional header/data-format spot check found **36 numeric-looking columns**, but this count includes numeric-looking identifiers (`ItemCode`, `Main_Barcode`, etc.) and is not a count of financial measures. `Type_Desc`, `Country_Desc`, and `Volume_Desc` were blank in the entire 97-row snapshot; this does not establish their intended null policy or their values in other periods.
 
