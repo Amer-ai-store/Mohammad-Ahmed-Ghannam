@@ -1,6 +1,6 @@
 # Owner-supplied MonthlyMovement TXT — JAWAFA ERP AI reference evidence
 
-**Date:** 2026-11-10 | **Security:** owner financial report values stay private/off GitHub. 
+**Date:** 2026-11-10 | **Security:** owner financial report values stay private/off GitHub.
 **Comparison scope:** prospective monthly item movements report within
 **Purchasing + Inventory**, linked to accounting and sales, with a dedicated
 report-view component under the approved five-department ERP UI.
@@ -94,4 +94,4 @@ report bulk-uploaded to public CI or silently posted back into Jawafa_DB.
 **Acceptance:** THIS OWNER FILE HAS BEEN TRANSFORMED AND VERIFIED FOR INTEGRITY.
 It has **not** been matched against a second independent system output.
 Owner-required 100% reports, critical workflows, and >=90% weighted source
-functionality gates remain **CLOSED / UNMEASURED**. 
+functionality gates remain **CLOSED / UNMEASURED**.
