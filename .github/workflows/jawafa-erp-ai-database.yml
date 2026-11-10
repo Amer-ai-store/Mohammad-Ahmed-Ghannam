@@ -1,5 +1,11 @@
 name: JAWAFA ERP AI — isolated PostgreSQL schema acceptance
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'jawafa-erp-ai/backend/**'
+      - 'jawafa-erp-ai/api/**'
+      - '.github/workflows/jawafa-erp-ai-database.yml'
   pull_request:
     paths:
       - 'jawafa-erp-ai/backend/**'
