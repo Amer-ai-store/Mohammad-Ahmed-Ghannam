@@ -59,7 +59,7 @@ const ownerReportCandidates = <ErpReportDefinition>[
     ],
     knownGaps: <String>[
       '44 حقلًا مرجعيًا؛ 43 حقلًا في TXT، والمرشح الغائب Main_Barcode',
-      'Cost_Damage وثلاثة أعمدة تكلفة مهيأة بنص ,0.000 وتحتاج تفسيرًا',
+      'ثلاثة أعمدة تكلفة، منها Cost_Damage، مهيأة بنص ,0.000 وتحتاج تفسيرًا',
       'لا توجد مطابقة مستقلة لمعادلات الربح والتكاليف والضرائب',
       'لا يوجد ربط API مرخص ولا مقارنة مخرجات TrustSoft الحية',
     ],
@@ -113,7 +113,7 @@ class _ErpReportCatalogViewState extends State<ErpReportCatalogView> {
         const SizedBox(height: 12),
         DropdownButtonFormField<ErpDepartment?>(
           key: const Key('erp_reports_department'),
-          value: department,
+          initialValue: department,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'المجموعة الرئيسية'),
           items: [
