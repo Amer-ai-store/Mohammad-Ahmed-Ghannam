@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SAFE_TOKEN = re.compile(r"^[A-Za-z0-9._:-]{3,128}$")
+FILTER_KEY = re.compile(r"^[A-Za-z][A-Za-z0-9._:-]{0,63}$")
 KNOWN_SCREENS = {"135", "136"}
 MAX_HEADER = 65536
 MAX_FILE = 512 * 1024 * 1024
@@ -85,7 +86,7 @@ def capture(
     if not isinstance(filters, dict) or not filters:
         raise CaptureError("MISSING_EXACT_UI_FILTERS")
     if any(
-        not isinstance(k, str) or not SAFE_TOKEN.fullmatch(k)
+        not isinstance(k, str) or not FILTER_KEY.fullmatch(k)
         or not isinstance(v, str) or not v.strip() or len(v) > 200
         for k, v in filters.items()
     ):
