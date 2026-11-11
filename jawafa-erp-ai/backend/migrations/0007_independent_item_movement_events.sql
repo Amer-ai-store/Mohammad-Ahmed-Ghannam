@@ -83,7 +83,7 @@ CREATE INDEX item_movement_report_range
 -- Check parent event TYPE, item/family/supplier, date and quantity.
 -- This is a new-ERP insertion guard, NOT a TrustSoft vendor implementation.
 CREATE OR REPLACE FUNCTION erp.verify_movement_return_origin()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $return_guard$
 DECLARE
   original erp.item_movement_events%ROWTYPE;
   expected_kind text;
@@ -111,7 +111,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$return_guard$;
 CREATE TRIGGER erp_return_lineage_before_insert
   BEFORE INSERT ON erp.item_movement_events
   FOR EACH ROW EXECUTE FUNCTION erp.verify_movement_return_origin();
