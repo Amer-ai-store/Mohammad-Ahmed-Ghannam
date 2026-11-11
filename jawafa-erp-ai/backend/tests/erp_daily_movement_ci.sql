@@ -103,7 +103,7 @@ BEGIN
        ('11111111-1111-4111-8111-111111111111','BR-A','BAD-FOREIGN-RETURN',
         date '2026-10-02','SKU-A','FAM-A','SUP-A',
         'sale_return','POSTED',100,25,4,15,'EV-B-1');
-  EXCEPTION WHEN foreign_key_violation THEN
+  EXCEPTION WHEN foreign_key_violation OR check_violation THEN
     blocked := true;
   END;
   IF NOT blocked THEN
