@@ -30,6 +30,7 @@ relaunch;                                       check rafiq-home-after-restart
 adb shell wm density 480; relaunch;             check rafiq-home-360dp
 adb shell wm density 380; relaunch;             check rafiq-home-454dp
 adb shell wm density reset
+open_link 'luqta://cart?add=milk*2,bread*1';    check shared-cart-link
 open_link 'luqta://appearance?design=classic';  check classic-appearance
 open_link 'luqta:///';                          check classic-home-again
 
