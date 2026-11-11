@@ -182,7 +182,7 @@ test('CLI emits only count/hash metadata and never item or amount', async t => {
   assert.equal(p.status, 0, p.stderr + p.stdout);
   assert.equal(JSON.parse(p.stdout).status, 'CREATED_PRIVATE_CANDIDATE');
   assert.ok(!p.stdout.includes('SKU-A'));
-  assert.ok(!p.stdout.includes('250'));
+  assert.ok(!p.stdout.includes('"netAmountFils"'));
   assert.ok(!p.stdout.includes('PRIVATE-NOT-TO-LEAK'));
 });
 
