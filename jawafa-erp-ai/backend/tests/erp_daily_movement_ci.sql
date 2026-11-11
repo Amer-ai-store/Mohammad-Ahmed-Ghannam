@@ -1,7 +1,7 @@
 -- Disposable CI PostgreSQL ONLY. Tests NEW ERP immutable event storage.
 -- Never run this test or migration on Jawafa_DB or TrustSoft.
 BEGIN;
-DO $$
+DO $daily_guard_test$
 DECLARE
   blocked boolean;
   allowed_flag boolean;
@@ -229,5 +229,5 @@ BEGIN
     RAISE EXCEPTION 'RETURN_OVERSIZED_SINGLE_RETURN_SHOULD_BE_BLOCKED';
   END IF;
 END
-$;
+$daily_guard_test$;
 ROLLBACK;
