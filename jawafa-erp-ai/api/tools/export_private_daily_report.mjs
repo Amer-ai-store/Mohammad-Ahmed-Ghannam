@@ -16,6 +16,7 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {
   independentDailyMovement, independentDailyMovementCsv,
@@ -198,6 +199,6 @@ async function main() {
   }
 }
 if (process.argv[1] && path.resolve(process.argv[1]) ===
-    path.resolve(new URL(import.meta.url).pathname)) {
+    path.resolve(fileURLToPath(import.meta.url))) {
   await main();
 }
