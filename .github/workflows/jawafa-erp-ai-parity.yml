@@ -21,6 +21,8 @@ on:
       - 'jawafa-erp-ai/tools/test_intake_trustsoft_report_export.py'
       - 'jawafa-erp-ai/tools/monthly_txt_intake.py'
       - 'jawafa-erp-ai/tools/test_monthly_txt_intake.py'
+      - 'jawafa-erp-ai/tools/verify_monthly_txt_csv_roundtrip.py'
+      - 'jawafa-erp-ai/tools/test_verify_monthly_txt_csv_roundtrip.py'
       - 'jawafa-erp-ai/tools/profile_monthly_movement_formulas.py'
       - 'jawafa-erp-ai/tools/test_profile_monthly_movement_formulas.py'
       - 'jawafa-erp-ai/docs/reference_monthly_movement_schema_20261110.json'
