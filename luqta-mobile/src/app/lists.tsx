@@ -42,7 +42,7 @@ export default function Lists() {
               <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: l.kind === "family" ? t.orangeSoft : t.primarySoft, alignItems: "center", justifyContent: "center" }}>{l.kind === "family" ? <Users size={20} color={t.orange} /> : <ListChecks size={20} color={t.primary} />}</View>
               <View style={{ flex: 1 }}>
                 <Txt weight="bold">{l.name}</Txt>
-                <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("{n} عناصر · {c} منجزة", { n: l.itemCount, c: l.checkedCount })}{l.kind === "family" ? ` · ${tr("{m} أفراد", { m: l.members.length })}` : ""}</Txt>
+                <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("{n:item} · {c} منجزة", { n: l.itemCount, c: l.checkedCount })}{l.kind === "family" ? ` · ${tr("{m:member}", { m: l.members.length })}` : ""}</Txt>
               </View>
               {l.kind === "family" ? <Badge label="عائلية" tone="accent" /> : null}
               <Txt weight="bold" style={{ color: t.orange }}>{money.format(l.estimatedTotal)}</Txt>

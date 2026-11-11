@@ -49,8 +49,6 @@ export function Robot({ size = 120, motion = "idle", message, look, face, reduce
   const want3d = mode !== "still" && (mode === "3d" || size >= MIN_3D) && prefs.use3d !== false && !webglMissing() && focused;
   const [live, setLive] = useState(false);
   const [failed, setFailed] = useState(false);
-  // The page is built once; later changes reach the engine as commands, so the 3D view never reloads.
-  const [html] = useState(() => avatarHtml({ action: motion, profile, reduceMotion: still }));
   const onFail = useCallback(() => { markWebglMissing(); setFailed(true); }, []);
 
   // The still pose breathes gently (and hops for jumps and dances) unless motion is reduced.
@@ -93,7 +91,7 @@ export function Robot({ size = 120, motion = "idle", message, look, face, reduce
       {bubble === "top" ? bubbleView : null}
       <Pressable accessibilityRole={onPress ? "button" : "image"} accessibilityLabel={label} onPress={onPress} disabled={!onPress} hitSlop={8}
         testID={`${testID || "robot"}-character`} {...({ dataSet: lookData } as object)} style={{ width: Math.round(size * 0.8), height: size }}>
-        {want3d && !failed ? <Live3D html={html} title={label} motion={motion} profileKey={profileKey} still={still} onReady={setLive} onFail={onFail} /> : null}
+        {want3d && !failed ? <Live3D title={label} motion={motion} profileKey={profileKey} still={still} onReady={setLive} onFail={onFail} /> : null}
         {showPoster ? <Animated.Image source={picture ? { uri: picture } : posePosters[POSTER[motion]]} resizeMode="contain" accessible={false} style={{ width: "100%", height: "100%", transform: [{ translateY }] }} /> : null}
       </Pressable>
       {bubble === "side" ? bubbleView : null}
@@ -102,8 +100,11 @@ export function Robot({ size = 120, motion = "idle", message, look, face, reduce
 }
 
 // The live 3D view. It reports ready once the engine has drawn, and not-ready again when it unmounts (a hidden screen).
-function Live3D({ html, title, motion, profileKey, still, onReady, onFail }: { html: string; title: string; motion: RobotMotion; profileKey: string; still: boolean; onReady: (ready: boolean) => void; onFail: () => void }) {
+function Live3D({ title, motion, profileKey, still, onReady, onFail }: { title: string; motion: RobotMotion; profileKey: string; still: boolean; onReady: (ready: boolean) => void; onFail: () => void }) {
   const frame = useRef<FrameHandle>(null);
+  // The page (about 650 KB with the 3D engine) is built only when a 3D view opens, and once per view: later changes
+  // reach the engine as commands, so the view never reloads. Still pictures, used on most screens, never build it.
+  const [html] = useState(() => avatarHtml({ action: motion as AvatarAction, profile: JSON.parse(profileKey) as AvatarProfile, reduceMotion: still }));
   const [ready, setReady] = useState(false);
   const latest = useRef({ motion, profileKey, still });
   useEffect(() => { latest.current = { motion, profileKey, still }; });

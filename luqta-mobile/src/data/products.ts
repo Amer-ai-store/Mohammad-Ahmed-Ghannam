@@ -839,7 +839,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "7 يوم تقريبًا"
+        "value": "7 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -886,7 +886,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "7 يوم تقريبًا"
+        "value": "7 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -932,7 +932,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "30 يوم تقريبًا"
+        "value": "30 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -979,7 +979,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "5 يوم تقريبًا"
+        "value": "5 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1025,7 +1025,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "20 يوم تقريبًا"
+        "value": "20 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1071,7 +1071,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "6 يوم تقريبًا"
+        "value": "6 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1116,7 +1116,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "21 يوم تقريبًا"
+        "value": "21 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1162,7 +1162,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "4 يوم تقريبًا"
+        "value": "4 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1211,7 +1211,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "3 يوم تقريبًا"
+        "value": "3 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1257,7 +1257,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "7 يوم تقريبًا"
+        "value": "7 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1303,7 +1303,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "14 يوم تقريبًا"
+        "value": "14 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1350,7 +1350,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "20 يوم تقريبًا"
+        "value": "20 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1397,7 +1397,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "10 يوم تقريبًا"
+        "value": "10 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1444,7 +1444,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "21 يوم تقريبًا"
+        "value": "21 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1491,7 +1491,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "3 يوم تقريبًا"
+        "value": "3 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1537,7 +1537,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "3 يوم تقريبًا"
+        "value": "3 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1584,7 +1584,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "180 يوم تقريبًا"
+        "value": "180 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1631,7 +1631,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "7 يوم تقريبًا"
+        "value": "7 أيام تقريبًا"
       }
     ],
     "model3d": {
@@ -1677,7 +1677,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "365 يوم تقريبًا"
+        "value": "365 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1723,7 +1723,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "180 يوم تقريبًا"
+        "value": "180 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1771,7 +1771,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "365 يوم تقريبًا"
+        "value": "365 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1818,7 +1818,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "540 يوم تقريبًا"
+        "value": "540 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1864,7 +1864,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "365 يوم تقريبًا"
+        "value": "365 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1911,7 +1911,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "365 يوم تقريبًا"
+        "value": "365 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -1957,7 +1957,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "720 يوم تقريبًا"
+        "value": "720 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -2002,7 +2002,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "365 يوم تقريبًا"
+        "value": "365 يومًا تقريبًا"
       }
     ],
     "model3d": {
@@ -2048,7 +2048,7 @@ export const products: Product[] = [
       },
       {
         "label": "الصلاحية",
-        "value": "270 يوم تقريبًا"
+        "value": "270 يومًا تقريبًا"
       }
     ],
     "model3d": {

@@ -13,7 +13,7 @@ export type Order = CommerceOrder;
 type State = {cart: Record<string,number>; favorites: string[]; compareIds: string[]; recentIds: string[]; saved: Record<string,number>; branchId: string|null};
 export type CheckoutInput = {address:Address;paymentMethod:'cod'|'wallet'|'card';couponCode?:string;idempotencyKey:string;deliverySlot?:{date:string;window:string}|null;deliveryNotes?:string;gift?:{wrap:boolean;message?:string;recipient?:string}|null;acceptTerms?:boolean;cardToken?:string;items?:Record<string,number>;checkoutMode?:'cart'|'buy-now';deliveryMode?:'standard'|'express'|'pickup';pickupBranchId?:string;tip?:number};
 type Store = State & {
-  hydrated: boolean; toast: string; products: Product[]; orders: Order[];
+  hydrated: boolean; toast: string; toastVars?: Record<string, string | number>; products: Product[]; orders: Order[];
   catalogStatus: 'sample'|'loading'|'connected'|'offline'; catalogError: string;
   settings: StoreSettings; cartCount: number; subtotal: number; shipping: number;
   wishlistSynced: boolean; refreshCatalog:()=>Promise<void>; refreshOrders:()=>Promise<void>; refreshWishlist:()=>Promise<void>;
@@ -24,7 +24,7 @@ type Store = State & {
   saveForLater:(id:string)=>void; moveToCart:(id:string)=>void; removeSaved:(id:string)=>void;
   buyNow:Record<string,number>|null; startBuyNow:(id:string,quantity:number)=>void; clearBuyNow:()=>void;
   setBranch:(id:string|null)=>void; branchStock:Record<string,number>|null; addManyToCart:(items:Record<string,number>)=>void;
-  reorder:(order:Order)=>void; notify:(message:string)=>void; clearCart:()=>void;
+  reorder:(order:Order)=>void; notify:(message:string,vars?:Record<string,string|number>)=>void; clearCart:()=>void;
   clearPersonalData:()=>Promise<void>;
 };
 const Context=createContext<Store|null>(null);
@@ -59,7 +59,10 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
   const [loadedBranch,setBranchStock]=useState<{branchId:string;stock:Record<string,number>}|null>(null);
   const [state,setState]=useState<State>(initial);
   const [hydrated,setHydrated]=useState(false);
-  const [toast,notify]=useState('');
+  // The toast text is translated when shown (Shell); numbers go in vars so they can be declined ({n:product}).
+  const [toastState,setToastState]=useState<{text:string;vars?:Record<string,string|number>}>({text:''});
+  const notify=useCallback((text:string,vars?:Record<string,string|number>)=>setToastState({text,vars}),[]);
+  const toast=toastState.text;
   const [products,setProducts]=useState<Product[]>(sampleProducts);
   const [settings,setSettings]=useState(defaults);
   useEffect(()=>{setAccentColor(settings.storefront?.accentColor||null);},[settings.storefront?.accentColor,setAccentColor]);
@@ -79,7 +82,7 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     }catch{/* Corrupted cache never authenticates a user or creates an order. */}
   }).catch(()=>{}).finally(()=>{if(active)setHydrated(true);});return()=>{active=false;};},[]);
   useEffect(()=>{if(hydrated)AsyncStorage.setItem(KEY,JSON.stringify(state)).catch(()=>{});},[state,hydrated]);
-  useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>notify(''),3500);return()=>clearTimeout(timer);},[toast]);
+  useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>notify(''),3500);return()=>clearTimeout(timer);},[toast,notify]);
   const refreshCatalog=useCallback(async()=>{
     const version=++requestVersion.current;
     if(!configured||!baseUrl){setProducts(sampleProducts);setSettings(defaults);setCatalogStatus('sample');setCatalogError('');return;}
@@ -142,11 +145,11 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
   const setQuantity=(id:string,quantity:number)=>{
     if(!validId(id)||!Number.isFinite(quantity))return;
     const maximum=limit(id);
-    if(quantity>maximum)notify(maximum===0?'هذا المنتج غير متوفر حاليًا':`المتاح ${maximum} قطعة فقط`);
+    if(quantity>maximum)notify(maximum===0?'هذا المنتج غير متوفر حاليًا':'المتاح {n:piece} فقط',{n:maximum});
     setState(s=>{const cart={...s.cart};const next=Math.min(maximum,Math.floor(quantity));if(next<=0)delete cart[id];else cart[id]=next;return {...s,cart};});
   };
   const addToCart=(id:string,quantity=1)=>{if(limit(id)<1){notify('هذا المنتج غير متوفر حاليًا');robot.react('error','نفد هذا المنتج حاليًا');return;}setQuantity(id,(state.cart[id]||0)+quantity);notify('أُضيف المنتج إلى سلتك');robot.react('cart');};
-  const addManyToCart=(items:Record<string,number>)=>{const next={...state.cart};let added=0;for(const [id,q] of Object.entries(items)){const max=limit(id);if(max<1||!Number.isInteger(q)||q<1)continue;next[id]=Math.min(max,(next[id]||0)+q);added++;}setState(s=>({...s,cart:next}));notify(added?`أُضيف ${added} منتج إلى السلة`:'المنتجات غير متوفرة حاليًا');if(added)robot.react('cart');};
+  const addManyToCart=(items:Record<string,number>)=>{const next={...state.cart};let added=0;for(const [id,q] of Object.entries(items)){const max=limit(id);if(max<1||!Number.isInteger(q)||q<1)continue;next[id]=Math.min(max,(next[id]||0)+q);added++;}setState(s=>({...s,cart:next}));notify(added?'أُضيف {n:product} إلى السلة':'المنتجات غير متوفرة حاليًا',{n:added});if(added)robot.react('cart');};
   const saveForLater=(id:string)=>setState(s=>{if(!s.cart[id])return s;const cart={...s.cart};const q=cart[id];delete cart[id];return {...s,cart,saved:{...s.saved,[id]:q}};});
   const moveToCart=(id:string)=>setState(s=>{const q=s.saved[id];if(!q)return s;const saved={...s.saved};delete saved[id];const max=cartLimit(products,id);if(max<1){notify('هذا المنتج غير متوفر حاليًا');return {...s,saved:{...saved,[id]:q}};}return {...s,saved,cart:{...s.cart,[id]:Math.min(max,(s.cart[id]||0)+q)}};});
   const removeSaved=(id:string)=>setState(s=>{const saved={...s.saved};delete saved[id];return {...s,saved};});
@@ -194,6 +197,6 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     await AsyncStorage.removeItem(KEY);
   };
   if(!hydrated)return <View style={{flex:1,backgroundColor:colors.background,justifyContent:'center',alignItems:'center'}}><ActivityIndicator color={colors.orange}/></View>;
-  return <Context.Provider value={{...state,hydrated,toast,products,orders,catalogStatus,catalogError,settings,wishlistSynced,subtotal,shipping,cartCount:Object.values(state.cart).reduce((a,b)=>a+b,0),refreshCatalog,refreshOrders,refreshWishlist,addToCart,setQuantity,toggleFavorite,toggleCompare,rememberProduct,submitOrder,reorder,notify,clearCart:()=>setState(s=>({...s,cart:{}})),clearPersonalData,unreadCount,refreshUnread,saveForLater,moveToCart,removeSaved,buyNow,startBuyNow,clearBuyNow:()=>setBuyNowState(null),setBranch,branchStock,addManyToCart}}>{children}</Context.Provider>;
+  return <Context.Provider value={{...state,hydrated,toast,toastVars:toastState.vars,products,orders,catalogStatus,catalogError,settings,wishlistSynced,subtotal,shipping,cartCount:Object.values(state.cart).reduce((a,b)=>a+b,0),refreshCatalog,refreshOrders,refreshWishlist,addToCart,setQuantity,toggleFavorite,toggleCompare,rememberProduct,submitOrder,reorder,notify,clearCart:()=>setState(s=>({...s,cart:{}})),clearPersonalData,unreadCount,refreshUnread,saveForLater,moveToCart,removeSaved,buyNow,startBuyNow,clearBuyNow:()=>setBuyNowState(null),setBranch,branchStock,addManyToCart}}>{children}</Context.Provider>;
 }
 export function useStore(){const value=useContext(Context);if(!value)throw new Error('StoreProvider is required');return value;}

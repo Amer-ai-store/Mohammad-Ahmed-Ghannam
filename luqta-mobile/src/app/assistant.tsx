@@ -104,7 +104,7 @@ export default function Assistant() {
                   <Button title={tr("أضف السلة كاملة")} testID="add-basket" icon={<ShoppingCart size={16} color={t.onAccent} />} onPress={() => addBasket(m.reply!.basket!)} />
                 </View> : null}
                 {m.reply?.recipe ? <View style={{ gap: 6 }} testID="recipe">
-                  <Txt weight="bold">{tr("مكونات {r} ({n} أشخاص)", { r: m.reply.recipe.name, n: m.reply.recipe.servings })}</Txt>
+                  <Txt weight="bold">{tr("مكونات {r} ({n:person})", { r: m.reply.recipe.name, n: m.reply.recipe.servings })}</Txt>
                   {m.reply.recipe.ingredients.map((i) => i.product ? mini(i.product, i.quantity) : <Txt key={i.ingredient} style={{ color: t.muted, fontSize: 12 }}>• {i.ingredient} — {tr("غير متوفر")}</Txt>)}
                   <Row><Button title={tr("أضف المكونات للسلة")} testID="add-recipe" onPress={() => addRecipe(m.reply!.recipe!)} style={{ flex: 1 }} /><Button title={tr("احفظها كقائمة")} secondary onPress={() => void saveRecipeList(m.reply!.recipe!)} style={{ flex: 1 }} /></Row>
                 </View> : null}

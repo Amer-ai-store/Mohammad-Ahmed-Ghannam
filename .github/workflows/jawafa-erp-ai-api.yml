@@ -1,6 +1,12 @@
 name: JAWAFA ERP AI — OIDC API integration and tenancy security
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'jawafa-erp-ai/api/**'
+      - 'jawafa-erp-ai/backend/migrations/**'
+      - '.github/workflows/jawafa-erp-ai-api.yml'
   pull_request:
     paths:
       - 'jawafa-erp-ai/api/**'

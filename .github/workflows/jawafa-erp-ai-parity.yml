@@ -1,5 +1,12 @@
 name: JAWAFA ERP AI — TrustSoft parity evidence integrity (nonproduction)
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'jawafa-erp-ai/tools/**'
+      - 'jawafa-erp-ai/docs/trustsoft_parity_catalog.json'
+      - 'jawafa-erp-ai/docs/trustsoft_report_catalog.json'
+      - '.github/workflows/jawafa-erp-ai-parity.yml'
   pull_request:
     branches:
       - main

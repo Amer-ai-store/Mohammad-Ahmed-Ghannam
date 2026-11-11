@@ -1,10 +1,7 @@
 name: JAWAFA ERP AI — isolated PostgreSQL schema acceptance
 on:
-  # Recovery path limited to this isolated development branch only.
-  # Keeps all disposable-Postgres security tests and existing PR gates intact.
   push:
-    branches:
-      - feature/jawafa-erp-report-inventory-20261110
+    branches: [main, feature/jawafa-erp-report-inventory-20261110]
     paths:
       - 'jawafa-erp-ai/backend/**'
       - 'jawafa-erp-ai/api/**'

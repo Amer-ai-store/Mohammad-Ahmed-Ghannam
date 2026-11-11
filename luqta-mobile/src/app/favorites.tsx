@@ -86,7 +86,7 @@ export default function Choices() {
           {!user ? <EmptyState title="سجّل الدخول لقوائمك" detail="القوائم محفوظة في حسابك ويمكن مشاركتها مع العائلة." action="تسجيل الدخول" href="/login" /> : <>
             {(lists.data?.lists || []).map((l) => (
               <Card key={l.id} onPress={() => router.push(`/list/${l.id}`)} accessibilityLabel={l.name}>
-                <Row><ListChecks size={20} color={t.primary} /><View style={{ flex: 1 }}><Txt weight="bold">{l.name}</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>{tr("{n} عناصر · {c} منجزة", { n: l.itemCount, c: l.checkedCount })}{l.kind === "family" ? ` · ${tr("عائلية")}` : ""}</Txt></View><Txt weight="bold" style={{ color: t.orange }}>{money.format(l.estimatedTotal)}</Txt></Row>
+                <Row><ListChecks size={20} color={t.primary} /><View style={{ flex: 1 }}><Txt weight="bold">{l.name}</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>{tr("{n:item} · {c} منجزة", { n: l.itemCount, c: l.checkedCount })}{l.kind === "family" ? ` · ${tr("عائلية")}` : ""}</Txt></View><Txt weight="bold" style={{ color: t.orange }}>{money.format(l.estimatedTotal)}</Txt></Row>
               </Card>
             ))}
             <Button title={tr("إدارة القوائم")} onPress={() => router.push("/lists")} secondary />

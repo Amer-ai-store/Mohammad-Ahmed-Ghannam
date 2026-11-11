@@ -96,7 +96,7 @@ export default function ProjectScreen() {
           {(vendors.data?.vendors || []).map((v) => (
             <Card key={v.id} style={{ gap: 4 }}>
               <Row><Txt weight="bold" style={{ flex: 1 }}>{v.name}</Txt><Badge label={v.status === "active" ? "نشط" : "موقوف"} tone={v.status === "active" ? "success" : "danger"} /></Row>
-              <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("{p} منتج · عمولة {c}% · {m}", { p: v.products, c: v.commission, m: v.members.map((m) => m.name).join("، ") || tr("بلا أعضاء") })}</Txt>
+              <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("{p:product} · عمولة {c}% · {m}", { p: v.products, c: v.commission, m: v.members.map((m) => m.name).join("، ") || tr("بلا أعضاء") })}</Txt>
               <Button title={tr(v.status === "active" ? "إيقاف" : "تفعيل")} secondary onPress={() => void run(async () => { await api.patch(`/admin/vendors/${v.id}`, { status: v.status === "active" ? "suspended" : "active" }); vendors.reload(); return "حُدّث البائع"; })} style={{ minHeight: 38, paddingVertical: 4 }} />
             </Card>
           ))}

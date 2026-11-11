@@ -72,7 +72,7 @@ export default function ProfileScreen() {
         </Row>
         {tier.data?.next ? <>
           <View style={{ height: 8, borderRadius: 4, backgroundColor: t.line, overflow: "hidden" }}><View style={{ width: `${tier.data.progress}%`, height: 8, backgroundColor: t.warning }} /></View>
-          <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("باقي {n} نقطة للمستوى {t}", { n: tier.data.next.pointsNeeded, t: tier.data.next.name })}</Txt>
+          <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("باقي {n:point} للمستوى {t}", { n: tier.data.next.pointsNeeded, t: tier.data.next.name })}</Txt>
         </> : null}
       </Card>
       <Card style={{ marginTop: 12 }}>
