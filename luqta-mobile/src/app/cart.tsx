@@ -55,7 +55,7 @@ export default function Cart() {
 
   const freeLeft = quote ? quote.freeShippingRemaining : Math.max(0, settings.freeShippingThreshold - subtotal);
   return (
-    <Shell title="السلة" subtitle={tr("{n} منتجات في سلتك", { n: store.cartCount })} robot={freeLeft > 0 ? tr("باقي {m} على التوصيل المجاني!", { m: money.format(freeLeft) }) : "التوصيل مجاني 🎉"} testID="cart">
+    <Shell title="السلة" subtitle={tr("{n:product} في سلتك", { n: store.cartCount })} robot={freeLeft > 0 ? tr("باقي {m} على التوصيل المجاني!", { m: money.format(freeLeft) }) : "التوصيل مجاني 🎉"} testID="cart">
       {lines.length ? (
         <View style={{ gap: 10 }}>
           {lines.map(({ product, quantity }) => (

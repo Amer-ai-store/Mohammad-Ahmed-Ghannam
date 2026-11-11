@@ -61,7 +61,7 @@ export default function BranchScreen() {
               <StoresMap home={nearby.home} branches={[placed]} selectedId={placed.id} onSelect={() => {}} height={220} />
             </View>
           ) : null}
-          <SectionTitle title="متوفر في هذا الفرع" subtitle={tr("{n} منتج", { n: products.length })} />
+          <SectionTitle title="متوفر في هذا الفرع" subtitle={tr("{n:product}", { n: products.length })} />
           <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, backgroundColor: t.paper, borderRadius: 14, borderWidth: 1, borderColor: t.line, paddingHorizontal: 12, minHeight: 48, marginBottom: 12 }}>
             <Search size={18} color={t.muted} />
             <TextInput testID="branch-search" accessibilityLabel={tr("ابحث في منتجات الفرع")} value={query} onChangeText={setQuery} placeholder={tr("ابحث في منتجات الفرع…")} placeholderTextColor={t.muted} style={{ flex: 1, minWidth: 0, minHeight: 44, color: t.ink, fontFamily: fonts.medium, fontSize: 15, textAlign: isRTL ? "right" : "left" }} />

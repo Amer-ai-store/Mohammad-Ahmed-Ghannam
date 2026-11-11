@@ -39,7 +39,7 @@ export default function Offers() {
         </View>
       ) : null}
       {catalogStatus !== "connected" ? <Txt style={{ color: t.muted, marginBottom: 12 }}>{tr("هذه العروض للكتالوج التجريبي حتى يتصل التطبيق بالخادم.")}</Txt> : null}
-      <SectionTitle title="تخفيضات" subtitle={offers.length ? tr("{n} منتجات بسعر أقل من السابق", { n: offers.length }) : undefined} />
+      <SectionTitle title="تخفيضات" subtitle={offers.length ? tr("{n:product} بسعر أقل من السابق", { n: offers.length }) : undefined} />
       {offers.length ? <ProductGrid items={offers} /> : <View style={{ gap: 12 }}><EmptyState title="لا توجد تخفيضات حالية" detail="يضيف المدير السعر السابق والسعر الحالي من لوحة الإدارة." action="" /><Button secondary title={tr("تصفح كل المنتجات")} onPress={() => router.push("/explore")} /></View>}
     </Shell>
   );

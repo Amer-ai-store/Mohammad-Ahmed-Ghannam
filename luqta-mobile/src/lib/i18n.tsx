@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { EN } from "./i18n-en";
+import { fillText } from "./plural";
 
 // Screens are written Arabic-first: `row-reverse` rows and right-aligned text. English flips the root layout
 // direction, which mirrors every row at once, and `Txt` switches text alignment, so one layout serves both languages.
@@ -18,11 +19,11 @@ type I18n = {
 };
 const KEY = "luqta-language-v1";
 const CURRENCY_KEY = "luqta-display-currency-v1";
-const fill = (text: string, vars?: Record<string, string | number>) => vars ? text.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`)) : text;
+const fill = fillText;
 export function translate(lang: Lang, arabic: string, vars?: Record<string, string | number>) {
-  return fill(lang === "en" ? EN[arabic] ?? arabic : arabic, vars);
+  return fill(lang === "en" ? EN[arabic] ?? arabic : arabic, vars, lang);
 }
-const Context = createContext<I18n>({ lang: "ar", isRTL: true, setLang: () => {}, t: (s, v) => fill(s, v), align: "right", hydrated: false, displayCurrency: null, setDisplayCurrency: () => {} });
+const Context = createContext<I18n>({ lang: "ar", isRTL: true, setLang: () => {}, t: (s, v) => fill(s, v, "ar"), align: "right", hydrated: false, displayCurrency: null, setDisplayCurrency: () => {} });
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("ar");

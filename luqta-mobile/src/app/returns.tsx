@@ -56,7 +56,7 @@ export default function Returns() {
     </Shell>
   );
   return (
-    <Shell title="إرجاع منتجات" subtitle={tr("خلال {d} يومًا من الاستلام، ويُرد المبلغ إلى محفظتك", { d: settings.returnsDays })} back testID="returns">
+    <Shell title="إرجاع منتجات" subtitle={tr("خلال {d:day:acc} من الاستلام، ويُرد المبلغ إلى محفظتك", { d: settings.returnsDays })} back testID="returns">
       {!order ? (
         delivered.length ? <View style={{ gap: 8 }}>
           <Txt weight="bold">{tr("اختر الطلب")}</Txt>

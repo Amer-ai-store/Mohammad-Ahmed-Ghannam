@@ -895,7 +895,7 @@ e2e('L061 L062 L063 L064 L065 L066 points after delivery, daily check-in, badges
   const page = await open(user, '/rewards');
   await until(async () => Number(await textOf(page, 'points-balance')) === before, 10000, 'balance shown');
   await tap(page, 'checkin-button');
-  await see(page, 'سلسلة 1 أيام');
+  await see(page, 'يوم واحد على التوالي');
   const checkin = await api('GET', '/rewards/check-in', undefined, user.token);
   assert.equal(checkin.checkedInToday, true);
   const tier = await api('GET', '/rewards/tier', undefined, user.token);

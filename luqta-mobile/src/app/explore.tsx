@@ -167,7 +167,7 @@ export default function Explore() {
         {categories.map((c) => <Chip key={c.id} testID={`chip-${c.id}`} label={categoryName(c, lang)} active={category === c.id} icon={<CategoryIcon name={c.icon} size={14} color={category === c.id ? t.onPrimary : c.color} />} onPress={() => setCategory(c.id)} />)}
       </ScrollView>
       <Row style={{ justifyContent: "space-between" }}>
-        <Txt weight="bold" testID="result-count">{imageHit ? tr("منتجات بلون {c}", { c: imageHit.colorName }) : tr("{n} منتج", { n: shown.length })}</Txt>
+        <Txt weight="bold" testID="result-count">{imageHit ? tr("منتجات بلون {c}", { c: imageHit.colorName }) : tr("{n:product}", { n: shown.length })}</Txt>
         <Pressable testID="filters-toggle" accessibilityRole="button" accessibilityLabel={tr("التصفية والترتيب")} onPress={() => setFilters((v) => !v)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, minHeight: 40, paddingHorizontal: 14, borderRadius: 999, backgroundColor: filters ? t.primary : t.paper, borderWidth: 1, borderColor: t.line }}>
           <SlidersHorizontal size={16} color={filters ? t.onPrimary : t.ink} /><Txt weight="bold" style={{ fontSize: 13, color: filters ? t.onPrimary : t.ink }}>{tr("التصفية والترتيب")}</Txt>
         </Pressable>

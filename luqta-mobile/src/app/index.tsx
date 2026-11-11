@@ -112,7 +112,7 @@ export default function Home() {
   const doCheckin = async () => {
     try {
       const result = await api.post<{ awarded: number; streak: number }>("/rewards/check-in", {});
-      checkin.reload(); robot.react("checkin", tr("+{n} نقاط! حضورك {d} يوم متتالي", { n: result.awarded, d: result.streak }));
+      checkin.reload(); robot.react("checkin", tr("+{n:point}! حضورك {d:day} على التوالي", { n: result.awarded, d: result.streak }));
     } catch { store.notify("تعذر تسجيل الحضور"); }
   };
   const Arrow = ArrowLeft;
@@ -140,7 +140,7 @@ export default function Home() {
       {!user ? <Pressable testID="home-passport" accessibilityRole="button" onPress={() => router.push("/passport")}
         style={{ marginTop: 14, backgroundColor: t.primarySoft, borderColor: t.primary, borderWidth: 1, padding: 14, borderRadius: 20, gap: 4 }}>
         <Txt weight="extra" style={{ color: t.primary, fontSize: 16 }}>{tr("✦ جوازك العالمي — تسوق على ذوقك")}</Txt>
-        <Txt style={{ color: t.muted, fontSize: 12 }}>{passport.categories.length ? tr("تم اختيار {n} اهتمامات محلية", { n: passport.categories.length }) : tr("خصّص تجربة التصفح دون حساب أو خادم")}</Txt>
+        <Txt style={{ color: t.muted, fontSize: 12 }}>{passport.categories.length ? tr("اهتماماتك المحفوظة على الجهاز: {n}", { n: passport.categories.length }) : tr("خصّص تجربة التصفح دون حساب أو خادم")}</Txt>
       </Pressable> : null}
 
       {user && prefs.data && !prefs.data.preferences.onboarded ? (
@@ -158,7 +158,7 @@ export default function Home() {
             <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: t.warningSoft, alignItems: "center", justifyContent: "center" }}><CalendarCheck size={22} color={t.warning} /></View>
             <View style={{ flex: 1 }}>
               <Txt weight="bold">{checkin.data.checkedInToday ? tr("سجّلت حضورك اليوم ✅") : tr("سجّل حضورك اليومي")}</Txt>
-              <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("سلسلة {n} يوم · المكافأة القادمة {p} نقاط", { n: checkin.data.streak, p: checkin.data.nextReward })}</Txt>
+              <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("{n:day} على التوالي · المكافأة القادمة: {p:point}", { n: checkin.data.streak, p: checkin.data.nextReward })}</Txt>
             </View>
             {!checkin.data.checkedInToday ? <Button title={tr("سجّل")} testID="checkin" onPress={doCheckin} style={{ minHeight: 42, paddingVertical: 8 }} /> : null}
           </Row>

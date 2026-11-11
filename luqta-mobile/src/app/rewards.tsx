@@ -41,11 +41,11 @@ export default function RewardsScreen() {
     if (!redeemKey.current) redeemKey.current = `redeem-${Date.now().toString(36)}`;
     const r = await api.post<{ walletBalance: number }>("/rewards/redeem", { points, requestKey: redeemKey.current });
     redeemKey.current = ""; rewards.reload(); robot.react("reward");
-    return tr("استبدلت {p} نقطة — رصيد محفظتك {m}", { p: points, m: money.format(r.walletBalance) });
+    return tr("استبدلت {p:point:acc} — رصيد محفظتك {m}", { p: points, m: money.format(r.walletBalance) });
   });
-  const checkIn = () => run("checkin", async () => { const r = await api.post<{ awarded: number; streak: number; alreadyCheckedIn: boolean }>("/rewards/check-in", {}); checkin.reload(); rewards.reload(); tier.reload(); badges.reload(); robot.react("checkin"); return r.alreadyCheckedIn ? tr("سجلت حضورك اليوم مسبقًا") : tr("+{n} نقاط · سلسلة {d} أيام", { n: r.awarded, d: r.streak }); });
+  const checkIn = () => run("checkin", async () => { const r = await api.post<{ awarded: number; streak: number; alreadyCheckedIn: boolean }>("/rewards/check-in", {}); checkin.reload(); rewards.reload(); tier.reload(); badges.reload(); robot.react("checkin"); return r.alreadyCheckedIn ? tr("سجلت حضورك اليوم مسبقًا") : tr("+{n:point} · {d:day} على التوالي", { n: r.awarded, d: r.streak }); });
   const applyCode = () => run("apply", async () => { await api.post("/referrals/apply", { code: friendCode.trim() }); setFriendCode(""); referral.reload(); rewards.reload(); tier.reload(); return "أُضيفت 20 نقطة ترحيب 🎉"; });
-  const shareCode = async () => { if (!referral.data) return; await Clipboard.setStringAsync(referral.data.code).catch(() => {}); await Share.share({ message: tr("جرّب لُقطة واستخدم رمز دعوتي {c} لتحصل على {n} نقطة ترحيب!", { c: referral.data.code, n: referral.data.friendReward }) }).catch(() => {}); };
+  const shareCode = async () => { if (!referral.data) return; await Clipboard.setStringAsync(referral.data.code).catch(() => {}); await Share.share({ message: tr("جرّب لُقطة واستخدم رمز دعوتي {c} لتحصل على هدية ترحيب: {n:point}!", { c: referral.data.code, n: referral.data.friendReward }) }).catch(() => {}); };
   return (
     <Shell title="مكافآتي" subtitle="اجمع النقاط وارفع مستواك" robot="كل يوم نقاط جديدة!" testID="rewards">
       {message ? <Notice text={message.text} tone={message.tone} /> : null}
@@ -54,18 +54,18 @@ export default function RewardsScreen() {
           <View><Txt style={{ color: t.onPrimary, opacity: 0.85 }}>{tr("رصيد النقاط")}</Txt><Txt weight="extra" style={{ color: t.onPrimary, fontSize: 34 }} testID="points-balance">{rewards.data?.points ?? 0}</Txt></View>
           {tier.data ? <ProgressRing value={tier.data.progress / 100} size={86} label={tier.data.tier.name} sublabel={tier.data.next ? tr("إلى {t}", { t: tier.data.next.name }) : tr("أعلى مستوى")} /> : null}
         </Row>
-        <Button title={tr("استبدل {p} نقطة بـ {m}", { p: rewards.data?.redeemablePoints ?? 0, m: money.format((rewards.data?.redeemablePoints ?? 0) / 100) })} testID="redeem" secondary busy={busy === "redeem"} disabled={!rewards.data?.redeemablePoints} onPress={() => void redeem()} />
+        <Button title={tr("استبدل {p:point:acc} بـ {m}", { p: rewards.data?.redeemablePoints ?? 0, m: money.format((rewards.data?.redeemablePoints ?? 0) / 100) })} testID="redeem" secondary busy={busy === "redeem"} disabled={!rewards.data?.redeemablePoints} onPress={() => void redeem()} />
       </Card>
       <Card style={{ marginTop: 12, gap: 10 }} testID="checkin">
-        <Row><CalendarCheck size={20} color={t.warning} /><Txt weight="bold" style={{ flex: 1 }}>{tr("الحضور اليومي")}</Txt><Badge label={tr("{n} أيام متتالية", { n: checkin.data?.streak ?? 0 })} tone="warning" /></Row>
+        <Row><CalendarCheck size={20} color={t.warning} /><Txt weight="bold" style={{ flex: 1 }}>{tr("الحضور اليومي")}</Txt><Badge label={tr("{n:day} على التوالي", { n: checkin.data?.streak ?? 0 })} tone="warning" /></Row>
         <Row style={{ justifyContent: "space-between" }}>{last7.map((d) => { const on = checkin.data?.days.includes(d); return <View key={d} style={{ alignItems: "center", gap: 4 }}><View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: on ? t.warning : t.secondary, alignItems: "center", justifyContent: "center" }}><Txt style={{ fontSize: 12, color: on ? "#fff" : t.muted, textAlign: "center" }}>{on ? "✓" : ""}</Txt></View><Txt style={{ fontSize: 10, color: t.muted }}>{d.slice(8)}</Txt></View>; })}</Row>
         <Button title={checkin.data?.checkedInToday ? tr("سجّلت اليوم ✅") : tr("سجّل حضورك +{n}", { n: checkin.data?.nextReward ?? 5 })} testID="checkin-button" busy={busy === "checkin"} disabled={checkin.data?.checkedInToday} onPress={() => void checkIn()} />
       </Card>
       {tier.data ? (
         <Card style={{ marginTop: 12, gap: 8 }} testID="tier">
-          <Row><Crown size={20} color={t.warning} /><Txt weight="bold" style={{ flex: 1 }}>{tr("مستوى {t}", { t: tier.data.tier.name })}</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>{tr("{n} نقطة مكتسبة", { n: tier.data.lifetimePoints })}</Txt></Row>
+          <Row><Crown size={20} color={t.warning} /><Txt weight="bold" style={{ flex: 1 }}>{tr("مستوى {t}", { t: tier.data.tier.name })}</Txt><Txt style={{ color: t.muted, fontSize: 12 }}>{tr("النقاط المكتسبة: {n}", { n: tier.data.lifetimePoints })}</Txt></Row>
           {tier.data.tier.benefits.map((b) => <Txt key={b} style={{ fontSize: 13 }}>✓ {b}</Txt>)}
-          {tier.data.next ? <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("باقي {n} نقطة للمستوى {t}", { n: tier.data.next.pointsNeeded, t: tier.data.next.name })}</Txt> : null}
+          {tier.data.next ? <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("باقي {n:point} للمستوى {t}", { n: tier.data.next.pointsNeeded, t: tier.data.next.name })}</Txt> : null}
           <Row wrap>{tier.data.tiers.map((x) => <Badge key={x.id} label={`${x.name} ${x.minPoints}+`} tone={x.id === tier.data!.tier.id ? "warning" : "muted"} />)}</Row>
         </Card>
       ) : null}
@@ -82,7 +82,7 @@ export default function RewardsScreen() {
       </View>
       <SectionTitle title="ادعُ أصدقاءك" />
       <Card style={{ gap: 10 }} testID="referral">
-        <Row><Gift size={20} color={t.orange} /><Txt style={{ flex: 1 }}>{tr("صديقك يحصل على {f} نقطة، وأنت {r} نقطة بعد استلام أول طلب له.", { f: referral.data?.friendReward ?? 20, r: referral.data?.referrerReward ?? 50 })}</Txt></Row>
+        <Row><Gift size={20} color={t.orange} /><Txt style={{ flex: 1 }}>{tr("صديقك يحصل على {f:point:acc}، وأنت على {r:point:acc} بعد استلام أول طلب له.", { f: referral.data?.friendReward ?? 20, r: referral.data?.referrerReward ?? 50 })}</Txt></Row>
         {referral.data ? <Row style={{ backgroundColor: t.secondary, borderRadius: 16, padding: 12 }}><Txt weight="extra" style={{ flex: 1, fontSize: 22, letterSpacing: 3 }} testID="referral-code">{referral.data.code}</Txt><Button title={tr("نسخ")} secondary icon={<Copy size={14} color={t.ink} />} onPress={() => void Clipboard.setStringAsync(referral.data!.code)} style={{ minHeight: 38, paddingVertical: 4 }} /></Row> : null}
         <Button title={tr("شارك رمزي")} icon={<Share2 size={16} color={t.onAccent} />} onPress={() => void shareCode()} />
         <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("دعوت {i} · استلموا {r}", { i: referral.data?.invited ?? 0, r: referral.data?.rewarded ?? 0 })}</Txt>
