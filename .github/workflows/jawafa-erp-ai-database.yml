@@ -63,6 +63,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0006_personnel_permissions_settings.sql
       - name: Verify personnel RLS, setting revisions, permissions and denied mutations
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_personnel_settings_ci.sql
+      - name: Install new ERP-only immutable daily movement schema with tenant/branch RLS
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0007_independent_item_movement_events.sql
       - name: Seed synthetic users and cheques in disposable database
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
       - name: Install pinned Node API dependencies
