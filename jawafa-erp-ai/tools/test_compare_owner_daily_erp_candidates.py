@@ -136,7 +136,12 @@ class CandidateCrosswalkTests(unittest.TestCase):
 
     def test_invalid_scale_and_naive_comma_coercion_denied(self):
         ref, erp = build()
-        malformed = ref.replace(b"0.250", b",0.250")
+        # Modify the decoded CELL, not raw CSV bytes: the comma must be
+        # properly quoted by csv.writer to test numeric validation rather
+        # than the unrelated row-width gate.
+        decoded = list(csv.reader(io.StringIO(ref.decode("utf-8-sig"), newline="")))
+        decoded[1][EXPECTED_FIELDS.index("Net_Sales_Before_Tax")] = ",0.250"
+        malformed = csvblob(decoded[1:], header=decoded[0])
         with self.assertRaisesRegex(CandidateError, "INVALID_REFERENCE_SCALE"):
             compare(malformed, erp)
         self.assertEqual(len(CANDIDATES), 4)
