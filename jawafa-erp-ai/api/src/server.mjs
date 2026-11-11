@@ -3,10 +3,33 @@ import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 import { createOidcVerifier } from './auth.mjs';
+import { independentDailyMovement } from './independent_daily_movement.mjs';
 
 const { Pool } = pg;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_FINANCE_ROLES = new Set(['accountant', 'supervisor', 'auditor']);
+const ERP_CODE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/;
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_REPORT_EVENT_ROWS = 50000;
+
+function validDay(value) {
+  if (typeof value !== 'string' || !ISO_DAY.test(value)) return false;
+  const date = new Date(value + 'T00:00:00.000Z');
+  return !Number.isNaN(date.getTime()) &&
+    date.toISOString().slice(0,10) === value;
+}
+
+function exactFilsOrMilli(value) {
+  if (typeof value !== 'string' || !/^(0|[1-9]\d*)$/.test(value)) {
+    throw new Error('UNSAFE_LEDGER_VALUE');
+  }
+  const number = BigInt(value);
+  if (number > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error('UNSAFE_LEDGER_VALUE');
+  }
+  return Number(number);
+}
+
 
 function reply(res, status, data, requestId, origin) {
   res.writeHead(status, {
@@ -38,7 +61,7 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
         res.writeHead(204, {
           'access-control-allow-origin': cors ?? 'null',
           'access-control-allow-methods': 'GET, OPTIONS',
-          'access-control-allow-headers': 'authorization, x-erp-tenant-id',
+          'access-control-allow-headers': 'authorization, x-erp-tenant-id, x-erp-branch-id',
           'cache-control': 'no-store',
           'x-request-id': requestId,
           vary: 'Origin',
@@ -47,7 +70,8 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
         return;
       }
       if (req.method !== 'GET') return send(405, { error: 'METHOD_NOT_ALLOWED' }, cors);
-      const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
+      const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+      const pathname = requestUrl.pathname;
       if (pathname === '/health/live') {
         return send(200, { status: 'up', service: 'jawafa-erp-ai-api' }, cors);
       }
@@ -61,8 +85,10 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
       const isPersonnel = pathname === '/v1/personnel';
       const isSettings = pathname === '/v1/settings';
       const isPermissions = pathname === '/v1/permissions';
+      const isMovementReport = pathname === '/v1/reports/daily-movements';
       if (!one && !events && !isList && !isJournal && !isPurchases &&
-          !isSuppliers && !isPersonnel && !isSettings && !isPermissions) {
+          !isSuppliers && !isPersonnel && !isSettings && !isPermissions &&
+          !isMovementReport) {
         return send(404, { error: 'NOT_FOUND' }, cors);
       }
       if ((one && !UUID.test(one[1])) || (events && !UUID.test(events[1]))) {
@@ -77,6 +103,35 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
       const tenantId = req.headers['x-erp-tenant-id'];
       if (typeof tenantId !== 'string' || !UUID.test(tenantId)) {
         return send(400, { error: 'VALID_TENANT_ID_REQUIRED' }, cors);
+      }
+      let reportParams = null;
+      if (isMovementReport) {
+        const branchId = req.headers['x-erp-branch-id'];
+        const allowed = new Set(['from', 'to', 'item', 'family', 'supplier']);
+        if (typeof branchId !== 'string' || !ERP_CODE.test(branchId) ||
+            [...requestUrl.searchParams.keys()].some(k => !allowed.has(k)) ||
+            [...allowed].some(k => requestUrl.searchParams.getAll(k).length > 1)) {
+          return send(400, {error: 'INVALID_REPORT_SCOPE'}, cors);
+        }
+        const fromDate = requestUrl.searchParams.get('from');
+        const toDate = requestUrl.searchParams.get('to');
+        if (!validDay(fromDate) || !validDay(toDate) ||
+            fromDate > toDate ||
+            Date.parse(toDate) - Date.parse(fromDate) > 30 * 86400000) {
+          return send(400, {error: 'INVALID_REPORT_PERIOD_MAX_31_DAYS'}, cors);
+        }
+        const codeFilter = (name) => {
+          const value = requestUrl.searchParams.get(name);
+          return value === null ? null : ERP_CODE.test(value) ? value : false;
+        };
+        const itemCode = codeFilter('item');
+        const familyCode = codeFilter('family');
+        const supplierCode = codeFilter('supplier');
+        if ([itemCode, familyCode, supplierCode].includes(false)) {
+          return send(400, {error: 'INVALID_REPORT_FILTER'}, cors);
+        }
+        reportParams = {branchId, fromDate, toDate,
+          itemCode, familyCode, supplierCode};
       }
       db = await pool.connect();
       await db.query('BEGIN READ ONLY');
@@ -109,6 +164,72 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
         }
       } else if (!ALLOWED_FINANCE_ROLES.has(membership.rows[0].erp_role)) {
         return send(403, { error: 'PERMISSION_DENIED' }, cors);
+      }
+      if (isMovementReport) {
+        const branchAccess = await db.query(
+          `SELECT 1 FROM erp.current_report_branch_access
+           WHERE tenant_id=$1 AND oidc_subject=$2 AND branch_id=$3
+             AND allowed=true`,
+          [tenantId, subject, reportParams.branchId],
+        );
+        if (branchAccess.rowCount !== 1) {
+          return send(403, {error:'REPORT_BRANCH_ACCESS_DENIED'}, cors);
+        }
+        const read = await db.query(
+          `SELECT event_id, event_date::text, item_code, family_code,
+                  supplier_code, movement_kind, posting_status,
+                  quantity_milli::text, net_amount_fils::text,
+                  tax_fils::text, cost_fils::text, reference_event_id
+             FROM erp.item_movement_events
+            WHERE tenant_id=$1 AND branch_id=$2
+              AND event_date >= $3::date AND event_date <= $4::date
+              AND ($5::text IS NULL OR item_code=$5)
+              AND ($6::text IS NULL OR family_code=$6)
+              AND ($7::text IS NULL OR supplier_code=$7)
+            ORDER BY event_date, event_id LIMIT 50001`,
+          [tenantId, reportParams.branchId,
+           reportParams.fromDate, reportParams.toDate,
+           reportParams.itemCode, reportParams.familyCode,
+           reportParams.supplierCode],
+        );
+        if (read.rowCount > MAX_REPORT_EVENT_ROWS) {
+          return send(422, {error: 'REPORT_EVENT_LIMIT_EXCEEDED'}, cors);
+        }
+        const scopedEvents = read.rows.map(row => ({
+          eventId: row.event_id,
+          tenantId,
+          branchId: reportParams.branchId,
+          date: row.event_date,
+          itemCode: row.item_code,
+          familyCode: row.family_code,
+          supplierCode: row.supplier_code,
+          kind: row.movement_kind,
+          status: row.posting_status,
+          quantityMilli: exactFilsOrMilli(row.quantity_milli),
+          netAmountFils: exactFilsOrMilli(row.net_amount_fils),
+          taxFils: exactFilsOrMilli(row.tax_fils),
+          costFils: exactFilsOrMilli(row.cost_fils),
+          ...(row.reference_event_id
+            ? {referenceEventId: row.reference_event_id} : {}),
+        }));
+        const projected = independentDailyMovement({
+          events: scopedEvents,
+          tenantId, branchId: reportParams.branchId,
+          fromDate: reportParams.fromDate, toDate: reportParams.toDate,
+          ...(reportParams.itemCode ? {itemCode:reportParams.itemCode} : {}),
+          ...(reportParams.familyCode ? {familyCode:reportParams.familyCode} : {}),
+          ...(reportParams.supplierCode ? {supplierCode:reportParams.supplierCode} : {}),
+        });
+        return send(200, {
+          report: projected.report,
+          referenceStatus: projected.referenceStatus,
+          evidenceStatus: 'ERP_EVENTS_ONLY_NOT_TRUSTSOFT_PARITY',
+          sourceScopedEventCount: projected.sourceScopedEventCount,
+          postedEventCount: projected.postedEventCount,
+          ignoredVoidedEventCount: projected.ignoredVoidedEventCount,
+          items: projected.rows,
+          functionalParityPercent: null,
+        }, cors);
       }
       let result;
       if (isList) {
