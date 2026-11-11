@@ -144,8 +144,9 @@ CREATE TRIGGER erp_return_lineage_before_insert
   BEFORE INSERT ON erp.item_movement_events
   FOR EACH ROW EXECUTE FUNCTION erp.verify_movement_return_origin();
 
--- Fast read-only fraud-review index. Multiple partial returns across
--- transactions still need an independently audited cumulative cap.
+-- Indexed return-origin lookup accelerates the transactional cumulative
+-- quantity guard. Concurrency stress testing and independent security
+-- acceptance are still required before production posting.
 CREATE INDEX item_movement_origin_returns
   ON erp.item_movement_events
   (tenant_id, branch_id, reference_event_id, posting_status)
