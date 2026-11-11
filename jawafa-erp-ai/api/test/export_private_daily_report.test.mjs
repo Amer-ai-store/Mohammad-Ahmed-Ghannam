@@ -80,7 +80,7 @@ test('creates private candidate and manifest with exact hash, not financial valu
   assert.equal(sha(csv), outcome.outputSha256);
   assert.match(csv.toString(), /"2026-10-01","SKU-A"/);
   assert.match(csv.toString(), /"250","40","175","75"/);
-  assert.equal((await stat(f.csv)).mode & 0o777, process.platform === 'win32' ? 
+  assert.equal((await stat(f.csv)).mode & 0o777, process.platform === 'win32' ?
     (await stat(f.csv)).mode & 0o777 : 0o600);
   const manifest = JSON.parse(await readFile(f.manifest, 'utf8'));
   assert.equal(manifest.outputSha256, outcome.outputSha256);
