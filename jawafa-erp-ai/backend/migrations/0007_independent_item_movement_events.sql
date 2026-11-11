@@ -80,6 +80,49 @@ CREATE TABLE erp.item_movement_events (
 CREATE INDEX item_movement_report_range
   ON erp.item_movement_events(tenant_id, branch_id, event_date, item_code, event_id);
 
+-- Check parent event TYPE, item/family/supplier, date and quantity.
+-- This is a new-ERP insertion guard, NOT a TrustSoft vendor implementation.
+CREATE OR REPLACE FUNCTION erp.verify_movement_return_origin()
+RETURNS trigger LANGUAGE plpgsql AS $
+DECLARE
+  original erp.item_movement_events%ROWTYPE;
+  expected_kind text;
+BEGIN
+  IF NEW.movement_kind NOT IN ('sale_return','purchase_return') THEN
+    RETURN NEW;
+  END IF;
+  expected_kind := CASE WHEN NEW.movement_kind='sale_return'
+                        THEN 'sale' ELSE 'purchase' END;
+  SELECT * INTO original FROM erp.item_movement_events
+   WHERE tenant_id=NEW.tenant_id AND branch_id=NEW.branch_id
+     AND event_id=NEW.reference_event_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='RETURN_SOURCE_NOT_FOUND';
+  END IF;
+  IF original.movement_kind <> expected_kind OR
+     original.posting_status <> 'POSTED' OR
+     original.item_code <> NEW.item_code OR
+     original.family_code <> NEW.family_code OR
+     original.supplier_code <> NEW.supplier_code OR
+     original.event_date > NEW.event_date OR
+     NEW.quantity_milli > original.quantity_milli THEN
+    RAISE EXCEPTION USING ERRCODE='23514',
+      MESSAGE='RETURN_SOURCE_KIND_SCOPE_OR_QUANTITY_INVALID';
+  END IF;
+  RETURN NEW;
+END;
+$;
+CREATE TRIGGER erp_return_lineage_before_insert
+  BEFORE INSERT ON erp.item_movement_events
+  FOR EACH ROW EXECUTE FUNCTION erp.verify_movement_return_origin();
+
+-- Fast read-only fraud-review index. Multiple partial returns across
+-- transactions still need an independently audited cumulative cap.
+CREATE INDEX item_movement_origin_returns
+  ON erp.item_movement_events
+  (tenant_id, branch_id, reference_event_id, posting_status)
+  WHERE reference_event_id IS NOT NULL;
+
 -- All original ERP financial events are append-only. Corrections must use
 -- separately authorized compensating events; neither update nor delete.
 CREATE TRIGGER erp_branches_no_update_delete
