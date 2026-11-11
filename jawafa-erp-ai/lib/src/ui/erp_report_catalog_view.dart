@@ -233,7 +233,7 @@ class ErpReportDetailScreen extends StatelessWidget {
       f != 'MonthYear' && f != 'ItemCode').length;
     final unmapped = all.length - candidateFields.length;
     return Scaffold(
-      key: Key('erp_report_detail_screen_\${report.id}'),
+      key: Key('erp_report_detail_screen_${report.id}'),
       appBar: AppBar(title: Text(report.title)),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -253,7 +253,7 @@ class ErpReportDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Text('الحقول المسجلة: \${all.length} | '
+          Text('الحقول المسجلة: ${all.length} | '
               'مفتاحا ربط مرشحان: 2 | '
               'مقارنات رقمية مرشحة: $numericProposals | '
               'حقول دون ربط: $unmapped | '
@@ -288,12 +288,12 @@ class ErpReportDetailScreen extends StatelessWidget {
             style: TextStyle(color: ErpPalette.muted)),
           for (var index = 0; index < all.length; index++)
             ListTile(
-              key: Key('erp_report_field_\${index + 1}'),
+              key: Key('erp_report_field_${index + 1}'),
               contentPadding: EdgeInsets.zero,
-              title: Text('\${index + 1}. \${all[index]}'),
+              title: Text('${index + 1}. ${all[index]}'),
               subtitle: Text(candidateFields[all[index]] ==
                   null ? 'غير مربوط — يحتاج تعريف مصدر ودلالة'
-                  : '\${candidateFields[all[index]]} — غير معتمد'),
+                  : '${candidateFields[all[index]]} — غير معتمد'),
               trailing: const Icon(Icons.pending_outlined,
                 color: ErpPalette.amber),
             ),
