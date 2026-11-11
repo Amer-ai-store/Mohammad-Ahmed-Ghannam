@@ -55,8 +55,8 @@ export function AdminOverview({ onTab }: { onTab: (tab: "products" | "orders" | 
           </Pressable>
         ))}
       </View>
-      <SectionTitle title="التقارير" subtitle={tr("آخر {d} يوم", { d: days })} />
-      <Row>{[7, 30, 90].map((d) => <Chip key={d} testID={`report-${d}`} label={tr("{d} يوم", { d })} active={days === d} onPress={() => setDays(d)} />)}</Row>
+      <SectionTitle title="التقارير" subtitle={tr("آخر {d:day:acc}", { d: days })} />
+      <Row>{[7, 30, 90].map((d) => <Chip key={d} testID={`report-${d}`} label={tr("{d:day}", { d })} active={days === d} onPress={() => setDays(d)} />)}</Row>
       <Card style={{ gap: 8 }} testID="report">
         <KeyValue label="الإيراد" value={money.format(report.data?.totals.revenue ?? 0)} strong />
         <KeyValue label="متوسط الطلب" value={money.format(report.data?.totals.averageOrderValue ?? 0)} />

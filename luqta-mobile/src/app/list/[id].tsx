@@ -59,7 +59,7 @@ export default function ListScreen() {
   };
   const unchecked = list.items.filter((i) => !i.checked && i.product);
   return (
-    <Shell title={list.name} subtitle={list.kind === "family" ? tr("قائمة عائلية · {n} أفراد", { n: list.members.length }) : tr("قائمة شخصية")} back testID="list-detail">
+    <Shell title={list.name} subtitle={list.kind === "family" ? tr("قائمة عائلية · {n:member}", { n: list.members.length }) : tr("قائمة شخصية")} back testID="list-detail">
       {error ? <Notice text={error} tone="danger" /> : null}
       <Card style={{ gap: 4 }} testID="list-items">
         {list.items.map((item) => (
@@ -92,7 +92,7 @@ export default function ListScreen() {
         <Button title={tr("اقرأ النص")} testID="paste-parse" secondary disabled={paste.trim().length < 2} onPress={() => void parse()} />
         {parsed ? <>
           {parsed.map((p, i) => <Row key={i}><Badge label={p.product ? "مطابق" : "نصي"} tone={p.product ? "success" : "muted"} /><Txt style={{ flex: 1 }}>{p.quantity} × {p.product?.name || p.name}</Txt></Row>)}
-          <Button title={tr("أضف {n} عناصر للقائمة", { n: parsed.length })} testID="paste-import" onPress={() => void importParsed()} />
+          <Button title={tr("أضف {n:item:acc} للقائمة", { n: parsed.length })} testID="paste-import" onPress={() => void importParsed()} />
         </> : null}
       </Card>
       <Card style={{ marginTop: 14, gap: 8 }} testID="list-members">

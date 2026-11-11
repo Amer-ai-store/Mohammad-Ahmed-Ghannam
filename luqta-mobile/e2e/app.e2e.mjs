@@ -895,7 +895,7 @@ e2e('L061 L062 L063 L064 L065 L066 points after delivery, daily check-in, badges
   const page = await open(user, '/rewards');
   await until(async () => Number(await textOf(page, 'points-balance')) === before, 10000, 'balance shown');
   await tap(page, 'checkin-button');
-  await see(page, 'سلسلة 1 أيام');
+  await see(page, 'يوم واحد على التوالي');
   const checkin = await api('GET', '/rewards/check-in', undefined, user.token);
   assert.equal(checkin.checkedInToday, true);
   const tier = await api('GET', '/rewards/tier', undefined, user.token);
@@ -1577,4 +1577,27 @@ e2e('L124 the staff screens in English: admin dashboard, project, sync, merchant
   const road = await english(await stack.ensureDriver(), '/driver');
   await see(road, EN['طلبات التوصيل المعيّنة']);
   await stillArabic(road, 'driver screen');
+});
+
+e2e('L035 a cart shared as a link is offered, added on one tap, and read strictly', async ({ open }) => {
+  const user = await stack.register('مشاركة السلة');
+  const link = 'milk*2,bread*1,<script>*3,ghost-item*1,eggs*0';
+  const page = await open(user, `/cart?add=${encodeURIComponent(link)}`);
+  await id(page, 'shared-cart').waitFor();
+  await id(page, 'shared-line-milk').waitFor();
+  await id(page, 'shared-line-bread').waitFor();
+  assert.equal(await page.locator('[data-testid^="shared-line-"]').count(), 2, 'unknown or malformed lines are left out');
+  assert.equal(await cartCount(page), 0, 'nothing is added before the tap');
+  await tap(page, 'shared-cart-add');
+  await id(page, 'cart-line-milk').waitFor();
+  await id(page, 'cart-line-bread').waitFor();
+  await until(async () => (await cartCount(page)) === 3, 10000, 'three units added');
+  assert.equal(await page.locator('[data-testid="shared-cart"]').count(), 0, 'the offer closes once used');
+  await see(page, '3 منتجات في سلتك');
+  // Sharing this cart sends a link that opens the same products.
+  await tap(page, 'share-cart');
+  const sent = await until(() => page.evaluate(() => window.__shared[0]?.text), 10000, 'share sheet opened');
+  const add = decodeURIComponent(sent.match(/luqta:\/\/cart\?add=(\S+)/)[1]);
+  assert.deepEqual(Object.fromEntries(add.split(',').map((p) => p.split('*')).map(([k, v]) => [k, Number(v)])), { milk: 2, bread: 1 });
+  assert.ok(sent.includes('3 منتجات'), 'the message counts the products in Arabic');
 });

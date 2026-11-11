@@ -162,7 +162,7 @@ export function Shell({ children, title, subtitle, search = false, robot, robotM
           ) : null}
         </KeyboardAvoidingView>
       </View>
-      {store.toast ? <View testID="toast" accessibilityLiveRegion="polite" style={s.toast}><Txt weight="bold" style={{ color: t.onToast, textAlign: "center", fontSize: 14 }}>{tr(store.toast)}</Txt></View> : null}
+      {store.toast ? <View testID="toast" accessibilityLiveRegion="polite" style={s.toast}><Txt weight="bold" style={{ color: t.onToast, textAlign: "center", fontSize: 14 }}>{tr(store.toast, store.toastVars)}</Txt></View> : null}
     </SafeAreaView>
   );
 }

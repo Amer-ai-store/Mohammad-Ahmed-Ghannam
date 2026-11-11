@@ -29,7 +29,7 @@ export default function PantryScreen() {
   const stats = pantry.data?.stats;
   const items = (pantry.data?.items || []).filter((i) => (tab === "active" ? i.status === "active" : i.status !== "active"));
   return (
-    <Shell title="مخزن البيت" subtitle="تابع الصلاحية وقلّل الهدر ووفّر الانبعاثات" robot={stats?.expiringSoon ? tr("عندك {n} منتجات قربت تنتهي!", { n: stats.expiringSoon }) : "مخزنك تمام 🌱"} testID="pantry">
+    <Shell title="مخزن البيت" subtitle="تابع الصلاحية وقلّل الهدر ووفّر الانبعاثات" robot={stats?.expiringSoon ? tr("عندك {n:product} قربت تنتهي!", { n: stats.expiringSoon }) : "مخزنك تمام 🌱"} testID="pantry">
       {error ? <Notice text={error} tone="danger" /> : null}
       <Row style={{ marginTop: 4 }}>
         <Card style={{ flex: 1, alignItems: "center", gap: 2 }} testID="carbon"><Leaf size={22} color={t.success} /><Txt weight="extra" style={{ fontSize: 22, color: t.success }}>{stats?.carbonSavedKg ?? 0}</Txt><Txt style={{ fontSize: 11, color: t.muted, textAlign: "center" }}>{tr("كغ انبعاثات وفّرتها")}</Txt></Card>
@@ -43,7 +43,7 @@ export default function PantryScreen() {
             <Row>
               <View style={{ flex: 1, gap: 2 }}>
                 <Row gap={6}><Txt weight="bold">{i.name} × {i.quantity}</Txt><Badge label={FRESH[i.freshness][1]} tone={FRESH[i.freshness][0]} /></Row>
-                <Txt style={{ color: t.muted, fontSize: 12 }}>{i.status === "active" ? (i.daysLeft >= 0 ? tr("ينتهي بعد {d} يوم ({e})", { d: i.daysLeft, e: i.expiresOn }) : tr("انتهى منذ {d} يوم", { d: -i.daysLeft })) : i.expiresOn}</Txt>
+                <Txt style={{ color: t.muted, fontSize: 12 }}>{i.status === "active" ? (i.daysLeft >= 0 ? tr("ينتهي بعد {d:day:acc} ({e})", { d: i.daysLeft, e: i.expiresOn }) : tr("انتهى منذ {d:day:acc}", { d: -i.daysLeft })) : i.expiresOn}</Txt>
               </View>
               {i.status === "active" ? <>
                 <Button title={tr("استهلكته")} testID={`consume-${i.id}`} onPress={() => void act(async () => { await api.patch(`/pantry/${i.id}`, { status: "consumed" }); robot.react("reward", tr("وفّرت {k} كغ انبعاثات 🌱", { k: Math.round(i.carbonKg * i.quantity * 100) / 100 })); })} style={{ minHeight: 38, paddingVertical: 4, paddingHorizontal: 10 }} />

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Share, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
-import { Bookmark, ShoppingCart, Tag, Trash } from "lucide-react-native";
+import { Bookmark, Share2, ShoppingCart, Tag, Trash, Users } from "lucide-react-native";
 import { Shell } from "../components/Shell";
 import { ProductImage } from "../components/ProductCard";
 import { Mascot } from "../components/Robot";
@@ -13,6 +14,7 @@ import { useI18n } from "../lib/i18n";
 import { useMoney } from "../lib/money";
 import { api } from "../lib/api";
 import { cartLimit } from "../lib/reorder";
+import { parseSharedCart, sharedCartLink } from "../lib/sharedCart";
 
 type Quote = { subtotal: number; discount: number; shipping: number; total: number; freeShippingRemaining: number; couponError: string | null; zone: { name: string } | null };
 
@@ -24,8 +26,17 @@ export default function Cart() {
   const store = useStore();
   const { products, cart, saved, setQuantity, subtotal, shipping, settings } = store;
   const [coupon, setCoupon] = useState("");
-  // A code picked in the coupon wallet arrives as ?coupon= and is applied straight away.
-  const { coupon: offered } = useLocalSearchParams<{ coupon?: string }>();
+  // A code picked in the coupon wallet arrives as ?coupon= and is applied straight away. A cart someone shared
+  // arrives as ?add=rice*2,milk*1 and is only offered: nothing is added until the shopper taps "add all".
+  const { coupon: offered, add: sharedParam } = useLocalSearchParams<{ coupon?: string; add?: string }>();
+  const [sharedHandled, setSharedHandled] = useState<string | null>(null);
+  const shared = useMemo(() => {
+    const items = parseSharedCart(sharedParam);
+    const known = Object.entries(items).map(([id, quantity]) => ({ product: store.products.find((p) => p.id === id), quantity })).filter((l) => l.product);
+    return { known, items: Object.fromEntries(known.map((l) => [l.product!.id, l.quantity])) };
+  }, [sharedParam, store.products]);
+  const showShared = typeof sharedParam === "string" && sharedParam !== "" && sharedHandled !== sharedParam;
+  const closeShared = () => { setSharedHandled(typeof sharedParam === "string" ? sharedParam : null); router.setParams({ add: "" }); };
   const [applied, setApplied] = useState("");
   const [lastOffered, setLastOffered] = useState<string | undefined>(undefined);
   if (typeof offered === "string" && offered && offered !== lastOffered) { setLastOffered(offered); setCoupon(offered); setApplied(offered.trim().toUpperCase()); }
@@ -45,8 +56,40 @@ export default function Cart() {
   }, [cart, applied, configured, lines.length]);
   const quote = configured && lines.length ? serverQuote : null;
   const apply = () => { setMessage(""); setApplied(coupon.trim().toUpperCase()); };
+  const shareCart = async () => {
+    const link = sharedCartLink(cart);
+    if (!link) return;
+    const list = lines.map(({ product, quantity }) => `• ${product!.name} × ${quantity}`).join("\n");
+    const message = `${tr("سلتي في لُقطة ({n:product}):", { n: store.cartCount })}\n${list}\n${tr("افتحها في التطبيق لإضافتها إلى سلتك:")} ${link}`;
+    await Clipboard.setStringAsync(link).catch(() => {});
+    // Where the system share sheet is missing (some browsers), the link is already on the clipboard.
+    try { await Share.share({ message }); } catch { store.notify("نُسخ رابط السلة"); }
+  };
+  const sharedCard = showShared ? (
+    <Card style={{ marginBottom: 14, gap: 10 }} tone="soft" testID="shared-cart">
+      <Row><Users size={20} color={t.primary} /><Txt weight="bold" style={{ flex: 1 }}>{tr("سلة مشتركة معك")}</Txt></Row>
+      {shared.known.length ? (
+        <>
+          {shared.known.slice(0, 8).map(({ product, quantity }) => (
+            <Txt key={product!.id} testID={`shared-line-${product!.id}`} style={{ fontSize: 13 }}>{`• ${product!.name} × ${quantity}`}</Txt>
+          ))}
+          {shared.known.length > 8 ? <Txt style={{ color: t.muted, fontSize: 12 }}>{tr("و{n:product} غيرها", { n: shared.known.length - 8 })}</Txt> : null}
+          <Row>
+            <Button title={tr("أضف الكل إلى سلتي")} testID="shared-cart-add" icon={<ShoppingCart size={16} color={t.onAccent} />} onPress={() => { store.addManyToCart(shared.items); closeShared(); }} style={{ flex: 1 }} />
+            <Button title={tr("تجاهل")} testID="shared-cart-dismiss" secondary onPress={closeShared} />
+          </Row>
+        </>
+      ) : (
+        <>
+          <Txt style={{ color: t.muted, fontSize: 13 }}>{tr("لم نجد منتجات هذه السلة في المتجر.")}</Txt>
+          <Button title={tr("تجاهل")} testID="shared-cart-dismiss" secondary onPress={closeShared} />
+        </>
+      )}
+    </Card>
+  ) : null;
   if (!lines.length && !savedLines.length) return (
     <Shell title="السلة" testID="cart">
+      {sharedCard}
       <EmptyState title="سلتك فاضية" detail="أضف منتجات من المتجر أو اطلب من لُقطي أن يجهز لك سلة بميزانيتك." art={<Mascot size={120} motion="sad" interactive={false} />} />
       <Button title={tr("جهز لي سلة بميزانية")} secondary onPress={() => router.navigate({ pathname: "/assistant", params: { q: "جهز لي سلة بـ ٢٠ دينار" } })} />
     </Shell>
@@ -55,7 +98,8 @@ export default function Cart() {
 
   const freeLeft = quote ? quote.freeShippingRemaining : Math.max(0, settings.freeShippingThreshold - subtotal);
   return (
-    <Shell title="السلة" subtitle={tr("{n} منتجات في سلتك", { n: store.cartCount })} robot={freeLeft > 0 ? tr("باقي {m} على التوصيل المجاني!", { m: money.format(freeLeft) }) : "التوصيل مجاني 🎉"} testID="cart">
+    <Shell title="السلة" subtitle={tr("{n:product} في سلتك", { n: store.cartCount })} robot={freeLeft > 0 ? tr("باقي {m} على التوصيل المجاني!", { m: money.format(freeLeft) }) : "التوصيل مجاني 🎉"} testID="cart">
+      {sharedCard}
       {lines.length ? (
         <View style={{ gap: 10 }}>
           {lines.map(({ product, quantity }) => (
@@ -101,6 +145,7 @@ export default function Cart() {
             {money.approx(total) ? <Txt style={{ color: t.muted, fontSize: 12 }}>{money.approx(total)}</Txt> : null}
           </Card>
           <Button title={tr(user ? "متابعة الطلب" : "سجّل الدخول للمتابعة")} testID="checkout" icon={<ShoppingCart size={18} color={t.onAccent} />} onPress={() => router.push(user ? { pathname: "/checkout", params: applied ? { coupon: applied } : {} } : "/login")} style={{ marginTop: 14 }} />
+          <Button title={tr("شارك السلة")} testID="share-cart" secondary icon={<Share2 size={17} color={t.ink} />} onPress={() => void shareCart()} style={{ marginTop: 10 }} />
         </>
       ) : null}
 

@@ -40,7 +40,7 @@ export default function Orders() {
               <Row gap={8}><Package size={18} color={t.primary} /><Txt weight="bold">{o.id}</Txt></Row>
               <Badge label={orderLabels[o.status] || o.status} tone={o.status === "delivered" ? "success" : o.status === "cancelled" ? "danger" : "accent"} />
             </Row>
-            <Txt style={{ color: t.muted, fontSize: 12 }}>{date(o.createdAt || o.date)} · {tr("{n} منتجات", { n: o.items.reduce((s, i) => s + i.quantity, 0) })}</Txt>
+            <Txt style={{ color: t.muted, fontSize: 12 }}>{date(o.createdAt || o.date)} · {tr("{n:product}", { n: o.items.reduce((s, i) => s + i.quantity, 0) })}</Txt>
             <Txt numberOfLines={2} style={{ fontSize: 13 }}>{o.items.map((i) => `${i.name} × ${i.quantity}`).join("، ")}</Txt>
             {ACTIVE.includes(o.status) ? <OrderSteps status={o.status} /> : null}
             <Row style={{ justifyContent: "space-between" }}>

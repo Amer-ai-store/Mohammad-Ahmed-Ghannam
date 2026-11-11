@@ -23,14 +23,15 @@
 
 المالك يعمل من الهاتف فقط، بلا حاسوب ولا طرفية. خطوتان فقط عليه، والباقي على المساعد.
 
-1. **المساعد:** يدمج التغييرات في `main` بعد نجاح كل الفحوص، ثم يرسل للمالك SHA الكامل لآخر commit على `main` (40 حرفًا)، مع رابط الخطوة 2.
+1. **المساعد:** يدمج التغييرات في `main` بعد نجاح كل الفحوص. الدمج الذي يمس `luqta-mobile/` يبدأ وحده تشغيل **Release Android app** (حدث `push`) يبني النسخة ويوقّعها دون نشر. بعد نجاح هذا البناء يرسل للمالك SHA الكامل لذلك الـ commit (40 حرفًا)، مع رابط الخطوة 2.
 2. **المالك:** يفتح
    https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/settings/variables/actions/RELEASE_APPROVED_SHA
    ويضع الـ SHA مكان القيمة القديمة، ثم يضغط **Update variable**، ويكتب للمساعد «تم».
    إن لم تفتح الصفحة، فمن **Settings → Secrets and variables → Actions → Variables** اضغط القلم ✏️ بجانب `RELEASE_APPROVED_SHA`.
 3. **المساعد:**
-   - يتأكد أن `main` لم يتغير. إن تغير، يرسل SHA الجديد ويعود إلى الخطوة 2.
-   - يشغّل **Release Android app** على `main` (`workflow_dispatch`).
+   - يعيد تشغيل بناء الـ `push` نفسه لذلك الـ commit: **Re-run all jobs** في صفحة التشغيل، أو `rerun_workflow_run` من أدوات GitHub.
+   - إعادة التشغيل تحتفظ بالـ SHA ورقم الإصدار، وتقرأ قيمة `RELEASE_APPROVED_SHA` الجديدة. لذلك لا يبطل الاعتماد إذا دفع وكيل آخر إلى `main` بعد الدمج، ولا حاجة لطلب رقم جديد من المالك. جُرّبت هذه الطريقة في v2.0.97 بتاريخ 2026-11-09، وانتظرت مهمة `publish` الموافقة.
+   - لا يشغّل `workflow_dispatch` على `main` إلا إذا لم يبدأ بناء `push` لذلك الـ commit (لأن الدمج لم يمس `luqta-mobile/`). في هذه الحالة يتأكد قبل التشغيل أن `main` ما زال على الـ SHA الذي اعتمده المالك.
    - بعد نحو 15 دقيقة يتحقق من شيئين:
      - في سجل خطوة «Build, sign and verify the release APK» يظهر `Signer #1 certificate DN: CN=Amer AI Store, O=Amer AI Store, C=JO`.
      - مهمة `publish` حالتها **Waiting**. هذا يعني أن كل البوابات نجحت.
@@ -52,7 +53,7 @@
 - **صلاحية الرمز المؤقت:** في قائمة الصلاحيات ثلاثة أسطر متشابهة: «Codespaces secrets» و«Dependabot secrets» و«Secrets». المطلوب **Secrets** وحده. تصحيح الرمز من **Edit** لا يغيّر قيمته.
 - **الموافقة على النشر:** تطبيق GitHub على الهاتف يعلق على «Loading steps» ولا يعرض الزر. الحل: Chrome مع Desktop site.
 - **كلمة مرور النسخة الاحتياطية:** 16 حرفًا على الأقل، بأحرف إنجليزية وأرقام لتسهل كتابتها على الهاتف.
-- **تغيّر `main` قبل النشر:** إن دُفع commit جديد قبل التشغيل، يتغير الـ SHA المطلوب، فحدّث `RELEASE_APPROVED_SHA` قبل التشغيل.
+- **تغيّر `main` قبل النشر:** كان التشغيل اليدوي على `main` يأخذ آخر commit فيه، فيبطل الاعتماد كلما دفع وكيل آخر، ويُطلب من المالك رقم جديد. الحل في الخطوة 3: إعادة تشغيل بناء الـ `push` للـ commit المعتمد نفسه.
 - **حذف الأسرار:** لا يحذف المالك أسرارًا بيده، خوفًا من حذف سر المفتاح بالخطأ. حذف `RELEASE_SETUP_TOKEN` يتم بالـ workflow `release-setup-cleanup.yml`.
 
 ## النسخة الاحتياطية للمفتاح
@@ -76,8 +77,8 @@
 
 ```text
 لنشر تطبيق لُقطة (مستودع Amer-ai-store/Mohammad-Ahmed-Ghannam على GitHub) اتبع docs/release-runbook.md في المستودع:
-ادمج في main بعد نجاح الفحوص، وأرسل لي SHA آخر commit مع رابط تعديل RELEASE_APPROVED_SHA،
-ثم شغّل Release Android app على main، وتحقق أن التوقيع CN=Amer AI Store وأن publish ينتظر الموافقة،
+ادمج في main بعد نجاح الفحوص، وبعد نجاح بناء ذلك الـ commit أرسل لي الـ SHA مع رابط تعديل RELEASE_APPROVED_SHA،
+ثم أعد تشغيل (Re-run all jobs) بناء Release Android app الذي بدأ عند دمج ذلك الـ commit، وتحقق أن التوقيع CN=Amer AI Store وأن publish ينتظر الموافقة،
 ثم أرسل لي رابط التشغيل لأوافق من Chrome (Desktop site)، ثم تحقق من الإصدار ورابط التحميل.
 لا تطلب مني أسرارًا في المحادثة، ولا تشغّل release-signing-setup.yml، ولا تغيّر أسرار SIGNING_*.
 أنا أعمل من الهاتف فقط: خطوات قصيرة بالعربية وروابط مباشرة.
