@@ -1,6 +1,18 @@
 // English text for the Arabic source strings passed through t(). Missing entries fall back to Arabic;
 // src/lib/i18n.test.mjs fails when a customer-facing or staff-screen string has no English translation.
 export const EN: Record<string, string> = {
+  "تجاهل": "Dismiss",
+  "سلة مشتركة معك": "A cart shared with you",
+  "و{n:product} غيرها": "and {n:product} more",
+  "أضف الكل إلى سلتي": "Add all to my cart",
+  "لم نجد منتجات هذه السلة في المتجر.": "None of these products are in the store.",
+  "شارك السلة": "Share cart",
+  "سلتي في لُقطة ({n:product}):": "My Luqta cart ({n:product}):",
+  "افتحها في التطبيق لإضافتها إلى سلتك:": "Open it in the app to add it to your cart:",
+  "نُسخ رابط السلة": "Cart link copied",
+  "المتاح {n:piece} فقط": "Only {n:piece} available",
+  "أُضيف {n:product} إلى السلة": "{n:product} added to the cart",
+  "طُبّق الرمز {c} في السلة": "Code {c} applied in the cart",
   "{p:product} · عمولة {c}% · {m}": "{p:product} · {c}% commission · {m}",
   "+{n:point} · {d:day} على التوالي": "+{n:point} · {d:day} in a row",
   "+{n:point}! حضورك {d:day} على التوالي": "+{n:point}! {d:day} in a row",

@@ -21,7 +21,7 @@ export default function CouponWallet() {
   const { data, loading, error, demo, reload } = useRemote<{ coupons: PublicCoupon[] }>("/coupons/public", { demo: () => ({ coupons: [{ code: DEMO_COUPON.code, title: "كوبون تجريبي", type: "fixed", value: DEMO_COUPON.discount, minSubtotal: 0, expiresAt: null }] }) });
   const { user } = useSession();
   const mine = useRemote<{ vouchers: PublicCoupon[] }>(user ? "/loyalty/stamps" : null, { auth: true });
-  function use(c: PublicCoupon) { notify(`طُبّق الرمز ${c.code} في السلة`); router.navigate({ pathname: "/cart", params: { coupon: c.code } }); }
+  function use(c: PublicCoupon) { notify("طُبّق الرمز {c} في السلة", { c: c.code }); router.navigate({ pathname: "/cart", params: { coupon: c.code } }); }
   return (
     <Shell title="محفظة الكوبونات" subtitle="كوبونات المتجر المتاحة لك الآن" side={<DemoChip show={demo} />}>
       {mine.data?.vouchers.length ? <View style={{ gap: 8, marginBottom: 12 }} testID="my-vouchers"><Txt weight="bold" style={{ color: t.title, fontSize: 18 }}>قسائمي الخاصة</Txt>{mine.data.vouchers.map((v) => <Card key={v.code} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, backgroundColor: t.successSoft }}><Ticket size={28} color={t.green} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt weight="bold" style={{ color: t.title }}>{v.type === "percent" ? `${v.value}%` : money(v.value)} — {v.title || "قسيمة"}</Txt><Chip label={v.code} tone="neutral" /></View><SmallButton title="استخدم" onPress={() => use(v)} /></Card>)}</View> : null}

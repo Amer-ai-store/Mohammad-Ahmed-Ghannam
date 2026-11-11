@@ -3,12 +3,13 @@
 // After a verb or a preposition the Arabic dual changes too ("أضف منتجين", "منذ يومين"): those texts write
 // {n:product:acc}. Pure, so the node tests can check it.
 
-export type Noun = "product" | "item" | "day" | "point" | "person" | "member" | "interest";
+export type Noun = "product" | "item" | "piece" | "day" | "point" | "person" | "member" | "interest";
 
 type ArabicForms = { one: string; two: string; twoAcc: string; few: string; many: string; other: string };
 const AR: Record<Noun, ArabicForms> = {
   product: { one: "منتج واحد", two: "منتجان", twoAcc: "منتجين", few: "منتجات", many: "منتجًا", other: "منتج" },
   item: { one: "عنصر واحد", two: "عنصران", twoAcc: "عنصرين", few: "عناصر", many: "عنصرًا", other: "عنصر" },
+  piece: { one: "قطعة واحدة", two: "قطعتان", twoAcc: "قطعتين", few: "قطع", many: "قطعة", other: "قطعة" },
   day: { one: "يوم واحد", two: "يومان", twoAcc: "يومين", few: "أيام", many: "يومًا", other: "يوم" },
   point: { one: "نقطة واحدة", two: "نقطتان", twoAcc: "نقطتين", few: "نقاط", many: "نقطة", other: "نقطة" },
   person: { one: "شخص واحد", two: "شخصان", twoAcc: "شخصين", few: "أشخاص", many: "شخصًا", other: "شخص" },
@@ -18,6 +19,7 @@ const AR: Record<Noun, ArabicForms> = {
 const EN: Record<Noun, [one: string, other: string]> = {
   product: ["product", "products"],
   item: ["item", "items"],
+  piece: ["piece", "pieces"],
   day: ["day", "days"],
   point: ["point", "points"],
   person: ["person", "people"],
