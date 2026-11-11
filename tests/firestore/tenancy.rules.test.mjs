@@ -329,3 +329,64 @@ test('PO-02 rejection, scoped visibility, reuse of audit entries and cross-compa
   await assertFails(deleteDoc(doc(db(users.accA), 'companies/A/purchaseOrders/p4')));
   await assertSucceeds(deleteDoc(doc(pm, 'companies/A/purchaseOrders/p4')));
 });
+
+// ---------- AI agents and workspaces ----------
+const agent = (u, over) => ({ name: 'مساعد المبيعات', systemInstruction: 'أنت مساعد خبير في تحليل فواتير الإيجارات وتلخيصها للمستأجرين.', model: 'gemini-3.7-flash', temperature: 0.2, by: u, at: 1, ...over });
+
+test('AGT-01 agents: only owner/chairman/GM write; fields validated; members read; other companies denied', async () => {
+  await assertSucceeds(setDoc(doc(db(users.gmA), 'companies/A/agents/agent_abc123'), agent('gmA')));
+  await assertSucceeds(setDoc(doc(db(users.ownerA), 'companies/A/agents/a2'), agent('ownerA', { temperature: 1 })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/agents/a3'), agent('accA')));
+  await assertFails(setDoc(doc(db(users.pmA), 'companies/A/agents/a3'), agent('pmA')));
+  await assertFails(setDoc(doc(db(users.gmA), 'companies/A/agents/a4'), agent('gmA', { temperature: 3 })));
+  await assertFails(setDoc(doc(db(users.gmA), 'companies/A/agents/a4'), agent('gmA', { temperature: '0.2' })));
+  await assertFails(setDoc(doc(db(users.gmA), 'companies/A/agents/a4'), agent('gmA', { model: 'gpt-4o' })));
+  await assertFails(setDoc(doc(db(users.gmA), 'companies/A/agents/a4'), agent('gmA', { systemInstruction: '' })));
+  await assertFails(setDoc(doc(db(users.gmA), 'companies/A/agents/a4'), agent('gmA', { systemInstruction: 'x'.repeat(4001) })));
+  await assertFails(setDoc(doc(db(users.gmA), 'companies/A/agents/a4'), agent('gmA', { apiKey: 'secret' })));
+  await assertFails(setDoc(doc(db(users.gmA), 'companies/A/agents/a4'), agent('ownerA')));
+  await assertSucceeds(getDoc(doc(db(users.empA), 'companies/A/agents/agent_abc123')));
+  await assertFails(getDoc(doc(db(users.ownerB), 'companies/A/agents/agent_abc123')));
+  await assertFails(setDoc(doc(db(users.ownerB), 'companies/A/agents/a5'), agent('ownerB')));
+  await assertFails(deleteDoc(doc(db(users.accA), 'companies/A/agents/a2')));
+  await assertSucceeds(deleteDoc(doc(db(users.gmA), 'companies/A/agents/a2')));
+});
+
+test('WS-01 workspaces: writers set the active agent, which must exist in the same company', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const f = ctx.firestore();
+    await setDoc(doc(f, 'companies/A/agents/agent_abc123'), agent('ownerA'));
+    await setDoc(doc(f, 'companies/B/agents/agentB'), agent('ownerB'));
+  });
+  await assertSucceeds(setDoc(doc(db(users.accA), 'companies/A/workspaces/ws1'), { name: 'شاشة عقود الإيجار', activeAgentId: 'agent_abc123' }));
+  await assertSucceeds(setDoc(doc(db(users.accA), 'companies/A/workspaces/ws2'), { name: 'بلا وكيل', activeAgentId: null, by: 'accA', at: 1 }));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/workspaces/ws3'), { name: 'وكيل غير موجود', activeAgentId: 'ghost' }));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/workspaces/ws3'), { name: 'وكيل شركة أخرى', activeAgentId: 'agentB' }));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/workspaces/ws3'), { name: 'حقل زائد', activeAgentId: null, prompt: 'x' }));
+  await assertFails(setDoc(doc(db(users.audA), 'companies/A/workspaces/ws3'), { name: 'مدقق' }));
+  await assertSucceeds(updateDoc(doc(db(users.gmA), 'companies/A/workspaces/ws2'), { activeAgentId: 'agent_abc123' }));
+  await assertFails(getDoc(doc(db(users.ownerB), 'companies/A/workspaces/ws1')));
+});
+
+// ---------- Phase 3: task board ----------
+const task = (u, over) => ({ title: 'جرد الرفوف', status: 'todo', by: u, at: 1, assigneeUid: 'empA', dueDate: '2026-11-20', priority: 'high', branchId: 'b1', ...over });
+
+test('TASK-01 tasks: validated fields, assignee must be a member, creator fixed', async () => {
+  await assertSucceeds(setDoc(doc(db(users.accA), 'companies/A/tasks/k1'), task('accA')));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { assigneeUid: 'ownerB' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { status: 'archived' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { priority: 'urgent' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { dueDate: '20/11/2026' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { branchId: 'ghost' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('accA', { title: '' })));
+  await assertFails(setDoc(doc(db(users.accA), 'companies/A/tasks/k2'), task('gmA')));
+  await assertFails(setDoc(doc(db(users.audA), 'companies/A/tasks/k2'), task('audA')));
+  await assertFails(setDoc(doc(db(users.ownerB), 'companies/A/tasks/k2'), task('ownerB', { assigneeUid: null, branchId: null })));
+  // The assignee moves it along; an unrelated member cannot; nobody rewrites the creator.
+  await assertSucceeds(updateDoc(doc(db(users.empA), 'companies/A/tasks/k1'), { status: 'doing', updatedAt: 2 }));
+  await assertFails(updateDoc(doc(db(users.pmA), 'companies/A/tasks/k1'), { status: 'done', updatedAt: 3 }));
+  await assertSucceeds(updateDoc(doc(db(users.gmA), 'companies/A/tasks/k1'), { status: 'done', doneAt: 3, updatedAt: 3 }));
+  await assertFails(updateDoc(doc(db(users.gmA), 'companies/A/tasks/k1'), { by: 'gmA' }));
+  await assertFails(deleteDoc(doc(db(users.empA), 'companies/A/tasks/k1')));
+  await assertSucceeds(deleteDoc(doc(db(users.gmA), 'companies/A/tasks/k1')));
+});

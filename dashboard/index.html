@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>مركز قيادة عامر</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -326,7 +327,7 @@ nav.side{gap:.5rem}
 <section class="panel" id="trustsoft-handoff-entry" aria-label="TrustSoft handoff and read-only connector">
  <div class="panel-head"><div><span class="eyebrow">TRUSTSOFT · HANDOFF · READ ONLY</span><h2>استلام لوحة TrustSoft وربطها بمركز جوافة</h2></div><span class="pill warn">تسليم جزئي — قبول التشغيل غير مثبت</span></div>
  <p class="small muted">مرجع التسليم 29 أكتوبر 2026: موصل موقّع وقراءات تجريبية موثقة تاريخيًا. لا يُعد ذلك إثباتًا لاتصال الهاتف أو اكتمال اختبارات OCR أو دمج كود AppDeploy في هذا المستودع. لا تُعرض هنا بيانات مالية أو مفاتيح أو مستندات التحقيق الخاصة.</p>
- <div class="toolbar"><a class="btn" href="#jawafa-trustsoft">فتح TrustSoft داخل القيادة المركزية</a><a href="https://trustcontrol-jawafa-h3gws3.v2.appdeploy.ai/?v=1793080626996" target="_blank" rel="noopener noreferrer">مرجع لوحة التسليم السابقة</a><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57" target="_blank" rel="noopener noreferrer">متابعة أدلة القبول</a></div>
+ <div class="toolbar"><a class="btn" href="./appdeploy-modules.html">الوحدات الموحّدة: جوافة وTrustSoft وAmer AI Store</a><a class="btn" href="#jawafa-trustsoft">فتح TrustSoft داخل القيادة المركزية</a><a href="https://trustcontrol-jawafa-h3gws3.v2.appdeploy.ai/?v=1793080626996" target="_blank" rel="noopener noreferrer">مرجع لوحة التسليم السابقة</a><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57" target="_blank" rel="noopener noreferrer">متابعة أدلة القبول</a></div>
  <details id="trustsoft-features"><summary>عرض أقسام TrustSoft العشرة ووظائفها</summary>
  <div class="toolbar"><a href="https://trustcontrol-jawafa-h3gws3.v2.appdeploy.ai/" target="_blank" rel="noopener noreferrer">فتح الوظائف الأصلية مع تسجيل الدخول</a></div>
  <ul>
@@ -999,6 +1000,94 @@ nav.side{gap:.5rem}
           <label class="field">الفرع الافتراضي<input id="set-branch" type="text" class="ltr" maxlength="120"></label>
           <div class="toolbar"><button class="primary" type="submit" data-write>حفظ الإعدادات</button></div>
         </form>
+        <section class="panel" id="owner-security-root" aria-labelledby="owner-security-heading">
+          <h2 id="owner-security-heading">أمان حساب المالك — تسجيل موحّد وتغيير كلمة المرور</h2>
+          <p class="small muted">المعرّف الإداري المعروض: <strong>admin</strong> (اسم عرض فقط، وليس كلمة مرور أو تصريحًا تلقائيًا). سجّل الدخول مرة واحدة إلى Firebase بحساب Google المعتمد؛ تُعاد الاستفادة من الجلسة داخل شاشات اللوحة نفسها.</p>
+          <p id="owner-sso-status" role="status" aria-live="polite">جارٍ فحص حالة المصادقة...</p>
+          <p>الحساب المتصل: <span id="owner-sso-email" class="ltr">—</span></p>
+          <div class="toolbar">
+            <button type="button" id="owner-sso-login" class="primary">دخول المالك عبر Google</button>
+            <button type="button" id="owner-sso-logout" hidden>تسجيل الخروج من جميع شاشات هذه اللوحة</button>
+          </div>
+          <form id="owner-email-signin-form" autocomplete="off">
+            <h3>تسجيل دخول واحد بالبريد وكلمة المرور (للحسابات المفعّلة في Firebase)</h3>
+            <label class="field">بريد الحساب المعتمد
+              <input type="email" name="owner-login-email" autocomplete="username" maxlength="160" required>
+            </label>
+            <label class="field">كلمة مرور Firebase الحالية
+              <input type="password" name="owner-login-password" autocomplete="current-password" required>
+            </label>
+            <button class="primary" type="submit">تسجيل الدخول لجميع شاشات اللوحة</button>
+          </form>
+          <form id="owner-phone-signin-form" autocomplete="off">
+            <h3>تسجيل الدخول برقم الهاتف ورمز SMS</h3>
+            <p class="small muted">يُختار مفتاح الدولة تلقائيًا حسب لغة الجهاز عند الإمكان، ويمكن تغييره يدويًا. لا ترسل رمز SMS في المحادثة.</p>
+            <label class="field" for="owner-country-code">الدولة ومفتاح الاتصال
+              <select id="owner-country-code" name="owner-country-code" autocomplete="tel-country-code" required>
+                <option value="+962" data-region="JO">الأردن (+962)</option>
+                <option value="+970" data-region="PS">فلسطين (+970)</option>
+                <option value="+966" data-region="SA">السعودية (+966)</option>
+                <option value="+971" data-region="AE">الإمارات (+971)</option>
+                <option value="+965" data-region="KW">الكويت (+965)</option>
+                <option value="+974" data-region="QA">قطر (+974)</option>
+                <option value="+973" data-region="BH">البحرين (+973)</option>
+                <option value="+968" data-region="OM">عُمان (+968)</option>
+                <option value="+20" data-region="EG">مصر (+20)</option>
+                <option value="+964" data-region="IQ">العراق (+964)</option>
+                <option value="+963" data-region="SY">سوريا (+963)</option>
+                <option value="+961" data-region="LB">لبنان (+961)</option>
+                <option value="+967" data-region="YE">اليمن (+967)</option>
+                <option value="+218" data-region="LY">ليبيا (+218)</option>
+                <option value="+216" data-region="TN">تونس (+216)</option>
+                <option value="+213" data-region="DZ">الجزائر (+213)</option>
+                <option value="+212" data-region="MA">المغرب (+212)</option>
+                <option value="+249" data-region="SD">السودان (+249)</option>
+                <option value="+90" data-region="TR">تركيا (+90)</option>
+                <option value="+44" data-region="GB">المملكة المتحدة (+44)</option>
+                <option value="+1" data-region="US">الولايات المتحدة (+1)</option>
+                <option value="+1" data-region="CA">كندا (+1)</option>
+                <option value="+49" data-region="DE">ألمانيا (+49)</option>
+                <option value="+33" data-region="FR">فرنسا (+33)</option>
+                <option value="+39" data-region="IT">إيطاليا (+39)</option>
+                <option value="+91" data-region="IN">الهند (+91)</option>
+              </select>
+            </label>
+            <p id="owner-country-detection" class="small muted" role="status">الأردن (+962) هو الخيار الافتراضي حتى يتحدد إعداد لغة الجهاز.</p>
+            <label class="field" for="owner-phone-number">رقم الهاتف المحلي
+              <input id="owner-phone-number" type="tel" name="owner-phone-number" autocomplete="tel-national" inputmode="tel" placeholder="07XXXXXXXX" maxlength="24" required>
+            </label>
+            <p class="small muted">الخطوة 1: اضغط «تحضير التحقق»، ثم أكمل مربع «أنا لست روبوتًا» الذي سيظهر هنا. الخطوة 2: بعد اكتمال التحقق اضغط «إرسال SMS الآن». لن يبقى الزر في تحميل غير محدود.</p>
+            <div id="owner-phone-recaptcha" aria-label="التحقق من عدم استخدام روبوت"></div>
+            <p id="owner-phone-status" class="small" role="status" aria-live="polite">لم يُرسل رمز SMS بعد. تحقّق من رقمك ومفتاح الدولة.</p>
+            <button type="submit" class="primary">تحضير التحقق وإرسال رمز SMS</button>
+          </form>
+          <form id="owner-phone-confirm-form" autocomplete="off" hidden>
+            <h3>التحقق من رمز SMS</h3>
+            <label class="field" for="owner-sms-code">الرمز الذي وصل إلى هاتفك
+              <input id="owner-sms-code" name="owner-sms-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required>
+            </label>
+            <button type="submit" class="primary">تأكيد الرمز والدخول</button>
+          </form>
+          <p class="small muted">الحساب الجديد يُعامل كمستخدم عادي، بصلاحية النظرة العامة فقط بعد اعتماد صلاحيات الخادم. لا تُمنح ملكية النظام تلقائيًا لأول شخص يدخل رقم هاتفه؛ يلزم اعتماد رقم المالك من حساب إداري موثوق.</p>
+          <form id="owner-password-form" autocomplete="off" hidden>
+            <h3>تغيير كلمة مرور حساب Firebase بالبريد وكلمة المرور</h3>
+            <p class="small muted">يتطلب إدخال كلمة المرور الحالية لإعادة إثبات الهوية. لن تُحفَظ كلمات المرور في اللوحة أو GitHub.</p>
+            <label class="field">كلمة المرور الحالية
+              <input type="password" name="current-password" autocomplete="current-password" required>
+            </label>
+            <label class="field">كلمة المرور الجديدة (14 محرفًا على الأقل)
+              <input type="password" name="new-password" autocomplete="new-password" minlength="14" required>
+            </label>
+            <label class="field">تأكيد كلمة المرور الجديدة
+              <input type="password" name="confirm-password" autocomplete="new-password" minlength="14" required>
+            </label>
+            <button class="primary" type="submit">تغيير كلمة المرور والتحقق من التنفيذ</button>
+          </form>
+          <a id="owner-google-security" class="btn" href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" hidden>تغيير كلمة مرور حساب Google من صفحة الأمان الرسمية</a>
+          <p id="owner-password-result" role="status" aria-live="polite"></p>
+          <p class="small muted">شاشات القيادة وجوافة ضمن هذا الموقع تعيد استخدام جلسة Firebase نفسها، وتجدد الرمز عند الطلب. لا تُخزَّن كلمة مرور SQL أو يُنشر رمز الدخول.</p>
+          <p class="small muted">حالة الربط بين النطاقات: جسر AAS الخاص وبوابة TrustSoft يحتاجان اعتماد الخادم للتحقق من Firebase قبل إلغاء شاشة الدخول المنفصلة. هذا الربط لم يُقبل إنتاجيًا بعد. <a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/219" target="_blank" rel="noopener noreferrer">متابعة الربط الموحد الآمن #219</a>.</p>
+        </section>
       </section>
     </main>
   </div>
@@ -1013,6 +1102,7 @@ nav.side{gap:.5rem}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="firebase-config.js"></script>
+<script src="owner-auth.js"></script>
 <script src="./aman-monitor/host-integration.js" defer></script>
 <script src="./trustsoft/host-integration.js" defer></script>
 <script>
@@ -1936,8 +2026,14 @@ nav.side{gap:.5rem}
       liveBox(el("p", { class: "small muted" }, "لم تُضبط إعدادات Firebase بعد. اتبع الدليل docs/firebase-setup.md ثم ضع إعدادات تطبيق الويب في dashboard/firebase-config.js."));
       return;
     }
-    try { for (const m of ["app", "auth", "firestore"]) await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-${m}-compat.js`); }
-    catch { liveBox(el("p", { class: "small", style: "color:var(--coral)" }, "تعذّر تحميل مكتبة Firebase. تحقق من الاتصال ثم أعد تحميل الصفحة.")); return; }
+    try {
+      // Central owner session loads app+auth once for every dashboard screen.
+      if(window.AAS_OWNER_AUTH) await window.AAS_OWNER_AUTH.ready;
+      else for (const m of ["app", "auth"]) await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-${m}-compat.js`);
+      if(typeof window.firebase?.firestore!=="function")
+        await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-firestore-compat.js`);
+    }
+    catch { liveBox(el("p", { class: "small", style: "color:var(--coral)" }, "تعذّر تحميل مكتبة Firebase أو تهيئة جلسة المالك؛ لا تُعرض بيانات حية.")); return; }
     const fb = window.firebase;
     const app = fb.apps.length ? fb.app() : fb.initializeApp(cfg);
     const auth = app.auth(), firestore = app.firestore();

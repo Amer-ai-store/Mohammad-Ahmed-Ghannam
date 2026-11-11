@@ -56,7 +56,7 @@ try {
   // 1. Signed-out preview: every view navigable, demo data clearly labelled.
   const a = await open();
   check('E2E-01', (await a.page.evaluate(() => window.__jawafaState.cloud)) === 'ready', 'Firebase SDK loaded and emulator connected');
-  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees'];
+  const views = ['home', 'sales', 'inventory', 'finance', 'investigations', 'maps', 'assistant', 'agents', 'connections', 'company', 'branches', 'members', 'audit', 'plans', 'approvals', 'purchases', 'suppliers', 'employees', 'aiagents', 'notifications', 'tasks'];
   const bad = [];
   for (const v of views) {
     await nav(a.page, v); await a.page.waitForTimeout(150);
@@ -202,7 +202,10 @@ try {
   await waitState(a.page, () => window.__jawafaState.orders[0]?.status === 'submitted');
   const bell = await a.page.waitForFunction(() => document.querySelector('#bell .count')?.textContent === '1' && !document.getElementById('bell').hidden, null, { timeout: 5000 }).then(() => true, () => false);
   check('E2E-30', bell, 'submitted order appears as 1 on the approvals bell');
+  // The bell opens the notification center; its approval item leads to the approvals inbox.
   await a.page.locator('#bell').click();
+  await a.page.waitForFunction(() => !document.querySelector('section.view[data-view="notifications"]').hidden);
+  await a.page.locator('section.view[data-view="notifications"] a.notif[data-kind="approval"]').click();
   await a.page.waitForFunction(() => !document.querySelector('section.view[data-view="approvals"]').hidden);
   await a.page.locator('section.view[data-view="approvals"] input[aria-label="ملاحظة القرار"]').fill('السعر مطابق');
   await a.page.getByRole('button', { name: 'اعتماد' }).click();
@@ -288,6 +291,85 @@ try {
   await a.page.screenshot({ path: `${out}/10-purchases.png` });
   await nav(d.page, 'employees'); await d.page.waitForTimeout(300);
   await d.page.screenshot({ path: `${out}/11-employees-branch-manager.png` });
+
+
+  // 3c. AI agents and workspaces: the owner defines the agent from the request, a workspace uses it,
+  // runs stay off without App Check, and a run (stubbed model on the emulator) sends only agent settings + typed text.
+  await nav(a.page, 'aiagents'); await a.page.waitForTimeout(200);
+  const aiView = a.page.locator('section.view[data-view="aiagents"]');
+  await aiView.locator('input[name="aname"]').fill('مساعد المبيعات');
+  await aiView.locator('input[name="model"]').fill('gemini-3.7-flash');
+  await aiView.locator('input[name="temp"]').fill('0.2');
+  await aiView.locator('textarea[name="instr"]').fill('أنت مساعد خبير في تحليل فواتير الإيجارات وتلخيصها للمستأجرين.');
+  await aiView.getByRole('button', { name: 'إضافة الوكيل' }).click();
+  await waitState(a.page, () => window.__jawafaState.agentsAi.length === 1);
+  // Let the agent form finish its own reset and redraw before using the workspace form.
+  await a.page.waitForFunction(() => document.querySelector('section.view[data-view="aiagents"] input[name="aname"]')?.value === '', null, { timeout: 5000 });
+  await a.page.waitForTimeout(150);
+  const ag = await a.page.evaluate(() => window.__jawafaState.agentsAi[0]);
+  check('E2E-36', ag.model === 'gemini-3.7-flash' && ag.temperature === 0.2 && /فواتير الإيجارات/.test(ag.systemInstruction), 'agent saved with name, system instruction, model gemini-3.7-flash and temperature 0.2');
+  await aiView.locator('input[name="wname"]').fill('شاشة عقود الإيجار');
+  await aiView.locator('select[name="wagent"]').selectOption(ag.id);
+  await aiView.getByRole('button', { name: 'إضافة مساحة' }).click();
+  await waitState(a.page, (id) => window.__jawafaState.workspaces.some(w => w.name === 'شاشة عقود الإيجار' && w.activeAgentId === id), ag.id)
+    .catch(async (e) => { console.log('DEBUG workspace', JSON.stringify(await a.page.evaluate(() => ({ ws: window.__jawafaState.workspaces, toast: document.getElementById('toast').textContent, wname: document.querySelector('section.view[data-view="aiagents"] input[name="wname"]')?.value, wagent: document.querySelector('section.view[data-view="aiagents"] select[name="wagent"]')?.value })))); throw e; });
+  const badRef = await expectDenial(() => a.page.evaluate(async () => { try { await window.firebase.app().firestore().collection('companies').doc(window.__jawafaState.companyId).collection('workspaces').add({ name: 'x', activeAgentId: 'ghost' }); return 'allowed'; } catch (e) { return e.code; } }));
+  check('E2E-37', badRef === 'permission-denied', 'workspace "شاشة عقود الإيجار" uses the agent; a workspace pointing to a missing agent is rejected: ' + badRef);
+  await a.page.waitForTimeout(300);
+  const off = await a.page.evaluate(() => { const v = document.querySelector('section.view[data-view="aiagents"]'); const btn = [...v.querySelectorAll('button')].find(b => b.textContent.trim() === 'تشغيل'); return { disabled: btn?.disabled, blocked: /يلزم App Check/.test(v.textContent) }; });
+  check('E2E-38', off.disabled === true && off.blocked, 'without an App Check site key the Run button is disabled and marked "يلزم App Check"');
+  await a.page.evaluate(() => { window.__jawafaAiTestRun = async (req) => { window.__lastAiReq = req; return 'ملخص تجريبي من نموذج بديل للاختبار'; }; });
+  await nav(a.page, 'home'); await nav(a.page, 'aiagents'); await a.page.waitForTimeout(200);
+  await aiView.locator('#ai-text').fill('لخّص فاتورة إيجار شهر 10');
+  await aiView.getByRole('button', { name: 'تشغيل' }).click();
+  await a.page.waitForFunction(() => /ملخص تجريبي/.test(document.getElementById('ai-answer')?.textContent || ''), null, { timeout: 5000 });
+  const req = await a.page.evaluate(() => window.__lastAiReq);
+  const labelled = await a.page.evaluate(() => /ناتج ذكاء اصطناعي/.test(document.querySelector('section.view[data-view="aiagents"] .ai-answer').textContent));
+  await waitState(a.page, () => window.__jawafaState.audit.some(e => e.action === 'agent.run'));
+  const auditRun = await a.page.evaluate(() => window.__jawafaState.audit.find(e => e.action === 'agent.run').detail);
+  check('E2E-39', JSON.stringify(Object.keys(req).sort()) === '["contents","generationConfig","model","systemInstruction"]' && req.contents === 'لخّص فاتورة إيجار شهر 10' && req.model === 'gemini-3.7-flash' && req.generationConfig.temperature === 0.2 && labelled && !auditRun.includes('فاتورة إيجار شهر'),
+    'run sends only agent settings + typed text; answer labelled as AI output; audit records the run without the prompt');
+  await a.page.screenshot({ path: `${out}/12-ai-agents.png` });
+  await nav(b.page, 'aiagents'); await b.page.waitForTimeout(300);
+  const audView = await b.page.evaluate(() => { const v = document.querySelector('section.view[data-view="aiagents"]'); return { form: !!v.querySelector('input[name="aname"]'), ws: !!v.querySelector('input[name="wname"]'), agents: window.__jawafaState.agentsAi.length }; });
+  check('E2E-40', !audView.form && !audView.ws && audView.agents === 1, 'auditor reads the agent but gets no agent or workspace form');
+
+  // 3d. Phase 3: task board, notification center, supplier performance.
+  const bmId = await d.page.evaluate(() => window.__jawafaState.user.uid);
+  await nav(a.page, 'tasks'); await a.page.waitForTimeout(200);
+  const tv = a.page.locator('section.view[data-view="tasks"]');
+  await tv.locator('input[name="ttitle"]').fill('جرد رفوف الزرقاء');
+  await tv.locator('select[name="tassignee"]').selectOption(bmId);
+  await tv.locator('input[name="tdue"]').fill('2026-01-15');
+  await tv.locator('select[name="tprio"]').selectOption('high');
+  await tv.getByRole('button', { name: 'إضافة المهمة' }).click();
+  await waitState(a.page, () => window.__jawafaState.tasks.some(t => t.title === 'جرد رفوف الزرقاء'));
+  const late = await a.page.waitForFunction(() => { const c = document.querySelector('section.view[data-view="tasks"] [data-col="todo"] .task-card.late'); return !!c && /متأخرة/.test(c.textContent); }, null, { timeout: 5000 }).then(() => true, () => false);
+  check('E2E-41', late, 'task assigned to the branch manager with a past due date appears in "للتنفيذ" marked overdue');
+  const bellBm = await d.page.waitForFunction(() => document.querySelector('#bell .count')?.textContent === '1', null, { timeout: 8000 }).then(() => true, () => false);
+  await d.page.locator('#bell').click();
+  await d.page.waitForFunction(() => !document.querySelector('section.view[data-view="notifications"]').hidden);
+  // The view is shown at once and drawn on the next frame; wait for the item itself.
+  await d.page.waitForFunction(() => !!document.querySelector('section.view[data-view="notifications"] a.notif'), null, { timeout: 5000 }).catch(() => {});
+  const note = await d.page.evaluate(() => document.querySelector('section.view[data-view="notifications"] a.notif')?.dataset.kind);
+  check('E2E-42', bellBm && note === 'overdue', 'branch manager\'s bell shows 1 and the notification center lists the overdue task');
+  await d.page.locator('section.view[data-view="notifications"] a.notif').click();
+  await d.page.waitForFunction(() => !document.querySelector('section.view[data-view="tasks"]').hidden);
+  await d.page.locator('section.view[data-view="tasks"] .task-card', { hasText: 'جرد رفوف الزرقاء' }).getByRole('button', { name: '→ قيد التنفيذ' }).click();
+  await waitState(d.page, () => window.__jawafaState.tasks.find(t => t.title === 'جرد رفوف الزرقاء')?.status === 'doing');
+  await d.page.locator('section.view[data-view="tasks"] .task-card', { hasText: 'جرد رفوف الزرقاء' }).getByRole('button', { name: '→ منجزة' }).click();
+  await waitState(a.page, () => window.__jawafaState.tasks.find(t => t.title === 'جرد رفوف الزرقاء')?.status === 'done');
+  const bmBellClear = await d.page.waitForFunction(() => document.querySelector('#bell .count').hidden, null, { timeout: 5000 }).then(() => true, () => false);
+  await nav(b.page, 'tasks'); await b.page.waitForTimeout(300);
+  const audTask = await b.page.evaluate(() => ({ form: !!document.querySelector('section.view[data-view="tasks"] input[name="ttitle"]'), moves: document.querySelectorAll('section.view[data-view="tasks"] .task-card button').length }));
+  const audDenied = await expectDenial(() => b.page.evaluate(async () => { const st = window.__jawafaState; const t = st.tasks.find(x => x.title === 'جرد رفوف الزرقاء'); try { await window.firebase.app().firestore().collection('companies').doc(st.companyId).collection('tasks').doc(t.id).update({ status: 'todo', updatedAt: Date.now() }); return 'allowed'; } catch (e) { return e.code; } }));
+  await waitState(a.page, () => ['task.create', 'task.doing', 'task.done'].every(x => window.__jawafaState.audit.some(e => e.action === x)));
+  check('E2E-43', bmBellClear && !audTask.form && audTask.moves === 0 && audDenied === 'permission-denied', 'assignee moved the task to done (audited), bell cleared; auditor has no form or moves and is denied via API: ' + audDenied);
+  await nav(a.page, 'tasks'); await a.page.waitForTimeout(300);
+  await a.page.screenshot({ path: `${out}/13-tasks.png` });
+  await nav(a.page, 'suppliers'); await a.page.waitForTimeout(300);
+  const supRow = await a.page.evaluate(() => document.querySelector('section.view[data-view="suppliers"] tbody tr')?.textContent || '');
+  check('E2E-44', /21\.5/.test(supRow) && /0%/.test(supRow), 'supplier performance from recorded orders: approved spend 21.5, rejection 0% (' + supRow.replace(/\s+/g, ' ').slice(0, 120) + ')');
 
   // 4. A stranger cannot read company A, even by id through the API.
   const c = await open({ width: 390, height: 844 });

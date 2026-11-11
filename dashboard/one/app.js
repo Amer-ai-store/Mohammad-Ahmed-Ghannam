@@ -53,7 +53,10 @@ const NAV = [
   ["maps", "📍", "الخرائط", "Maps"],
   ["assistant", "✦", "المساعد الذكي", "AI assistant"],
   ["agents", "⚇", "الوكلاء", "Agents"],
+  ["aiagents", "✧", "وكلاء الذكاء الاصطناعي", "AI agents"],
   ["sep", "", "العمليات", "Operations"],
+  ["notifications", "🛎", "التنبيهات", "Notifications"],
+  ["tasks", "✓", "المهام", "Tasks"],
   ["approvals", "🔔", "الموافقات", "Approvals"],
   ["purchases", "🛍", "أوامر الشراء", "Purchase orders"],
   ["suppliers", "🚚", "الموردون", "Suppliers"],
@@ -101,7 +104,7 @@ function show(view) {
 // ---------- state ----------
 const state = {
   cloud: "loading", // loading | ready | unconfigured | failed
-  user: null, profile: null, companies: [], companyId: null, invites: [], messages: [], tasks: [], branches: [], audit: [], employees: [], suppliers: [], orders: [], scopeKey: null,
+  user: null, profile: null, companies: [], companyId: null, invites: [], messages: [], tasks: [], branches: [], audit: [], employees: [], suppliers: [], orders: [], agentsAi: [], workspaces: [], scopeKey: null,
   demo: store.get("jawafa-one-demo", "1") === "1",
   localRouter: C.createRouter(),
 };
@@ -111,7 +114,7 @@ const dataset = (() => { let cache; return () => (state.demo ? (cache ||= C.demo
 
 // ---------- Firebase ----------
 let fb, auth, fs;
-const unsubs = { companies: null, invites: null, messages: null, tasks: null, branches: null, audit: null, employees: null, suppliers: null, orders: null };
+const unsubs = { companies: null, invites: null, messages: null, tasks: null, branches: null, audit: null, employees: null, suppliers: null, orders: null, agentsAi: null, workspaces: null };
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error(src)); document.head.append(s); }); }
 
 async function initCloud() {
@@ -149,7 +152,7 @@ function stopAll() { for (const k of Object.keys(unsubs)) { if (unsubs[k]) unsub
 function onUser(user) {
   stopAll();
   state.user = user && !user.isAnonymous ? { uid: user.uid, email: C.normalizeEmail(user.email), name: user.displayName || "", photo: user.photoURL || "" } : null;
-  state.companies = []; state.invites = []; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.employees = []; state.suppliers = []; state.orders = []; state.scopeKey = null; state.companyId = null; state.profile = null;
+  state.companies = []; state.invites = []; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.employees = []; state.suppliers = []; state.orders = []; state.agentsAi = []; state.workspaces = []; state.scopeKey = null; state.companyId = null; state.profile = null;
   if (!state.user) { render(); return; }
   // The profile remembers the last company across devices; localStorage is only a fallback.
   const me = state.user;
@@ -172,8 +175,9 @@ function onUser(user) {
 }
 
 function selectCompany(id) {
-  for (const k of ["messages", "tasks", "branches", "audit"]) { if (unsubs[k]) unsubs[k](); unsubs[k] = null; }
-  state.companyId = id; state.messages = []; state.tasks = []; state.branches = []; state.audit = [];
+  for (const k of ["messages", "tasks", "branches", "audit", "agentsAi", "workspaces"]) { if (unsubs[k]) unsubs[k](); unsubs[k] = null; }
+  state.companyId = id; state.messages = []; state.tasks = []; state.branches = []; state.audit = []; state.agentsAi = []; state.workspaces = [];
+  aiState.answer = null; aiState.error = null; aiState.editingAgent = null;
   if (id && state.user) {
     store.set("jawafa-one-company:" + state.user.uid, id);
     if (!state.profile || state.profile.lastCompanyId !== id) {
@@ -184,7 +188,10 @@ function selectCompany(id) {
     unsubs.branches = ref.collection("branches").orderBy("name").onSnapshot(s => { state.branches = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     unsubs.audit = ref.collection("audit").orderBy("at", "desc").limit(100).onSnapshot(s => { state.audit = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
     unsubs.messages = ref.collection("agentMessages").orderBy("at", "desc").limit(50).onSnapshot(s => { state.messages = s.docs.map(d => d.data()); render(); }, () => {});
-    unsubs.tasks = ref.collection("tasks").orderBy("at", "desc").limit(50).onSnapshot(s => { state.tasks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+    const byName = (a, b) => S(a.name).localeCompare(S(b.name));
+    unsubs.agentsAi = ref.collection("agents").limit(200).onSnapshot(s => { state.agentsAi = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => typeof a.systemInstruction === "string").sort(byName); render(); }, () => {});
+    unsubs.workspaces = ref.collection("workspaces").limit(200).onSnapshot(s => { state.workspaces = s.docs.map(d => ({ id: d.id, ...d.data() })).sort(byName); render(); }, () => {});
+    unsubs.tasks = ref.collection("tasks").orderBy("at", "desc").limit(300).onSnapshot(s => { state.tasks = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
   }
   subscribeOps();
   render();
@@ -476,7 +483,9 @@ function renderSuppliers(v) {
   if (!state.user) return needSignIn(v, title);
   if (!company()) return needCompany(v, title);
   const w = C.PROCURERS.includes(role());
-  const count = (id) => state.orders.filter(o => o.supplierId === id).length;
+  const stats = C.supplierStats(state.orders);
+  const st = (id) => stats[id] || { orders: 0, spend: 0, rejectionRate: null, avgApprovalHours: null, avgDeliveryHours: null };
+  const hrs = (h) => (h == null ? "—" : num(h) + T(" س", " h"));
   const form = w ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await addSupplier(e.target)) e.target.reset(); } },
     el("h3", null, T("إضافة مورد", "Add supplier")),
     el("div", { class: "cols-2" },
@@ -486,11 +495,12 @@ function renderSuppliers(v) {
       el("label", { class: "small" }, T("البريد", "Email"), el("input", { name: "semail", type: "email", maxlength: "200", class: "ltr" }))),
     el("button", { class: "primary", type: "submit" }, T("إضافة", "Add"))) : el("div", { class: "panel muted small" }, T("إضافة الموردين للمالك ورئيس المجلس والمدير العام ومدير المشتريات.", "Owner, chairman, general manager and procurement manager add suppliers."));
   const rows = state.suppliers.map(s => el("tr", null, el("td", null, S(s.name, 80)), el("td", null, S(s.category, 80)), el("td", { class: "ltr" }, S(s.phone, 30)), el("td", { class: "ltr" }, S(s.email, 200)),
-    el("td", null, num(count(s.id))), el("td", null, s.status === "inactive" ? badge("blocked", T("موقوف", "Inactive")) : badge("live", T("نشط", "Active"))),
+    el("td", null, num(st(s.id).orders)), el("td", null, money(st(s.id).spend)), el("td", null, st(s.id).rejectionRate == null ? "—" : st(s.id).rejectionRate + "%"),
+    el("td", null, hrs(st(s.id).avgApprovalHours)), el("td", null, hrs(st(s.id).avgDeliveryHours)), el("td", null, s.status === "inactive" ? badge("blocked", T("موقوف", "Inactive")) : badge("live", T("نشط", "Active"))),
     el("td", null, w ? el("button", { class: "ghost", onclick: () => setSupplierStatus(s, s.status === "inactive" ? "active" : "inactive") }, s.status === "inactive" ? T("تفعيل", "Activate") : T("إيقاف", "Deactivate")) : "")));
   v.replaceChildren(sectionHead(title, badge("demo", "UNVERIFIED"), csvBtn(() => downloadCsv("suppliers", "UNVERIFIED", [T("الاسم", "Name"), T("الفئة", "Category"), T("الهاتف", "Phone"), T("البريد", "Email"), T("الحالة", "Status")], state.suppliers.map(s => [s.name, s.category, s.phone, s.email, s.status])))),
-    el("div", { class: "banner info" }, T("قائمة الموردين يدخلها فريق المشتريات. عدد الأوامر محسوب من أوامر الشراء المسجلة هنا فقط، لا من قاعدة جوافة.", "Suppliers are entered by the procurement team. Order counts come only from purchase orders recorded here, not from the Jawafa database.")),
-    form, el("div", { style: "margin-top:1rem" }, table([T("الاسم", "Name"), T("الفئة", "Category"), T("الهاتف", "Phone"), T("البريد", "Email"), T("أوامر الشراء", "Orders"), T("الحالة", "Status"), ""], rows)));
+    el("div", { class: "banner info" }, T("قائمة الموردين يدخلها فريق المشتريات. مؤشرات الأداء (عدد الأوامر، والمصروف المعتمد، ونسبة الرفض، ومتوسط زمن الموافقة من الإرسال إلى القرار، ومتوسط زمن التوريد من الاعتماد إلى الاستلام) محسوبة من أوامر الشراء المسجلة هنا فقط، لا من قاعدة جوافة.", "Suppliers are entered by the procurement team. Performance figures (orders, approved spend, rejection rate, average approval time from submission to decision, average delivery time from approval to receipt) come only from purchase orders recorded here, not from the Jawafa database.")),
+    form, el("div", { style: "margin-top:1rem" }, table([T("الاسم", "Name"), T("الفئة", "Category"), T("الهاتف", "Phone"), T("البريد", "Email"), T("أوامر الشراء", "Orders"), T("المصروف المعتمد", "Approved spend"), T("نسبة الرفض", "Rejection"), T("زمن الموافقة", "Approval time"), T("زمن التوريد", "Delivery time"), T("الحالة", "Status"), ""], rows)));
 }
 
 // --- purchase orders ---
@@ -627,6 +637,206 @@ function scopeEditor(c, uid, r) {
     boxes.length ? el("div", null, ...boxes, el("p", { class: "small muted" }, T("بدون اختيار = كل الفروع.", "None selected = all branches.")),
       el("button", { type: "button", onclick: (e) => setScope(uid, [...e.target.closest("details").querySelectorAll("input:checked")].map(x => x.value).slice(0, 30)) }, T("حفظ", "Save")))
       : el("p", { class: "small muted" }, T("أضف فروعًا أولًا.", "Add branches first.")));
+}
+
+// ---------- AI agents & workspaces (Firebase AI Logic) ----------
+// Agents and workspaces are Firestore records (rules AGT-01, WS-01). A run sends only the agent's
+// settings and the text the member typed to Gemini through Firebase AI Logic; no company dataset or
+// financial record is attached, and the prompt/answer are not stored. Runs are enabled only when
+// ai-config.js carries an App Check (reCAPTCHA Enterprise) site key, so the public site cannot be
+// used to spend the project's AI quota. Answers are labelled AI and are never treated as LIVE data.
+const AI_SDK = "11.10.0";
+const aiState = { editingAgent: null, running: false, answer: null, error: null, wsId: "", text: "" };
+let aiRunner = null;
+function aiSiteKey() { return S(window.JAWAFA_ONE_APPCHECK_SITE_KEY || "", 200); }
+async function getAiRunner() {
+  if (EMULATOR && typeof window.__jawafaAiTestRun === "function") return window.__jawafaAiTestRun; // E2E stub only
+  if (!C.aiRunnable(aiSiteKey(), false)) throw Object.assign(new Error("appcheck"), { code: "appcheck-missing" });
+  if (!aiRunner) aiRunner = (async () => {
+    const base = `https://www.gstatic.com/firebasejs/${AI_SDK}/`;
+    const [appMod, checkMod, aiMod] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-app-check.js"), import(base + "firebase-ai.js")]);
+    const app = appMod.getApps().find(a => a.name === "jawafa-one-ai") || appMod.initializeApp(window.AMER_FIREBASE_CONFIG, "jawafa-one-ai");
+    checkMod.initializeAppCheck(app, { provider: new checkMod.ReCaptchaEnterpriseProvider(aiSiteKey()), isTokenAutoRefreshEnabled: true });
+    const ai = aiMod.getAI(app, { backend: new aiMod.GoogleAIBackend() });
+    return async (req) => {
+      const model = aiMod.getGenerativeModel(ai, { model: req.model, systemInstruction: req.systemInstruction, generationConfig: req.generationConfig });
+      const res = await model.generateContent(req.contents);
+      return res.response.text();
+    };
+  })().catch((e) => { aiRunner = null; throw e; });
+  return aiRunner;
+}
+const agentsCol = () => fs.collection("companies").doc(state.companyId).collection("agents");
+const wsCol = () => fs.collection("companies").doc(state.companyId).collection("workspaces");
+async function saveAgent(f) {
+  const v = C.validateAgent({ name: f.aname.value, systemInstruction: f.instr.value, model: f.model.value, temperature: f.temp.value });
+  if (!v.ok) { toast(v.error); return false; }
+  const data = { ...v.value, by: state.user.uid, at: Date.now() };
+  try {
+    if (aiState.editingAgent) { await agentsCol().doc(aiState.editingAgent).set(data); audit("agent.update", v.value.name + " · " + v.value.model); }
+    else { await agentsCol().add(data); audit("agent.create", v.value.name + " · " + v.value.model); }
+    aiState.editingAgent = null; toast(T("حُفظ الوكيل.", "Agent saved.")); return true;
+  } catch (e) { fail(e); return false; }
+}
+async function deleteAgent(a) {
+  if (state.workspaces.some(w => w.activeAgentId === a.id)) { toast(T("الوكيل مستخدم في مساحة عمل؛ غيّر الوكيل هناك أولًا.", "The agent is used by a workspace; change it there first.")); return; }
+  if (!confirm(T("حذف الوكيل «" + a.name + "»؟", "Delete agent \"" + a.name + "\"?"))) return;
+  try { await agentsCol().doc(a.id).delete(); audit("agent.delete", a.name); } catch (e) { fail(e); }
+}
+async function addWorkspace(f) {
+  const name = f.wname.value.trim();
+  if (!name || name.length > 80) { toast(T("اسم مساحة العمل مطلوب (حتى 80 حرفًا).", "Workspace name required (≤80).")); return false; }
+  try { await wsCol().add({ name, activeAgentId: f.wagent.value || null, by: state.user.uid, at: Date.now() }); audit("workspace.create", name); return true; }
+  catch (e) { fail(e); return false; }
+}
+async function setWorkspaceAgent(w, agentId) {
+  try { await wsCol().doc(w.id).update({ activeAgentId: agentId || null, by: state.user.uid, at: Date.now() }); audit("workspace.agent", w.name + " → " + (agentId ? S(state.agentsAi.find(a => a.id === agentId)?.name || agentId, 80) : "—")); }
+  catch (e) { fail(e); }
+}
+function aiErrorText(e) {
+  const code = e && (e.code || "");
+  if (code === "appcheck-missing") return T("التشغيل غير مفعّل: يلزم ضبط App Check لهذا الموقع (انظر docs/jawafa-one/AI_AGENTS.md).", "Runs are off: App Check must be configured for this site.");
+  if (/appCheck|app-check/i.test(code + (e && e.message || ""))) return T("رفض App Check الطلب. تحقق من مفتاح reCAPTCHA Enterprise وتسجيل النطاق.", "App Check rejected the request.");
+  if (/not.?found|404/i.test(code + (e && e.message || ""))) return T("النموذج غير متاح. تحقق من اسم النموذج في إعدادات الوكيل.", "Model not available. Check the agent's model name.");
+  if (/quota|429|resource-exhausted/i.test(code + (e && e.message || ""))) return T("تجاوزت الحصة المسموحة. حاول لاحقًا.", "Quota exceeded. Try later.");
+  if (/fetch|network|Failed to load/i.test(code + (e && e.message || ""))) return T("تعذّر الاتصال بخدمة الذكاء الاصطناعي.", "Could not reach the AI service.");
+  return T("تعذّر تشغيل الوكيل: ", "Agent run failed: ") + S(code || (e && e.message), 120);
+}
+async function runAgent(text) {
+  const w = state.workspaces.find(x => x.id === aiState.wsId);
+  const a = w && state.agentsAi.find(x => x.id === w.activeAgentId);
+  if (!w || !a) { toast(T("اختر مساحة عمل لها وكيل نشط.", "Choose a workspace with an active agent.")); return; }
+  let req;
+  try { req = C.buildAiRequest(a, text); } catch (e) { toast(S(e.message, 120)); return; }
+  aiState.running = true; aiState.answer = null; aiState.error = null; render();
+  try {
+    const run = await getAiRunner();
+    const out = await run(req);
+    aiState.answer = { text: S(out, 20000), agent: a.name, model: a.model, at: Date.now() };
+    audit("agent.run", a.name + " · " + a.model + " · " + w.name);
+  } catch (e) { aiState.error = aiErrorText(e); }
+  finally { aiState.running = false; render(); }
+}
+function renderAiAgents(v) {
+  const title = T("وكلاء الذكاء الاصطناعي", "AI agents");
+  if (!state.user) return needSignIn(v, title);
+  if (!company()) return needCompany(v, title);
+  const manage = C.can(role(), "manage"), write = C.can(role(), "write");
+  const runnable = C.aiRunnable(aiSiteKey(), EMULATOR && typeof window.__jawafaAiTestRun === "function");
+  const editing = aiState.editingAgent ? state.agentsAi.find(a => a.id === aiState.editingAgent) : null;
+  const agentForm = manage ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await saveAgent(e.target)) { e.target.reset(); render(); } } },
+    el("h3", null, editing ? T("تعديل وكيل", "Edit agent") : T("وكيل جديد", "New agent")),
+    el("div", { class: "cols-2" },
+      el("label", { class: "small" }, T("الاسم", "Name"), el("input", { name: "aname", maxlength: "80", required: true, value: editing ? S(editing.name, 80) : null })),
+      el("label", { class: "small" }, T("النموذج", "Model"), el("input", { name: "model", class: "ltr", maxlength: "48", required: true, placeholder: "gemini-…", value: editing ? S(editing.model, 48) : null })),
+      el("label", { class: "small" }, T("الحرارة (0–2)", "Temperature (0–2)"), el("input", { name: "temp", type: "number", min: "0", max: "2", step: "0.1", class: "ltr", required: true, value: editing ? String(editing.temperature) : "0.2" }))),
+    el("label", { class: "small" }, T("تعليمات النظام", "System instruction"), el("textarea", { name: "instr", maxlength: "4000", rows: "4", required: true }, editing ? S(editing.systemInstruction, 4000) : "")),
+    el("div", { class: "toolbar" }, el("button", { class: "primary", type: "submit" }, editing ? T("حفظ التعديل", "Save changes") : T("إضافة الوكيل", "Add agent")),
+      editing ? el("button", { type: "button", onclick: () => { aiState.editingAgent = null; v.querySelector("form")?.removeAttribute("data-dirty"); render(); } }, T("إلغاء", "Cancel")) : null))
+    : el("div", { class: "panel muted small" }, T("إنشاء الوكلاء وتعديل تعليماتهم للمالك ورئيس المجلس والمدير العام.", "Owner, chairman and general manager create and edit agents."));
+  const agentRows = state.agentsAi.map(a => el("tr", null, el("td", null, S(a.name, 80)), el("td", { class: "ltr" }, S(a.model, 48)), el("td", null, String(a.temperature)),
+    el("td", null, el("details", null, el("summary", { class: "small" }, T("التعليمات", "Instruction")), el("p", { class: "small" }, S(a.systemInstruction, 4000)))),
+    el("td", null, manage ? el("div", { class: "toolbar", style: "margin:0" },
+      el("button", { class: "ghost", onclick: () => { aiState.editingAgent = a.id; v.querySelector("form")?.removeAttribute("data-dirty"); render(); } }, T("تعديل", "Edit")),
+      el("button", { class: "ghost", onclick: () => deleteAgent(a) }, T("حذف", "Delete"))) : "")));
+  const agentOptions = (sel) => [el("option", { value: "" }, T("— بلا وكيل —", "— no agent —")), ...state.agentsAi.map(a => el("option", { value: a.id, selected: a.id === sel }, S(a.name, 80)))];
+  const wsRows = state.workspaces.map(w => el("tr", null, el("td", null, S(w.name, 80)),
+    el("td", null, write ? el("select", { style: "width:auto", "aria-label": T("الوكيل النشط", "Active agent"), "data-ws": w.id, onchange: (e) => setWorkspaceAgent(w, e.target.value) }, ...agentOptions(w.activeAgentId))
+      : S(state.agentsAi.find(a => a.id === w.activeAgentId)?.name || "—", 80))));
+  const wsForm = write ? el("form", { class: "toolbar", onsubmit: async (e) => { e.preventDefault(); if (await addWorkspace(e.target)) e.target.reset(); } },
+    el("input", { name: "wname", maxlength: "80", required: true, placeholder: T("اسم مساحة العمل", "Workspace name"), "aria-label": T("اسم مساحة العمل", "Workspace name") }),
+    el("select", { name: "wagent", style: "width:auto", "aria-label": T("الوكيل", "Agent") }, ...agentOptions("")),
+    el("button", { type: "submit" }, T("إضافة مساحة", "Add workspace"))) : null;
+  const withAgent = state.workspaces.filter(w => state.agentsAi.some(a => a.id === w.activeAgentId));
+  if (!withAgent.some(w => w.id === aiState.wsId)) aiState.wsId = withAgent[0]?.id || "";
+  const runPanel = el("div", { class: "panel" },
+    el("h3", null, T("تشغيل الوكيل", "Run agent"), badge(runnable ? "live" : "blocked", runnable ? "Firebase AI Logic" : T("غير مفعّل — يلزم App Check", "Off — App Check required"))),
+    !withAgent.length ? el("p", { class: "muted small" }, T("أنشئ وكيلًا واربطه بمساحة عمل أولًا.", "Create an agent and attach it to a workspace first.")) :
+      el("div", null,
+        el("label", { class: "small" }, T("مساحة العمل", "Workspace"), el("select", { id: "ai-ws", onchange: (e) => { aiState.wsId = e.target.value; render(); } },
+          ...withAgent.map(w => el("option", { value: w.id, selected: w.id === aiState.wsId }, S(w.name, 80) + " · " + S(state.agentsAi.find(a => a.id === w.activeAgentId)?.name, 60))))),
+        el("label", { class: "small" }, T("نصّك (لا تلصق بيانات مالية أو شخصية حساسة)", "Your text (do not paste sensitive financial or personal data)"), el("textarea", { id: "ai-text", rows: "4", maxlength: "8000", oninput: (e) => { aiState.text = e.target.value; } }, aiState.text || "")),
+        el("button", { class: "primary", disabled: !runnable || aiState.running, onclick: () => runAgent(v.querySelector("#ai-text").value) }, aiState.running ? T("جارٍ التشغيل...", "Running...") : T("تشغيل", "Run"))),
+    aiState.error ? el("div", { class: "banner err", role: "alert" }, aiState.error) : null,
+    aiState.answer ? el("div", { class: "panel ai-answer", style: "margin-top:.75rem" },
+      el("div", { class: "row" }, badge("demo", T("ناتج ذكاء اصطناعي — راجعه قبل الاعتماد", "AI output — review before relying on it")), el("span", { class: "small muted" }, S(aiState.answer.agent, 80) + " · " + S(aiState.answer.model, 48) + " · " + fmtTime(aiState.answer.at))),
+      el("p", { style: "white-space:pre-wrap", id: "ai-answer" }, aiState.answer.text)) : null);
+  v.replaceChildren(sectionHead(title, badge("live", "Firestore")),
+    el("div", { class: "banner info" }, T("الوكيل = اسم + تعليمات نظام + نموذج Gemini + حرارة. مساحة العمل تختار وكيلها النشط. عند التشغيل يُرسل فقط إعداد الوكيل والنص الذي تكتبه إلى Gemini عبر Firebase AI Logic؛ لا تُرسل بيانات الشركة ولا قاعدة جوافة، ولا يُحفظ النص أو الرد. يُسجَّل في سجل التدقيق أن الوكيل شُغّل فقط.", "An agent = name + system instruction + Gemini model + temperature. Each workspace picks its active agent. A run sends only the agent settings and the text you type to Gemini via Firebase AI Logic; no company data or Jawafa database is sent, and neither prompt nor answer is stored. The audit log records only that the agent ran.")),
+    el("div", { class: "cols-2" }, agentForm, runPanel),
+    el("h3", { style: "margin-top:1rem" }, T("الوكلاء", "Agents")),
+    table([T("الاسم", "Name"), T("النموذج", "Model"), T("الحرارة", "Temp."), T("التعليمات", "Instruction"), ""], agentRows),
+    el("h3", { style: "margin-top:1rem" }, T("مساحات العمل", "Workspaces")), wsForm || "",
+    table([T("مساحة العمل", "Workspace"), T("الوكيل النشط", "Active agent")], wsRows));
+}
+
+// ---------- task board & notifications (phase 3) ----------
+// Tasks are companies/{id}/tasks (rules TASK-01). Notifications are computed in the browser from
+// data the member can already read (approvals, tasks assigned to them, invitations); nothing is sent
+// outside the app.
+const TASK_LABEL = { todo: ["للتنفيذ", "To do"], doing: ["قيد التنفيذ", "In progress"], done: ["منجزة", "Done"] };
+const PRIO_LABEL = { low: ["منخفضة", "Low"], normal: ["عادية", "Normal"], high: ["عالية", "High"] };
+const memberName = (uid) => { const m = company()?.members?.[uid]; return S(m?.name || m?.email || uid || "—", 80); };
+const myNotifications = () => (state.user ? C.notificationsFor({ role: role(), uid: state.user.uid, orders: state.orders, tasks: state.tasks, invites: state.invites, today: C.todayIso() }) : []);
+const taskView = { mine: false };
+async function addTask(f) {
+  const title = f.ttitle.value.trim(), due = f.tdue.value;
+  if (!title || title.length > 200) { toast(T("عنوان المهمة مطلوب (حتى 200 حرف).", "Task title required (≤200).")); return false; }
+  if (!C.isDate(due)) { toast(T("تاريخ الاستحقاق غير صحيح.", "Invalid due date.")); return false; }
+  const now = Date.now();
+  const data = { title, status: "todo", by: state.user.uid, at: now, updatedAt: now, assigneeUid: f.tassignee.value || null, dueDate: due, priority: C.TASK_PRIORITY.includes(f.tprio.value) ? f.tprio.value : "normal", branchId: f.tbranch.value || null };
+  try { await fs.collection("companies").doc(state.companyId).collection("tasks").add(data); audit("task.create", title + (data.assigneeUid ? " → " + memberName(data.assigneeUid) : "")); toast(T("أُضيفت المهمة.", "Task added.")); return true; }
+  catch (e) { fail(e); return false; }
+}
+async function moveTask(t, status) {
+  const change = { status, updatedAt: Date.now() };
+  if (status === "done") change.doneAt = Date.now();
+  try { await fs.collection("companies").doc(state.companyId).collection("tasks").doc(t.id).update(change); audit("task." + status, S(t.title, 120)); }
+  catch (e) { fail(e); }
+}
+function taskCard(t, today) {
+  const late = C.isOverdue(t, today);
+  const can = C.canEditTask(role(), state.user.uid, t);
+  const moves = C.TASK_STATES.filter(s => s !== (t.status || "todo"));
+  return el("div", { class: "item task-card" + (late ? " late" : ""), "data-task": t.id },
+    el("div", { class: "row" }, el("b", null, S(t.title, 200)), t.priority === "high" ? badge("blocked", T(...PRIO_LABEL.high)) : null, late ? badge("blocked", T("متأخرة", "Overdue")) : null),
+    el("div", { class: "small muted" }, T("المكلَّف: ", "Assignee: ") + (t.assigneeUid ? memberName(t.assigneeUid) : "—") + (t.dueDate ? " · " + T("الاستحقاق: ", "Due: ") + S(t.dueDate, 10) : "") + (t.branchId ? " · " + branchName(t.branchId) : "")),
+    can ? el("div", { class: "toolbar", style: "margin:.3rem 0 0" }, ...moves.map(s => el("button", { class: "ghost small", onclick: () => moveTask(t, s) }, "→ " + T(...TASK_LABEL[s])))) : null);
+}
+function renderTasks(v) {
+  const title = T("المهام", "Tasks");
+  if (!state.user) return needSignIn(v, title);
+  if (!company()) return needCompany(v, title);
+  const r = role(), today = C.todayIso();
+  const list = state.tasks.filter(t => !taskView.mine || t.assigneeUid === state.user.uid);
+  const late = list.filter(t => C.isOverdue(t, today)).length;
+  const form = C.can(r, "tasks") ? el("form", { class: "panel", onsubmit: async (e) => { e.preventDefault(); if (await addTask(e.target)) e.target.reset(); } },
+    el("h3", null, T("مهمة جديدة", "New task")),
+    el("div", { class: "cols-2" },
+      el("label", { class: "small" }, T("العنوان", "Title"), el("input", { name: "ttitle", maxlength: "200", required: true })),
+      el("label", { class: "small" }, T("المكلَّف", "Assignee"), el("select", { name: "tassignee" }, el("option", { value: "" }, "—"), ...(company().memberIds || []).map(uid => el("option", { value: uid }, memberName(uid))))),
+      el("label", { class: "small" }, T("تاريخ الاستحقاق", "Due date"), el("input", { name: "tdue", type: "date", class: "ltr" })),
+      el("label", { class: "small" }, T("الأولوية", "Priority"), el("select", { name: "tprio" }, ...C.TASK_PRIORITY.map(p => el("option", { value: p, selected: p === "normal" }, T(...PRIO_LABEL[p]))))),
+      el("label", { class: "small" }, T("الفرع (اختياري)", "Branch (optional)"), el("select", { name: "tbranch" }, el("option", { value: "" }, "—"), ...branchOptions()))),
+    el("button", { class: "primary", type: "submit" }, T("إضافة المهمة", "Add task")))
+    : el("div", { class: "panel muted small" }, T("دورك للقراءة فقط.", "Your role is read only."));
+  const col = (s) => el("div", { class: "panel task-col", "data-col": s }, el("h3", null, T(...TASK_LABEL[s]), " ", badge("", num(list.filter(t => (t.status || "todo") === s).length))),
+    el("div", { class: "list" }, ...list.filter(t => (t.status || "todo") === s).sort((a, b) => S(a.dueDate || "9999").localeCompare(S(b.dueDate || "9999"))).map(t => taskCard(t, today))));
+  v.replaceChildren(sectionHead(title, badge("live", "Firestore"), late ? badge("blocked", num(late) + T(" متأخرة", " overdue")) : null,
+      el("label", { class: "small" }, el("input", { id: "task-mine", type: "checkbox", style: "width:auto;min-height:auto", checked: taskView.mine, onchange: (e) => { taskView.mine = e.target.checked; renderTasks(v); } }), " ", T("مهامي فقط", "My tasks only")),
+      csvBtn(() => downloadCsv("tasks", "FIRESTORE", [T("العنوان", "Title"), T("الحالة", "Status"), T("المكلَّف", "Assignee"), T("الاستحقاق", "Due"), T("الأولوية", "Priority")], list.map(t => [t.title, t.status, t.assigneeUid ? memberName(t.assigneeUid) : "", t.dueDate || "", t.priority || ""])))),
+    el("div", { class: "banner info" }, T("يحرّك المهمة المكلَّف بها أو منشئها أو المدير، وتفرض ذلك قواعد Firestore. كل تغيير يُسجَّل في سجل التدقيق.", "The assignee, the creator or a manager moves a task (enforced by Firestore rules). Every change is in the audit log.")),
+    form, el("div", { class: "task-board", style: "margin-top:1rem" }, ...C.TASK_STATES.map(col)));
+}
+function renderNotifications(v) {
+  const title = T("التنبيهات", "Notifications");
+  if (!state.user) return needSignIn(v, title);
+  const items = myNotifications();
+  const KIND = { overdue: ["blocked", "متأخرة", "Overdue"], approval: ["demo", "موافقة", "Approval"], invite: ["verified", "دعوة", "Invite"], task: ["live", "مهمة", "Task"] };
+  v.replaceChildren(sectionHead(title, badge(items.length ? "demo" : "live", num(items.length))),
+    el("div", { class: "banner info" }, T("التنبيهات محسوبة من بياناتك في التطبيق: أوامر الشراء بانتظار قرارك، والمهام المسندة إليك والمتأخرة، والدعوات. لا تُرسل إشعارات خارج التطبيق بعد.", "Computed from your data in the app: orders awaiting your decision, tasks assigned to you and overdue, invitations. No push or e-mail notifications yet.")),
+    items.length ? el("div", { class: "list" }, ...items.map(n => el("a", { class: "item row notif", href: n.href, "data-kind": n.kind }, badge(KIND[n.kind][0], T(KIND[n.kind][1], KIND[n.kind][2])), el("span", null, T(n.ar, n.en)))))
+      : el("div", { class: "panel muted" }, T("لا توجد تنبيهات.", "No notifications.")));
 }
 
 // ---------- audit log viewer ----------
@@ -954,11 +1164,12 @@ function renderUser() {
       el("button", { class: "ghost small", onclick: () => auth.signOut() }, T("خروج", "Sign out")));
   }
   const waiting = state.user && company() ? myApprovals().length : 0;
+  const notes = myNotifications().length;
   const bell = $("bell");
-  bell.hidden = !state.user || !company();
-  bell.querySelector(".count").textContent = waiting ? String(waiting) : "";
-  bell.querySelector(".count").hidden = !waiting;
-  bell.setAttribute("aria-label", T("الموافقات", "Approvals") + (waiting ? " (" + waiting + ")" : ""));
+  bell.hidden = !state.user;
+  bell.querySelector(".count").textContent = notes ? String(notes) : "";
+  bell.querySelector(".count").hidden = !notes;
+  bell.setAttribute("aria-label", T("التنبيهات", "Notifications") + (notes ? " (" + notes + ")" : ""));
   const navItem = document.querySelector('#nav a[data-nav="approvals"]');
   if (navItem) { let n = navItem.querySelector(".count"); if (!n) { n = el("span", { class: "count" }); navItem.append(n); } n.textContent = waiting ? String(waiting) : ""; n.hidden = !waiting; }
   const pill = $("company-pill"), sel = $("company-select");
@@ -970,7 +1181,7 @@ function renderUser() {
   $("status-data").textContent = state.demo ? T("البيانات المعروضة: تجريبية DEMO — ليست بيانات حقيقية", "Shown data: DEMO — not real") : T("البيانات التشغيلية: لا يوجد مصدر LIVE", "Operational data: no LIVE source");
 }
 
-const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals };
+const RENDER = { home: renderHome, sales: renderSales, inventory: renderInventory, finance: renderFinance, investigations: renderInvestigations, maps: renderMaps, assistant: renderAssistant, agents: renderAgents, connections: renderConnections, company: renderCompany, members: renderMembers, plans: renderPlans, branches: renderBranches, audit: renderAudit, employees: renderEmployees, suppliers: renderSuppliers, purchases: renderPurchases, approvals: renderApprovals, aiagents: renderAiAgents, tasks: renderTasks, notifications: renderNotifications };
 // Redraws a view but keeps what the user typed in forms marked dirty (see the listeners below), and
 // puts the caret back if it was inside one of those forms.
 function redrawKeepingDrafts(v) {

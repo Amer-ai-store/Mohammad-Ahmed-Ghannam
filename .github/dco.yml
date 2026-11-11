@@ -1,0 +1,4 @@
+# Preserve DCO enforcement while allowing original authors to remediate their own prior commits.
+# Third-party attestations are intentionally NOT enabled.
+allowRemediationCommits:
+  individual: true

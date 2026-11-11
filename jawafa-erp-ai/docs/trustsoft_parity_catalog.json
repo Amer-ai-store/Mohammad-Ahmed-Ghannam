@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "reference_product": "TrustSoft",
+  "status": "CANDIDATE_UNFROZEN",
+  "catalog_frozen": false,
+  "catalog_approval_ref": null,
+  "reference_snapshot": {
+    "date": "2026-11-09",
+    "scope": "read-only export metadata; no private source records committed",
+    "private_evidence_sha256": "48e2ad05cf7fa670de14894858eaa75e2e2b7fd946f8077f1607cff03c5e242e"
+  },
+  "mandatory_modules": [
+    "cheques",
+    "bank_reconciliation",
+    "general_ledger",
+    "accounts_receivable",
+    "procurement",
+    "inventory",
+    "sales_pos",
+    "tax",
+    "investments",
+    "security",
+    "branches",
+    "statutory_reports",
+    "personnel",
+    "permissions_settings"
+  ],
+  "notes": "Incomplete unfrozen reference catalog. No 90% claim. Every owner-used critical workflow and security control must be accepted without exception; all owner's TrustSoft reports separately require 100% acceptance. Source behavior is not yet certified.",
+  "workflows": [
+    {
+      "id": "CHQ-REG",
+      "module": "cheques",
+      "name": "Cheque registration and validation",
+      "status": "TESTED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "CHQ-LIFE",
+      "module": "cheques",
+      "name": "Cheque deposit, delivery, clearing, return and cancellation",
+      "status": "TESTED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "CHQ-BANK",
+      "module": "bank_reconciliation",
+      "name": "Cheque to bank-original settlement matching",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "GL-DRAFT",
+      "module": "general_ledger",
+      "name": "Exact-fils journal draft balancing",
+      "status": "TESTED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "GL-POST",
+      "module": "general_ledger",
+      "name": "Audited double-entry posting and reversal",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "AR-PAY",
+      "module": "accounts_receivable",
+      "name": "Customer and vendor payment voucher lifecycles",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "PROC-PO",
+      "module": "procurement",
+      "name": "Purchase order, receiving and supplier return",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "STK-MOVE",
+      "module": "inventory",
+      "name": "Stock movement, cost and adjustment control",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "POS-SALE",
+      "module": "sales_pos",
+      "name": "POS sale, refund, shift settlement and exception log",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "VAT-INV",
+      "module": "tax",
+      "name": "VAT invoices, return handling and tax reporting",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "INV-CON",
+      "module": "investments",
+      "name": "Investor contracts, percentage terms and settlements",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "SEC-TEN",
+      "module": "security",
+      "name": "Verified actor identity, tenant permissions and audit trail",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "BRN-REP",
+      "module": "branches",
+      "name": "Branch reporting and data separation",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "REP-STAT",
+      "module": "statutory_reports",
+      "name": "Financial and statutory report reconciliation",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "HR-MASTER",
+      "module": "personnel",
+      "name": "Employee master, department and employment state (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "HR-ATTEND",
+      "module": "personnel",
+      "name": "Employee attendance, shifts and leave workflows (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "HR-PAY",
+      "module": "personnel",
+      "name": "Payroll, allowances, deductions and payroll-to-ledger control (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "SEC-UI",
+      "module": "permissions_settings",
+      "name": "Screen/action permissions, user groups, branch constraints and negative-denial tests (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    },
+    {
+      "id": "CFG-CONST",
+      "module": "permissions_settings",
+      "name": "System constants, document sequences, tax and peripheral configuration (candidate, unverified)",
+      "status": "DISCOVERED",
+      "weight": null,
+      "reference_evidence_sha256": null,
+      "implementation_evidence_sha256": null,
+      "comparison_evidence_sha256": null,
+      "independent_approval_ref": null
+    }
+  ],
+  "owner_workflow_inventory_complete": false,
+  "owner_workflow_inventory_approval_ref": null
+}

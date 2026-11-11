@@ -164,3 +164,8 @@ a.button{display:inline-flex;align-items:center;min-height:40px;padding:.5rem .9
 @media (max-width:600px){.po-line{grid-template-columns:1fr 1fr}.po-line input[data-line-name]{grid-column:1/-1}}
 details.scope summary{cursor:pointer}
 :root[data-theme="light"] button.danger{color:#b91c1c}
+/* Phase 3: task board, notifications */
+.task-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+@media (max-width:860px){.task-board{grid-template-columns:1fr}}
+.task-card.late{border-color:var(--red)}
+a.notif{text-decoration:none;color:var(--fg);gap:.6rem;justify-content:flex-start}

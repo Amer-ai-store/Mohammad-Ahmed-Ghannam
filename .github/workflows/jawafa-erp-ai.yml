@@ -1,0 +1,154 @@
+name: JAWAFA ERP AI — independent Windows Android iOS genesis
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'jawafa-erp-ai/lib/**'
+      - 'jawafa-erp-ai/test/**'
+      - 'jawafa-erp-ai/pubspec.yaml'
+      - 'jawafa-erp-ai/analysis_options.yaml'
+      - '.github/workflows/jawafa-erp-ai.yml'
+  pull_request:
+    paths:
+      # Rebuild mobile and Windows only when Flutter code or its toolchain changes.
+      # ERP SQL migrations have their own PostgreSQL acceptance workflow.
+      - 'jawafa-erp-ai/lib/**'
+      - 'jawafa-erp-ai/test/**'
+      - 'jawafa-erp-ai/pubspec.yaml'
+      - 'jawafa-erp-ai/analysis_options.yaml'
+      - '.github/workflows/jawafa-erp-ai.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jawafa-erp-flutter-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: New ERP Flutter unit, widget and analysis checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: jawafa-erp-ai
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - name: Generate Android host without replacing original ERP source
+        run: flutter create . --project-name jawafa_erp_ai --org ai.jawafa --platforms=android
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Static analysis
+        run: flutter analyze
+      - name: Exact cheque/journal and Flutter UI tests
+        run: flutter test --reporter expanded
+
+  android:
+    name: Android DEBUG APK (not signed for Play Store)
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: jawafa-erp-ai
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - run: flutter create . --project-name jawafa_erp_ai --org ai.jawafa --platforms=android
+      - run: flutter pub get
+      - run: flutter build apk --debug
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jawafa-erp-ai-android-debug-apk
+          path: jawafa-erp-ai/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    name: Windows EXE portable distribution (unsigned)
+    runs-on: windows-latest
+    needs: validate
+    timeout-minutes: 55
+    defaults:
+      run:
+        working-directory: jawafa-erp-ai
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - run: flutter config --enable-windows-desktop
+      - run: flutter create . --project-name jawafa_erp_ai --org ai.jawafa --platforms=windows
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Zip EXE together with all required runtime files
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          $releaseDir = "build/windows/x64/runner/Release"
+          if (-not (Test-Path $releaseDir)) { throw "Windows release folder does not exist" }
+          $exe = Get-ChildItem -LiteralPath $releaseDir -Filter '*.exe' -File
+          if ($exe.Count -eq 0) { throw "Windows EXE missing" }
+          Compress-Archive -Path "$releaseDir/*" -DestinationPath artifacts/JAWAFA-ERP-AI-Windows.zip -Force
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jawafa-erp-ai-windows-exe-portable
+          path: jawafa-erp-ai/artifacts/JAWAFA-ERP-AI-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: iOS unsigned APP archive (not IPA/TestFlight installable)
+    runs-on: macos-latest
+    needs: validate
+    timeout-minutes: 65
+    defaults:
+      run:
+        working-directory: jawafa-erp-ai
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - run: flutter create . --project-name jawafa_erp_ai --org ai.jawafa --platforms=ios
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
+      - name: Archive the unsigned .app for later approved Apple signing
+        run: |
+          test -d build/ios/iphoneos/Runner.app
+          mkdir -p artifacts
+          ditto -c -k --keepParent build/ios/iphoneos/Runner.app artifacts/JAWAFA-ERP-AI-iOS-unsigned-app.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jawafa-erp-ai-ios-unsigned-app
+          path: jawafa-erp-ai/artifacts/JAWAFA-ERP-AI-iOS-unsigned-app.zip
+          if-no-files-found: error
+          retention-days: 14

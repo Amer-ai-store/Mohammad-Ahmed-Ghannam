@@ -1,0 +1,70 @@
+name: JAWAFA ERP AI — OIDC API integration and tenancy security
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'jawafa-erp-ai/api/**'
+      - 'jawafa-erp-ai/backend/migrations/**'
+      - '.github/workflows/jawafa-erp-ai-api.yml'
+  pull_request:
+    paths:
+      - 'jawafa-erp-ai/api/**'
+      - 'jawafa-erp-ai/backend/migrations/**'
+      - '.github/workflows/jawafa-erp-ai-api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-erp-api:
+    name: OIDC JWT and Postgres RLS integration against disposable data
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jawafa_erp_api_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-never-production
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jawafa_erp_api_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGDATABASE: jawafa_erp_api_ci
+      PGUSER: postgres
+      PGPASSWORD: ci-only-never-production
+      ERP_TEST_DATABASE_URL: postgresql://erp_ci_api_login:ci-only-synthetic-never-production@localhost:5432/jawafa_erp_api_ci
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Migrate only synthetic ERP database
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0001_erp_initial.sql
+          psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0002_journal_draft_balance.sql
+          psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0003_cheque_lifecycle_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0004_api_tenant_memberships.sql
+          psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0005_supplier_invoice_guards.sql
+          psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0006_personnel_permissions_settings.sql
+          psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
+      - name: Install pinned API dependencies
+        working-directory: jawafa-erp-ai/api
+        run: npm install --no-audit --no-fund
+      - name: Syntax and module smoke check
+        working-directory: jawafa-erp-ai/api
+        run: npm run check
+      - name: Integration tests signed JWT, SQL permissions, company isolation, deny writes
+        working-directory: jawafa-erp-ai/api
+        run: npm test

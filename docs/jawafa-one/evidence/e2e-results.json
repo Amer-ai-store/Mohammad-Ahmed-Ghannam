@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-11-09T01:07:45.789Z",
+  "ranAt": "2026-11-09T03:10:54.312Z",
   "environment": "Firebase Auth + Firestore emulators, Chromium (Playwright), local static server",
   "results": [
     {
@@ -10,7 +10,7 @@
     {
       "id": "E2E-02",
       "result": "PASS",
-      "detail": "18 views render after navigation"
+      "detail": "21 views render after navigation"
     },
     {
       "id": "E2E-03",
@@ -153,6 +153,51 @@
       "detail": "branch manager has no approval rights and no bell count, and confirms receipt of the branch-1 order (po.receive audited)"
     },
     {
+      "id": "E2E-36",
+      "result": "PASS",
+      "detail": "agent saved with name, system instruction, model gemini-3.7-flash and temperature 0.2"
+    },
+    {
+      "id": "E2E-37",
+      "result": "PASS",
+      "detail": "workspace \"شاشة عقود الإيجار\" uses the agent; a workspace pointing to a missing agent is rejected: permission-denied"
+    },
+    {
+      "id": "E2E-38",
+      "result": "PASS",
+      "detail": "without an App Check site key the Run button is disabled and marked \"يلزم App Check\""
+    },
+    {
+      "id": "E2E-39",
+      "result": "PASS",
+      "detail": "run sends only agent settings + typed text; answer labelled as AI output; audit records the run without the prompt"
+    },
+    {
+      "id": "E2E-40",
+      "result": "PASS",
+      "detail": "auditor reads the agent but gets no agent or workspace form"
+    },
+    {
+      "id": "E2E-41",
+      "result": "PASS",
+      "detail": "task assigned to the branch manager with a past due date appears in \"للتنفيذ\" marked overdue"
+    },
+    {
+      "id": "E2E-42",
+      "result": "PASS",
+      "detail": "branch manager's bell shows 1 and the notification center lists the overdue task"
+    },
+    {
+      "id": "E2E-43",
+      "result": "PASS",
+      "detail": "assignee moved the task to done (audited), bell cleared; auditor has no form or moves and is denied via API: permission-denied"
+    },
+    {
+      "id": "E2E-44",
+      "result": "PASS",
+      "detail": "supplier performance from recorded orders: approved spend 21.5, rejection 0% (مورد الألبان التجريبيألبان121.5 د.أ0%0 س0 سنشطإيقاف)"
+    },
+    {
       "id": "E2E-14",
       "result": "PASS",
       "detail": "stranger API access to company A denied: {\"doc\":\"permission-denied\",\"msgs\":\"permission-denied\",\"plan\":\"permission-denied\"}"
@@ -180,7 +225,7 @@
     {
       "id": "PERF-01",
       "result": "PASS",
-      "detail": "time to ready (load + Firebase SDK + emulator): desktop 771 ms, mobile 546 ms"
+      "detail": "time to ready (load + Firebase SDK + emulator): desktop 822 ms, mobile 522 ms"
     }
   ]
 }

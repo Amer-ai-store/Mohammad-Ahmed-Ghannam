@@ -111,7 +111,16 @@ function message(p,text,tone="warn"){const n=el("div","banner "+(tone==="error"?
 function details(p,rows){const box=el("div","grid2");for(const [label,value] of rows){const card=el("div","kpi");add(card,el("span","label",label),el("strong","value small",value));box.append(card)}p.append(box)}
 function table(p,columns,rows){const wrap=el("div","table-wrap"),t=el("table"),head=el("thead"),hrow=el("tr");columns.forEach(x=>hrow.append(el("th",null,x[0])));head.append(hrow);t.append(head);const body=el("tbody");if(!rows?.length){const tr=el("tr"),td=el("td",null,"لا توجد بيانات مؤيدة من مصدر معتمد");td.colSpan=columns.length;tr.append(td);body.append(tr)}else rows.slice(0,100).forEach(r=>{const tr=el("tr");columns.forEach(x=>tr.append(el("td",null,r?.[x[1]]??"—")));body.append(tr)});t.append(body);wrap.append(t);p.append(wrap)}
 function status(name,value,src,when){const s=document.querySelector('[data-jawafa-status="'+name+'"]');if(s){s.textContent=value;s.className="pill "+(value==="CONNECTED"?"ok":value==="NOT_ACCEPTED"||value==="BLOCKED"?"bad":"warn")}const so=document.querySelector('[data-jawafa-source="'+name+'"]');if(so)so.textContent=src||B.source;const u=document.querySelector('[data-jawafa-updated="'+name+'"]');if(u)u.textContent=when||"غير مُثبت"}
-async function token(){if(!window.firebase||typeof window.firebase.auth!=="function")return null;try{const auth=window.firebase.auth();const user=auth.currentUser;if(!user||!user.emailVerified)return null;return await user.getIdToken()}catch{return null}}
+async function token(){
+  try{
+    if(window.AAS_OWNER_AUTH)return await window.AAS_OWNER_AUTH.getIdToken();
+    // Legacy fallback for standalone embedded contexts. Never persist a bearer token.
+    if(!window.firebase||typeof window.firebase.auth!=="function")return null;
+    const user=window.firebase.auth().currentUser;
+    if(!user||!user.emailVerified)return null;
+    return await user.getIdToken();
+  }catch{return null}
+}
 async function call(route,{method="GET",body}={}){const jwt=await token();if(!jwt)throw Error("NOT_AUTHENTICATED — سجّل الدخول بحساب المالك في النظام");
 const c=new AbortController(),timer=setTimeout(()=>c.abort(),8000);
 try{const r=await fetch(BASE+"/"+route,{method,headers:{"Accept":"application/json","Authorization":"Bearer "+jwt,...(body?{"Content-Type":"application/json"}:{})},cache:"no-store",credentials:"same-origin",signal:c.signal,...(body?{body:JSON.stringify(body)}:{})});let o={};try{o=await r.json()}catch{}
@@ -180,6 +189,20 @@ if(key==="jawafa-errors")message(p,"تُعرض الأخطاء والتحقق و�
 if(key==="jawafa-reports")message(p,"التقارير المعتمدة تحفظ إلى مجلد Google Drive الخاص. أزرار الرفع المباشر معطّلة حتى تفعيل مسار آمن مع تأكيد البصمة والحجم والصلاحيات.");
 if(key==="jawafa-investigations")message(p,"تمييز الوقائع المثبتة عن القرائن والإفادات والادعاءات. عدم نسبة الفعل إلى مستخدم مشترك دون الجهاز وWindows وTrustSoft والوقت.");
 }}
-let authListenerAttached=false;let checks=0;const authWatch=setInterval(()=>{checks++;try{if(!authListenerAttached&&window.firebase?.apps?.length&&typeof window.firebase.auth==="function"){authListenerAttached=true;clearInterval(authWatch);window.firebase.auth().onAuthStateChanged(()=>connect())}}catch{}if(checks>40)clearInterval(authWatch)},500);window.addEventListener("focus",()=>{if(!connected)connect()});
+if(window.AAS_OWNER_AUTH){
+  window.AAS_OWNER_AUTH.subscribe(()=>{connect()});
+}else{
+  let authListenerAttached=false,checks=0;
+  const authWatch=setInterval(()=>{
+    checks++;
+    try{
+      if(!authListenerAttached&&window.firebase?.apps?.length&&typeof window.firebase.auth==="function"){
+        authListenerAttached=true;clearInterval(authWatch);
+        window.firebase.auth().onAuthStateChanged(()=>connect());
+      }
+    }catch{}
+    if(checks>40)clearInterval(authWatch);
+  },500);
+}window.addEventListener("focus",()=>{if(!connected)connect()});
 render();connect();setInterval(()=>{const s=document.querySelector('[data-view="jawafa-export"]');const p=document.querySelector('[data-jawafa-pane="jawafa-export"]');if(connected&&s&&p&&!s.hidden)renderExportMonitor(p)},30000);window.JawafaUI={refresh:connect,connected:()=>connected,canDispatch:(operation)=>canDispatch(operation)}; 
 })();

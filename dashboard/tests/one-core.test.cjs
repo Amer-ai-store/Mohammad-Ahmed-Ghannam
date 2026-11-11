@@ -109,3 +109,50 @@ test('CORE-08 purchase orders: lines, totals and allowed moves per role', () => 
   assert.equal(C.PO_ACTION.approved, 'po.approve');
   assert.ok(C.isDate('2026-11-09')); assert.ok(C.isDate('')); assert.ok(!C.isDate('9/11/2026'));
 });
+
+test('CORE-09 AI agents: validation matches the rules and requests carry only agent settings + typed text', () => {
+  const a = { name: 'مساعد المبيعات', systemInstruction: 'أنت مساعد خبير في تحليل فواتير الإيجارات وتلخيصها للمستأجرين.', model: 'gemini-3.7-flash', temperature: '0.2' };
+  const v = C.validateAgent(a);
+  assert.ok(v.ok); assert.equal(v.value.temperature, 0.2);
+  assert.ok(!C.validateAgent({ ...a, model: 'gpt-4o' }).ok);
+  assert.ok(!C.validateAgent({ ...a, model: 'Gemini-Pro' }).ok);
+  assert.ok(!C.validateAgent({ ...a, temperature: 2.5 }).ok);
+  assert.ok(!C.validateAgent({ ...a, systemInstruction: '' }).ok);
+  const r = C.buildAiRequest(a, '  لخّص هذا العقد  ');
+  assert.deepEqual(Object.keys(r).sort(), ['contents', 'generationConfig', 'model', 'systemInstruction']);
+  assert.equal(r.contents, 'لخّص هذا العقد'); assert.equal(r.generationConfig.temperature, 0.2);
+  assert.throws(() => C.buildAiRequest(a, '   '));
+  assert.throws(() => C.buildAiRequest(a, 'x'.repeat(8001)));
+  assert.ok(!C.aiRunnable('', false)); assert.ok(!C.aiRunnable(undefined, false));
+  assert.ok(C.aiRunnable('6Lc_abcdefghijklmnop', false)); assert.ok(C.aiRunnable('', true));
+});
+
+test('CORE-10 tasks and notifications: overdue, edit rights, ordered notification list', () => {
+  const today = '2026-11-09';
+  assert.ok(C.isOverdue({ status: 'todo', dueDate: '2026-11-08' }, today));
+  assert.ok(!C.isOverdue({ status: 'done', dueDate: '2026-11-01' }, today));
+  assert.ok(!C.isOverdue({ status: 'todo', dueDate: '' }, today));
+  assert.ok(!C.isOverdue({ status: 'doing', dueDate: today }, today));
+  const t = { by: 'a', assigneeUid: 'b' };
+  assert.ok(C.canEditTask('accountant', 'a', t)); assert.ok(C.canEditTask('employee', 'b', t));
+  assert.ok(C.canEditTask('general_manager', 'z', t)); assert.ok(!C.canEditTask('accountant', 'z', t)); assert.ok(!C.canEditTask('auditor', 'a', t));
+  const n = C.notificationsFor({ role: 'owner', uid: 'u', today,
+    orders: [{ id: 'p1', status: 'submitted', total: 10 }, { id: 'p2', status: 'draft' }],
+    tasks: [{ id: 't1', title: 'A', assigneeUid: 'u', status: 'todo', dueDate: '2026-11-01' }, { id: 't2', title: 'B', assigneeUid: 'u', status: 'doing' }, { id: 't3', title: 'C', assigneeUid: 'x', status: 'todo' }, { id: 't4', assigneeUid: 'u', status: 'done' }],
+    invites: [{ id: 'i1', companyName: 'X' }] });
+  assert.deepEqual(n.map(x => x.kind), ['overdue', 'approval', 'invite', 'task']);
+  assert.equal(C.notificationsFor({ role: 'employee', uid: 'u', today, orders: [{ status: 'submitted' }], tasks: [], invites: [] }).length, 0);
+});
+
+test('CORE-11 supplier performance comes only from recorded orders', () => {
+  const H = 3600000;
+  const s = C.supplierStats([
+    { supplierId: 's1', status: 'received', total: 100, submittedAt: 0, decidedAt: 2 * H, receivedAt: 26 * H },
+    { supplierId: 's1', status: 'approved', total: 50.5, submittedAt: 0, decidedAt: 4 * H },
+    { supplierId: 's1', status: 'rejected', total: 999, submittedAt: 0, decidedAt: 6 * H },
+    { supplierId: 's1', status: 'draft', total: 7 },
+    { supplierId: 's2', status: 'submitted', total: 3, submittedAt: 0 },
+  ]);
+  assert.deepEqual(s.s1, { orders: 4, approved: 2, rejected: 1, received: 1, spend: 150.5, rejectionRate: 33, avgApprovalHours: 4, avgDeliveryHours: 24 });
+  assert.deepEqual(s.s2, { orders: 1, approved: 0, rejected: 0, received: 0, spend: 0, rejectionRate: null, avgApprovalHours: null, avgDeliveryHours: null });
+});

@@ -99,6 +99,81 @@
   const pendingApprovals = (role, orders) => (APPROVERS.includes(role) ? (orders || []).filter(o => o.status === "submitted") : []);
   const isDate = (d) => d === "" || (/^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d)));
 
+  // ---------- tasks, notifications, supplier performance (phase 3) ----------
+  const TASK_STATES = ["todo", "doing", "done"];
+  const TASK_PRIORITY = ["low", "normal", "high"];
+  const todayIso = (now) => new Date(now || Date.now()).toISOString().slice(0, 10);
+  const isOverdue = (t, today) => !!(t && t.status !== "done" && typeof t.dueDate === "string" && t.dueDate && t.dueDate < today);
+  /** Who may move a task (mirrors firestore.rules): managers, the creator or the assignee. */
+  const canEditTask = (role, uid, t) => !!(role && role !== "auditor" && t && (ROLES[role]?.manage || t.by === uid || t.assigneeUid === uid));
+
+  /** In-app notifications for one member, newest concern first. Each item links to its screen. */
+  function notificationsFor({ role, uid, email, orders, tasks, invites, today }) {
+    const out = [];
+    for (const i of invites || []) out.push({ kind: "invite", ref: i.id, href: "#company", ar: "دعوة للانضمام إلى «" + (i.companyName || "") + "»", en: "Invitation to join \"" + (i.companyName || "") + "\"" });
+    for (const o of pendingApprovals(role, orders)) out.push({ kind: "approval", ref: o.id, href: "#approvals", ar: "أمر شراء بانتظار قرارك: " + (o.total ?? 0), en: "Purchase order awaiting your decision: " + (o.total ?? 0) });
+    for (const t of tasks || []) {
+      if (t.status === "done" || t.assigneeUid !== uid) continue;
+      const late = isOverdue(t, today);
+      out.push({ kind: late ? "overdue" : "task", ref: t.id, href: "#tasks", ar: (late ? "مهمة متأخرة: " : "مهمة مسندة إليك: ") + (t.title || ""), en: (late ? "Overdue task: " : "Task assigned to you: ") + (t.title || "") });
+    }
+    const rank = { overdue: 0, approval: 1, invite: 2, task: 3 };
+    return out.sort((a, b) => rank[a.kind] - rank[b.kind]);
+  }
+
+  /** Per-supplier figures derived only from purchase orders recorded in the app. */
+  function supplierStats(orders) {
+    const by = new Map();
+    const hours = (a, b) => (Number.isFinite(a) && Number.isFinite(b) && b >= a ? (b - a) / 3600000 : null);
+    const avg = (xs) => (xs.length ? Math.round((xs.reduce((t, x) => t + x, 0) / xs.length) * 10) / 10 : null);
+    for (const o of orders || []) {
+      if (!o || !o.supplierId) continue;
+      const s = by.get(o.supplierId) || { orders: 0, decided: 0, approved: 0, rejected: 0, received: 0, spend: 0, approvalH: [], deliveryH: [] };
+      s.orders++;
+      if (o.status === "approved" || o.status === "received") { s.approved++; s.spend += Number(o.total) || 0; }
+      if (o.status === "rejected") s.rejected++;
+      if (o.status === "received") s.received++;
+      if (["approved", "rejected", "received"].includes(o.status)) { s.decided++; const h = hours(o.submittedAt, o.decidedAt); if (h != null) s.approvalH.push(h); }
+      if (o.status === "received") { const h = hours(o.decidedAt, o.receivedAt); if (h != null) s.deliveryH.push(h); }
+      by.set(o.supplierId, s);
+    }
+    const out = {};
+    for (const [id, s] of by) out[id] = {
+      orders: s.orders, approved: s.approved, rejected: s.rejected, received: s.received,
+      spend: Math.round(s.spend * 100) / 100,
+      rejectionRate: s.decided ? Math.round((s.rejected / s.decided) * 100) : null,
+      avgApprovalHours: avg(s.approvalH), avgDeliveryHours: avg(s.deliveryH),
+    };
+    return out;
+  }
+
+  // ---------- AI agents (must match firestore.rules validAgent) ----------
+  const AI_MODEL_RE = /^gemini-[0-9a-z.-]{1,40}$/;
+  /** Validates an agent form; returns { ok, value } or { ok:false, error }. */
+  function validateAgent(a) {
+    const name = String(a && a.name || "").trim();
+    const systemInstruction = String(a && a.systemInstruction || "").trim();
+    const model = String(a && a.model || "").trim();
+    const temperature = Number(a && a.temperature);
+    if (!name || name.length > 80) return { ok: false, error: "اسم الوكيل مطلوب (حتى 80 حرفًا)" };
+    if (!systemInstruction || systemInstruction.length > 4000) return { ok: false, error: "تعليمات الوكيل مطلوبة (حتى 4000 حرف)" };
+    if (!AI_MODEL_RE.test(model)) return { ok: false, error: "اسم النموذج يجب أن يبدأ بـ gemini- (أحرف صغيرة وأرقام ونقاط وشرطات)" };
+    if (!(Number.isFinite(temperature) && temperature >= 0 && temperature <= 2)) return { ok: false, error: "الحرارة رقم بين 0 و2" };
+    return { ok: true, value: { name, systemInstruction, model, temperature } };
+  }
+  /** The request sent to the model: only the agent settings and the text the member typed.
+   * No company dataset, financial record or other member data is attached. */
+  function buildAiRequest(agent, text) {
+    const t = String(text || "").trim();
+    if (!t) throw new Error("text required");
+    if (t.length > 8000) throw new Error("text too long");
+    const v = validateAgent(agent);
+    if (!v.ok) throw new Error(v.error);
+    return { model: v.value.model, systemInstruction: v.value.systemInstruction, generationConfig: { temperature: v.value.temperature }, contents: t };
+  }
+  /** Runs are allowed only on a site protected by App Check (or on the local emulator for tests). */
+  const aiRunnable = (siteKey, emulator) => !!emulator || (typeof siteKey === "string" && siteKey.trim().length > 10);
+
   // ---------- agent message router ----------
   const MSG_STATES = ["QUEUED", "DELIVERED", "READ", "ACKNOWLEDGED", "FAILED"];
   const NEXT = { QUEUED: ["DELIVERED", "FAILED"], DELIVERED: ["READ", "FAILED"], READ: ["ACKNOWLEDGED"], ACKNOWLEDGED: [], FAILED: [] };
@@ -274,6 +349,6 @@
   }
 
   return { ROLES, INVITABLE_ROLES, roleOf, can, normalizeEmail, isEmail, inviteId, validCompanyName, validateSocial,
-    branchScope, inScope, PROCURERS, APPROVERS, canManageEmployees, PO_STATES, PO_ACTION, poMoves, validateLines, poTotal, pendingApprovals, isDate,
+    branchScope, inScope, PROCURERS, APPROVERS, canManageEmployees, PO_STATES, PO_ACTION, poMoves, validateLines, poTotal, pendingApprovals, isDate, validateAgent, buildAiRequest, aiRunnable, TASK_STATES, TASK_PRIORITY, todayIso, isOverdue, canEditTask, notificationsFor, supplierStats,
     MSG_STATES, canTransition, createRouter, FINDING_CLASS, classify, detectAnomalies, demoDataset, dailySales, kpis };
 });
