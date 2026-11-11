@@ -152,6 +152,20 @@ class _ErpReportCatalogViewState extends State<ErpReportCatalogView> {
                 const SizedBox(height: 10),
                 Align(
                   alignment: AlignmentDirectional.centerStart,
+                  child: OutlinedButton.icon(
+                    key: Key('erp_report_detail_open_${report.id}'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ErpReportDetailScreen(report: report),
+                      ),
+                    ),
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('فتح صفحة التقرير المخصصة — مرجع فقط'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
                   child: Text('الحقول المرصودة (${report.sourceColumns.length})'),
                 ),
                 const SizedBox(height: 6),
@@ -167,20 +181,6 @@ class _ErpReportCatalogViewState extends State<ErpReportCatalogView> {
                       color: ErpPalette.amber),
                     title: Text(gap),
                   ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: OutlinedButton.icon(
-                    key: Key('erp_report_detail_open_${report.id}'),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => ErpReportDetailScreen(report: report),
-                      ),
-                    ),
-                    icon: const Icon(Icons.open_in_new),
-                    label: const Text('فتح صفحة التقرير المخصصة — مرجع فقط'),
-                  ),
-                ),
                 const SizedBox(height: 12),
                 const Text(
                   'لا توجد بيانات حية محملة. يلزم API موثق وصلاحية قراءة '
