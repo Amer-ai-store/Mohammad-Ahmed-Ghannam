@@ -126,6 +126,108 @@ BEGIN
   IF NOT blocked THEN
     RAISE EXCEPTION 'ZERO_QUANTITY_EVENT_ACCEPTED';
   END IF;
+
+  blocked := false;
+  BEGIN
+    INSERT INTO erp.item_movement_events
+       (tenant_id,branch_id,event_id,event_date,item_code,
+        family_code,supplier_code,movement_kind,posting_status,
+        quantity_milli,net_amount_fils,tax_fils,cost_fils,reference_event_id)
+     VALUES
+       ('11111111-1111-4111-8111-111111111111','BR-A','BAD-MISMATCH_KIND',
+        date '2026-10-02','SKU-A','FAM-A','SUP-A',
+        'purchase_return','POSTED',100,25,4,0,'EV-A-1');
+  EXCEPTION WHEN check_violation THEN
+    blocked := true;
+  END;
+  IF NOT blocked THEN
+    RAISE EXCEPTION 'RETURN_MISMATCH_KIND_SHOULD_BE_BLOCKED';
+  END IF;
+
+  blocked := false;
+  BEGIN
+    INSERT INTO erp.item_movement_events
+       (tenant_id,branch_id,event_id,event_date,item_code,
+        family_code,supplier_code,movement_kind,posting_status,
+        quantity_milli,net_amount_fils,tax_fils,cost_fils,reference_event_id)
+     VALUES
+       ('11111111-1111-4111-8111-111111111111','BR-A','BAD-MISMATCH_ITEM',
+        date '2026-10-02','OTHER-SKU','FAM-A','SUP-A',
+        'sale_return','POSTED',100,25,4,15,'EV-A-1');
+  EXCEPTION WHEN check_violation THEN
+    blocked := true;
+  END;
+  IF NOT blocked THEN
+    RAISE EXCEPTION 'RETURN_MISMATCH_ITEM_SHOULD_BE_BLOCKED';
+  END IF;
+
+  blocked := false;
+  BEGIN
+    INSERT INTO erp.item_movement_events
+       (tenant_id,branch_id,event_id,event_date,item_code,
+        family_code,supplier_code,movement_kind,posting_status,
+        quantity_milli,net_amount_fils,tax_fils,cost_fils,reference_event_id)
+     VALUES
+       ('11111111-1111-4111-8111-111111111111','BR-A','BAD-MISMATCH_FAMILY',
+        date '2026-10-02','SKU-A','OTHER-FAMILY','SUP-A',
+        'sale_return','POSTED',100,25,4,15,'EV-A-1');
+  EXCEPTION WHEN check_violation THEN
+    blocked := true;
+  END;
+  IF NOT blocked THEN
+    RAISE EXCEPTION 'RETURN_MISMATCH_FAMILY_SHOULD_BE_BLOCKED';
+  END IF;
+
+  blocked := false;
+  BEGIN
+    INSERT INTO erp.item_movement_events
+       (tenant_id,branch_id,event_id,event_date,item_code,
+        family_code,supplier_code,movement_kind,posting_status,
+        quantity_milli,net_amount_fils,tax_fils,cost_fils,reference_event_id)
+     VALUES
+       ('11111111-1111-4111-8111-111111111111','BR-A','BAD-MISMATCH_SUPPLIER',
+        date '2026-10-02','SKU-A','FAM-A','OTHER-SUPPLIER',
+        'sale_return','POSTED',100,25,4,15,'EV-A-1');
+  EXCEPTION WHEN check_violation THEN
+    blocked := true;
+  END;
+  IF NOT blocked THEN
+    RAISE EXCEPTION 'RETURN_MISMATCH_SUPPLIER_SHOULD_BE_BLOCKED';
+  END IF;
+
+  blocked := false;
+  BEGIN
+    INSERT INTO erp.item_movement_events
+       (tenant_id,branch_id,event_id,event_date,item_code,
+        family_code,supplier_code,movement_kind,posting_status,
+        quantity_milli,net_amount_fils,tax_fils,cost_fils,reference_event_id)
+     VALUES
+       ('11111111-1111-4111-8111-111111111111','BR-A','BAD-BACKDATED_RETURN',
+        date '2026-09-30','SKU-A','FAM-A','SUP-A',
+        'sale_return','POSTED',100,25,4,15,'EV-A-1');
+  EXCEPTION WHEN check_violation THEN
+    blocked := true;
+  END;
+  IF NOT blocked THEN
+    RAISE EXCEPTION 'RETURN_BACKDATED_RETURN_SHOULD_BE_BLOCKED';
+  END IF;
+
+  blocked := false;
+  BEGIN
+    INSERT INTO erp.item_movement_events
+       (tenant_id,branch_id,event_id,event_date,item_code,
+        family_code,supplier_code,movement_kind,posting_status,
+        quantity_milli,net_amount_fils,tax_fils,cost_fils,reference_event_id)
+     VALUES
+       ('11111111-1111-4111-8111-111111111111','BR-A','BAD-OVERSIZED_SINGLE_RETURN',
+        date '2026-10-02','SKU-A','FAM-A','SUP-A',
+        'sale_return','POSTED',1001,25,4,15,'EV-A-1');
+  EXCEPTION WHEN check_violation THEN
+    blocked := true;
+  END;
+  IF NOT blocked THEN
+    RAISE EXCEPTION 'RETURN_OVERSIZED_SINGLE_RETURN_SHOULD_BE_BLOCKED';
+  END IF;
 END
-$$;
+$;
 ROLLBACK;
