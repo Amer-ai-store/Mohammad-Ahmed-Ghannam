@@ -228,6 +228,34 @@ BEGIN
   IF NOT blocked THEN
     RAISE EXCEPTION 'RETURN_OVERSIZED_SINGLE_RETURN_SHOULD_BE_BLOCKED';
   END IF;
+  -- A first partial return is allowed within the remaining quantity.
+  -- Existing synthetic EV-A-2 already returned 100 of original 1000.
+  INSERT INTO erp.item_movement_events
+    (tenant_id,branch_id,event_id,event_date,item_code,
+     family_code,supplier_code,movement_kind,posting_status,
+     quantity_milli,net_amount_fils,tax_fils,cost_fils,reference_event_id)
+  VALUES
+    ('11111111-1111-4111-8111-111111111111','BR-A','VALID-PARTIAL-RETURN-600',
+     date '2026-10-03','SKU-A','FAM-A','SUP-A',
+     'sale_return','POSTED',600,150,24,105,'EV-A-1');
+  blocked := false;
+  BEGIN
+    -- 100 existing + 600 new + 400 more = 1100 > original quantity 1000.
+    INSERT INTO erp.item_movement_events
+      (tenant_id,branch_id,event_id,event_date,item_code,
+       family_code,supplier_code,movement_kind,posting_status,
+       quantity_milli,net_amount_fils,tax_fils,cost_fils,reference_event_id)
+    VALUES
+      ('11111111-1111-4111-8111-111111111111','BR-A','BAD-CUMULATIVE-RETURN',
+       date '2026-10-04','SKU-A','FAM-A','SUP-A',
+       'sale_return','POSTED',400,100,16,70,'EV-A-1');
+  EXCEPTION WHEN check_violation THEN
+    blocked := true;
+  END;
+  IF NOT blocked THEN
+    RAISE EXCEPTION 'CUMULATIVE_RETURN_LIMIT_NOT_ENFORCED';
+  END IF;
+
 END
 $daily_guard_test$;
 ROLLBACK;
