@@ -67,6 +67,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0007_independent_item_movement_events.sql
       - name: Seed synthetic users and cheques in disposable database
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
+      - name: Reject movement and branch grant edits, cross-company returns and unauthorized SQL writes
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_daily_movement_ci.sql
       - name: Install pinned Node API dependencies
         working-directory: jawafa-erp-ai/api
         run: npm install --no-audit --no-fund
