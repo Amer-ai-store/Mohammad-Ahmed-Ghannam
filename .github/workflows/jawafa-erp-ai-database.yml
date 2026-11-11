@@ -69,6 +69,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
       - name: Reject movement and branch grant edits, cross-company returns and unauthorized SQL writes
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_daily_movement_ci.sql
+      - name: Assert single and cumulative refund value VAT and cost caps using synthetic SQL
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_return_financial_limits_ci.sql
       - name: Challenge simultaneous partial refunds against same original in isolated CI database
         env:
           ERP_ALLOW_RETURN_RACE_CI: '1'
