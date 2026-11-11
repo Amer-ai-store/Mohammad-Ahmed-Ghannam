@@ -2,7 +2,7 @@
 """Real concurrent PostgreSQL test on disposable NEW-ERP CI database only.
 
 Verifies that two independent transactions cannot both post a partial return
-whose SUM exceeds the original sale quantity. All records are synthetic.
+whose SUM exceeds the original sale quantity, amount, tax or cost. All records are synthetic.
 NEVER run on Jawafa_DB, TrustSoft, or a non-disposable database.
 """
 from __future__ import annotations
@@ -42,7 +42,8 @@ def must_succeed(result: subprocess.CompletedProcess, label: str) -> str:
     return result.stdout.strip()
 
 
-def return_insert(event_id: str, origin: str) -> str:
+def return_insert(event_id: str, origin: str, *, quantity: int,
+                  amount: int, tax: int, cost: int) -> str:
     return f"""INSERT INTO erp.item_movement_events
        (tenant_id,branch_id,event_id,event_date,item_code,family_code,
         supplier_code,movement_kind,posting_status,quantity_milli,
@@ -50,11 +51,20 @@ def return_insert(event_id: str, origin: str) -> str:
       VALUES
        ('{TENANT}','{BRANCH}','{event_id}',date '2026-10-09',
         'SYNTH-RACE-ITEM','SYNTH-RACE-FAMILY','SYNTH-RACE-SUP',
-        'sale_return','POSTED',600,600,0,400,'{origin}');"""
+        'sale_return','POSTED',{quantity},{amount},{tax},{cost},'{origin}');"""
 
 
-def run_race(round_number: int) -> None:
-    origin = f"RACE-ORIGINAL-{round_number}"
+def run_race(round_number: int, dimension: str) -> None:
+    origin = f"RACE-ORIGINAL-{round_number}-{dimension}"
+    if dimension not in ("QUANTITY", "AMOUNT", "TAX", "COST"):
+        raise RuntimeError("UNKNOWN_SYNTHETIC_DIMENSION")
+    quantity = 600 if dimension == "QUANTITY" else 300
+    amount = 600 if dimension == "AMOUNT" else 300
+    tax = 60 if dimension == "TAX" else 10
+    cost = 400 if dimension == "COST" else 200
+    rejected_code = ("CUMULATIVE_RETURN_EXCEEDS_SOURCE_QUANTITY"
+                     if dimension == "QUANTITY"
+                     else "CUMULATIVE_RETURN_EXCEEDS_SOURCE_FINANCIAL_LIMIT")
     setup = f"""INSERT INTO erp.item_movement_events
       (tenant_id,branch_id,event_id,event_date,item_code,family_code,
        supplier_code,movement_kind,posting_status,quantity_milli,
@@ -62,19 +72,21 @@ def run_race(round_number: int) -> None:
     VALUES
       ('{TENANT}','{BRANCH}','{origin}',date '2026-10-08',
        'SYNTH-RACE-ITEM','SYNTH-RACE-FAMILY','SYNTH-RACE-SUP',
-       'sale','POSTED',1000,1000,0,700);"""
+       'sale','POSTED',1000,1000,100,700);"""
     must_succeed(psql(setup), "SYNTHETIC_ORIGIN")
 
     # First connection holds its transaction open after acquiring the return
     # origin lock. Second connection competes for the same original source.
     first_sql = (
         "BEGIN;\nSET LOCAL statement_timeout = '12000ms';\n"
-        + return_insert(f"RACE-RETURN-{round_number}-A", origin)
+        + return_insert(f"RACE-RETURN-{round_number}-{dimension}-A", origin,
+                        quantity=quantity, amount=amount, tax=tax, cost=cost)
         + "\nSELECT pg_sleep(1.5);\nCOMMIT;\n"
     )
     second_sql = (
         "BEGIN;\nSET LOCAL statement_timeout = '12000ms';\n"
-        + return_insert(f"RACE-RETURN-{round_number}-B", origin)
+        + return_insert(f"RACE-RETURN-{round_number}-{dimension}-B", origin,
+                        quantity=quantity, amount=amount, tax=tax, cost=cost)
         + "\nCOMMIT;\n"
     )
 
@@ -102,16 +114,20 @@ def run_race(round_number: int) -> None:
     if len(statuses) != 2 or statuses[0] != 0 or statuses[1] == 0:
         raise RuntimeError("CONCURRENT_OVERRETURN_WAS_NOT_REJECTED")
     rejected_text = second.stderr if second.returncode else first_stderr
-    if "CUMULATIVE_RETURN_EXCEEDS_SOURCE_QUANTITY" not in rejected_text:
+    if rejected_code not in rejected_text:
         raise RuntimeError("UNEXPECTED_REJECTION_REQUIRES_REVIEW")
 
     status = must_succeed(psql(f"""SELECT count(*)::text || ':' ||
-        coalesce(sum(quantity_milli),0)::text
+        coalesce(sum(quantity_milli),0)::text || ':' ||
+        coalesce(sum(net_amount_fils),0)::text || ':' ||
+        coalesce(sum(tax_fils),0)::text || ':' ||
+        coalesce(sum(cost_fils),0)::text
         FROM erp.item_movement_events
         WHERE tenant_id='{TENANT}' AND branch_id='{BRANCH}'
           AND reference_event_id='{origin}' AND posting_status='POSTED';"""),
         "RACE_READBACK")
-    if status != "1:600":
+    expected = f"1:{quantity}:{amount}:{tax}:{cost}"
+    if status != expected:
         raise RuntimeError("INVALID_CONCURRENT_COMMIT_READBACK")
 
 
@@ -123,9 +139,12 @@ def main() -> int:
           VALUES ('{TENANT}','{BRANCH}','Synthetic Race Test Branch');"""),
           "RACE_BRANCH")
         for number in (1, 2):
-            run_race(number)
-        print("PASS: 2 isolated two-transaction races, each one accepted and "
-              "one rejected, 1:600 post-commit readback")
+            run_race(number, "QUANTITY")
+        for dimension in ("AMOUNT", "TAX", "COST"):
+            run_race(3, dimension)
+        print("PASS: 5 isolated two-transaction races across quantity, amount, "
+              "VAT and cost; one accepted, one rejected and exact count/qty/"
+              "amount/tax/cost post-commit readback each")
         return 0
     except (RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
         # Only error codes, not SQL rows/source contents.
