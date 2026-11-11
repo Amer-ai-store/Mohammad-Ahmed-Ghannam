@@ -88,6 +88,9 @@ DECLARE
   original erp.item_movement_events%ROWTYPE;
   expected_kind text;
   previously_returned_milli numeric;
+  previously_returned_amount numeric;
+  previously_returned_tax numeric;
+  previously_returned_cost numeric;
 BEGIN
   IF NEW.movement_kind NOT IN ('sale_return','purchase_return') THEN
     RETURN NEW;
@@ -106,9 +109,12 @@ BEGIN
      original.family_code <> NEW.family_code OR
      original.supplier_code <> NEW.supplier_code OR
      original.event_date > NEW.event_date OR
-     NEW.quantity_milli > original.quantity_milli THEN
+     NEW.quantity_milli > original.quantity_milli OR
+     NEW.net_amount_fils > original.net_amount_fils OR
+     NEW.tax_fils > original.tax_fils OR
+     NEW.cost_fils > original.cost_fils THEN
     RAISE EXCEPTION USING ERRCODE='23514',
-      MESSAGE='RETURN_SOURCE_KIND_SCOPE_OR_QUANTITY_INVALID';
+      MESSAGE='RETURN_SOURCE_KIND_SCOPE_QUANTITY_OR_FINANCIAL_LIMIT_INVALID';
   END IF;
   -- Concurrent partial returns on the same original must serialize before
   -- their cumulative quantity is tested. A fresh READ COMMITTED statement
@@ -124,8 +130,16 @@ BEGIN
         NEW.branch_id || '|' || NEW.reference_event_id, 0
       )
     );
-    SELECT COALESCE(sum(quantity_milli), 0)
-      INTO previously_returned_milli
+    -- Fixed-precision NUMERIC totals avoid bigint SUM/JS overflow and
+    -- independently constrain every original monetary dimension.
+    SELECT COALESCE(sum(quantity_milli), 0),
+           COALESCE(sum(net_amount_fils), 0),
+           COALESCE(sum(tax_fils), 0),
+           COALESCE(sum(cost_fils), 0)
+      INTO previously_returned_milli,
+           previously_returned_amount,
+           previously_returned_tax,
+           previously_returned_cost
       FROM erp.item_movement_events
      WHERE tenant_id=NEW.tenant_id AND branch_id=NEW.branch_id
        AND reference_event_id=NEW.reference_event_id
@@ -135,6 +149,15 @@ BEGIN
        original.quantity_milli THEN
       RAISE EXCEPTION USING ERRCODE='23514',
         MESSAGE='CUMULATIVE_RETURN_EXCEEDS_SOURCE_QUANTITY';
+    END IF;
+    IF previously_returned_amount + NEW.net_amount_fils >
+         original.net_amount_fils OR
+       previously_returned_tax + NEW.tax_fils >
+         original.tax_fils OR
+       previously_returned_cost + NEW.cost_fils >
+         original.cost_fils THEN
+      RAISE EXCEPTION USING ERRCODE='23514',
+        MESSAGE='CUMULATIVE_RETURN_EXCEEDS_SOURCE_FINANCIAL_LIMIT';
     END IF;
   END IF;
   RETURN NEW;
