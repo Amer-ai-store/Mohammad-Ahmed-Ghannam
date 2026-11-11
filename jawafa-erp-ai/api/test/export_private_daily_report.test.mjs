@@ -104,11 +104,11 @@ test('input hash mismatch fails closed', async t => {
 test('source must stay within approved private directory', async t => {
   const f = await fixture(t);
   const outside = path.join(os.tmpdir(), 'not-approved-erp.json');
-  await rejected(privateExport({...f.options, '--events-json': outside}),
-    'INVALID_OR_UNAVAILABLE_PRIVATE_SOURCE').catch(async error => {
-      // fs ENOENT is deliberately masked by the CLI, not in direct function.
-      assert.equal(error?.code, 'ENOENT');
-    });
+  // The direct helper exposes fs ENOENT, while the CLI masks path details.
+  await assert.rejects(
+    privateExport({...f.options, '--events-json': outside}),
+    {code: 'ENOENT'},
+  );
   const nestedRoot = path.join(f.root, 'sub');
   const {mkdir} = await import('node:fs/promises');
   await mkdir(nestedRoot);
