@@ -11,7 +11,7 @@ New-ERP-only migration: `backend/migrations/0007_independent_item_movement_event
 - `erp.item_movement_events` stores only separate new-ERP sales, purchase, stock-in/out and return event inputs. A unique tenant+branch+event ID prevents duplicate source event identities.
 - PostgreSQL `FORCE ROW LEVEL SECURITY` is enabled for all three tables; access is scoped by the tenant transaction setting. The reader principal receives SELECT only; no INSERT, UPDATE, DELETE or DDL is granted.
 - Triggers reject changes and deletions to event and branch access history even by normally privileged roles; a DBA/superuser could still bypass such controls, so production needs a reviewed administrative boundary and audit logs.
-- Same-tenant and same-branch foreign keys guard a return's source reference. **The present schema does not yet certify opposite original event type, aggregate return quantity, full source event completeness, inventory valuation, tax policy or cross-period cutoffs.** These remain mandatory acceptance tests before real ERP posting.
+- Same-tenant and same-branch foreign keys guard a return's source reference. **The new `erp.verify_movement_return_origin` BEFORE INSERT trigger validates the original event type (sale vs purchase), the same item/family/supplier/branch, a non-backdated return, original POSTED status and that the single return quantity does not exceed the original.** However the schema **does not yet enforce the sum of all partial returns** across concurrent transactions, independently verify actual source completeness, valuation, tax policy or production role provisioning. These remain mandatory acceptance gates before real ERP posting.
 
 The migration is referenced only in disposable PostgreSQL CI workflows. **It was not applied to Jawafa_DB, TrustSoft or any live accounting database.**
 
@@ -42,7 +42,7 @@ The result has **11 independent ERP event-derived fields** at day+item grain, in
 - Date, family, supplier, item, size and method filters deny malformed access.
 - Tenant RLS separates source rows in SQL.
 - SELECT-only login cannot change event amounts or branch access history.
-- `backend/tests/erp_daily_movement_ci.sql` probes immutable triggers, revocation precedence, duplicate event rejection, invalid quantities, return references to foreign tenants, and denied write grants.
+- `backend/tests/erp_daily_movement_ci.sql` probes immutable triggers, revocation precedence, duplicate event rejection, invalid quantities, return references to foreign tenants, **six deliberately invalid return-lineage cases** (wrong source type/item/family/supplier, backdated return, single return exceeding source quantity), and denied write grants.
 
 Only synthetic data are used in these tests. A successful return is **not** an independent check of the vendor's accounting formula.
 
