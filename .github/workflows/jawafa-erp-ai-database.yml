@@ -69,6 +69,10 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
       - name: Reject movement and branch grant edits, cross-company returns and unauthorized SQL writes
         run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_daily_movement_ci.sql
+      - name: Challenge simultaneous partial refunds against same original in isolated CI database
+        env:
+          ERP_ALLOW_RETURN_RACE_CI: '1'
+        run: python3 jawafa-erp-ai/backend/tests/erp_return_concurrency_ci.py
       - name: Install pinned Node API dependencies
         working-directory: jawafa-erp-ai/api
         run: npm install --no-audit --no-fund
