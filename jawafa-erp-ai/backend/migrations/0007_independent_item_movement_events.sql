@@ -87,6 +87,7 @@ RETURNS trigger LANGUAGE plpgsql AS $return_guard$
 DECLARE
   original erp.item_movement_events%ROWTYPE;
   expected_kind text;
+  previously_returned_milli numeric;
 BEGIN
   IF NEW.movement_kind NOT IN ('sale_return','purchase_return') THEN
     RETURN NEW;
@@ -108,6 +109,33 @@ BEGIN
      NEW.quantity_milli > original.quantity_milli THEN
     RAISE EXCEPTION USING ERRCODE='23514',
       MESSAGE='RETURN_SOURCE_KIND_SCOPE_OR_QUANTITY_INVALID';
+  END IF;
+  -- Concurrent partial returns on the same original must serialize before
+  -- their cumulative quantity is tested. A fresh READ COMMITTED statement
+  -- snapshot is mandatory: repeatable-read snapshot could be stale.
+  IF NEW.posting_status='POSTED' THEN
+    IF current_setting('transaction_isolation') <> 'read committed' THEN
+      RAISE EXCEPTION USING ERRCODE='23514',
+        MESSAGE='RETURN_REQUIRES_READ_COMMITTED_ISOLATION';
+    END IF;
+    PERFORM pg_advisory_xact_lock(
+      hashtextextended(
+        'NEW-ERP-RETURN|' || NEW.tenant_id::text || '|' ||
+        NEW.branch_id || '|' || NEW.reference_event_id, 0
+      )
+    );
+    SELECT COALESCE(sum(quantity_milli), 0)
+      INTO previously_returned_milli
+      FROM erp.item_movement_events
+     WHERE tenant_id=NEW.tenant_id AND branch_id=NEW.branch_id
+       AND reference_event_id=NEW.reference_event_id
+       AND movement_kind=NEW.movement_kind
+       AND posting_status='POSTED';
+    IF previously_returned_milli + NEW.quantity_milli >
+       original.quantity_milli THEN
+      RAISE EXCEPTION USING ERRCODE='23514',
+        MESSAGE='CUMULATIVE_RETURN_EXCEEDS_SOURCE_QUANTITY';
+    END IF;
   END IF;
   RETURN NEW;
 END;
