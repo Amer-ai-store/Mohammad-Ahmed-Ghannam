@@ -28,6 +28,8 @@ on:
       - 'jawafa-erp-ai/tools/compare_owner_daily_erp_candidates.py'
       - 'jawafa-erp-ai/tools/test_compare_owner_daily_erp_candidates.py'
       - 'jawafa-erp-ai/tools/test_private_erp_bridge_end_to_end.py'
+      - 'jawafa-erp-ai/tools/test_owner_monthly_field_registry.py'
+      - 'jawafa-erp-ai/docs/owner_monthly_field_registry_20261111.json'
       - 'jawafa-erp-ai/tools/profile_monthly_movement_formulas.py'
       - 'jawafa-erp-ai/tools/test_profile_monthly_movement_formulas.py'
       - 'jawafa-erp-ai/docs/reference_monthly_movement_schema_20261110.json'
