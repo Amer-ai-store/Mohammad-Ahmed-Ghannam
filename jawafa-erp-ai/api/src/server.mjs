@@ -202,6 +202,12 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
               (event_date BETWEEN $7::date AND $8::date))`
           : `(event_date >= $3::date AND event_date <= $4::date)`;
         const filterStart = isHistoricalComparison ? 9 : 5;
+        // Build SQL placeholders from fixed indices; values remain bound,
+        // never interpolated from the untrusted HTTP request.
+        const sqlParameter = (index) => String.fromCharCode(36) + index;
+        const itemPlaceholder = sqlParameter(filterStart);
+        const familyPlaceholder = sqlParameter(filterStart + 1);
+        const supplierPlaceholder = sqlParameter(filterStart + 2);
         const readArgs = [
           tenantId, reportParams.branchId,
           ...(isHistoricalComparison
@@ -217,9 +223,9 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
              FROM erp.item_movement_events
             WHERE tenant_id=$1 AND branch_id=$2
               AND ${dateClause}
-              AND (${filterStart}::text IS NULL OR item_code=${filterStart})
-              AND (${filterStart + 1}::text IS NULL OR family_code=${filterStart + 1})
-              AND (${filterStart + 2}::text IS NULL OR supplier_code=${filterStart + 2})
+              AND (${itemPlaceholder}::text IS NULL OR item_code=${itemPlaceholder})
+              AND (${familyPlaceholder}::text IS NULL OR family_code=${familyPlaceholder})
+              AND (${supplierPlaceholder}::text IS NULL OR supplier_code=${supplierPlaceholder})
             ORDER BY event_date, event_id LIMIT 50001`,
           readArgs,
         );
