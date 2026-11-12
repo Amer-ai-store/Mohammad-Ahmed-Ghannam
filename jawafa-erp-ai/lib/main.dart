@@ -241,7 +241,7 @@ class _ErpShellState extends State<ErpShell> {
           details: 'سجل أحداث غير قابل للتعديل وفصل الصلاحيات وأدلة قبل/بعد.',
         );
       case ErpArea.reports:
-        return const ErpReportCatalogView();
+        return ErpReportCatalogView(historicalReader: widget.gateway);
     }
   }
 
