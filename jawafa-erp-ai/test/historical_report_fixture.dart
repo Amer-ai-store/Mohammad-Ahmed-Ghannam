@@ -1,5 +1,8 @@
 /// Synthetic-only API fixture. No owner transaction, supplier or token data.
-Map<String, dynamic> syntheticHistoricalReport({bool missingOlderYear = false}) {
+Map<String, dynamic> syntheticHistoricalReport({
+  bool missingOlderYear = false,
+  bool includeDailySeries = false,
+}) {
   const columns = [
     'purchase_qty_milli', 'sales_qty_milli', 'stock_delta_qty_milli',
     'purchases_before_tax_fils', 'purchase_tax_fils',
@@ -39,6 +42,16 @@ Map<String, dynamic> syntheticHistoricalReport({bool missingOlderYear = false}) 
             missing: i == 2 && missingOlderYear),
         'monthToDate': period(550 - i * 100,
             missing: i == 2 && missingOlderYear),
+        if (includeDailySeries)
+          'dailySeries': [
+            for (var dayNumber = 1; dayNumber <= 2; dayNumber++) {
+              'dayOfMonth': dayNumber,
+              'date': (2026 - i).toString() + '-10-' +
+                  dayNumber.toString().padLeft(2, '0'),
+              ...period(dayNumber == 1 ? 300 - i * 30 : 250 - i * 70,
+                  missing: i == 2 && missingOlderYear),
+            },
+          ],
       },
     ],
     'comparisons': [
