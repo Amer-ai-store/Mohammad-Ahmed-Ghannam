@@ -7,12 +7,41 @@
  let dataset=null,origin="NOT_CONNECTED";
  const nf=new Intl.NumberFormat("en-US",{minimumFractionDigits:0,maximumFractionDigits:3});
  const num=v=>typeof v==="number"&&Number.isFinite(v)&&Math.abs(v)<=1e15?v:null;
- const fit=()=>{
-  if(innerWidth<960){stage.style.transform="none";frame.style.height="auto";return;}
-  const width=frame.clientWidth||innerWidth,scale=Math.min(1,Math.max(.45,width/1536));
-  stage.style.transform="scale("+scale+")";frame.style.height=Math.ceil(864*scale)+"px";
+ // The 1536px desktop artwork must occupy exactly the available horizontal space.
+ // A 0.45 minimum scale previously cropped narrow/browser-desktop-mode viewports.
+ let lastReportedHeight=0,resizeFrame;
+ const reportHeight=()=>{
+  if(window.parent===window)return;
+  const footer=document.querySelector(".functional-tools");
+  const bottom=footer?footer.getBoundingClientRect().bottom+window.scrollY:document.documentElement.scrollHeight;
+  const height=Math.max(200,Math.ceil(bottom+4));
+  if(Math.abs(height-lastReportedHeight)<2)return;
+  lastReportedHeight=height;
+  try{window.parent.postMessage({type:"jawafa2100:content-height",height},location.origin==="null"?"*":location.origin);}catch{}
  };
- addEventListener("resize",fit,{passive:true});fit();
+ const scheduleHeight=()=>{
+  if(resizeFrame)cancelAnimationFrame(resizeFrame);
+  resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;reportHeight();});
+ };
+ const fit=()=>{
+  const responsive=matchMedia("(max-width:959px)").matches;
+  frame.style.direction="ltr";
+  stage.style.transformOrigin="top left";
+  if(responsive){
+   stage.style.transform="none";
+   frame.style.height="auto";
+  }else{
+   const width=frame.clientWidth||innerWidth;
+   const scale=Math.min(1,width/1536);
+   stage.style.transform="scale("+scale+")";
+   frame.style.height=Math.ceil(864*scale)+"px";
+  }
+  scheduleHeight();
+ };
+ addEventListener("resize",fit,{passive:true});
+ addEventListener("load",scheduleHeight);
+ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(scheduleHeight);
+ fit();
  function shape(x){
   if(!x||typeof x!=="object"||Array.isArray(x)||x.format!=="jawafa-performance-v1"||!x.metrics||typeof x.metrics!=="object")
     throw Error("الملف غير مطابق لصيغة jawafa-performance-v1.");
