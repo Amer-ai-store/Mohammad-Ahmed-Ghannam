@@ -453,7 +453,7 @@ test('historical report denies wrong company, viewer and revoked or ungranted br
   });
   assert.equal(authorized.status,200);
   assert.equal(authorized.body.years[1].daily.totals.sales_before_tax_fils,9999);
-  assert.equal(authorized.body.years[0].monthToDate.totals,null);
+  assert.equal(authorized.body.years[0].monthToDate.totals.sales_before_tax_fils,8000);
 });
 
 test('historical report prevents SQL injection or scope/filter widening',async()=>{
@@ -492,6 +492,8 @@ test('historical report has no access to another tenant even with the same branc
   });
   assert.equal(r.status,200);
   assert.equal(r.body.years[1].daily.totals.sales_before_tax_fils,9999);
-  assert.equal(r.body.years[0].daily.totals.sales_before_tax_fils,8000);
+  // Prior-day postings belong in MTD but not in the requested daily total.
+  assert.equal(r.body.years[0].daily.totals,null);
+  assert.equal(r.body.years[0].monthToDate.totals.sales_before_tax_fils,8000);
   assert.equal(JSON.stringify(r.body).includes('SKU-A'),false);
 });
