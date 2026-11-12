@@ -7,8 +7,8 @@ a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer}b
 a:focus-visible,button:focus-visible{outline:3px solid #b0ffca;outline-offset:2px}
 .svg-defs{position:absolute;width:0;height:0;overflow:hidden}
 svg{width:22px;height:22px;fill:none;stroke:currentColor}
-.stage-frame{position:relative;width:100%;margin:auto;max-width:1536px;overflow:visible}
-.stage{width:1536px;height:864px;position:relative;direction:ltr;transform-origin:0 0;isolation:isolate;background:radial-gradient(ellipse 40% 39% at 51% 31%,#265d438a,transparent 96%),radial-gradient(ellipse 34% 44% at 0 69%,#1139268a,transparent 88%),radial-gradient(ellipse 40% 45% at 100% 76%,#112c2a8c,transparent 85%),linear-gradient(#061610,#06120e);overflow:hidden}
+.stage-frame{position:relative;width:100%;margin:0 auto;max-width:1536px;overflow:visible;direction:ltr;/* prevent RTL anchoring of the 1536px scene off-screen */}
+.stage{width:1536px;height:864px;position:relative;direction:ltr;margin-left:0;margin-right:0;transform-origin:top left;isolation:isolate;background:radial-gradient(ellipse 40% 39% at 51% 31%,#265d438a,transparent 96%),radial-gradient(ellipse 34% 44% at 0 69%,#1139268a,transparent 88%),radial-gradient(ellipse 40% 45% at 100% 76%,#112c2a8c,transparent 85%),linear-gradient(#061610,#06120e);overflow:hidden}
 .stage:before{content:"";position:absolute;inset:90px -100px 115px;background:repeating-linear-gradient(118deg,transparent 0 70px,#57d88908 71px,transparent 72px),repeating-linear-gradient(75deg,transparent 0 97px,#76e1aa08 99px,transparent 101px);filter:blur(4px);pointer-events:none}
 .stage:after{content:"";position:absolute;z-index:0;left:435px;top:128px;width:780px;height:428px;background:radial-gradient(ellipse,#38e88625,transparent 68%);filter:blur(42px);pointer-events:none}
 .hero{position:absolute;z-index:9;top:0;left:0;width:100%;height:123px;direction:ltr}
