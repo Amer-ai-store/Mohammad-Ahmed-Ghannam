@@ -112,8 +112,8 @@ class ErpGatewayClient implements ErpHistoricalReportReader {
     }
   }
 
-  /// Read a scoped three-year same-day/MTD report after real login is
-  /// supplied by the host app. This NEVER stores the token or grants access.
+  /// Only authorized host login provides a short-lived OIDC token.
+  /// No database access or identity secret is persisted here.
   @override
   Future<ErpHistoricalComparison> readHistoricalComparison({
     required String date,
@@ -122,102 +122,7 @@ class ErpGatewayClient implements ErpHistoricalReportReader {
     String? familyCode,
     String? supplierCode,
   }) async {
-    final allowedCode = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}
-    final result = await _get('/v1/cheques');
-    final rows = result['items'];
-    if (rows is! List) throw const ErpGatewayError('INVALID_RESPONSE');
-    return List.unmodifiable(rows.map((row) =>
-        ErpRemoteCheque.fromJson(Map<String, dynamic>.from(row as Map))));
-  }
-
-  Future<List<ErpRemotePurchaseInvoice>> readPurchaseInvoices() async {
-    final result = await _get('/v1/purchase-invoices');
-    final rows = result['items'];
-    if (rows is! List) throw const ErpGatewayError('INVALID_RESPONSE');
-    return List.unmodifiable(rows.map((row) =>
-        ErpRemotePurchaseInvoice.fromJson(
-          Map<String, dynamic>.from(row as Map),
-        )));
-  }
-
-  Future<List<Map<String, dynamic>>> readPersonnel() =>
-      _readReferenceDirectory('/v1/personnel');
-
-  Future<List<Map<String, dynamic>>> readPermissions() =>
-      _readReferenceDirectory('/v1/permissions');
-
-  Future<List<Map<String, dynamic>>> readSettings() =>
-      _readReferenceDirectory('/v1/settings');
-
-  /// Minimal allowlisted, read-only metadata. Never stores employee identity
-  /// documents, payroll, service credentials or mutable configuration.
-  Future<List<Map<String, dynamic>>> _readReferenceDirectory(String path) async {
-    final result = await _get(path);
-    final rows = result['items'];
-    if (rows is! List) throw const ErpGatewayError('INVALID_RESPONSE');
-    try {
-      return List.unmodifiable(rows.map((row) =>
-          Map<String, dynamic>.unmodifiable(
-            Map<String, dynamic>.from(row as Map),
-          )));
-    } catch (_) {
-      throw const ErpGatewayError('INVALID_RESPONSE');
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> readChequeEvents(String chequeId) async {
-    if (!RegExp(r'^[0-9a-f-]{36}$', caseSensitive: false).hasMatch(chequeId)) {
-      throw const ErpGatewayError('INVALID_CHEQUE_ID');
-    }
-    final result = await _get('/v1/cheques/$chequeId/events');
-    final rows = result['items'];
-    if (rows is! List) throw const ErpGatewayError('INVALID_RESPONSE');
-    return List.unmodifiable(
-      rows.map((row) => Map<String, dynamic>.unmodifiable(
-          Map<String, dynamic>.from(row as Map))),
-    );
-  }
-
-  Future<Map<String, dynamic>> _get(String path, {String? branchId}) async {
-    final token = await accessTokenProvider();
-    if (token.trim().isEmpty) throw const ErpGatewayError('AUTH_REQUIRED');
-    try {
-      final request = await _httpClient
-          .getUrl(baseUri.resolve(path))
-          .timeout(const Duration(seconds: 8));
-      request.followRedirects = false;
-      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
-      request.headers.set('x-erp-tenant-id', tenantId);
-      if (branchId != null) request.headers.set('x-erp-branch-id', branchId);
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      final response = await request.close().timeout(const Duration(seconds: 8));
-      if (response.statusCode != 200) {
-        throw ErpGatewayError(
-            response.statusCode == 401 || response.statusCode == 403
-                ? 'API_ACCESS_DENIED'
-                : 'API_RESPONSE_REJECTED');
-      }
-      final buffer = BytesBuilder(copy: false);
-      await for (final chunk in response.timeout(const Duration(seconds: 8))) {
-        if (buffer.length + chunk.length > 1024 * 1024) {
-          throw const ErpGatewayError('RESPONSE_TOO_LARGE');
-        }
-        buffer.add(chunk);
-      }
-      final json = jsonDecode(utf8.decode(buffer.takeBytes()));
-      if (json is! Map) throw const ErpGatewayError('INVALID_RESPONSE');
-      return Map<String, dynamic>.from(json);
-    } on ErpGatewayError {
-      rethrow;
-    } catch (_) {
-      // Do not disclose OIDC token, URI credentials or private source data.
-      throw const ErpGatewayError('API_UNAVAILABLE');
-    }
-  }
-
-  void close() => _httpClient.close(force: true);
-}
-);
+    final allowedCode = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$');
     if (!validReportDay(date) || !allowedCode.hasMatch(branchId) ||
         [
           if (itemCode != null) itemCode,
@@ -295,7 +200,7 @@ class ErpGatewayClient implements ErpHistoricalReportReader {
     );
   }
 
-  Future<Map<String, dynamic>> _get(String path) async {
+  Future<Map<String, dynamic>> _get(String path, {String? branchId}) async {
     final token = await accessTokenProvider();
     if (token.trim().isEmpty) throw const ErpGatewayError('AUTH_REQUIRED');
     try {
@@ -305,6 +210,7 @@ class ErpGatewayClient implements ErpHistoricalReportReader {
       request.followRedirects = false;
       request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
       request.headers.set('x-erp-tenant-id', tenantId);
+      if (branchId != null) request.headers.set('x-erp-branch-id', branchId);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
       final response = await request.close().timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) {
