@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 import { createOidcVerifier } from './auth.mjs';
 import { independentDailyMovement } from './independent_daily_movement.mjs';
+import { historicalComparisonWindows, compareIndependentErpYears } from './daily_yoy_comparison.mjs';
 
 const { Pool } = pg;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -86,9 +87,10 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
       const isSettings = pathname === '/v1/settings';
       const isPermissions = pathname === '/v1/permissions';
       const isMovementReport = pathname === '/v1/reports/daily-movements';
+      const isHistoricalComparison = pathname === '/v1/reports/historical-daily-compare';
       if (!one && !events && !isList && !isJournal && !isPurchases &&
           !isSuppliers && !isPersonnel && !isSettings && !isPermissions &&
-          !isMovementReport) {
+          !isMovementReport && !isHistoricalComparison) {
         return send(404, { error: 'NOT_FOUND' }, cors);
       }
       if ((one && !UUID.test(one[1])) || (events && !UUID.test(events[1]))) {
@@ -105,20 +107,35 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
         return send(400, { error: 'VALID_TENANT_ID_REQUIRED' }, cors);
       }
       let reportParams = null;
-      if (isMovementReport) {
+      if (isMovementReport || isHistoricalComparison) {
         const branchId = req.headers['x-erp-branch-id'];
-        const allowed = new Set(['from', 'to', 'item', 'family', 'supplier']);
+        const allowed = new Set(isHistoricalComparison
+          ? ['date', 'item', 'family', 'supplier']
+          : ['from', 'to', 'item', 'family', 'supplier']);
         if (typeof branchId !== 'string' || !ERP_CODE.test(branchId) ||
             [...requestUrl.searchParams.keys()].some(k => !allowed.has(k)) ||
             [...allowed].some(k => requestUrl.searchParams.getAll(k).length > 1)) {
           return send(400, {error: 'INVALID_REPORT_SCOPE'}, cors);
         }
-        const fromDate = requestUrl.searchParams.get('from');
-        const toDate = requestUrl.searchParams.get('to');
-        if (!validDay(fromDate) || !validDay(toDate) ||
-            fromDate > toDate ||
-            Date.parse(toDate) - Date.parse(fromDate) > 30 * 86400000) {
-          return send(400, {error: 'INVALID_REPORT_PERIOD_MAX_31_DAYS'}, cors);
+        let fromDate = null;
+        let toDate = null;
+        let comparisonDay = null;
+        let comparisonWindows = null;
+        if (isHistoricalComparison) {
+          comparisonDay = requestUrl.searchParams.get('date');
+          try {
+            comparisonWindows = historicalComparisonWindows(comparisonDay);
+          } catch {
+            return send(400, {error: 'INVALID_HISTORICAL_COMPARISON_DATE'}, cors);
+          }
+        } else {
+          fromDate = requestUrl.searchParams.get('from');
+          toDate = requestUrl.searchParams.get('to');
+          if (!validDay(fromDate) || !validDay(toDate) ||
+              fromDate > toDate ||
+              Date.parse(toDate) - Date.parse(fromDate) > 30 * 86400000) {
+            return send(400, {error: 'INVALID_REPORT_PERIOD_MAX_31_DAYS'}, cors);
+          }
         }
         const codeFilter = (name) => {
           const value = requestUrl.searchParams.get(name);
@@ -130,8 +147,10 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
         if ([itemCode, familyCode, supplierCode].includes(false)) {
           return send(400, {error: 'INVALID_REPORT_FILTER'}, cors);
         }
-        reportParams = {branchId, fromDate, toDate,
-          itemCode, familyCode, supplierCode};
+        reportParams = {
+          branchId, fromDate, toDate, comparisonDay, comparisonWindows,
+          itemCode, familyCode, supplierCode,
+        };
       }
       db = await pool.connect();
       await db.query('BEGIN READ ONLY');
@@ -165,7 +184,7 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
       } else if (!ALLOWED_FINANCE_ROLES.has(membership.rows[0].erp_role)) {
         return send(403, { error: 'PERMISSION_DENIED' }, cors);
       }
-      if (isMovementReport) {
+      if (isMovementReport || isHistoricalComparison) {
         const branchAccess = await db.query(
           `SELECT 1 FROM erp.current_report_branch_access
            WHERE tenant_id=$1 AND oidc_subject=$2 AND branch_id=$3
@@ -175,6 +194,21 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
         if (branchAccess.rowCount !== 1) {
           return send(403, {error:'REPORT_BRANCH_ACCESS_DENIED'}, cors);
         }
+        // Three exact same-month windows avoid fetching unrelated years or
+        // months; both routes use parameterized, tenant-scoped read-only SQL.
+        const dateClause = isHistoricalComparison
+          ? `((event_date BETWEEN $3::date AND $4::date) OR
+              (event_date BETWEEN $5::date AND $6::date) OR
+              (event_date BETWEEN $7::date AND $8::date))`
+          : `(event_date >= $3::date AND event_date <= $4::date)`;
+        const filterStart = isHistoricalComparison ? 9 : 5;
+        const readArgs = [
+          tenantId, reportParams.branchId,
+          ...(isHistoricalComparison
+            ? reportParams.comparisonWindows.flatMap(w => [w.monthStart, w.day])
+            : [reportParams.fromDate, reportParams.toDate]),
+          reportParams.itemCode, reportParams.familyCode, reportParams.supplierCode,
+        ];
         const read = await db.query(
           `SELECT event_id, event_date::text, item_code, family_code,
                   supplier_code, movement_kind, posting_status,
@@ -182,15 +216,12 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
                   tax_fils::text, cost_fils::text, reference_event_id
              FROM erp.item_movement_events
             WHERE tenant_id=$1 AND branch_id=$2
-              AND event_date >= $3::date AND event_date <= $4::date
-              AND ($5::text IS NULL OR item_code=$5)
-              AND ($6::text IS NULL OR family_code=$6)
-              AND ($7::text IS NULL OR supplier_code=$7)
+              AND ${dateClause}
+              AND (${filterStart}::text IS NULL OR item_code=${filterStart})
+              AND (${filterStart + 1}::text IS NULL OR family_code=${filterStart + 1})
+              AND (${filterStart + 2}::text IS NULL OR supplier_code=${filterStart + 2})
             ORDER BY event_date, event_id LIMIT 50001`,
-          [tenantId, reportParams.branchId,
-           reportParams.fromDate, reportParams.toDate,
-           reportParams.itemCode, reportParams.familyCode,
-           reportParams.supplierCode],
+          readArgs,
         );
         if (read.rowCount > MAX_REPORT_EVENT_ROWS) {
           return send(422, {error: 'REPORT_EVENT_LIMIT_EXCEEDED'}, cors);
@@ -212,6 +243,16 @@ export function createServer({ pool, verifyToken, allowedOrigins = [] }) {
           ...(row.reference_event_id
             ? {referenceEventId: row.reference_event_id} : {}),
         }));
+        if (isHistoricalComparison) {
+          return send(200, compareIndependentErpYears({
+            events: scopedEvents,
+            day: reportParams.comparisonDay,
+            tenantId, branchId: reportParams.branchId,
+            ...(reportParams.itemCode ? {itemCode: reportParams.itemCode} : {}),
+            ...(reportParams.familyCode ? {familyCode: reportParams.familyCode} : {}),
+            ...(reportParams.supplierCode ? {supplierCode: reportParams.supplierCode} : {}),
+          }), cors);
+        }
         const projected = independentDailyMovement({
           events: scopedEvents,
           tenantId, branchId: reportParams.branchId,
