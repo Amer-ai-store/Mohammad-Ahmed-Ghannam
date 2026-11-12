@@ -133,3 +133,66 @@ test('valid negative margin is preserved without vendor profit assumptions', () 
 test('source validation must reject a missing events array', () => {
   assert.throws(() => run(null), /YOY_EVENTS_NOT_ARRAY/);
 });
+
+
+test('three-year daily trend has one point per calendar day, never fake zero on gaps', () => {
+  const data = run([
+    sale('2026-10-01',300,'TREND-A'),
+    sale('2026-10-03',100,'TREND-B'),
+    sale('2025-10-02',200,'TREND-C'),
+    sale('2024-10-03',50,'TREND-D'),
+  ]);
+  assert.deepEqual(data.years.map(y => y.dailySeries.length),[3,3,3]);
+  assert.deepEqual(data.years[0].dailySeries.map(p => p.date),
+    ['2026-10-01','2026-10-02','2026-10-03']);
+  assert.equal(data.years[0].dailySeries[0].totals.sales_before_tax_fils,300);
+  assert.equal(data.years[0].dailySeries[1].totals,null);
+  assert.equal(data.years[0].dailySeries[1].availability,'NO_POSTED_EVENTS_FOUND');
+  assert.equal(data.years[0].dailySeries[2].totals.sales_before_tax_fils,100);
+  assert.equal(data.years[1].dailySeries[1].totals.sales_before_tax_fils,200);
+  assert.equal(data.years[2].dailySeries[0].totals,null);
+  assert.deepEqual(data.years.map(y=>y.sourceCoverage),['UNATTESTED','UNATTESTED','UNATTESTED']);
+  for(const year of data.years) {
+    assert.deepEqual(year.dailySeries.at(-1).totals,year.daily.totals);
+    assert.equal(Object.isFrozen(year.dailySeries),true);
+    assert.equal(Object.isFrozen(year.dailySeries[0]),true);
+  }
+  assert.equal(data.functionalParityPercent,null);
+});
+
+test('year trend maintains returns as signed negative observations, not missing', () => {
+  const d = run([
+    sale('2026-10-01',100,'ORIGINAL'),
+    sale('2026-10-02',75,'RETURN',{kind:'sale_return',
+      referenceEventId:'ORIGINAL',costFils:30}),
+  ]);
+  assert.equal(d.years[0].dailySeries[1].totals.sales_before_tax_fils,-75);
+  assert.equal(d.years[0].dailySeries[1].availability,'HAS_POSTED_EVENTS_UNATTESTED');
+  assert.equal(d.years[0].monthToDate.totals.sales_before_tax_fils,25);
+});
+
+test('trend excludes VOIDED and foreign tenant or branch rows and filtered categories', () => {
+  const d = run([
+    sale('2026-10-01',100,'GOOD'),
+    sale('2026-10-02',999,'VOIDED',{status:'VOIDED'}),
+    sale('2026-10-02',999,'OTHER-COMPANY',{tenantId:'TENANT-B'}),
+    sale('2026-10-02',999,'OTHER-BRANCH',{branchId:'BR-B'}),
+    sale('2026-10-03',999,'OTHER-ITEM',{itemCode:'ANOTHER'}),
+  ],{itemCode:'SKU-A'});
+  assert.deepEqual(d.years[0].dailySeries.map(p=>p.totals?.sales_before_tax_fils ?? null),
+    [100,null,null]);
+  assert.equal(d.years[0].sourceScopedEventCount,2);
+  assert.equal(JSON.stringify(d).includes('999'),false);
+});
+
+test('full 31-day month series is bounded to requested day and never includes future rows', () => {
+  const d = run([
+    sale('2026-10-31',200,'OCT-END'),
+    sale('2026-11-01',999,'NOV-EXCLUDED'),
+  ], {day:'2026-10-31'});
+  assert.deepEqual(d.years.map(y=>y.dailySeries.length),[31,31,31]);
+  assert.equal(d.years[0].dailySeries[29].totals,null);
+  assert.equal(d.years[0].dailySeries[30].totals.sales_before_tax_fils,200);
+  assert.equal(d.years[0].monthToDate.totals.sales_before_tax_fils,200);
+  assert.equal(d.years[1].dailySeries[30].availability,'NO_POSTED_EVENTS_FOUND');
+});
