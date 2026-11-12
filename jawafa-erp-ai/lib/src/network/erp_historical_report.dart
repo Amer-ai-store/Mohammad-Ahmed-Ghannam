@@ -74,14 +74,40 @@ class ErpReportPeriod {
   }
 }
 
+/// One independently observed month-day. Absence is null, never zero.
+class ErpHistoricalTrendDay {
+  final int dayOfMonth;
+  final String date;
+  final ErpReportPeriod observation;
+  const ErpHistoricalTrendDay._(
+    this.dayOfMonth, this.date, this.observation,
+  );
+
+  factory ErpHistoricalTrendDay.parse(dynamic raw) {
+    final json = _object(raw);
+    final day = json['dayOfMonth'];
+    final date = json['date'];
+    if (day is! int || day < 1 || day > 31 ||
+        date is! String || !validReportDay(date) ||
+        int.parse(date.substring(8, 10)) != day) {
+      throw const ErpHistoricalReportError('INVALID_TREND_DATE');
+    }
+    return ErpHistoricalTrendDay._(
+      day, date, ErpReportPeriod.parse(json),
+    );
+  }
+}
+
 class ErpHistoricalYear {
   final int year;
   final String date;
   final String sourceCoverage;
   final ErpReportPeriod daily;
   final ErpReportPeriod monthToDate;
+  final List<ErpHistoricalTrendDay> dailySeries;
   const ErpHistoricalYear._(
     this.year, this.date, this.sourceCoverage, this.daily, this.monthToDate,
+    this.dailySeries,
   );
 
   factory ErpHistoricalYear.parse(dynamic value) {
@@ -94,10 +120,39 @@ class ErpHistoricalYear {
         json['sourceCoverage'] != 'UNATTESTED') {
       throw const ErpHistoricalReportError('INVALID_COVERAGE');
     }
+    final daily = ErpReportPeriod.parse(json['daily']);
+    final monthly = ErpReportPeriod.parse(json['monthToDate']);
+    final rawSeries = json['dailySeries'];
+    // Older V1 fixtures can omit the optional trend. If included, every
+    // day must be present and last-day totals must match the daily summary.
+    final series = rawSeries == null
+        ? <ErpHistoricalTrendDay>[]
+        : rawSeries is List
+            ? rawSeries.map(ErpHistoricalTrendDay.parse).toList(growable: false)
+            : throw const ErpHistoricalReportError('INVALID_TREND');
+    if (rawSeries != null) {
+      final lastDay = int.parse(day.substring(8, 10));
+      if (series.length != lastDay) {
+        throw const ErpHistoricalReportError('INVALID_TREND_LENGTH');
+      }
+      for (var index = 0; index < series.length; index++) {
+        if (series[index].date != day.substring(0, 8) +
+              (index + 1).toString().padLeft(2, '0')) {
+          throw const ErpHistoricalReportError('INVALID_TREND_ORDER');
+        }
+      }
+      final last = series.last.observation;
+      final current = daily.totals;
+      if (last.availability != daily.availability ||
+          (current == null) != (last.totals == null) ||
+          (current != null && reportFields.any((k) =>
+            current[k] != last.totals![k]))) {
+        throw const ErpHistoricalReportError('INVALID_TREND_SUMMARY');
+      }
+    }
     return ErpHistoricalYear._(
-      year, day, 'UNATTESTED',
-      ErpReportPeriod.parse(json['daily']),
-      ErpReportPeriod.parse(json['monthToDate']),
+      year, day, 'UNATTESTED', daily, monthly,
+      List.unmodifiable(series),
     );
   }
 }
