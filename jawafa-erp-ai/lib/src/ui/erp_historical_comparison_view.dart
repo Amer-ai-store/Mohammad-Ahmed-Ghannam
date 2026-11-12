@@ -123,6 +123,81 @@ class _ErpHistoricalComparisonViewState
     );
   }
 
+  int largestObservedTrendSale(ErpHistoricalComparison comparison) {
+    var maximum = 1;
+    for (final year in comparison.years) {
+      for (final point in year.dailySeries) {
+        final value = point.observation.totals?['sales_before_tax_fils'];
+        if (value != null && value.abs() > maximum) maximum = value.abs();
+      }
+    }
+    return maximum;
+  }
+
+  /// A missing observation is a dash, never a zero-sized "zero sales" bar.
+  Widget historicalTrend(ErpHistoricalComparison comparison) {
+    final years = comparison.years;
+    if (years.any((year) => year.dailySeries.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+    final maximum = largestObservedTrendSale(comparison);
+    return Column(
+      key: const Key('erp_history_month_trend'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('اتجاه المبيعات اليومية قبل الضريبة — ثلاث سنوات',
+          style: TextStyle(fontWeight: FontWeight.bold,
+            color: ErpPalette.green)),
+        const Text('المقارنة حسب يوم الشهر؛ الحركات غير المتوفرة'
+          ' لا تُعرض على أنها مبيعات صفرية.',
+          style: TextStyle(color: ErpPalette.amber)),
+        const SizedBox(height: 8),
+        for (var index = 0; index < years[0].dailySeries.length; index++) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              key: Key('erp_history_trend_day_' +
+                (index + 1).toString().padLeft(2, '0')),
+              children: [
+                SizedBox(width: 30, child: Text(
+                  (index + 1).toString().padLeft(2, '0'))),
+                for (final year in years)
+                  Expanded(child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(year.year.toString(),
+                          style: const TextStyle(fontSize: 10,
+                            color: ErpPalette.muted)),
+                        if (year.dailySeries[index]
+                            .observation.totals?['sales_before_tax_fils']
+                            case final int sales) ...[
+                          LinearProgressIndicator(
+                            value: (sales.abs() / maximum)
+                              .clamp(0.0, 1.0).toDouble(),
+                            color: sales < 0
+                                ? ErpPalette.amber : ErpPalette.green,
+                            backgroundColor: ErpPalette.raised,
+                            minHeight: 6,
+                          ),
+                          Text(amount(sales),
+                            style: const TextStyle(fontSize: 10)),
+                        ] else
+                          const Text('غير متوفر',
+                            style: TextStyle(fontSize: 10,
+                              color: ErpPalette.amber)),
+                      ],
+                    ),
+                  )),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final response = result;
@@ -224,6 +299,7 @@ class _ErpHistoricalComparisonViewState
                 ),
               ),
             ],
+            historicalTrend(response),
             for (final change in response.comparisons) ...[
               const SizedBox(height: 8),
               Text('مقارنة مع ' + change.againstYear.toString(),
