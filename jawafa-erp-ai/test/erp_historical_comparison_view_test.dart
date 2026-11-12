@@ -7,6 +7,7 @@ import 'historical_report_fixture.dart';
 
 class FakeReader implements ErpHistoricalReportReader {
   bool fail = false;
+  bool includeTrend = false;
   int count = 0;
   String? requestedDate;
   String? requestedBranch;
@@ -23,7 +24,8 @@ class FakeReader implements ErpHistoricalReportReader {
     requestedItem = itemCode;
     if (fail) throw const ErpHistoricalReportError('NO_AUTH');
     return ErpHistoricalComparison.parse(
-      syntheticHistoricalReport(missingOlderYear:true),
+      syntheticHistoricalReport(missingOlderYear:true,
+        includeDailySeries:includeTrend),
       requestedDay:date,
     );
   }
@@ -86,4 +88,22 @@ void main() {
     expect(find.textContaining('SENSITIVE_PRIVATE_DATABASE_ROW'),
       findsNothing);
   });
+
+  testWidgets('daily three-year sales trend displays missing days without fabricated zeros',
+      (tester) async {
+    final fake = FakeReader()..includeTrend = true;
+    await tester.pumpWidget(page(fake));
+    await tester.enterText(find.byKey(const Key('erp_history_branch')), 'BR-A');
+    await tester.ensureVisible(find.byKey(const Key('erp_history_refresh')));
+    await tester.tap(find.byKey(const Key('erp_history_refresh')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('erp_history_month_trend')),findsOneWidget);
+    expect(find.byKey(const Key('erp_history_trend_day_01')),findsOneWidget);
+    expect(find.byKey(const Key('erp_history_trend_day_02')),findsOneWidget);
+    expect(find.textContaining('المقارنة حسب يوم الشهر'),findsOneWidget);
+    expect(find.text('غير متوفر'),findsWidgets);
+    expect(find.byType(LinearProgressIndicator),findsWidgets);
+    expect(find.textContaining('غير مثبت الاكتمال'),findsWidgets);
+  });
+
 }
