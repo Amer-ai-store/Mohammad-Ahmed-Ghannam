@@ -144,4 +144,31 @@ INSERT INTO erp.item_movement_events
   date '2026-10-01','PRIVATE-OTHER-TENANT','FAM-B','SUP-B',
   'sale','POSTED',9000,8000,1280,4000,NULL);
 
+
+-- Independent ERP-only 2024/2025 historical comparator test data.
+-- Synthetic, never derived from owner TrustSoft/Jawafa_DB records.
+INSERT INTO erp.item_movement_events
+ (tenant_id,branch_id,event_id,event_date,item_code,family_code,supplier_code,
+  movement_kind,posting_status,quantity_milli,net_amount_fils,tax_fils,
+  cost_fils,reference_event_id) VALUES
+ ('11111111-1111-4111-8111-111111111111','BR-A','HIST-EV-2025-01',
+  date '2025-10-01','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,100,16,60,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-A','HIST-EV-2025-02',
+  date '2025-10-02','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,200,32,120,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-A','HIST-EV-2024-01',
+  date '2024-10-01','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,75,12,50,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-A','HIST-EV-2024-02',
+  date '2024-10-02','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,50,8,30,NULL),
+ ('22222222-2222-4222-8222-222222222222','BR-A','HIST-FOREIGN-2025',
+  date '2025-10-02','SECRET-OTHER-TENANT','FAM-B','SUP-B',
+  'sale','POSTED',1000,9999,1599,5000,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-LOCKED','HIST-LOCKED-2025',
+  date '2025-10-02','SECRET-RESTRICTED','FAM-A','SUP-A',
+  'sale','POSTED',1000,9999,1599,5000,NULL);
+
+
 COMMIT;
