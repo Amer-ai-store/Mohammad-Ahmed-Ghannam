@@ -144,4 +144,57 @@ void main() {
       await server.close(force:true);
     }
   });
+
+test('optional daily trend parses exact dates and preserves missing observations', () {
+  final result = ErpHistoricalComparison.parse(
+    syntheticHistoricalReport(
+      includeDailySeries: true, missingOlderYear: true,
+    ), requestedDay: '2026-10-02',
+  );
+  expect(result.years.map((y) => y.dailySeries.length),[2,2,2]);
+  expect(result.years.first.dailySeries.first.date,'2026-10-01');
+  expect(result.years.first.dailySeries.first.observation.totals![
+    'sales_before_tax_fils'],300);
+  expect(result.years.first.dailySeries.last.observation.totals![
+    'sales_before_tax_fils'],250);
+  expect(result.years.last.dailySeries.first.observation.totals,isNull);
+  expect(result.years.last.dailySeries.last.observation.totals,isNull);
+  expect(() => result.years.first.dailySeries.clear(),throwsUnsupportedError);
+  expect(() => result.years.first.dailySeries.last.observation.totals![
+    'sales_before_tax_fils'] = 0,throwsUnsupportedError);
+});
+
+test('trend order, dates, missing-data zero fabrication and daily mismatch fail closed', () {
+  void rejects(void Function(Map<String,dynamic>) mutate) {
+    final raw = syntheticHistoricalReport(includeDailySeries:true);
+    mutate(raw);
+    expect(() => ErpHistoricalComparison.parse(raw,requestedDay:'2026-10-02'),
+      throwsA(isA<ErpHistoricalReportError>()));
+  }
+  rejects((raw) {
+    final year=(raw['years'] as List).first as Map<String,dynamic>;
+    final series=year['dailySeries'] as List;
+    series.removeAt(0);
+  });
+  rejects((raw) {
+    final year=(raw['years'] as List).first as Map<String,dynamic>;
+    final series=year['dailySeries'] as List;
+    (series[0] as Map<String,dynamic>)['date']='2026-10-02';
+  });
+  rejects((raw) {
+    final year=(raw['years'] as List).last as Map<String,dynamic>;
+    final series=year['dailySeries'] as List;
+    (series[1] as Map<String,dynamic>)['totals']=null;
+  });
+  rejects((raw) {
+    final year=(raw['years'] as List).first as Map<String,dynamic>;
+    final series=year['dailySeries'] as List;
+    final last=series.last as Map<String,dynamic>;
+    last['totals'] = <String,int>{
+      ...(last['totals'] as Map<String,int>),
+      'sales_before_tax_fils':0,
+    };
+  });
+});
+
 }
