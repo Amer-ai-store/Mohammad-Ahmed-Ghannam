@@ -121,7 +121,12 @@ async function token(){
     return await user.getIdToken();
   }catch{return null}
 }
-async function call(route,{method="GET",body}={}){const jwt=await token();if(!jwt)throw Error("NOT_AUTHENTICATED — سجّل الدخول بحساب المالك في النظام");
+async function call(route,{method="GET",body}={}){
+  // GitHub Pages is static, not an authenticated SQL/API reverse proxy.
+  // Do not send owner Firebase JWTs to the static host's nonexistent /api route.
+  const hostname=typeof location!=="undefined"?String(location.hostname||"").toLowerCase():"";
+  if(hostname.endsWith(".github.io"))throw Error("PRIVATE_HTTPS_GATEWAY_NOT_DEPLOYED");
+  const jwt=await token();if(!jwt)throw Error("NOT_AUTHENTICATED — سجّل الدخول بحساب المالك في النظام");
 const c=new AbortController(),timer=setTimeout(()=>c.abort(),8000);
 try{const r=await fetch(BASE+"/"+route,{method,headers:{"Accept":"application/json","Authorization":"Bearer "+jwt,...(body?{"Content-Type":"application/json"}:{})},cache:"no-store",credentials:"same-origin",signal:c.signal,...(body?{body:JSON.stringify(body)}:{})});let o={};try{o=await r.json()}catch{}
 if(!r.ok)throw Error((o.error||"HTTP_"+r.status)+" ("+r.status+")");return o}
