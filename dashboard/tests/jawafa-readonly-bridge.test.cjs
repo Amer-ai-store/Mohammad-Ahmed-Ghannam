@@ -39,3 +39,14 @@ test('summary cells render as unknown until data is sourced and verified',()=>{
   }
   assert.match(html,/NOT_CONNECTED — بانتظار بوابة HTTPS خاصة/);
 });
+
+test('private dashboard first verifies SQL health and withholds financial amounts until approval',()=>{
+  for(const code of [central,erp]){
+    assert.match(code,/\/api\/jawafa\/v1\/sql-health/);
+    assert.match(code,/jawafa\.sql-connectivity\.v1/);
+    assert.match(code,/production_accepted!==true/);
+    assert.match(code,/certificate_trusted!==true/);
+  }
+  assert.match(central,/writer_role!==false/);
+  assert.match(erp,/writer_role!==false/);
+});
