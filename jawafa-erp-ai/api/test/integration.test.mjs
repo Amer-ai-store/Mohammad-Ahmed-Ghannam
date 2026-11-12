@@ -497,3 +497,39 @@ test('historical report has no access to another tenant even with the same branc
   assert.equal(r.body.years[0].monthToDate.totals.sales_before_tax_fils,8000);
   assert.equal(JSON.stringify(r.body).includes('SKU-A'),false);
 });
+
+
+test('historical API exposes three-year day-index series through OIDC and Postgres branch RLS',async()=>{
+  const r=await call(historicalUrl,{
+    jwt:await token('member-A'),tenant:A,branch:'BR-A',
+  });
+  assert.equal(r.status,200,JSON.stringify(r.body));
+  assert.deepEqual(r.body.years.map(y=>y.dailySeries.length),[2,2,2]);
+  assert.deepEqual(r.body.years.map(y=>y.dailySeries[0].totals.sales_before_tax_fils),
+    [250,100,75]);
+  assert.deepEqual(r.body.years.map(y=>y.dailySeries[1].totals.sales_before_tax_fils),
+    [-25,200,50]);
+  for (const year of r.body.years) {
+    assert.deepEqual(year.dailySeries[1].totals,year.daily.totals);
+    assert.equal(year.sourceCoverage,'UNATTESTED');
+  }
+  assert.equal(r.body.sourceCompletenessIndependentlyVerified,false);
+  assert.equal(r.body.functionalParityPercent,null);
+  assert.equal(JSON.stringify(r.body).includes('SECRET-'),false);
+});
+
+test('historical trend empty days remain null after scoped SQL filtering',async()=>{
+  const opts={jwt:await token('member-A'),tenant:A,branch:'BR-A'};
+  const r=await call(historicalUrl.replace('2026-10-02','2026-10-03'),opts);
+  assert.equal(r.status,200);
+  assert.deepEqual(r.body.years.map(y=>y.dailySeries.length),[3,3,3]);
+  assert.deepEqual(r.body.years.map(y=>y.dailySeries[2].totals),[null,null,null]);
+  assert.deepEqual(r.body.years.map(y=>y.dailySeries[2].availability),
+    ['NO_POSTED_EVENTS_FOUND','NO_POSTED_EVENTS_FOUND','NO_POSTED_EVENTS_FOUND']);
+  const restricted=await call(historicalUrl, {...opts,branch:'BR-LOCKED'});
+  assert.equal(restricted.status,403);
+  const filtered=await call(historicalUrl+'&item=MISSING',opts);
+  assert.equal(filtered.status,200);
+  assert.equal(filtered.body.years[0].dailySeries[0].totals,null);
+  assert.equal(filtered.body.years[0].dailySeries[1].totals,null);
+});
