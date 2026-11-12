@@ -1,0 +1,37 @@
+name: JAWAFA user_read — synthetic least-privilege policy
+on:
+  pull_request:
+    paths:
+      - 'jawafa-erp-ai/tools/verify_user_read_policy.ps1'
+      - 'jawafa-erp-ai/docs/USER_READ_GATE.md'
+      - '.github/workflows/jawafa-user-read-policy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-synthetic-policy:
+    name: Windows DPAPI user_read policy — synthetic only
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse PowerShell 5.1 and run synthetic allow/deny policy
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $file = Join-Path $PWD 'jawafa-erp-ai/tools/verify_user_read_policy.ps1'
+          $tokens = $null
+          $parseErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            $file, [ref]$tokens, [ref]$parseErrors
+          )
+          if ($parseErrors.Count -ne 0) {
+            throw 'USER_READ_GATE_POWERSHELL_PARSE_FAILED'
+          }
+          & $file -SelfTest
+          if ($LASTEXITCODE -ne 0) {
+            throw 'USER_READ_GATE_SYNTHETIC_POLICY_FAILED'
+          }
+          Write-Host 'PASS: user_read policy synthetic only, no DPAPI or SQL accessed'
