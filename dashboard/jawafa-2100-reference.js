@@ -113,6 +113,11 @@
   // Never send credentials or raw SQL connection strings to an external origin.
   let jwt;
   try {
+    // The approved public GitHub Pages domain cannot host a protected API.
+    // Fail closed before even requesting a JWT; never transmit owner tokens to it.
+    if(location.hostname==="amer-ai-store.github.io"||
+       location.hostname.endsWith(".github.io"))
+       throw Error("PRIVATE_HTTPS_GATEWAY_NOT_DEPLOYED");
     const auth=window.parent===window?window.AAS_OWNER_AUTH:window.parent.AAS_OWNER_AUTH;
     if(!auth||typeof auth.getIdToken!=="function")throw Error("OWNER_AUTH_NOT_READY");
     jwt=await auth.getIdToken();
