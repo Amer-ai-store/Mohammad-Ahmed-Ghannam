@@ -57,6 +57,34 @@ function totals(rows) {
   return Object.freeze(out);
 }
 
+/**
+ * Calendar-date points are source observations, not a complete cash ledger.
+ * Null (no POSTED event found) must NEVER become a fabricated zero.
+ * Positive and negative net sales are both allowed (returns can dominate).
+ */
+function observedDailySeries(rows, window) {
+  const grouped = new Map();
+  for (const row of rows) {
+    if (!grouped.has(row.day)) grouped.set(row.day, []);
+    grouped.get(row.day).push(row);
+  }
+  const points = [];
+  const lastDay = Number(window.day.slice(-2));
+  for (let dayNumber = 1; dayNumber <= lastDay; dayNumber += 1) {
+    const date = window.monthStart.slice(0, 8) +
+      String(dayNumber).padStart(2, '0');
+    const observed = grouped.get(date) ?? [];
+    points.push(Object.freeze({
+      dayOfMonth: dayNumber,
+      date,
+      availability: observed.length > 0
+        ? 'HAS_POSTED_EVENTS_UNATTESTED' : 'NO_POSTED_EVENTS_FOUND',
+      totals: observed.length > 0 ? totals(observed) : null,
+    }));
+  }
+  return Object.freeze(points);
+}
+
 function percentBasisPoints(current, baseline, currentHasData, baselineHasData) {
   if (!currentHasData || !baselineHasData) return null;
   // Profit / returns may have negative baselines; those do not yield a
@@ -88,6 +116,7 @@ export function compareIndependentErpYears({
       fromDate: w.monthStart, toDate: w.day,
     });
     const daily = projection.rows.filter(r => r.day === w.day);
+    const dailySeries = observedDailySeries(projection.rows, w);
     const dailyHasData = daily.length > 0;
     const mtdHasData = projection.rows.length > 0;
     return Object.freeze({
@@ -97,6 +126,7 @@ export function compareIndependentErpYears({
       ignoredVoidedEventCount: projection.ignoredVoidedEventCount,
       // NO_POSTED_DATA does NOT imply zero or complete source extraction.
       sourceCoverage: 'UNATTESTED',
+      dailySeries,
       daily: Object.freeze({
         availability: dailyHasData ? 'HAS_POSTED_EVENTS_UNATTESTED' : 'NO_POSTED_EVENTS_FOUND',
         itemsWithEvents: daily.length,
