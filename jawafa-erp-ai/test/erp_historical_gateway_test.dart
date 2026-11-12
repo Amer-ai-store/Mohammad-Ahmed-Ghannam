@@ -52,7 +52,7 @@ void main() {
       requestedDay:'2026-10-02').years.first.daily.totals![
         'sales_before_tax_fils'], -2);
 
-    totals['sales_before_tax_fils'] = 1.25 as dynamic;
+    period['totals'] = {...totals, 'sales_before_tax_fils': 1.25};
     expect(() => ErpHistoricalComparison.parse(badTotal,
       requestedDay:'2026-10-02'), throwsA(isA<ErpHistoricalReportError>()));
   });
