@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="./progress-board.css">
 <link rel="stylesheet" href="./live-execution.css">
 <link rel="stylesheet" href="./jawafa-investigation.css">
+<script src="./jawafa-readonly-kpis.js" defer></script>
 <script src="./jawafa-2100-frame-host.js" defer></script>
 <style>
 /* Give the JAWAFA ERP reference composition the full canvas only while its native route is selected. */
@@ -279,6 +280,23 @@ nav.side{gap:.5rem}
 </section>
 <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
+<section class="panel" id="jawafa-secure-kpis" aria-label="مؤشرات Jawafa_DB الخاصة عبر حساب user_read">
+  <div class="panel-head"><div>
+    <span class="eyebrow">JAWAFA DB · PRIVATE API · READ ONLY</span>
+    <h2>مؤشرات قاعدة جوافة — اتصال المالك المحمي</h2>
+    <p class="small muted">تعرض الشاشة النتائج فقط عند إثبات هوية user_read وتشفير TLS وتاريخ الاستعلام. لا تعرض أرقامًا افتراضية أو بيانات مالية في الصفحة العامة.</p>
+  </div><button type="button" id="jawafa-secure-kpis-refresh">التحقق من اتصال البيانات</button></div>
+  <p id="jawafa-secure-kpis-status" class="small muted" role="status" aria-live="polite">NOT_CONNECTED — بانتظار بوابة HTTPS خاصة مع صلاحيات قراءة فقط.</p>
+  <div class="grid3" aria-label="بيانات جوافة المتحققة">
+    <div class="kpi"><span class="label">المبيعات اليوم</span><strong class="value" data-sql-kpi="sales">—</strong></div>
+    <div class="kpi"><span class="label">المشتريات اليوم</span><strong class="value" data-sql-kpi="purchases">—</strong></div>
+    <div class="kpi"><span class="label">المخزون</span><strong class="value" data-sql-kpi="inventory">—</strong></div>
+    <div class="kpi"><span class="label">الذمم المستحقة</span><strong class="value" data-sql-kpi="payables">—</strong></div>
+    <div class="kpi"><span class="label">الشيكات تحت التحصيل</span><strong class="value" data-sql-kpi="postdated_cheques">—</strong></div>
+  </div>
+  <a class="btn" href="#jawafa-2100">فتح شاشة ERP 2100 الخضراء</a>
+</section>
+
 <section class="panel" id="jf-investigation" aria-labelledby="jf-title">
  <div class="jf-head">
   <div>
