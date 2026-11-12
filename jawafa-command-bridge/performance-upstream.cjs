@@ -26,7 +26,7 @@ function normalize(source,now=Date.now()){
      v.sql_login!=='user_read'||v.database!=='Jawafa_DB'||
      v.tls_encrypted!==true||v.tls_certificate_trusted!==true||
      v.read_only!==true||v.deny_write_test_passed!==true||
-     v.accepted_permissions===false)
+     v.accepted_permissions!==true)
      throw fail('SQL_SECURITY_NOT_VERIFIED',503);
   const verified=stamp(v.verified_at),cutoff=stamp(source.cutoff);
   if(!verified||!cutoff)throw fail('SQL_EVIDENCE_TIMESTAMPS_MISSING',503);
