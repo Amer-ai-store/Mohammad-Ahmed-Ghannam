@@ -46,10 +46,22 @@
      if(!owner||typeof owner.getIdToken!=='function')throw Error('OWNER_AUTH_UNAVAILABLE');
      jwt=await owner.getIdToken();
      if(!jwt)throw Error('NOT_AUTHENTICATED');
-     const res=await fetch('/api/jawafa/v1/performance',{
-       method:'GET',credentials:'same-origin',cache:'no-store',
-       headers:{Accept:'application/json',Authorization:'Bearer '+jwt},signal:ctrl.signal
-     });
+     const opts={method:'GET',credentials:'same-origin',cache:'no-store',
+       headers:{Accept:'application/json',Authorization:'Bearer '+jwt},signal:ctrl.signal};
+     // Stage 1: owner-authenticated SQL connectivity proof, never raw accounting rows.
+     const healthResponse=await fetch('/api/jawafa/v1/sql-health',opts);
+     const health=await healthResponse.json().catch(()=>({}));
+     if(!healthResponse.ok)throw Error(String(health.error||'SQL_HEALTH_'+healthResponse.status).slice(0,110));
+     if(health.schema!=='jawafa.sql-connectivity.v1'||health.sql_login!=='user_read'||
+       health.source_system!=='Jawafa_DB'||health.sql_read_proven!==true||
+       health.read_only!==true||health.writer_role!==false)
+       throw Error('SQL_HEALTH_NOT_VERIFIED');
+     if(health.production_accepted!==true||health.certificate_trusted!==true){
+       status.textContent='متصل محليًا بقاعدة Jawafa_DB بحساب user_read للقراءة فقط · شهادة SQL أو اعتماد الإنتاج لم يكتمل · الأرقام المالية محجوبة';
+       return;
+     }
+     // Stage 2: accept aggregate financial KPIs only after the separate production gate.
+     const res=await fetch('/api/jawafa/v1/performance',opts);
      const value=await res.json().catch(()=>({}));
      if(!res.ok)throw Error(String(value.error||'HTTP_'+res.status).slice(0,110));
      const data=verify(value);

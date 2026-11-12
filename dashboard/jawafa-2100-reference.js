@@ -125,10 +125,21 @@
     const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),8000);
     let response;
     try {
-      response=await fetch("/api/jawafa/v1/performance",{
-        method:"GET",credentials:"same-origin",cache:"no-store",signal:ctrl.signal,
-        headers:{"Accept":"application/json","Authorization":"Bearer "+jwt}
-      });
+      const opts={method:"GET",credentials:"same-origin",cache:"no-store",signal:ctrl.signal,
+        headers:{"Accept":"application/json","Authorization":"Bearer "+jwt}};
+      const healthResponse=await fetch("/api/jawafa/v1/sql-health",opts);
+      const health=await healthResponse.json().catch(()=>({}));
+      if(!healthResponse.ok)throw Error(String(health.error||"SQL_HEALTH_"+healthResponse.status).slice(0,100));
+      if(health.schema!=="jawafa.sql-connectivity.v1"||health.sql_read_proven!==true||
+         health.sql_login!=="user_read"||health.source_system!=="Jawafa_DB"||
+         health.read_only!==true||health.writer_role!==false)
+         throw Error("SQL_READER_IDENTITY_NOT_VERIFIED");
+      if(health.production_accepted!==true||health.certificate_trusted!==true){
+        dataset=null;origin="NOT_CONNECTED";render();
+        $("connection-status").textContent="● SQL LOCAL VERIFIED — Jawafa_DB / user_read قراءة فقط · شهادة SQL غير معتمدة؛ المبالغ محجوبة";
+        return;
+      }
+      response=await fetch("/api/jawafa/v1/performance",opts);
     }finally{clearTimeout(timer)}
     const content=await response.json().catch(()=>({}));
     if(!response.ok)throw Error(String(content.error||"HTTP_"+response.status).slice(0,100));
