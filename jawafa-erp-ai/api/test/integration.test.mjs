@@ -379,3 +379,119 @@ test('new ERP report source RLS hides other company events from direct reader',a
     try{await client.query('ROLLBACK');}finally{client.release();}
   }
 });
+
+
+const historicalUrl = '/v1/reports/historical-daily-compare?date=2026-10-02';
+
+test('NEW ERP protected daily historical comparison calculates same-day and MTD with real scoped SQL reads',async()=>{
+  const r=await call(historicalUrl,{
+    jwt:await token('member-A'),tenant:A,branch:'BR-A',
+  });
+  assert.equal(r.status,200,JSON.stringify(r.body));
+  assert.equal(r.body.report,'INDEPENDENT_NEW_ERP_HISTORICAL_DAILY_AND_MTD_V1');
+  assert.equal(r.body.referenceStatus,'NOT_MATCHED_WITH_TRUSTSOFT');
+  assert.equal(r.body.sourceCompletenessIndependentlyVerified,false);
+  assert.equal(r.body.formulasIndependentlyApproved,false);
+  assert.equal(r.body.functionalParityPercent,null);
+  assert.deepEqual(r.body.years.map(y=>y.year),[2026,2025,2024]);
+  assert.deepEqual(r.body.years.map(y=>y.date),
+    ['2026-10-02','2025-10-02','2024-10-02']);
+  assert.deepEqual(r.body.years.map(y=>y.daily.totals.sales_before_tax_fils),
+    [-25,200,50]);
+  assert.deepEqual(r.body.years.map(y=>y.monthToDate.totals.sales_before_tax_fils),
+    [225,300,125]);
+  assert.equal(r.body.comparisons[0].daily.sales_before_tax_fils,-11250);
+  assert.equal(r.body.comparisons[0].monthToDate.sales_before_tax_fils,-2500);
+  assert.equal(r.body.comparisons[1].monthToDate.sales_before_tax_fils,8000);
+  assert.equal(r.body.years[0].sourceScopedEventCount,4);
+  assert.equal(r.body.years[0].postedEventCount,3);
+  assert.equal(r.body.years[0].ignoredVoidedEventCount,1);
+  assert.equal(JSON.stringify(r.body).includes('SECRET-'),false);
+  assert.equal(JSON.stringify(r.body).includes('HIST-EV-'),false);
+});
+
+test('historical report daily comparison is not replaced by month-to-date numbers',async()=>{
+  const r=await call(
+    '/v1/reports/historical-daily-compare?date=2026-10-01',
+    {jwt:await token('member-A'),tenant:A,branch:'BR-A'},
+  );
+  assert.equal(r.status,200);
+  assert.deepEqual(r.body.years.map(y=>y.daily.totals.sales_before_tax_fils),
+    [250,100,75]);
+  assert.equal(r.body.comparisons[0].daily.sales_before_tax_fils,15000);
+  assert.equal(r.body.comparisons[1].daily.sales_before_tax_fils,23333);
+  assert.equal(r.body.years[0].monthToDate.daysWithPostedEvents,1);
+});
+
+test('historical report clearly flags missing days, never manufactures zero totals',async()=>{
+  const r=await call(
+    '/v1/reports/historical-daily-compare?date=2026-10-03',
+    {jwt:await token('member-A'),tenant:A,branch:'BR-A'},
+  );
+  assert.equal(r.status,200);
+  assert.equal(r.body.years[0].daily.availability,'NO_POSTED_EVENTS_FOUND');
+  assert.equal(r.body.years[0].daily.totals,null);
+  assert.equal(r.body.comparisons[0].daily.sales_before_tax_fils,null);
+  assert.equal(r.body.years[0].monthToDate.totals.sales_before_tax_fils,225);
+  assert.equal(r.body.years[1].monthToDate.totals.sales_before_tax_fils,300);
+});
+
+test('historical report denies wrong company, viewer and revoked or ungranted branch',async()=>{
+  const allowed=await token('member-A');
+  assert.equal((await call(historicalUrl,{tenant:A,branch:'BR-A'})).status,401);
+  assert.equal((await call(historicalUrl,{jwt:allowed,tenant:B,branch:'BR-A'})).status,403);
+  assert.equal((await call(historicalUrl,{
+    jwt:await token('viewer-A'),tenant:A,branch:'BR-A',
+  })).status,403);
+  for (const branch of ['BR-LOCKED','BR-REVOKED']) {
+    const r=await call(historicalUrl,{jwt:allowed,tenant:A,branch});
+    assert.equal(r.status,403);
+    assert.equal(JSON.stringify(r.body).includes('SECRET-'),false);
+  }
+  const authorized=await call(historicalUrl,{
+    jwt:await token('supervisor-A'),tenant:A,branch:'BR-LOCKED',
+  });
+  assert.equal(authorized.status,200);
+  assert.equal(authorized.body.years[1].daily.totals.sales_before_tax_fils,9999);
+  assert.equal(authorized.body.years[0].monthToDate.totals,null);
+});
+
+test('historical report prevents SQL injection or scope/filter widening',async()=>{
+  const opts={jwt:await token('member-A'),tenant:A,branch:'BR-A'};
+  for(const url of [
+    '/v1/reports/historical-daily-compare',
+    '/v1/reports/historical-daily-compare?date=2024-02-29',
+    '/v1/reports/historical-daily-compare?date=2026-02-30',
+    '/v1/reports/historical-daily-compare?date=2001-10-02',
+    historicalUrl+'&date=2026-10-01',
+    historicalUrl+'&from=2024-01-01',
+    historicalUrl+'&item==SQL',
+    historicalUrl+'&item=SKU-A&item=SKU-B',
+  ]) {
+    assert.equal((await call(url,opts)).status,400,url);
+  }
+  assert.equal((await call(historicalUrl,{...opts,branch:'../../BR-A'})).status,400);
+  assert.equal((await call(historicalUrl,{...opts,method:'POST'})).status,405);
+});
+
+test('historical report item/supplier/family filters apply separately to all three years',async()=>{
+  const opts={jwt:await token('member-A'),tenant:A,branch:'BR-A'};
+  const good=await call(historicalUrl+'&item=SKU-A&family=FAM-A&supplier=SUP-A',opts);
+  assert.equal(good.status,200);
+  assert.equal(good.body.years[0].monthToDate.totals.sales_before_tax_fils,225);
+  const empty=await call(historicalUrl+'&item=MISSING',opts);
+  assert.equal(empty.status,200);
+  assert.ok(empty.body.years.every(y=>y.monthToDate.totals===null));
+  assert.ok(empty.body.comparisons.every(c=>c.daily.sales_before_tax_fils===null));
+  assert.ok(empty.body.years.every(y=>y.sourceCoverage==='UNATTESTED'));
+});
+
+test('historical report has no access to another tenant even with the same branch ID',async()=>{
+  const r=await call(historicalUrl,{
+    jwt:await token('member-B'),tenant:B,branch:'BR-A',
+  });
+  assert.equal(r.status,200);
+  assert.equal(r.body.years[1].daily.totals.sales_before_tax_fils,9999);
+  assert.equal(r.body.years[0].daily.totals.sales_before_tax_fils,8000);
+  assert.equal(JSON.stringify(r.body).includes('SKU-A'),false);
+});
