@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#051811">
+<meta name="description" content="JAWAFA ERP AI — واجهة جوافة الخضراء المرجعية داخل لوحة القيادة المركزية، قراءة فقط.">
+<title>JAWAFA ERP AI | جوافة 2100</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./jawafa-2100-reference.css">
+<script src="./jawafa-2100-reference.js" defer></script>
+</head>
+<body>
+<svg aria-hidden="true" class="svg-defs" xmlns="http://www.w3.org/2000/svg">
+ <symbol id="i-cart" viewBox="0 0 24 24"><path d="M2.5 4h2l2.4 12.2H19l2.5-9.5H5.2M9 21h.01M18 21h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+ <symbol id="i-box" viewBox="0 0 24 24"><path d="m3 7.3 9-4.5 9 4.5v9.5l-9 4.5-9-4.5zM3 7.3l9 4.7 9-4.7M12 12v9.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+ <symbol id="i-stack" viewBox="0 0 24 24"><path d="m12 2 10 6-10 6L2 8zm-10 11 10 6 10-6M2 18l10 5 10-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+ <symbol id="i-calc" viewBox="0 0 24 24"><rect x="4" y="2.5" width="16" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 6h10v4H7zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+ <symbol id="i-cheque" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM5 10h7m-7 4h6m5-2 4-4m-5 7 5-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+ <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M2 20c0-4 3-7 7-7s7 3 7 7zM16 5c2.5 0 4 1.5 4 4s-1.5 4-4 4M18 14c3 0 5 2 5 6" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+ <symbol id="i-bars" viewBox="0 0 24 24"><path d="M3 21V9h4v12zm7 0V3h4v18zm7 0V12h4v9z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+ <symbol id="i-bank" viewBox="0 0 24 24"><path d="M2 9 12 3l10 6M4 11v9m5-9v9m6-9v9m5-9v9M2 21h20M2 10h20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+ <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 2 9 4v7c0 5-4 8-9 9-5-1-9-4-9-9V6zM8.5 12l2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+ <symbol id="i-ai" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="12" y="15.7" font-family="Arial" text-anchor="middle" font-size="8" font-weight="900" fill="currentColor">AI</text><path d="M8 1v3m8-3v3M8 20v3m8-3v3M1 8h3M1 16h3m16-8h3m-3 8h3" stroke="currentColor" stroke-width="1.5"/></symbol>
+ <symbol id="i-gear" viewBox="0 0 24 24"><path d="M10 2h4l.7 2.4 2 1 2.4-.6 2 3.5-1.8 1.8v2.1l1.8 1.8-2 3.5-2.4-.6-2 1L14 22h-4l-.7-2.4-2-1-2.4.6-2-3.5 1.8-1.8v-2.1L3 10l2-3.5 2.4.6 2-1z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+ <symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 17h14l-2-3V9c0-3.5-2-5-5-5s-5 1.5-5 5v5zm5 3h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+ <symbol id="i-link" viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5M8 8l-2 2a4 4 0 0 0 6 6l2-2m-4-4 2-2a4 4 0 0 1 6 6l-2 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+ <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5C8 3 5 3 2 4v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-3-1-6-1-10 1zm0 0v15" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+ <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 5v14c0 4 18 4 18 0V5M3 12c0 4 18 4 18 0" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+ <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 5 5" stroke="currentColor" stroke-width="1.7"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<div class="stage-frame" id="stage-frame">
+ <div class="stage" id="stage">
+  <header class="hero">
+   <div class="hero-logo"><svg class="mark"><use href="#i-cart"></use></svg><div><strong>مجموعة أسواق جوافة</strong><span>JAWAFA Group</span></div></div>
+   <div class="hero-brand"><h1>JAWAFA ERP <em>AI</em></h1><strong>نظام إدارة موارد المؤسسات الذكي والمتكامل</strong><p>هدف مطابقة وظائف TrustSoft بنسبة ≥ 90% مع إضافات ذكية متقدمة — غير معتمد بعد</p></div>
+   <nav class="hero-pills" aria-label="أبرز مزايا جوافة"><span><svg><use href="#i-stack"></use></svg>ERP متكامل</span><span><svg><use href="#i-ai"></use></svg>ذكاء اصطناعي</span><span><svg><use href="#i-shield"></use></svg>أمان ورقابة</span><span><svg><use href="#i-link"></use></svg>متعدد المنصات</span></nav>
+  </header>
+
+  <div class="phone left-phone" aria-label="معاينة تطبيق أندرويد">
+   <div class="phone-screen dark-phone">
+    <div class="phone-notch"></div><div class="phone-status">◈ <span>◉ ▂ ▰</span></div>
+    <div class="phone-head"><svg><use href="#i-ai"></use></svg><b>JAWAFA ERP AI</b><span>⌕</span></div>
+    <div class="phone-greet"><div><b>مرحباً، فريق جوافة</b><small>شاشة معاينة للبيانات</small></div><span class="avatar">👤</span></div>
+    <div class="phone-kpis"><div><small>المبيعات اليوم</small><b data-number="sales">—</b><span>د.أ</span></div><div><small>المشتريات</small><b data-number="purchases">—</b><span>د.أ</span></div></div>
+    <div class="phone-tiles">
+      <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-cart"></use></svg>المبيعات</a>
+      <a href="./index.html#jawafa-purchases" target="_top"><svg><use href="#i-box"></use></svg>المشتريات</a>
+      <a href="./index.html#jawafa-receiving" target="_top"><svg><use href="#i-stack"></use></svg>المخزون</a>
+      <a href="./index.html#jawafa-accounting" target="_top"><svg><use href="#i-calc"></use></svg>المحاسبة</a>
+      <a href="./index.html#jawafa-checks" target="_top"><svg><use href="#i-cheque"></use></svg>الشيكات</a>
+      <a href="./index.html#jawafa-people" target="_top"><svg><use href="#i-users"></use></svg>الموظفون</a>
+      <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-bars"></use></svg>التقارير</a>
+      <a href="./index.html#settings" target="_top"><svg><use href="#i-gear"></use></svg>الإعدادات</a>
+      <a href="./index.html#jawafa-monitor" target="_top"><svg><use href="#i-ai"></use></svg>التحليل الذكي</a>
+    </div>
+    <div class="phone-bottom"><a href="./index.html#jawafa-2100" target="_top">⌂<small>الرئيسية</small></a><a href="./index.html#jawafa-monitor" target="_top"><svg><use href="#i-bell"></use></svg><small>التنبيهات</small></a><a href="./index.html#jawafa" target="_top">•••<small>المزيد</small></a></div>
+   </div>
+  </div>
+  <div class="phone right-phone" aria-label="معاينة تطبيق آيفون">
+   <div class="phone-screen light-phone">
+    <div class="phone-notch"></div><div class="phone-status">10:24 <span>▰ ▂ ◉</span></div>
+    <div class="phone-head"><svg><use href="#i-cart"></use></svg><b>JAWAFA ERP <em>AI</em></b><span>⌕</span></div>
+    <div class="phone-greet"><div><b>مرحباً، فريق جوافة</b><small>شاشة معاينة للبيانات</small></div><span class="avatar">👤</span></div>
+    <div class="phone-kpis"><div><small>المبيعات</small><b data-number="sales">—</b><span>د.أ</span></div><div><small>المشتريات</small><b data-number="purchases">—</b><span>د.أ</span></div></div>
+    <div class="phone-tiles">
+      <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-cart"></use></svg>المبيعات</a>
+      <a href="./index.html#jawafa-purchases" target="_top"><svg><use href="#i-box"></use></svg>المشتريات</a>
+      <a href="./index.html#jawafa-receiving" target="_top"><svg><use href="#i-stack"></use></svg>المخزون</a>
+      <a href="./index.html#jawafa-accounting" target="_top"><svg><use href="#i-calc"></use></svg>المحاسبة</a>
+      <a href="./index.html#jawafa-checks" target="_top"><svg><use href="#i-cheque"></use></svg>الشيكات</a>
+      <a href="./index.html#jawafa-people" target="_top"><svg><use href="#i-users"></use></svg>الموظفون</a>
+      <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-bars"></use></svg>التقارير</a>
+      <a href="./index.html#settings" target="_top"><svg><use href="#i-gear"></use></svg>الإعدادات</a>
+      <a href="./index.html#jawafa-monitor" target="_top"><svg><use href="#i-ai"></use></svg>التحليل الذكي</a>
+    </div>
+    <div class="phone-bottom"><a href="./index.html#jawafa-2100" target="_top">⌂<small>الرئيسية</small></a><a href="./index.html#jawafa-monitor" target="_top"><svg><use href="#i-bell"></use></svg><small>التنبيهات</small></a><a href="./index.html#jawafa" target="_top">•••<small>المزيد</small></a></div>
+   </div>
+  </div>
+
+  <div class="monitor">
+   <div class="monitor-body">
+    <div class="monitor-apphead">
+     <span class="monitor-brand"><svg><use href="#i-cart"></use></svg>JAWAFA ERP <em>AI</em></span>
+     <div class="monitor-search"><svg><use href="#i-search"></use></svg><span>بحث شامل (فواتير، أصناف، قيود، تقارير)...</span></div>
+     <div class="monitor-actions"><a href="./index.html#jawafa-monitor" target="_top" title="التنبيهات"><svg><use href="#i-bell"></use></svg><i>!</i></a><a href="./index.html#settings" target="_top" title="الإعدادات"><svg><use href="#i-gear"></use></svg></a><span>ⓘ</span><span>−</span><span>□</span></div>
+    </div>
+    <div class="monitor-inner">
+     <aside class="monitor-sidebar">
+      <div class="monitor-user"><span class="user-photo">👤</span><div><b>فريق جوافة</b><small>لوحة الإدارة</small></div></div>
+      <div class="monitor-switch">⌄ مجموعة جوافة</div><div class="monitor-switch">⌄ المركز الرئيسي</div>
+      <nav class="monitor-menu" aria-label="وحدات البرنامج">
+       <a class="selected" href="./index.html#jawafa-2100" target="_top">⌂ الرئيسية</a>
+       <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-cart"></use></svg>المبيعات</a>
+       <a href="./index.html#jawafa-purchases" target="_top"><svg><use href="#i-box"></use></svg>المشتريات</a>
+       <a href="./index.html#jawafa-receiving" target="_top"><svg><use href="#i-stack"></use></svg>المخزون</a>
+       <a href="./index.html#jawafa-accounting" target="_top"><svg><use href="#i-calc"></use></svg>المحاسبة</a>
+       <a href="./index.html#jawafa-checks" target="_top"><svg><use href="#i-bank"></use></svg>الشيكات والبنوك</a>
+       <a href="./index.html#jawafa-people" target="_top"><svg><use href="#i-users"></use></svg>شؤون الموظفين</a>
+       <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-bars"></use></svg>التقارير والتحليل</a>
+       <a href="./index.html#jawafa-monitor" target="_top"><svg><use href="#i-shield"></use></svg>الإعدادات والصلاحيات</a>
+      </nav>
+     </aside>
+     <div class="monitor-content">
+      <div class="workspace-title">لوحة القيادة الرئيسية <span id="source-state">مصدر البيانات: غير متصل</span></div>
+      <div class="metric-cards">
+       <a class="metric-card metric-sales" href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-cart"></use></svg><small>المبيعات اليوم</small><b data-number="sales">—</b><span>د.أ</span></a>
+       <a class="metric-card metric-purchases" href="./index.html#jawafa-purchases" target="_top"><svg><use href="#i-box"></use></svg><small>المشتريات اليوم</small><b data-number="purchases">—</b><span>د.أ</span></a>
+       <a class="metric-card metric-stock" href="./index.html#jawafa-receiving" target="_top"><svg><use href="#i-stack"></use></svg><small>المخزون الحالي</small><b data-number="inventory">—</b><span>د.أ</span></a>
+       <a class="metric-card metric-dues" href="./index.html#jawafa-accounting" target="_top"><svg><use href="#i-database"></use></svg><small>المستحقات</small><b data-number="payables">—</b><span>د.أ</span></a>
+       <a class="metric-card metric-cheques" href="./index.html#jawafa-checks" target="_top"><svg><use href="#i-cheque"></use></svg><small>الشيكات تحت التحصيل</small><b data-number="postdated_cheques">—</b><span>د.أ</span></a>
+      </div>
+      <div class="dashboard-charts">
+       <section class="chart-card movement">
+        <h2>حركة المبيعات (آخر 30 يوم)</h2>
+        <div class="chart-illustration">
+         <svg viewBox="0 0 304 120" id="sales-svg" role="img" aria-label="مقارنة حركة المبيعات السنوية">
+           <g class="grid" stroke="#2a5141" stroke-width=".7"><path d="M32 12H300M32 39H300M32 66H300M32 93H300M32 120H300"/></g>
+           <g class="labels" fill="#b6d7c6" font-size="7"><text x="5" y="13">100K</text><text x="10" y="41">75K</text><text x="10" y="68">50K</text><text x="10" y="95">25K</text><text x="18" y="119">0</text></g>
+           <g class="demo-bars" fill="#4ae98e" opacity=".65"><rect x="42" y="76" width="10" height="44"/><rect x="65" y="71" width="10" height="49"/><rect x="88" y="83" width="10" height="37"/><rect x="111" y="64" width="10" height="56"/><rect x="134" y="69" width="10" height="51"/><rect x="157" y="54" width="10" height="66"/><rect x="180" y="60" width="10" height="60"/><rect x="203" y="38" width="10" height="82"/><rect x="226" y="48" width="10" height="72"/><rect x="249" y="28" width="10" height="92"/><rect x="272" y="20" width="10" height="100"/></g>
+           <path class="demo-line" d="M47 89L70 76L93 81L116 66L139 69L162 61L185 47L208 45L231 55L254 44L277 23" fill="none" stroke="#99ffb7" stroke-width="2"/>
+           <g class="date-labels" fill="#adcdbb" font-size="7"><text x="42" y="129">01</text><text x="89" y="129">07</text><text x="137" y="129">13</text><text x="185" y="129">19</text><text x="234" y="129">25</text><text x="274" y="129">30</text></g>
+         </svg><span class="chart-unverified" id="chart-state">رسم توضيحي — دون بيانات فعلية</span>
+        </div>
+       </section>
+       <section class="chart-card departments">
+         <h2>توزيع المبيعات حسب الأقسام</h2>
+         <div class="donut-and-legend"><div class="donut" id="donut"><span id="donut-value">—</span></div><ul id="department-list"><li>الأسواق <b>—</b></li><li>المطاعم <b>—</b></li><li>الأفران <b>—</b></li><li>أخرى <b>—</b></li></ul></div>
+       </section>
+       <section class="chart-card alerts">
+        <h2><svg><use href="#i-ai"></use></svg> تنبيهات الذكاء الاصطناعي</h2>
+        <div id="alerts-list" class="alert-stack"><div class="alert danger">🔴 الفواتير المتكررة: غير متحقق</div><div class="alert warn">⚠️ التعديلات السابقة: غير متحقق</div><div class="alert info">● الشيكات المستحقة: غير متحقق</div><div class="alert success">✓ المطابقة: لم تُعتمد</div></div>
+       </section>
+      </div>
+      <div class="quick-actions">
+        <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-cart"></use></svg>فواتير مبيعات</a>
+        <a href="./index.html#jawafa-purchases" target="_top"><svg><use href="#i-box"></use></svg>فواتير مشتريات</a>
+        <a href="./index.html#jawafa-accounting" target="_top"><svg><use href="#i-book"></use></svg>سند قيد</a>
+        <a href="./index.html#jawafa-checks" target="_top"><svg><use href="#i-cheque"></use></svg>شيك جديد</a>
+        <a href="./index.html#jawafa-receiving" target="_top"><svg><use href="#i-stack"></use></svg>جرد مخزون</a>
+        <a href="./index.html#jawafa-people" target="_top"><svg><use href="#i-users"></use></svg>حركة موظف</a>
+        <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-bars"></use></svg>تقرير مالي</a>
+        <a href="./index.html#jawafa-monitor" target="_top"><svg><use href="#i-ai"></use></svg>تحليل AI</a>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="monitor-bottom"></div>
+   <div class="monitor-neck"></div>
+   <div class="monitor-stand"></div>
+  </div>
+
+  <div class="platform android"><span>♟</span>Android APK <small>معاينة واجهة</small></div>
+  <div class="platform windows"><span>⊞</span>Windows EXE <small>(واجهة ويب — EXE غير مثبت)</small></div>
+  <div class="platform ios"><span>●</span>iOS (iPhone / iPad) <small>معاينة واجهة</small></div>
+
+  <section class="bottom-panel connection-panel" aria-label="البنية التقنية والربط">
+   <h2>البنية التقنية والربط</h2>
+   <div class="connection-columns">
+    <div class="connection-items"><span>أجهزة POS <svg><use href="#i-calc"></use></svg></span><span>قارئ باركود <svg><use href="#i-box"></use></svg></span><span>موازين <svg><use href="#i-stack"></use></svg></span><span>طابعات <svg><use href="#i-gear"></use></svg></span></div>
+    <div class="central-database"><svg><use href="#i-database"></use></svg><b>Jawafa_DB</b><small>قراءة فقط</small></div>
+    <div class="connection-items"><span><svg><use href="#i-cart"></use></svg>Android / iOS</span><span><svg><use href="#i-bars"></use></svg>لوحة القيادة</span><span><svg><use href="#i-link"></use></svg>واجهة API آمنة</span><span><svg><use href="#i-ai"></use></svg>الذكاء الاصطناعي</span></div>
+   </div>
+  </section>
+
+  <section class="bottom-panel modules-panel" aria-label="الوحدات الرئيسية">
+   <h2>الوحدات الرئيسية للنظام (هدف مطابقة TrustSoft ≥ 90%)</h2>
+   <div class="module-grid">
+    <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-cart"></use></svg>المبيعات</a>
+    <a href="./index.html#jawafa-purchases" target="_top"><svg><use href="#i-box"></use></svg>المشتريات</a>
+    <a href="./index.html#jawafa-receiving" target="_top"><svg><use href="#i-stack"></use></svg>المخزون</a>
+    <a href="./index.html#jawafa-accounting" target="_top"><svg><use href="#i-calc"></use></svg>المحاسبة العامة</a>
+    <a href="./index.html#jawafa-checks" target="_top"><svg><use href="#i-cheque"></use></svg>الشيكات والبنوك</a>
+    <a href="./index.html#jawafa" target="_top"><svg><use href="#i-bank"></use></svg>الأصول الثابتة</a>
+    <a href="./index.html#jawafa-people" target="_top"><svg><use href="#i-users"></use></svg>شؤون الموظفين</a>
+    <a href="./index.html#jawafa-people" target="_top"><svg><use href="#i-users"></use></svg>الرواتب</a>
+    <a href="./index.html#jawafa-monitor" target="_top"><svg><use href="#i-shield"></use></svg>الصلاحيات</a>
+    <a href="./index.html#settings" target="_top"><svg><use href="#i-gear"></use></svg>الإعدادات</a>
+    <a href="./index.html#jawafa-reports" target="_top"><svg><use href="#i-bars"></use></svg>التقارير والتحليل</a>
+    <a href="./index.html#jawafa-monitor" target="_top"><svg><use href="#i-ai"></use></svg>الذكاء الاصطناعي</a>
+   </div>
+  </section>
+
+  <section class="bottom-panel intelligence-panel" aria-label="الإضافات الذكية والرقابة">
+   <h2>أهم الإضافات الذكية والرقابة ✦</h2>
+   <ul><li>سجل تاريخي غير قابل للتعديل لكل عملية.</li><li>كشف التلاعب والشذوذ تلقائيًا بالذكاء الاصطناعي.</li><li>مقارنة النسخ التاريخية وأثر التعديلات.</li><li>مطابقة آلية للأسواق ↔ المطاعم ↔ الأفران.</li><li>تنبيهات ذكية للمخاطر والشيكات والمصاريف.</li><li>تكامل آمن متعدد المنصات.</li></ul>
+   <div class="not-live">ميزات مستهدفة — حالة التحقق من التنفيذ في لوحاتها المختصة</div>
+  </section>
+ </div>
+</div>
+<footer class="functional-tools" aria-label="أدوات العرض">
+ <span id="connection-status" role="status">● المصدر: غير متصل — هذه واجهة بصرية؛ لا توجد أرقام مالية حية</span>
+ <div class="export-actions">
+  <button id="load-json" type="button">استيراد مؤشرات JSON</button>
+  <input id="json-file" type="file" accept=".json,application/json" hidden aria-label="ملف بيانات مؤشرات جوافة">
+  <button id="check-source" type="button">فحص جسر القراءة</button>
+  <button id="download-json" type="button" disabled>تصدير JSON</button>
+  <button id="download-csv" type="button" disabled>تصدير CSV</button>
+  <a href="./index.html#jawafa" target="_top">العودة للوحة المركزية</a>
+ </div>
+</footer>
+</body>
+</html>
