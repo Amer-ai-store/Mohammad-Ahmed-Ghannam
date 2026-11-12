@@ -133,7 +133,7 @@ try {
   # SQL Server SqlCredential takes a SecureString; no -P, cleartext password,
   # SQL auth token in a process argument, environment variable or log.
   Add-Type -AssemblyName System.Data
-  $sqlCredential = New-Object System.Data.SqlClient.SqlCredential(
+  $sqlCredential = [System.Data.SqlClient.SqlCredential]::new(
     'user_read', $credential.Password
   )
   $builder = New-Object System.Data.SqlClient.SqlConnectionStringBuilder
@@ -145,7 +145,7 @@ try {
   $builder['Connect Timeout'] = 7
   $builder['Application Name'] = 'Jawafa_UserRead_ReadOnly_Verification'
   $builder['ApplicationIntent'] = 'ReadOnly'
-  $connection = New-Object System.Data.SqlClient.SqlConnection(
+  $connection = [System.Data.SqlClient.SqlConnection]::new(
     $builder.ConnectionString
   )
   $connection.Credential = $sqlCredential
