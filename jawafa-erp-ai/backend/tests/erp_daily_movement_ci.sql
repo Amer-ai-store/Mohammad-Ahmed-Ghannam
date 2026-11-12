@@ -7,7 +7,19 @@ DECLARE
   allowed_flag boolean;
   expected_count integer;
 BEGIN
-  SELECT count(*) INTO expected_count FROM erp.item_movement_events;
+  -- Count ONLY the seven baseline synthetic event IDs. Subsequent
+  -- historical-report test years may legitimately add independent rows.
+  SELECT count(*) INTO expected_count
+    FROM erp.item_movement_events
+   WHERE (tenant_id, branch_id, event_id) IN (
+      ('11111111-1111-4111-8111-111111111111','BR-A','EV-A-1'),
+      ('11111111-1111-4111-8111-111111111111','BR-A','EV-A-2'),
+      ('11111111-1111-4111-8111-111111111111','BR-A','EV-A-3'),
+      ('11111111-1111-4111-8111-111111111111','BR-A','EV-A-4'),
+      ('11111111-1111-4111-8111-111111111111','BR-LOCKED','EV-A-HIDDEN'),
+      ('11111111-1111-4111-8111-111111111111','BR-REVOKED','EV-A-REVOKED'),
+      ('22222222-2222-4222-8222-222222222222','BR-A','EV-B-1')
+    );
   IF expected_count <> 7 THEN
     RAISE EXCEPTION 'SYNTHETIC_EVENT_FIXTURES_MISSING';
   END IF;
