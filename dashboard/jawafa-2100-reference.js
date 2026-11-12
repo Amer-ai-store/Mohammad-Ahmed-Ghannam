@@ -57,7 +57,7 @@
  }
  function render(){
   keys.forEach(k=>document.querySelectorAll('[data-number="'+k+'"]').forEach(el=>el.textContent=dataset&&dataset.metrics[k].today!==null?nf.format(dataset.metrics[k].today):"—"));
-  const text=dataset?"مصدر العرض: "+dataset.source+(origin==="LOCAL"?" (محلي، غير معتمد)":" (API، التحقق مطلوب)"):"مصدر البيانات: غير متصل";
+  const text=dataset?"مصدر العرض: "+dataset.source+(origin==="LOCAL"?" (محلي، غير معتمد)":origin==="API"?" (user_read • قراءة مشفرة ومتحقق منها)":" (غير مثبت)"):"مصدر البيانات: غير متصل";
   $("source-state").textContent=text;
   $("connection-status").textContent=dataset?"● "+text+" • لا تغييرات على قاعدة البيانات":"● المصدر: غير متصل — هذه واجهة بصرية؛ لا توجد أرقام مالية حية";
   $("download-json").disabled=$("download-csv").disabled=!dataset;
@@ -108,15 +108,40 @@
   }catch(err){$("connection-status").textContent="تعذر عرض البيانات: "+err.message;}
   finally{e.currentTarget.value="";}
  });
- $("check-source").addEventListener("click",async ()=>{
-  const endpoint=window.JAWAFA_2100_ENDPOINT;
-  if(typeof endpoint!=="string"||!endpoint.startsWith("/api/jawafa/v1/")||endpoint.startsWith("//")){
-   $("connection-status").textContent="NOT_CONNECTED — لا يوجد API خاص ومصادق عليه لهذا العرض.";return;
-  }
-  try{const r=await fetch(endpoint,{credentials:"same-origin",cache:"no-store",headers:{Accept:"application/json"}});
-   if(!r.ok)throw Error("HTTP "+r.status);setData(await r.json(),"API");
-  }catch(err){$("connection-status").textContent="فشل الاتصال: "+err.message;}
- });
+ async function connectVerified(){
+  // Only the authorized same-origin command bridge may receive a Firebase bearer.
+  // Never send credentials or raw SQL connection strings to an external origin.
+  let jwt;
+  try {
+    const auth=window.parent===window?window.AAS_OWNER_AUTH:window.parent.AAS_OWNER_AUTH;
+    if(!auth||typeof auth.getIdToken!=="function")throw Error("OWNER_AUTH_NOT_READY");
+    jwt=await auth.getIdToken();
+    if(typeof jwt!=="string"||!jwt)throw Error("NOT_AUTHENTICATED");
+    const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),8000);
+    let response;
+    try {
+      response=await fetch("/api/jawafa/v1/performance",{
+        method:"GET",credentials:"same-origin",cache:"no-store",signal:ctrl.signal,
+        headers:{"Accept":"application/json","Authorization":"Bearer "+jwt}
+      });
+    }finally{clearTimeout(timer)}
+    const content=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(String(content.error||"HTTP_"+response.status).slice(0,100));
+    if(content.format!=="jawafa-performance-v1"||
+       content.source_system!=="Jawafa_DB"||content.data_verified!==true||
+       content.read_only!==true||content.verification?.sql_login!=="user_read"||
+       content.verification?.tls_encrypted!==true||
+       content.verification?.tls_certificate_trusted!==true||
+       content.verification?.deny_write_test_passed!==true)
+       throw Error("SQL_SOURCE_VERIFICATION_FAILED");
+    setData(content,"API");
+  }catch(err){
+    dataset=null;origin="NOT_CONNECTED";render();
+    $("connection-status").textContent="● NOT_CONNECTED — "+String(err.message||"SOURCE_UNAVAILABLE").slice(0,110);
+  }finally{jwt=null}
+ }
+ $("check-source").addEventListener("click",connectVerified);
+ window.addEventListener("load",()=>setTimeout(connectVerified,1000),{once:true});
  $("download-json").addEventListener("click",()=>{if(dataset)save("jawafa-2100-screen.json","application/json;charset=utf-8",JSON.stringify({provenance:origin,verified:false,data:dataset},null,2));});
  $("download-csv").addEventListener("click",()=>{
   if(!dataset)return;
