@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '24'
       - name: Node tests — native navigation and private-link fail-closed guard
-        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs dashboard/tests/central-transfer-audit.test.mjs dashboard/tests/jawafa-forensic-workspace.test.mjs dashboard/tests/cca999-task-flow.test.mjs dashboard/tests/cca999-api-health.test.mjs dashboard/tests/owner-sso.test.mjs
+        run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs dashboard/tests/central-transfer-audit.test.mjs dashboard/tests/jawafa-forensic-workspace.test.mjs dashboard/tests/cca999-task-flow.test.mjs dashboard/tests/cca999-api-health.test.mjs dashboard/tests/owner-sso.test.mjs dashboard/tests/jawafa-2100-layout.test.mjs
       - name: Publication preflight — reject private links in entire dashboard artifact
         shell: bash
         run: |
