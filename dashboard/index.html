@@ -9,6 +9,8 @@
 <link rel="stylesheet" href="./progress-board.css">
 <link rel="stylesheet" href="./live-execution.css">
 <link rel="stylesheet" href="./jawafa-investigation.css">
+<link rel="stylesheet" href="./jawafa-2100.css">
+<script src="./jawafa-2100.js" defer></script>
 <style>
 /* Layout: an operations console — fixed right sidebar of sections (chips on phones), one section visible at a time, summary first then detail. Dark-first like the ChatGPT original. */
 :root{
@@ -262,7 +264,79 @@ nav.side{gap:.5rem}
       <div id="nav-breadcrumb" class="nav-breadcrumb" role="status" aria-live="polite"></div>
       <div id="mode-banner" class="banner" hidden></div>
 
-      <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
+<section class="view" data-view="jawafa-2100" id="jawafa-2100-screen" hidden aria-label="JAWAFA ERP AI — تقارير الأداء 2100">
+  <div class="j21-wrap">
+    <header class="j21-top">
+      <div class="j21-logo">
+        <svg viewBox="0 0 72 72" role="img" aria-label="جوافة"><path d="M32 17c-4-9-12-12-21-11 1 12 8 17 21 17M39 18c3-10 10-14 22-13-2 11-10 17-22 19" fill="#80ec87"/><path d="M12 29h48l-6 28H21l-9-28zm7 8h36M28 30l3 27m14-27-3 27" fill="none" stroke="#69f28d" stroke-width="4" stroke-linejoin="round"/><circle cx="28" cy="65" r="4" fill="#c5ffd0"/><circle cx="51" cy="65" r="4" fill="#c5ffd0"/></svg>
+        <div><strong>مجموعة أسواق جوافة</strong><small>JAWAFA Group</small></div>
+      </div>
+      <div class="j21-title"><h1>JAWAFA ERP <em>AI</em></h1><p>نظام إدارة موارد المؤسسات الذكي والمتكامل</p><small>تقارير الأداء 2100 • تصميم أخضر متعدد المنصات</small></div>
+      <div class="j21-features"><span>▣ متعدد المنصات</span><span>♢ أمان ورقابة</span><span>✦ ذكاء اصطناعي</span><span>▤ ERP متكامل</span></div>
+    </header>
+    <div class="j21-ticker" role="status" aria-live="polite"><span>◉ <strong id="j21-state">NOT_CONNECTED</strong> — لا تُعرض أرقام إنتاجية دون مصدر مفحوص</span><span class="j21-source" id="j21-source">Jawafa_DB: غير متصل</span><span id="j21-updated">آخر تحديث: غير متوفر</span></div>
+    <div class="j21-workspace" aria-label="شاشة جوافة الرئيسية">
+      <div class="j21-appbar"><strong>🛒 JAWAFA ERP AI</strong><span class="j21-search">⌕ البحث الشامل في النظام</span><span class="j21-bells">♧ لوحة القيادة | إشعارات | إعدادات</span></div>
+      <div class="j21-shell">
+        <aside class="j21-side" aria-label="وحدات النظام">
+          <div class="j21-profile"><b>لوحة القيادة الرئيسية</b>جوافة • قراءة وتحليل</div>
+          <a class="j21-nav active" href="#jawafa-2100">⌂ الرئيسية</a>
+          <a class="j21-nav" href="#jawafa-reports">▥ المبيعات والتقارير</a>
+          <a class="j21-nav" href="#jawafa-purchases">▤ المشتريات</a>
+          <a class="j21-nav" href="#jawafa-receiving">▣ المخزون</a>
+          <a class="j21-nav" href="#jawafa-accounting">▦ المحاسبة</a>
+          <a class="j21-nav" href="#jawafa-checks">▰ الشيكات والبنوك</a>
+          <a class="j21-nav" href="#jawafa-people">◉ الموظفون</a>
+          <a class="j21-nav" href="#jawafa-monitor">♧ الرقابة والتحليل</a>
+          <a class="j21-nav" href="#jawafa-evidence">▧ سجل الأدلة</a>
+          <a class="j21-nav" href="#jawafa-trustsoft">✧ TrustSoft</a>
+        </aside>
+        <div class="j21-content">
+          <div class="j21-content-head"><span>لوحة القيادة الرئيسية • مقارنة 2024 / 2025 / 2026</span><span class="j21-status">للقراءة فقط • التحقق مطلوب</span></div>
+          <div class="j21-kpis" aria-label="بطاقات مؤشرات الأداء">
+            <div class="j21-kpi"><span class="j21-kicon">🛒</span><span class="j21-klabel">المبيعات اليوم</span><span class="j21-kvalue" id="j21-k-sales">—</span><span class="j21-ksub" id="j21-y-sales">2025/2024: —</span></div>
+            <div class="j21-kpi"><span class="j21-kicon">▣</span><span class="j21-klabel">المشتريات اليوم</span><span class="j21-kvalue" id="j21-k-purchases">—</span><span class="j21-ksub" id="j21-y-purchases">2025/2024: —</span></div>
+            <div class="j21-kpi"><span class="j21-kicon">▤</span><span class="j21-klabel">المخزون الحالي</span><span class="j21-kvalue" id="j21-k-inventory">—</span><span class="j21-ksub" id="j21-y-inventory">2025/2024: —</span></div>
+            <div class="j21-kpi"><span class="j21-kicon">▥</span><span class="j21-klabel">الذمم المستحقة</span><span class="j21-kvalue" id="j21-k-payables">—</span><span class="j21-ksub" id="j21-y-payables">2025/2024: —</span></div>
+            <div class="j21-kpi"><span class="j21-kicon">▰</span><span class="j21-klabel">الشيكات تحت التحصيل</span><span class="j21-kvalue" id="j21-k-postdated_cheques">—</span><span class="j21-ksub" id="j21-y-postdated_cheques">2025/2024: —</span></div>
+          </div>
+          <div class="j21-stats">
+            <div class="j21-box"><h2>حركة المبيعات والمقارنة التاريخية</h2><svg id="j21-linechart" viewBox="0 0 500 180" role="img" aria-label="منحنى مبيعات 2026 و2025 و2024"></svg><div class="j21-chart-legend"><span><i class="j21-legend-dot" style="background:#42f58e"></i>2026</span><span><i class="j21-legend-dot" style="background:#9ade5a"></i>2025</span><span><i class="j21-legend-dot" style="background:#ecc361"></i>2024</span></div></div>
+            <div class="j21-box"><h2>توزيع المبيعات حسب الأقسام</h2><div class="j21-donut" id="j21-donut"><span id="j21-donut-caption">—</span></div><ul class="j21-departments" id="j21-departments"><li>غير متوفر</li></ul></div>
+            <div class="j21-box"><h2>تنبيهات الذكاء الاصطناعي والرقابة</h2><div class="j21-alerts" id="j21-alerts"><div class="j21-alert warn">بانتظار المصدر الفعلي</div></div></div>
+          </div>
+          <div class="j21-quick" aria-label="اختصارات وحدات جوافة">
+            <a href="#jawafa-reports"><span class="symbol">🛒</span>فواتير مبيعات</a>
+            <a href="#jawafa-purchases"><span class="symbol">▣</span>فواتير مشتريات</a>
+            <a href="#jawafa-accounting"><span class="symbol">▤</span>سند قيد</a>
+            <a href="#jawafa-checks"><span class="symbol">▰</span>البنوك والشيكات</a>
+            <a href="#jawafa-receiving"><span class="symbol">⬡</span>جرد مخزون</a>
+            <a href="#jawafa-people"><span class="symbol">♟</span>شؤون الموظفين</a>
+            <a href="#jawafa-monitor"><span class="symbol">✦</span>تحليل ذكي</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="j21-controls">
+      <button class="j21-btn primary" type="button" id="j21-import">⊕ استيراد بيانات الأداء</button>
+      <input type="file" id="j21-upload" accept=".json,application/json" aria-label="ملف مؤشرات الأداء JSON">
+      <button class="j21-btn" type="button" id="j21-connect">⌁ فحص الجسر الخاص</button>
+      <button class="j21-btn" type="button" id="j21-export" disabled>⇩ تصدير بيانات الشاشة JSON</button>
+      <button class="j21-btn" type="button" id="j21-export-csv" disabled>⇩ تصدير CSV</button>
+      <a class="j21-btn" href="#jawafa">⌂ لوحة جوافة المركزية</a>
+      <a class="j21-btn" href="#jawafa-trustsoft">▣ TrustSoft</a>
+    </div>
+    <p id="j21-feedback" class="j21-foot" role="status" aria-live="polite">استيراد ملف محلي يعرض بياناته في هذه الجلسة فقط. لا تُرسل الملفات للخادم. الربط الحي غير مفعل ما لم يتوفر API خاص ومصادق عليه.</p>
+    <div class="j21-panels">
+      <div class="j21-bottom"><h3>البنية التقنية والربط</h3><span class="j21-pill">Jawafa_DB</span><span class="j21-pill">واجهة API خاصة</span><span class="j21-pill">TrustSoft</span><span class="j21-pill">Windows</span><span class="j21-pill">Android / iOS</span><p>مصادر تشغيلية مستقلة. الربط المالي للقراءة فقط وبعد المصادقة والتحقق من سلامة البيانات.</p></div>
+      <div class="j21-bottom"><h3>الوحدات الرئيسية للنظام</h3><span class="j21-pill">المبيعات</span><span class="j21-pill">المشتريات</span><span class="j21-pill">المخزون</span><span class="j21-pill">البنوك</span><span class="j21-pill">الرواتب</span><span class="j21-pill">التقارير والتحليل</span><p>تظل الوحدات الحالية في لوحة جوافة المركزية متاحة دون حذف أو تغيير.</p></div>
+      <div class="j21-bottom"><h3>الإضافات الذكية والرقابة</h3><ul><li>مقارنة السنوات 2024 و2025 و2026</li><li>تنبيه الفروقات الشاذة بعد اتصال المصدر</li><li>أثر التعديلات وربط سندات الإثبات</li><li>تصدير محلي للعرض دون تعديل الأصل</li></ul></div>
+    </div>
+    <div class="j21-foot">JAWAFA ERP AI — واجهة عرض لا تدّعي اتصالًا مباشرًا بـ Jawafa_DB. <a href="#jawafa-evidence">مراجعة الأدلة</a> · <a href="#jawafa-gate15">التحقق GATE-15</a></div>
+  </div>
+</section>
+
+<!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
 <section class="panel" id="jf-investigation" aria-labelledby="jf-title">
  <div class="jf-head">
@@ -1179,7 +1253,7 @@ nav.side{gap:.5rem}
       ["aas-commerce","لقطات تطبيق AAS"]
     ]],
     ["جوافة | المالية والتحقيق", [
-      ["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة والمهام"],
+      ["jawafa","القيادة المركزية"],["jawafa-2100","جوافة 2100 • ERP الأخضر"],["jawafa-tasks","الخطة والمهام"],
       ["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
       ["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","TrustSoft"],
       ["jawafa-export","مراقبة التصدير"],["jawafa-accounting","القيود"],
