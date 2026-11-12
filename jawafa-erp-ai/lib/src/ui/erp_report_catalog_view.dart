@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../network/erp_historical_report.dart';
+import 'erp_historical_comparison_view.dart';
+
 import 'erp_visual_system.dart';
 
 /// Metadata-only report registry. A visible report is NOT a verified TrustSoft
@@ -67,7 +70,8 @@ const ownerReportCandidates = <ErpReportDefinition>[
 ];
 
 class ErpReportCatalogView extends StatefulWidget {
-  const ErpReportCatalogView({super.key});
+  final ErpHistoricalReportReader? historicalReader;
+  const ErpReportCatalogView({super.key, this.historicalReader});
 
   @override
   State<ErpReportCatalogView> createState() =>
@@ -101,6 +105,8 @@ class _ErpReportCatalogViewState extends State<ErpReportCatalogView> {
         ),
         const SizedBox(height: 12),
         const ErpNonLiveBadge(),
+        const SizedBox(height: 14),
+        ErpHistoricalComparisonView(reader: widget.historicalReader),
         const SizedBox(height: 14),
         TextField(
           key: const Key('erp_reports_search'),
