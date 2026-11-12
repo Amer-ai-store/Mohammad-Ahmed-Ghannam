@@ -58,7 +58,28 @@ function Get-UserReadVerdict {
   }
 }
 
+function New-ReadOnlySqlPassword {
+  param([System.Security.SecureString]$Password)
+  # SqlCredential rejects mutable SecureString instances from Import-Clixml.
+  # Copy first so the imported credential remains unchanged.
+  $copy = $Password.Copy()
+  $copy.MakeReadOnly()
+  return $copy
+}
+
 if ($SelfTest) {
+  $testPassword = ConvertTo-SecureString 'synthetic-only' -AsPlainText -Force
+  $testCopy = New-ReadOnlySqlPassword $testPassword
+  try {
+    if (-not $testCopy.IsReadOnly() -or $testPassword.IsReadOnly()) {
+      throw 'SELF_TEST_SECURESTRING_COPY_FAILED'
+    }
+    Add-Type -AssemblyName System.Data
+    $testSqlCredential = [System.Data.SqlClient.SqlCredential]::new('user_read', $testCopy)
+  } finally {
+    $testCopy.Dispose()
+    $testPassword.Dispose()
+  }
   # Synthetic data ONLY. This path MUST NOT access DPAPI or any SQL server.
   $good = @{
     Connected = $true; Login = 'user_read'; Database = 'Jawafa_DB'
@@ -123,6 +144,7 @@ $connection = $null
 $command = $null
 $reader = $null
 $credential = $null
+$sqlPassword = $null
 try {
   $credential = Import-Clixml -LiteralPath $CredentialFile
   if ($credential -isnot [System.Management.Automation.PSCredential] -or
@@ -133,8 +155,9 @@ try {
   # SQL Server SqlCredential takes a SecureString; no -P, cleartext password,
   # SQL auth token in a process argument, environment variable or log.
   Add-Type -AssemblyName System.Data
+  $sqlPassword = New-ReadOnlySqlPassword $credential.Password
   $sqlCredential = [System.Data.SqlClient.SqlCredential]::new(
-    'user_read', $credential.Password
+    'user_read', $sqlPassword
   )
   $builder = New-Object System.Data.SqlClient.SqlConnectionStringBuilder
   $builder['Data Source'] = $Server
@@ -273,6 +296,7 @@ SELECT
   if ($reader) { $reader.Close() }
   if ($command) { $command.Dispose() }
   if ($connection) { $connection.Dispose() }
+  if ($sqlPassword) { $sqlPassword.Dispose() }
   $credential = $null
   $sqlCredential = $null
 }
