@@ -35,3 +35,25 @@
 8. اجتياز تدقيق مستقل وحفظ بصمات الأدلة والاستعادة ومطابقة GATE-15 قبل اعتبار النتائج المالية نهائية.
 
 **الحالة الحالية: CODE_PREPARED / SQL_LIVE_NOT_VERIFIED / PRIVATE_OWNER_AUTH_BLOCKED / HTTPS_SQL_NOT_ACCEPTED.**
+
+
+## تحديث تحقق حي لاحق — 12 نوفمبر 2026 (user_read 3467)
+
+هذه الفقرة **تصحّح حالة اختبار الدخول** المذكورة في دورة القراءة الأقدم أعلاه، ولا ترفع حظر النشر الإنتاجي.
+
+### تحقق مباشر من JAWAFFASVR
+- استجاب `GET http://127.0.0.1:3467/health` باستخدام Windows Integrated Authentication برمز **200**، وأعاد `database=Jawafa_DB` و`login=user_read` و`reader=1` و`writer=0` و`mode=READ_ONLY_LOCAL`.
+- استجاب `GET /api/sales/aug05-08` برمز **200**، بقيم إيصالات **1045، 1067، 1154، 1055** للأيام 5–8 أغسطس 2026. ويؤيد ملف القبول المحلي تطابقها 4/4 مع لقطة CSV التاريخية، مع كون تلك اللقطة غير ذرية.
+- الطلب المجهول إلى `/health` أعاد **401**، و`POST /api/sales/aug05-08` أعاد **405**، و`GET /api/sql` أعاد **404**.
+- استماع الخدمة الجديدة محصور في `127.0.0.1:3467`. مهمة `JawafaLocalUserReadOnlyAPI_AtLogon` تعمل حاليًا، لكن هويتها Windows **Administrator** وبوضع تسجيل دخول Interactive؛ لم يُثبت الاستمرار عبر إعادة تشغيل الخادم دون تسجيل دخول.
+- **الخدمة القديمة** `127.0.0.1:3456/api/health` ما زالت تعلن `user=sa`؛ لم تُستبدل ولم يُعتمد نقل المستهلكين إليها.
+- سجل التصدير ما زال عند **1023/1024** و`PARTIAL_REFERENCE_ONLY`؛ لا يُعتمد GATE-15 أو كشف مالي نهائي استنادًا إلى نجاح مسار المبيعات الجزئي.
+
+### حدود الإثبات والأمان
+- هذا **إثبات حي لاتصال محلي ناجح باسم user_read**، وليس إثبات منع DML على جميع الكائنات؛ `db_datawriter=0` وحده لا يكفي لاختبار جميع أذونات الكتابة. يلزم فحص `HAS_PERMS_BY_NAME` لكافة العروض والجداول المعتمدة دون تغيير بيانات أصلية.
+- ملف الاعتماد محفوظ محليًا بصيغة DPAPI/PSCredential. فشل استعماله تحت `NT AUTHORITY\\SYSTEM` بسبب `CryptographicException`؛ الحل المحلي الحالي يعتمد جلسة Windows مخوّلة، وليس حساب خدمة Windows مستقلًا منخفض الامتياز.
+- الاتصال المحلي مُشفّر لكنه يتجاوز التحقق من سلسلة شهادة SQL؛ `tls_certificate_trusted` **غير مثبت**. لا يُسمح بتحويل هذا الاستثناء إلى إنتاج أو فتح المنفذ للعالم الخارجي.
+- API الجديدة تقبل Windows Administrator فقط، وGET لمسارات ثابتة. لا يوجد فيها endpoint مؤشرات الأداء الخمسة `/internal/jawafa/performance` المطلوب في `performance-upstream.cjs`؛ لذلك لا تعني اختبارات 3467 أن مؤشرات لوحة GitHub Pages أصبحت حية.
+- ملفات القبول الداخلية: `C:\\ProgramData\\JawafaReadOnly\\SecurityEvidence\\Jawafa_Reader_LocalAPI_Validated_20261112_0630.json` و`C:\\JawafaGPT\\analysis_sales_20261112_aug05_08_readonly\\LIVE_SQL_USER_READ_ACCEPTANCE_20261112_025752.json`.
+
+**الحالة المصححة: LOCAL_USER_READ_LIVE_VERIFIED / LOCAL_READ_ONLY_API_VERIFIED / OLD_SA_BRIDGE_STILL_ACTIVE / WINDOWS_SERVICE_IDENTITY_PENDING / SQL_TLS_TRUST_PENDING / PUBLIC_DASHBOARD_CONNECTOR_NOT_APPROVED.**
