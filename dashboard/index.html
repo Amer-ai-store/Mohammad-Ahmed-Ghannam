@@ -278,6 +278,47 @@ nav.side{gap:.5rem}
 <section class="view" data-view="jawafa-2100" id="jawafa-2100-screen" hidden aria-label="JAWAFA ERP AI — جوافة 2100">
   <iframe id="jawafa-2100-reference-frame" src="./jawafa-2100-reference.html" title="جوافة 2100 — واجهة ERP المطابقة للصورة المرجعية باللون الأخضر" loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 </section>
+
+<!-- One shared public navigation entry for the independent ERP prototype.
+     This does not host a Flutter executable or confer ERP/SQL access. -->
+<section class="view" data-view="erp-app" id="erp-app-screen" hidden aria-labelledby="erp-app-heading">
+  <header class="view-head">
+    <div>
+      <span class="eyebrow">JAWAFA ERP AI · INTEGRATION STATUS</span>
+      <h1 id="erp-app-heading">تطبيق ERP الذكي — بوابة مركز القيادة</h1>
+      <p>نقطة دخول موحدة من لوحة Amer AI Store إلى وحدات جوافة ومشروع تطبيق ERP المستقل، دون تكرار لوحة قيادة جديدة.</p>
+    </div>
+    <a class="btn primary" href="#jawafa-2100">واجهة جوافة 2100 الخضراء</a>
+  </header>
+  <p class="banner" role="status" id="erp-app-readiness">
+    <strong>حالة الربط: تنقّل واجهات فقط · نموذج تطويري.</strong>
+    لا توجد نسخة ويب تشغيلية موثقة لتطبيق Flutter هنا، ولا اتصال ERP إنتاجي أو مصادقة SQL مثبتة من هذه الصفحة.
+    بيانات Jawafa_DB وTrustSoft لا تُعدّل ولا تُعرض على GitHub Pages.
+  </p>
+  <section class="panel" aria-labelledby="erp-app-modules-heading">
+    <h2 id="erp-app-modules-heading">وحدات الإدارة والتحليل المتاحة في مركز القيادة</h2>
+    <p class="small muted">الروابط أدناه تفتح الشاشات الموجودة في لوحة جوافة، ولا تعني أن العمليات الأصلية متاحة للترحيل في تطبيق ERP.</p>
+    <div class="nav-landing-grid">
+      <a class="nav-landing-card" href="#jawafa-accounting"><strong>المحاسبة والقيود</strong><span class="small muted">عرض وتحليل · دون ترحيل</span></a>
+      <a class="nav-landing-card" href="#jawafa-purchases"><strong>المشتريات والموردون</strong><span class="small muted">مراقبة ومطابقة</span></a>
+      <a class="nav-landing-card" href="#jawafa-receiving"><strong>المخزون والاستلام</strong><span class="small muted">قراءة فقط</span></a>
+      <a class="nav-landing-card" href="#jawafa-reports"><strong>المبيعات والتقارير</strong><span class="small muted">مؤشرات موثّقة فقط</span></a>
+      <a class="nav-landing-card" href="#jawafa-people"><strong>الموظفون والصلاحيات</strong><span class="small muted">مراجعة الصلاحيات</span></a>
+      <a class="nav-landing-card" href="#jawafa-checks"><strong>الشيكات والبنوك</strong><span class="small muted">التحقيق والتسوية</span></a>
+    </div>
+  </section>
+  <section class="panel" aria-labelledby="erp-app-client-heading">
+    <h2 id="erp-app-client-heading">تطبيق JAWAFA ERP AI المستقل</h2>
+    <p>العميل البرمجي مبني بـ Flutter لأنظمة Windows وAndroid وiOS. عند تثبيت بناء اختباري موثوق يمكن فتح لوحة القيادة المركزية من شريط التطبيق؛ لا تُدار الحسابات أو الصلاحيات عبر هذا الرابط العام.</p>
+    <div class="toolbar">
+      <a class="btn" href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/tree/main/jawafa-erp-ai" target="_blank" rel="noopener noreferrer">مصدر تطبيق ERP (تطويري)</a>
+      <a class="btn" href="#jawafa-monitor">مراقبة الاتصال والصلاحيات</a>
+      <a class="btn" href="#home">العودة للرئيسية</a>
+    </div>
+    <p class="small muted">الربط التشغيلي الفعلي مشروط بهوية مستخدم محققة، وHTTPS خاص، وAPI خلفية بصلاحيات SELECT، واختبارات E2E مستقلة، ومنع تسرب الأسرار. لا يُمرَّر أي مفتاح أو بيانات مالية عبر الرابط.</p>
+  </section>
+</section>
+
 <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
 <section class="panel" id="jawafa-secure-kpis" aria-label="مؤشرات Jawafa_DB الخاصة عبر حساب user_read">
@@ -685,6 +726,7 @@ nav.side{gap:.5rem}
           </div>
           <div class="command-hero-actions">
             <a class="btn primary" href="#luqta/workspace">فتح بيئة عمل التطبيق</a>
+            <a class="btn" href="#erp-app">ربط تطبيق ERP الذكي</a>
             <a class="btn" href="#jawafa-monitor">مراقبة الخادم والمزامنة</a>
             <button type="button" data-action="new-task">إنشاء مهمة تنفيذية</button>
           </div>
@@ -1212,7 +1254,7 @@ nav.side{gap:.5rem}
       ["aas-commerce","لقطات تطبيق AAS"]
     ]],
     ["جوافة | المالية والتحقيق", [
-      ["jawafa","القيادة المركزية"],["jawafa-2100","جوافة 2100 • ERP الأخضر"],["jawafa-tasks","الخطة والمهام"],
+      ["jawafa","القيادة المركزية"],["erp-app","تطبيق ERP الذكي"],["jawafa-2100","جوافة 2100 • ERP الأخضر"],["jawafa-tasks","الخطة والمهام"],
       ["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
       ["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","TrustSoft"],
       ["jawafa-export","مراقبة التصدير"],["jawafa-accounting","القيود"],
