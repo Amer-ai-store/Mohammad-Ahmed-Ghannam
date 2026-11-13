@@ -139,7 +139,8 @@ export function independentDailyMovement({events, ...scopeInput}) {
     const tax = integer(event.taxFils, 'TAX_FILS');
     const cost = integer(event.costFils, 'COST_FILS');
     if ((event.kind === 'purchase_return' || event.kind === 'sale_return') &&
-        !ID.test(event.referenceEventId ?? '')) {
+        (typeof event.referenceEventId !== 'string' ||
+         !ID.test(event.referenceEventId))) {
       throw new DailyMovementError('RETURN_REFERENCE_REQUIRED');
     }
     if (event.kind === 'stock_in' || event.kind === 'stock_out') {
