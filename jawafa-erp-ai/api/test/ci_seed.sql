@@ -89,4 +89,86 @@ INSERT INTO erp.setting_revisions
   '11111111-1111-4111-8111-111111111111','locale',2,'ar','ci-only'),
  ('bbbbbbbb-0000-4000-8000-000000000055',
   '22222222-2222-4222-8222-222222222222','locale',1,'en','ci-only');
+
+-- NEW ERP synthetic-only branch ledger fixtures: NEVER real source data.
+INSERT INTO erp.branches(tenant_id,branch_id,branch_label) VALUES
+ ('11111111-1111-4111-8111-111111111111','BR-A','Synthetic authorized branch'),
+ ('11111111-1111-4111-8111-111111111111','BR-LOCKED','Synthetic restricted branch'),
+ ('11111111-1111-4111-8111-111111111111','BR-REVOKED','Synthetic revoked branch'),
+ ('22222222-2222-4222-8222-222222222222','BR-A','Synthetic foreign branch');
+INSERT INTO erp.report_branch_access_events
+ (access_event_id,tenant_id,branch_id,oidc_subject,access_action,
+  authorization_reference,recorded_at) VALUES
+ ('70000000-0000-4000-8000-000000000001',
+  '11111111-1111-4111-8111-111111111111','BR-A','member-A','grant',
+  'SYNTHETIC-CI-GRANT-001',timestamptz '2026-11-10 00:00:00+00'),
+ ('70000000-0000-4000-8000-000000000002',
+  '11111111-1111-4111-8111-111111111111','BR-A','viewer-A','grant',
+  'SYNTHETIC-CI-GRANT-002',timestamptz '2026-11-10 00:00:00+00'),
+ ('70000000-0000-4000-8000-000000000003',
+  '11111111-1111-4111-8111-111111111111','BR-LOCKED','supervisor-A','grant',
+  'SYNTHETIC-CI-GRANT-003',timestamptz '2026-11-10 00:00:00+00'),
+ ('70000000-0000-4000-8000-000000000004',
+  '22222222-2222-4222-8222-222222222222','BR-A','member-B','grant',
+  'SYNTHETIC-CI-GRANT-004',timestamptz '2026-11-10 00:00:00+00'),
+ ('70000000-0000-4000-8000-000000000005',
+  '11111111-1111-4111-8111-111111111111','BR-REVOKED','member-A','grant',
+  'SYNTHETIC-CI-GRANT-005',timestamptz '2026-11-10 00:00:00+00'),
+ ('70000000-0000-4000-8000-000000000006',
+  '11111111-1111-4111-8111-111111111111','BR-REVOKED','member-A','revoke',
+  'SYNTHETIC-CI-REVOKE-006',timestamptz '2026-11-11 00:00:00+00');
+
+INSERT INTO erp.item_movement_events
+ (tenant_id,branch_id,event_id,event_date,item_code,family_code,supplier_code,
+  movement_kind,posting_status,quantity_milli,net_amount_fils,tax_fils,
+  cost_fils,reference_event_id) VALUES
+ ('11111111-1111-4111-8111-111111111111','BR-A','EV-A-1',
+  date '2026-10-01','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,250,40,175,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-A','EV-A-2',
+  date '2026-10-02','SKU-A','FAM-A','SUP-A',
+  'sale_return','POSTED',100,25,4,15,'EV-A-1'),
+ ('11111111-1111-4111-8111-111111111111','BR-A','EV-A-3',
+  date '2026-10-02','SKU-A','FAM-A','SUP-A',
+  'purchase','POSTED',3000,600,96,0,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-A','EV-A-4',
+  date '2026-10-02','SKU-A','FAM-A','SUP-A',
+  'stock_out','VOIDED',200,0,0,0,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-LOCKED','EV-A-HIDDEN',
+  date '2026-10-01','PRIVATE-ITEM','FAM-A','SUP-A',
+  'sale','POSTED',9000,8000,1280,4000,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-REVOKED','EV-A-REVOKED',
+  date '2026-10-01','PRIVATE-REVOKED','FAM-A','SUP-A',
+  'sale','POSTED',9000,8000,1280,4000,NULL),
+ ('22222222-2222-4222-8222-222222222222','BR-A','EV-B-1',
+  date '2026-10-01','PRIVATE-OTHER-TENANT','FAM-B','SUP-B',
+  'sale','POSTED',9000,8000,1280,4000,NULL);
+
+
+-- Independent ERP-only 2024/2025 historical comparator test data.
+-- Synthetic, never derived from owner TrustSoft/Jawafa_DB records.
+INSERT INTO erp.item_movement_events
+ (tenant_id,branch_id,event_id,event_date,item_code,family_code,supplier_code,
+  movement_kind,posting_status,quantity_milli,net_amount_fils,tax_fils,
+  cost_fils,reference_event_id) VALUES
+ ('11111111-1111-4111-8111-111111111111','BR-A','HIST-EV-2025-01',
+  date '2025-10-01','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,100,16,60,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-A','HIST-EV-2025-02',
+  date '2025-10-02','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,200,32,120,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-A','HIST-EV-2024-01',
+  date '2024-10-01','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,75,12,50,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-A','HIST-EV-2024-02',
+  date '2024-10-02','SKU-A','FAM-A','SUP-A',
+  'sale','POSTED',1000,50,8,30,NULL),
+ ('22222222-2222-4222-8222-222222222222','BR-A','HIST-FOREIGN-2025',
+  date '2025-10-02','SECRET-OTHER-TENANT','FAM-B','SUP-B',
+  'sale','POSTED',1000,9999,1599,5000,NULL),
+ ('11111111-1111-4111-8111-111111111111','BR-LOCKED','HIST-LOCKED-2025',
+  date '2025-10-02','SECRET-RESTRICTED','FAM-A','SUP-A',
+  'sale','POSTED',1000,9999,1599,5000,NULL);
+
+
 COMMIT;

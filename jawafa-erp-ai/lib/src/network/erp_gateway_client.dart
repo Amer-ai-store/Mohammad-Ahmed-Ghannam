@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'erp_historical_report.dart';
+
 /// Access tokens are provided transiently by a future authenticated login
 /// adapter, and are NEVER persisted, printed or embedded into Flutter assets.
 typedef ErpAccessTokenProvider = Future<String> Function();
@@ -83,7 +85,7 @@ class ErpRemotePurchaseInvoice {
 ///
 /// No database URL, SQL password, writes, refresh-token storage, or hidden
 /// financial actions. The test-only HTTP exception is restricted to loopback.
-class ErpGatewayClient {
+class ErpGatewayClient implements ErpHistoricalReportReader {
   final Uri baseUri;
   final String tenantId;
   final ErpAccessTokenProvider accessTokenProvider;
@@ -108,6 +110,46 @@ class ErpGatewayClient {
         !uuid.hasMatch(tenantId)) {
       throw ArgumentError('INVALID_SECURE_ERP_GATEWAY_CONFIGURATION');
     }
+  }
+
+  /// Only authorized host login provides a short-lived OIDC token.
+  /// No database access or identity secret is persisted here.
+  @override
+  Future<ErpHistoricalComparison> readHistoricalComparison({
+    required String date,
+    required String branchId,
+    String? itemCode,
+    String? familyCode,
+    String? supplierCode,
+  }) async {
+    final allowedCode = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$');
+    if (!validReportDay(date) || !allowedCode.hasMatch(branchId) ||
+        [
+          if (itemCode != null) itemCode,
+          if (familyCode != null) familyCode,
+          if (supplierCode != null) supplierCode,
+        ].any((value) => !allowedCode.hasMatch(value))) {
+      throw const ErpGatewayError('INVALID_REPORT_SCOPE');
+    }
+    final query = Uri(queryParameters: {
+      'date': date,
+      if (itemCode != null) 'item': itemCode,
+      if (familyCode != null) 'family': familyCode,
+      if (supplierCode != null) 'supplier': supplierCode,
+    }).query;
+    final response = await _get(
+      '/v1/reports/historical-daily-compare?' + query,
+      branchId: branchId,
+    );
+    return ErpHistoricalComparison.parse(
+      response,
+      requestedDay: date,
+      requestedTenantId: tenantId,
+      requestedBranchId: branchId,
+      requestedItemCode: itemCode,
+      requestedFamilyCode: familyCode,
+      requestedSupplierCode: supplierCode,
+    );
   }
 
   Future<List<ErpRemoteCheque>> readCheques() async {
@@ -166,7 +208,7 @@ class ErpGatewayClient {
     );
   }
 
-  Future<Map<String, dynamic>> _get(String path) async {
+  Future<Map<String, dynamic>> _get(String path, {String? branchId}) async {
     final token = await accessTokenProvider();
     if (token.trim().isEmpty) throw const ErpGatewayError('AUTH_REQUIRED');
     try {
@@ -176,6 +218,7 @@ class ErpGatewayClient {
       request.followRedirects = false;
       request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
       request.headers.set('x-erp-tenant-id', tenantId);
+      if (branchId != null) request.headers.set('x-erp-branch-id', branchId);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
       final response = await request.close().timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) {

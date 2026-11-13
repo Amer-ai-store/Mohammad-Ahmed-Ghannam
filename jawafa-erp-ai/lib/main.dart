@@ -6,6 +6,7 @@ import 'src/domain/cheque.dart';
 import 'src/domain/journal.dart';
 import 'src/network/erp_gateway_client.dart';
 import 'src/ui/erp_visual_system.dart';
+import 'src/ui/erp_report_catalog_view.dart';
 
 const centralDashboardUrl = 'https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/index.html#erp-app';
 
@@ -83,7 +84,7 @@ class _ErpShellState extends State<ErpShell> {
 
   static const departmentPages = <ErpDepartment, List<ErpArea>>{
     ErpDepartment.accounting: [ErpArea.journal, ErpArea.cheques, ErpArea.reports],
-    ErpDepartment.procurementInventory: [ErpArea.procurement, ErpArea.inventory],
+    ErpDepartment.procurementInventory: [ErpArea.procurement, ErpArea.inventory, ErpArea.reports],
     ErpDepartment.sales: [ErpArea.pointOfSale],
     ErpDepartment.hr: [ErpArea.personnel],
     ErpDepartment.shared: [
@@ -262,11 +263,7 @@ class _ErpShellState extends State<ErpShell> {
           details: 'سجل أحداث غير قابل للتعديل وفصل الصلاحيات وأدلة قبل/بعد.',
         );
       case ErpArea.reports:
-        return const PendingModuleView(
-          title: 'التقارير المحاسبية والتشغيلية',
-          details: 'الميزان والأستاذ والتدفق النقدي والشيكات؛ '
-            'التقارير الأصلية قيد حصر وظائف TrustSoft.',
-        );
+        return ErpReportCatalogView(historicalReader: widget.gateway);
     }
   }
 

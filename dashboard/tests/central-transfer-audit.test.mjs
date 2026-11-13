@@ -27,8 +27,9 @@ test('canonical dashboard routes all 14 AAS screens and 17 Jawafa panes',()=>{
   // proposed views only for structural CI; do not claim them as published.
   const proposedViews=['project-messages','cca999-task-flow','jawafa-2100','erp-app']
     .filter(id=>navRoutes.includes(id)&&viewSet.has(id)).length;
-  assert.equal(viewSet.size,report.public_inventory.main_native_views+proposedViews);
-  assert.equal(navRoutes.length,report.public_inventory.main_navigation_destinations+proposedViews);
+  const acceptanceDraft=Number(navRoutes.includes('jawafa-acceptance')&&viewSet.has('jawafa-acceptance'));
+  assert.equal(viewSet.size,report.public_inventory.main_native_views+proposedViews+acceptanceDraft);
+  assert.equal(navRoutes.length,report.public_inventory.main_navigation_destinations+proposedViews+acceptanceDraft);
   assert.equal(manifest.routes.length,14);
   assert.equal(new Set(manifest.routes).size,14);
   assert.ok(manifest.routes.every(x=>navRoutes.includes('aas-'+x)),'all AAS routes must be navigable');

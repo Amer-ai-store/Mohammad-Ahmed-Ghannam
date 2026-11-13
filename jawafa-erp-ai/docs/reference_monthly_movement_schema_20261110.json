@@ -1,0 +1,336 @@
+{
+  "schema_version": 1,
+  "reference_product": "TrustSoft",
+  "source_export_snapshot": "20261109-0100",
+  "source_table": "dbo.MonthlyMovementSummaryReport",
+  "source_kind": "CSV_HEADER_ONLY_NOT_UI_REPORT",
+  "expected_column_count": 44,
+  "header_columns_sha256": "4813d30898f9097fc39ac999aa84363b02e2d268d9127c80fe78ce2ae2ec68a9",
+  "reference_ui_report_id": null,
+  "reference_output_sha256": null,
+  "approved_reference_filters": null,
+  "reference_runtime_output_captured": false,
+  "reference_semantics_verified": false,
+  "owner_report_accepted": false,
+  "candidate_report_kind": "SYNTHETIC_MONTHLY_ITEM_MOVEMENT",
+  "candidate_columns": [
+    "item_code",
+    "purchased_qty_milli",
+    "sold_qty_milli",
+    "stock_net_qty_milli",
+    "purchase_net_fils",
+    "sales_net_fils",
+    "tax_net_fils"
+  ],
+  "columns": [
+    {
+      "ordinal": 1,
+      "name": "MonthYear",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 2,
+      "name": "ItemCode",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 3,
+      "name": "Item_Name",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 4,
+      "name": "Net_Sales_Before_Tax",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 5,
+      "name": "Net_Sales_After_Tax",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 6,
+      "name": "Net_Purchase_Before_Tax",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 7,
+      "name": "Net_Purchase_After_Tax",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 8,
+      "name": "Sales_Cost",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 9,
+      "name": "Net_Sales_Cost",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 10,
+      "name": "Net_Profit",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 11,
+      "name": "Profit_Markup_Per",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 12,
+      "name": "Net_Profit_Markup_Per",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 13,
+      "name": "Net_Profit_Margin_Per",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 14,
+      "name": "Profit_Margin_Per",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 15,
+      "name": "Sales_Qty",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 16,
+      "name": "Receipt_Qty",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 17,
+      "name": "Receipt_Value",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 18,
+      "name": "Withdrawals_Qty",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 19,
+      "name": "Withdrawals_Value",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 20,
+      "name": "Stock_Net_Qty",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 21,
+      "name": "Stock_Net_Value",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 22,
+      "name": "Total_Damage_Qty",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 23,
+      "name": "Total_Damage_Cost",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 24,
+      "name": "Damage_from_Sales_Before_Tax_Per",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 25,
+      "name": "Damage_from_Net_Profit_Per",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 26,
+      "name": "Damage_from_Sales_Cost_Per",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 27,
+      "name": "Dept_Withdrawals_Qty",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 28,
+      "name": "Dept_Withdrawals_Cost",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 29,
+      "name": "Net_Purchase_Qty",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 30,
+      "name": "Cost_Damage",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 31,
+      "name": "Qty_Damage",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 32,
+      "name": "Cost_Installation Damage",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 33,
+      "name": "Qty_Installation Damage",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 34,
+      "name": "Cost_Maintenance Damage",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 35,
+      "name": "Qty_Maintenance Damage",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 36,
+      "name": "Main_Barcode",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 37,
+      "name": "Family_Code",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 38,
+      "name": "Family_Desc",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 39,
+      "name": "Supplier_Code",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 40,
+      "name": "Supplier_Desc",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 41,
+      "name": "Class_Desc",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 42,
+      "name": "Type_Desc",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 43,
+      "name": "Country_Desc",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    },
+    {
+      "ordinal": 44,
+      "name": "Volume_Desc",
+      "source_type": "UNKNOWN_NOT_OBSERVED",
+      "business_formula_verified": false,
+      "candidate_erp_field": null
+    }
+  ],
+  "notes": "Observed source-table CSV header only; NOT a verified TrustSoft UI report definition. No row values inspected. Identical names or 7-column demo do not mean mapped formulas or report parity."
+}

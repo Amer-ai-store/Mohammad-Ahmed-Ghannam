@@ -1,0 +1,33 @@
+/* Native section in the existing Jawafa dashboard. Inherits host theme. */
+#jawafa-acceptance-root{display:flex;flex-direction:column;gap:1rem;min-width:0}
+#jawafa-acceptance-root .ja-headline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}
+#jawafa-acceptance-root .ja-metric{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:12px;padding:1rem;background:var(--surface)}
+#jawafa-acceptance-root .ja-metric small{color:var(--muted);font-size:.8rem}
+#jawafa-acceptance-root .ja-metric strong{font-size:1.14rem;color:var(--accent);line-height:1.35}
+#jawafa-acceptance-root .ja-metric span{font-size:.78rem;color:var(--muted)}
+#jawafa-acceptance-root .ja-section{gap:.8rem}
+#jawafa-acceptance-root .ja-search,#jawafa-acceptance-root .ja-filter{display:flex;align-items:center;gap:.45rem;font-size:.85rem}
+#jawafa-acceptance-root .ja-search input{width:min(260px,55vw)}
+#jawafa-acceptance-root .ja-filter select{width:auto;min-width:150px}
+#jawafa-acceptance-root td{vertical-align:top;line-height:1.65;overflow-wrap:anywhere}
+#jawafa-acceptance-root td a{font-size:.8rem;word-break:break-word}
+#jawafa-acceptance-root .ja-status{font-weight:700;min-width:145px}
+#jawafa-acceptance-root .ja-status[data-status="مثبت"]{color:var(--ok)}
+#jawafa-acceptance-root .ja-status[data-status="جزئي"],#jawafa-acceptance-root .ja-status[data-status="يحتاج تحققًا إضافيًا"]{color:var(--amber)}
+#jawafa-acceptance-root .ja-status[data-status="غير مثبت"]{color:var(--coral)}
+#jawafa-acceptance-root .ja-status[data-status="فرضية"]{color:var(--info)}
+#jawafa-acceptance-root .ja-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+#jawafa-acceptance-root .ja-form>label{display:flex;flex-direction:column;gap:.3rem;font-size:.82rem;color:var(--muted)}
+#jawafa-acceptance-root .ja-form .ja-wide,#jawafa-acceptance-root .ja-actions{grid-column:1/-1}
+#jawafa-acceptance-root .ja-actions{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+#jawafa-acceptance-root .ja-import{display:flex;align-items:center;gap:.45rem;border:1px solid var(--line);border-radius:9px;padding:.4rem .7rem;font-size:.8rem}
+#jawafa-acceptance-root .ja-import input{max-width:220px;border:0;padding:0;font-size:.75rem}
+#jawafa-acceptance-root td button{font-size:.76rem;margin:.1rem}
+#jawafa-acceptance-root .table-wrap{max-width:100%}
+#jawafa-acceptance-root table{min-width:670px}
+@media(max-width:760px){
+ #jawafa-acceptance-root .ja-headline{grid-template-columns:1fr}
+ #jawafa-acceptance-root .ja-form{grid-template-columns:1fr}
+ #jawafa-acceptance-root .ja-search,#jawafa-acceptance-root .ja-filter{width:100%}
+ #jawafa-acceptance-root .ja-search input,#jawafa-acceptance-root .ja-filter select{flex:1;width:100%;min-width:0}
+}

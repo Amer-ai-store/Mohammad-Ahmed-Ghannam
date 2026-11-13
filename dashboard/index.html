@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="./progress-board.css">
 <link rel="stylesheet" href="./live-execution.css">
 <link rel="stylesheet" href="./jawafa-investigation.css">
+<link rel="stylesheet" href="./jawafa-acceptance.css">
 <script src="./jawafa-readonly-kpis.js" defer></script>
 <script src="./jawafa-2100-frame-host.js" defer></script>
 <style>
@@ -550,7 +551,11 @@ nav.side{gap:.5rem}
     <div id="pm-list" aria-live="polite"></div>
   </div>
 </section>
-<section class="view" data-view="release-verification" aria-labelledby="h-release-verification" hidden><div class="view-head"><div><span class="eyebrow">AMER · RELEASE EVIDENCE</span><h1 id="h-release-verification">التحقق والإصدارات</h1><p>طلبات السحب وعمليات GitHub Actions وبوابات القبول في اللوحة المركزية.</p></div></div><div class="panel" id="central-dashboard-run-proof"><h2>مرجع نشر لوحة القيادة المركزية المثبت</h2><p><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/41757350444" target="_blank" rel="noopener noreferrer" data-release-proof="41757350444">Run #41757350444 — GitHub Pages: نجاح النشر والتحقق الحي (4 نوفمبر 2026)</a></p><p class="muted">مرجع للواجهة العامة فقط؛ لا يعني اكتمال قبول GATE-15 أو نشر PR #148.</p></div><section class="panel" id="central-transfer-audit-root" aria-label="التحقق من نقل اللوحات والوكلاء والوظائف"><h2>مطابقة نقل اللوحات والوكلاء والوظائف</h2><p class="muted">ستظهر نتيجة التحقق من ملفات النشر والمصادر وحالة اتصال الخدمات بصورة منفصلة.</p></section><div id="release-verification-root"></div></section>
+<section class="view" data-view="jawafa-acceptance" aria-labelledby="h-jawafa-acceptance" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · CENTRAL ACCEPTANCE · EVIDENCE-GATED</span><h1 id="h-jawafa-acceptance">متابعة إكمال واعتماد لوحة جوافة المركزية</h1><p>فحص الحالة العامة وPreview والإنتاج والمصادقة والتقارير والأوامر والهاتف، مع بقاء القبول الأمني والمالي مستقلًا.</p></div><span class="pill warn">PRODUCTION NOT ACCEPTED</span></div>
+<div id="jawafa-acceptance-root"></div>
+</section>
+<section class="view" data-view="release-verification" aria-labelledby="h-release-verification" hidden><div class="view-head"><div><span class="eyebrow">AMER · RELEASE EVIDENCE</span><h1 id="h-release-verification">التحقق والإصدارات</h1><p>طلبات السحب وعمليات GitHub Actions وبوابات القبول في اللوحة المركزية.</p></div></div><div class="panel" id="central-dashboard-run-proof"><h2>مرجع نشر لوحة القيادة المركزية المثبت</h2><p><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/41757350444" target="_blank" rel="noopener noreferrer" data-release-proof="41757350444">Run #41757350444 — GitHub Pages: نجاح النشر والتحقق الحي (4 نوفمبر 2026)</a></p><p class="muted">مرجع للواجهة العامة فقط؛ لا يعني اكتمال قبول GATE-15 أو نشر PR #148.</p></div><section class="panel" id="central-transfer-audit-root" aria-label="التحقق من نقل اللوحات والوكلاء والوظائف"><h2>مطابقة نقل اللوحات والوكلاء والوظائف</h2><p class="muted">ستظهر نتيجة التحقق من ملفات النشر والمصادر وحالة اتصال الخدمات بصورة منفصلة.</p></section><p><a href="#jawafa-acceptance">فتح مصفوفة قبول جوافة ومتابعة Security / QA</a></p><div id="release-verification-root"></div></section>
 <section class="view" data-view="jawafa-forensic-workspace" aria-labelledby="h-jawafa-forensic-workspace" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · FORENSIC INVESTIGATION · OWNER-ONLY DETAIL</span><h1 id="h-jawafa-forensic-workspace">مساحة التحقيق الموسع — الأدلة والقرائن</h1>
 <p class="muted small">محاور عامة غير حساسة على اللوحة؛ التفاصيل القانونية والمالية في ملف المالك الخاص، وقراءة المصدر لا تتم إلا عبر HTTPS ومصادقة مستقلة.</p></div><span class="pill warn">SOURCE_VERIFICATION_REQUIRED</span></div>
@@ -1255,7 +1260,7 @@ nav.side{gap:.5rem}
     ]],
     ["جوافة | المالية والتحقيق", [
       ["jawafa","القيادة المركزية"],["erp-app","تطبيق ERP الذكي"],["jawafa-2100","جوافة 2100 • ERP الأخضر"],["jawafa-tasks","الخطة والمهام"],
-      ["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
+      ["jawafa-acceptance","اعتماد اللوحة | Security / QA"],["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
       ["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","TrustSoft"],
       ["jawafa-export","مراقبة التصدير"],["jawafa-accounting","القيود"],
       ["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","الموردون والمشتريات"],
@@ -2981,4 +2986,5 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()})
 <script type="module" src="cca999-task-flow.mjs"></script>
 <script type="module" src="cca999-api-health.mjs"></script>
 <script type="module" src="release-verification.mjs"></script>
+<script type="module" src="jawafa-acceptance.mjs"></script>
 <script type="module" src="central-transfer-audit.mjs"></script>
