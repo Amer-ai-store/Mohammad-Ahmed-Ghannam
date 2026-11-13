@@ -40,3 +40,7 @@ jobs:
           }
           if ($safe.reason_code -ne 'MISSING_HOST_CREDENTIAL_OR_APPROVED_VIEWS') { throw 'UNEXPECTED_GATE_STATUS' }
           Write-Host 'PASS: no secret, no SQL, no live acceptance from CI'
+          # The tested child script intentionally exited 2. Reset the parent
+          # shell's remembered code only after asserting the fail-closed result.
+          $global:LASTEXITCODE = 0
+          exit 0
