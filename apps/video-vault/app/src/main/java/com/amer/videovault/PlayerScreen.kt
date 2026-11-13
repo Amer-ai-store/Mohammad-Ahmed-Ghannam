@@ -45,6 +45,7 @@ fun PlayerScreen(video: LocalVideo, vm: VideoVaultViewModel, onBack: () -> Unit)
     var addingSubtitleLanguage by remember { mutableStateOf("ar") }
     var addingAudioLanguage by remember { mutableStateOf("ar") }
     var activeDub by remember(video.uri) { mutableStateOf<String?>(null) }
+    val currentActiveDub by rememberUpdatedState(activeDub)
 
     var audioChoices by remember(video.uri) { mutableStateOf(emptyList<AudioTrackChoice>()) }
     var audioMenuExpanded by remember { mutableStateOf(false) }
@@ -73,6 +74,7 @@ fun PlayerScreen(video: LocalVideo, vm: VideoVaultViewModel, onBack: () -> Unit)
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onTracksChanged(tracks: Tracks) {
+                val audioGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
                 audioChoices = buildList {
                     for ((groupNumber, group) in tracks.groups.withIndex()) {
                         if (group.type != C.TRACK_TYPE_AUDIO) continue
@@ -83,6 +85,24 @@ fun PlayerScreen(video: LocalVideo, vm: VideoVaultViewModel, onBack: () -> Unit)
                                 ?: format.language?.takeIf { it.isNotBlank() }
                                 ?: "مسار صوت ${groupNumber + 1} / ${i + 1}"
                             add(AudioTrackChoice(group.mediaTrackGroup, i, label))
+                        }
+                    }
+                }
+                if (currentActiveDub != null) {
+                    // The last audio group belongs to the externally merged dubbed-audio source.
+                    val externalGroup = audioGroups.lastOrNull()
+                    if (externalGroup != null) {
+                        val selectedIndex = (0 until externalGroup.length)
+                            .firstOrNull { externalGroup.isTrackSupported(it) }
+                        if (selectedIndex != null && !externalGroup.isTrackSelected(selectedIndex)) {
+                            player.trackSelectionParameters = player.trackSelectionParameters
+                                .buildUpon()
+                                .setOverrideForType(
+                                    TrackSelectionOverride(
+                                        externalGroup.mediaTrackGroup,
+                                        listOf(selectedIndex)
+                                    )
+                                ).build()
                         }
                     }
                 }
@@ -120,13 +140,15 @@ fun PlayerScreen(video: LocalVideo, vm: VideoVaultViewModel, onBack: () -> Unit)
         }.build()
         playbackError = null
         val dubbedAudio = dubbedTracks.firstOrNull { it.language == activeDub }
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_AUDIO).build()
         if (dubbedAudio == null) {
             player.setMediaItem(mediaItem, resumeAt)
         } else {
             val factory = DefaultMediaSourceFactory(context)
             val mainSource = factory.createMediaSource(mediaItem)
             val audioSource = factory.createMediaSource(MediaItem.fromUri(Uri.parse(dubbedAudio.uri)))
-            player.setMediaSource(MergingMediaSource(true, true, mainSource, audioSource), resumeAt)
+            player.setMediaSource(MergingMediaSource(true, false, mainSource, audioSource), resumeAt)
         }
         player.prepare()
         player.playWhenReady = previouslyPlaying
