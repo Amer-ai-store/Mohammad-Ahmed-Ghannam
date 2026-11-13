@@ -1,0 +1,25 @@
+name: DCO trailer audit (per-commit)
+# This is an additional transparent trailer test, not the external DCO App.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: PR commit author trailer audit (not external DCO App)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify audit code fails on missing/mismatched signoffs
+        run: python3 -m unittest discover -s tests -p test_pr_dco.py -v
+      - name: Verify every PR commit author actually signed
+        run: python3 tools/verify_pr_dco.py origin/main
