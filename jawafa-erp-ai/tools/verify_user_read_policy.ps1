@@ -67,7 +67,40 @@ function New-ReadOnlySqlPassword {
   return $copy
 }
 
+function Get-SafeProbeFailure {
+  param([string]$Stage, [System.Exception]$Exception)
+  # Only fixed stage names are allowed into logs. Never serialize the exception.
+  $knownStages = @('CREDENTIAL_IMPORT', 'SQL_CREDENTIAL',
+    'TLS_SQL_CONNECT', 'IDENTITY_PERMISSIONS', 'APPROVED_VIEWS')
+  $safeStage = if ($Stage -cin $knownStages) { $Stage } else { 'UNKNOWN' }
+  return [pscustomobject]@{
+    status = 'BLOCKED'
+    failureStage = $safeStage
+    failureType = $Exception.GetType().Name
+    noCredentialOrFinancialContentReturned = $true
+    productionApproved = $false
+  }
+}
+
 if ($SelfTest) {
+  $secretMarker = 'synthetic-secret-must-never-be-logged'
+  $innerError = [System.Exception]::new($secretMarker)
+  $outerError = [System.Exception]::new($secretMarker, $innerError)
+  foreach ($stageName in @('CREDENTIAL_IMPORT', 'SQL_CREDENTIAL',
+      'TLS_SQL_CONNECT', 'IDENTITY_PERMISSIONS', 'APPROVED_VIEWS')) {
+    $failure = Get-SafeProbeFailure $stageName $outerError
+    $json = $failure | ConvertTo-Json -Compress
+    if ($failure.failureStage -cne $stageName -or
+        $failure.status -ne 'BLOCKED' -or $failure.productionApproved -ne $false -or
+        $json.Contains($secretMarker)) {
+      throw 'SELF_TEST_UNSAFE_FAILURE_DIAGNOSTIC'
+    }
+  }
+  $unknownFailure = Get-SafeProbeFailure $secretMarker $outerError
+  if ($unknownFailure.failureStage -cne 'UNKNOWN' -or
+      ($unknownFailure | ConvertTo-Json -Compress).Contains($secretMarker)) {
+    throw 'SELF_TEST_UNSAFE_FAILURE_STAGE'
+  }
   $testPassword = ConvertTo-SecureString 'synthetic-only' -AsPlainText -Force
   $testCopy = New-ReadOnlySqlPassword $testPassword
   try {
@@ -145,6 +178,7 @@ $command = $null
 $reader = $null
 $credential = $null
 $sqlPassword = $null
+$probeStage = 'CREDENTIAL_IMPORT'
 try {
   $credential = Import-Clixml -LiteralPath $CredentialFile
   if ($credential -isnot [System.Management.Automation.PSCredential] -or
@@ -154,6 +188,7 @@ try {
 
   # SQL Server SqlCredential takes a SecureString; no -P, cleartext password,
   # SQL auth token in a process argument, environment variable or log.
+  $probeStage = 'SQL_CREDENTIAL'
   Add-Type -AssemblyName System.Data
   $sqlPassword = New-ReadOnlySqlPassword $credential.Password
   $sqlCredential = [System.Data.SqlClient.SqlCredential]::new(
@@ -172,7 +207,9 @@ try {
     $builder.ConnectionString
   )
   $connection.Credential = $sqlCredential
+  $probeStage = 'TLS_SQL_CONNECT'
   $connection.Open()
+  $probeStage = 'IDENTITY_PERMISSIONS'
   $command = $connection.CreateCommand()
   $command.CommandTimeout = 10
 
@@ -253,6 +290,7 @@ SELECT
 
   # Check only named approved views by passing the name as a SQL parameter.
   # This checks effective permissions; it never SELECTs any financial rows.
+  $probeStage = 'APPROVED_VIEWS'
   foreach ($view in $ApprovedViews) {
     $command.Parameters.Clear()
     $command.CommandText =
@@ -285,12 +323,7 @@ SELECT
 } catch {
   # Log only a non-sensitive failure code/class. Never echo exception.Message:
   # it can contain internal host or user/credential metadata.
-  [pscustomobject]@{
-    status = 'BLOCKED'
-    failureType = $_.Exception.GetType().Name
-    noCredentialOrFinancialContentReturned = $true
-    productionApproved = $false
-  } | ConvertTo-Json -Compress
+  Get-SafeProbeFailure $probeStage $_.Exception | ConvertTo-Json -Compress
   exit 2
 } finally {
   if ($reader) { $reader.Close() }
