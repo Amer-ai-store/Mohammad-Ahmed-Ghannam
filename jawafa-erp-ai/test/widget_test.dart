@@ -66,6 +66,8 @@ void main() {
     await tester.pumpWidget(const JawafaErpApp());
     expect(find.byKey(const Key('erp_desktop_nav')), findsOneWidget);
     expect(find.byKey(const Key('erp_module_search')), findsOneWidget);
+    expect(find.byKey(const Key('central_dashboard_link')), findsOneWidget);
+    expect(centralDashboardUrl, 'https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/index.html#erp-app');
     expect(find.text('لا توجد بيانات حية'), findsNWidgets(4));
     // The desktop menu is scrollable/lazily built. Verify the full
     // owner-approved catalog directly, and test one rendered navigation group.
