@@ -96,7 +96,7 @@ if(typeof document!=='undefined'){
  const link=(tr,url,label)=>{const e=document.createElement('td');const a=document.createElement('a');a.href=url;a.textContent=label;a.target='_blank';a.rel='noopener noreferrer';e.append(a);tr.append(e);return e};
  const table=(id,rows,format)=>{const target=$(id);target.replaceChildren();rows.forEach(item=>{const tr=document.createElement('tr');format(tr,item);target.append(tr)});if(!rows.length){const tr=document.createElement('tr'),cell=td(tr,'لا توجد نتائج');cell.colSpan=5;target.append(tr)}};
  const datetime=()=>{const d=new Date(),shift=new Date(d.getTime()-d.getTimezoneOffset()*60000);return shift.toISOString().slice(0,16)};
- const issueState=n=>{const item=issues.get(n);return item?((item.state==='open'?'مفتوحة':'مغلقة')+' · آخر تحديث GitHub '+(item.updated_at||'غير متوفر')):'غير مفحوصة مباشرة';
+ const issueState=n=>{const item=issues.get(n);return item?((item.state==='open'?'مفتوحة':'مغلقة')+' · آخر تحديث GitHub '+(item.updated_at||'غير متوفر')):'غير مفحوصة مباشرة'};
  const render=()=>{
   const q=$('ja-search').value.trim().toLocaleLowerCase('ar'),f=$('ja-filter').value;
   table('ja-matrix',ITEMS.filter(i=>(!f||i.status===f)&&(!q||(i.label+' '+i.current+' '+i.ref).toLocaleLowerCase('ar').includes(q))), (tr,i)=>{
