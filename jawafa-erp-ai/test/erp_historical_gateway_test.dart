@@ -8,6 +8,45 @@ import 'package:jawafa_erp_ai/src/network/erp_historical_report.dart';
 import 'historical_report_fixture.dart';
 
 void main() {
+
+  Map<String, dynamic> reportForYear(int requestedYear) {
+    final raw = syntheticHistoricalReport();
+    final years = raw['years'] as List;
+    for (var i = 0; i < years.length; i++) {
+      final year = years[i] as Map<String, dynamic>;
+      year['year'] = requestedYear - i;
+      year['date'] = '${requestedYear - i}-10-02';
+    }
+    final rates = raw['comparisons'] as List;
+    for (var i = 0; i < rates.length; i++) {
+      (rates[i] as Map<String, dynamic>)['againstYear'] = requestedYear - i - 1;
+    }
+    return raw;
+  }
+
+  test('2002 and 2003 requests accept 2000 and 2001 baseline years', () {
+    for (final year in [2002, 2003]) {
+      final result = ErpHistoricalComparison.parse(
+        reportForYear(year), requestedDay: '$year-10-02');
+      expect(result.years.map((y) => y.year), [year, year - 1, year - 2]);
+    }
+  });
+
+  test('requested dates below 2002 and mismatched baseline calendar days fail', () {
+    for (final day in ['2001-10-02', 'invalid', '2026-02-30']) {
+      expect(() => ErpHistoricalComparison.parse(
+        reportForYear(2001), requestedDay: day),
+        throwsA(isA<ErpHistoricalReportError>()));
+    }
+    for (final date in ['2025-09-02', '2025-10-01']) {
+      final raw = reportForYear(2026);
+      ((raw['years'] as List)[1] as Map<String, dynamic>)['date'] = date;
+      expect(() => ErpHistoricalComparison.parse(raw,
+        requestedDay: '2026-10-02'),
+        throwsA(isA<ErpHistoricalReportError>()));
+    }
+  });
+
   const tenant = '11111111-1111-4111-8111-111111111111';
 
   test('parser preserves exact daily/MTD integers and mandatory unverified evidence', () {
