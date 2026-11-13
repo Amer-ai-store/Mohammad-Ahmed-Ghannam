@@ -1,0 +1,42 @@
+name: JAWAFA reader proof — Windows synthetic preflight
+# Run on public CI with synthetic facts only. Never import DPAPI, query production
+# SQL, request credentials, or infer this is a real server acceptance.
+on:
+  pull_request:
+    paths:
+      - 'tools/jawafa-readonly-proof.ps1'
+      - '.github/workflows/jawafa-readonly-proof-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/jawafa-readonly-proof.ps1'
+      - '.github/workflows/jawafa-readonly-proof-ci.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-windows-gate:
+    name: PowerShell 5.1 reader-proof fail-closed regression
+    runs-on: windows-2022
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Test permission, login, TLS and broad-reader denial on synthetic facts
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\tools\jawafa-readonly-proof.ps1 -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw 'SYNTHETIC_GATE_FAILED' }
+      - name: Test missing private inputs fail closed without contacting SQL
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = & .\tools\jawafa-readonly-proof.ps1
+          if ($LASTEXITCODE -ne 2) { throw 'MISSING_INPUTS_MUST_BLOCK' }
+          $safe = $out | ConvertFrom-Json
+          if ($safe.result -ne 'BLOCKED' -or $safe.production_release_approved -ne $false -or $safe.sql_connection_opened -ne $false) {
+            throw 'UNVERIFIED_INPUTS_MUST_NOT_PASS'
+          }
+          if ($safe.reason_code -ne 'MISSING_HOST_CREDENTIAL_OR_APPROVED_VIEWS') { throw 'UNEXPECTED_GATE_STATUS' }
+          Write-Host 'PASS: no secret, no SQL, no live acceptance from CI'
