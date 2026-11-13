@@ -82,7 +82,69 @@ function Get-SafeProbeFailure {
   }
 }
 
+function Get-IdentityPermissionSql {
+  # Include updatable views: ownership chaining can permit DML without table grants.
+  return @'
+SELECT
+  CONVERT(nvarchar(128), ORIGINAL_LOGIN()) AS sql_login,
+  DB_NAME() AS database_name,
+  COALESCE(IS_SRVROLEMEMBER('sysadmin'), -1) AS sysadmin_role,
+  COALESCE(IS_MEMBER('db_owner'), -1) AS owner_role,
+  COALESCE(IS_MEMBER('db_datawriter'), -1) AS writer_role,
+  COALESCE(IS_MEMBER('db_ddladmin'), -1) AS ddl_role,
+  COALESCE(IS_MEMBER('db_datareader'), -1) AS broad_reader_role,
+  (
+    SELECT COUNT_BIG(*)
+      FROM sys.objects t
+     WHERE t.is_ms_shipped = 0
+       AND t.type IN ('U', 'V')
+       AND (
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
+           + '.' + QUOTENAME(t.name), 'OBJECT', 'INSERT'), 0) = 1 OR
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
+           + '.' + QUOTENAME(t.name), 'OBJECT', 'UPDATE'), 0) = 1 OR
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
+           + '.' + QUOTENAME(t.name), 'OBJECT', 'DELETE'), 0) = 1 OR
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
+           + '.' + QUOTENAME(t.name), 'OBJECT', 'ALTER'), 0) = 1 OR
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
+           + '.' + QUOTENAME(t.name), 'OBJECT', 'CONTROL'), 0) = 1
+       )
+  ) AS writable_object_count,
+  (
+    SELECT COUNT_BIG(*)
+      FROM sys.schemas s
+     WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
+       AND (
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
+           'SCHEMA', 'INSERT'), 0) = 1 OR
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
+           'SCHEMA', 'UPDATE'), 0) = 1 OR
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
+           'SCHEMA', 'DELETE'), 0) = 1 OR
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
+           'SCHEMA', 'ALTER'), 0) = 1 OR
+         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
+           'SCHEMA', 'CONTROL'), 0) = 1
+       )
+  ) AS writable_schema_count,
+  (
+    SELECT COUNT_BIG(*)
+      FROM sys.fn_my_permissions(NULL, 'DATABASE')
+     WHERE permission_name IN ('INSERT','UPDATE','DELETE','ALTER',
+         'CONTROL','CREATE TABLE','CREATE VIEW','TAKE OWNERSHIP')
+  ) AS database_mutation_permissions
+'@
+}
+
 if ($SelfTest) {
+  # Regression guard for the exact live SELECT text. This is not a live SQL test.
+  $auditSql = Get-IdentityPermissionSql
+  if ($auditSql -notmatch 'FROM sys.objects t' -or
+      -not $auditSql.Contains("t.type IN ('U', 'V')") -or
+      $auditSql -match 'FROM sys.tables t') {
+    throw 'SELF_TEST_WRITABLE_VIEWS_NOT_AUDITED'
+  }
   $secretMarker = 'synthetic-secret-must-never-be-logged'
   $innerError = [System.Exception]::new($secretMarker)
   $outerError = [System.Exception]::new($secretMarker, $innerError)
@@ -215,56 +277,7 @@ try {
 
   # Metadata only: not one invoice/cheque/journal/inventory row is queried.
   # Each result is returned only as a role/permission boolean or total count.
-  $command.CommandText = @'
-SELECT
-  CONVERT(nvarchar(128), ORIGINAL_LOGIN()) AS sql_login,
-  DB_NAME() AS database_name,
-  COALESCE(IS_SRVROLEMEMBER('sysadmin'), -1) AS sysadmin_role,
-  COALESCE(IS_MEMBER('db_owner'), -1) AS owner_role,
-  COALESCE(IS_MEMBER('db_datawriter'), -1) AS writer_role,
-  COALESCE(IS_MEMBER('db_ddladmin'), -1) AS ddl_role,
-  COALESCE(IS_MEMBER('db_datareader'), -1) AS broad_reader_role,
-  (
-    SELECT COUNT_BIG(*)
-      FROM sys.tables t
-     WHERE t.is_ms_shipped = 0
-       AND (
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
-           + '.' + QUOTENAME(t.name), 'OBJECT', 'INSERT'), 0) = 1 OR
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
-           + '.' + QUOTENAME(t.name), 'OBJECT', 'UPDATE'), 0) = 1 OR
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
-           + '.' + QUOTENAME(t.name), 'OBJECT', 'DELETE'), 0) = 1 OR
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
-           + '.' + QUOTENAME(t.name), 'OBJECT', 'ALTER'), 0) = 1 OR
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(t.schema_id))
-           + '.' + QUOTENAME(t.name), 'OBJECT', 'CONTROL'), 0) = 1
-       )
-  ) AS writable_table_count,
-  (
-    SELECT COUNT_BIG(*)
-      FROM sys.schemas s
-     WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
-       AND (
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
-           'SCHEMA', 'INSERT'), 0) = 1 OR
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
-           'SCHEMA', 'UPDATE'), 0) = 1 OR
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
-           'SCHEMA', 'DELETE'), 0) = 1 OR
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
-           'SCHEMA', 'ALTER'), 0) = 1 OR
-         COALESCE(HAS_PERMS_BY_NAME(QUOTENAME(s.name),
-           'SCHEMA', 'CONTROL'), 0) = 1
-       )
-  ) AS writable_schema_count,
-  (
-    SELECT COUNT_BIG(*)
-      FROM sys.fn_my_permissions(NULL, 'DATABASE')
-     WHERE permission_name IN ('INSERT','UPDATE','DELETE','ALTER',
-         'CONTROL','CREATE TABLE','CREATE VIEW','TAKE OWNERSHIP')
-  ) AS database_mutation_permissions
-'@
+  $command.CommandText = Get-IdentityPermissionSql
   $reader = $command.ExecuteReader()
   if (-not $reader.Read()) { throw 'SQL_IDENTITY_RESULT_EMPTY' }
   $login = $reader.GetString(0)
