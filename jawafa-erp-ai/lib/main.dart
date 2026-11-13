@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'src/domain/cheque.dart';
 import 'src/domain/journal.dart';
 import 'src/network/erp_gateway_client.dart';
 import 'src/ui/erp_visual_system.dart';
+
+const centralDashboardUrl = 'https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/index.html#erp-app';
 
 void main() => runApp(const JawafaErpApp());
 
@@ -101,6 +105,24 @@ class _ErpShellState extends State<ErpShell> {
       selected = ErpArea.overview;
     });
     if (closeDrawer) Navigator.maybePop(context);
+  }
+
+  Future<void> openCentralDashboard() async {
+    // Public navigation only; never send tokens, financial data or tenant identifiers.
+    final uri = Uri.parse(centralDashboardUrl);
+    bool opened = false;
+    try {
+      opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened) {
+      await Clipboard.setData(const ClipboardData(text: centralDashboardUrl));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('تعذّر فتح لوحة القيادة؛ تم نسخ رابطها الآمن.'),
+      ));
+    }
   }
 
   void searchDepartments() {
@@ -260,6 +282,12 @@ class _ErpShellState extends State<ErpShell> {
           title: Text('JAWAFA ERP AI • $title',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           actions: [
+            IconButton(
+              key: const Key('central_dashboard_link'),
+              onPressed: () { openCentralDashboard(); },
+              icon: const Icon(Icons.open_in_new),
+              tooltip: 'فتح لوحة القيادة المركزية',
+            ),
             IconButton(
               key: const Key('erp_module_search'),
               onPressed: searchDepartments,
