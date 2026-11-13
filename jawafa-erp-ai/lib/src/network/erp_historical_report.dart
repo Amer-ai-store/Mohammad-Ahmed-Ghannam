@@ -114,7 +114,7 @@ class ErpHistoricalYear {
     final json = _object(value);
     final year = json['year'];
     final day = json['date'];
-    if (year is! int || year < 2002 || year > 9999 ||
+    if (year is! int || year < 2000 || year > 9999 ||
         day is! String || !validReportDay(day) ||
         int.parse(day.substring(0, 4)) != year ||
         json['sourceCoverage'] != 'UNATTESTED') {
@@ -195,6 +195,10 @@ class ErpHistoricalComparison {
 
   factory ErpHistoricalComparison.parse(Map<String, dynamic> json,
       {required String requestedDay}) {
+    if (!validReportDay(requestedDay) ||
+        int.parse(requestedDay.substring(0, 4)) < 2002) {
+      throw const ErpHistoricalReportError('INVALID_REQUESTED_DATE');
+    }
     if (json['report'] != 'INDEPENDENT_NEW_ERP_HISTORICAL_DAILY_AND_MTD_V1' ||
         json['referenceStatus'] != 'NOT_MATCHED_WITH_TRUSTSOFT' ||
         json['sourceCompletenessIndependentlyVerified'] != false ||
@@ -211,6 +215,7 @@ class ErpHistoricalComparison {
         years[0].date != requestedDay ||
         years[1].year != years[0].year - 1 ||
         years[2].year != years[0].year - 2 ||
+        years.any((y) => y.date.substring(4) != requestedDay.substring(4)) ||
         comparisons[0].againstYear != years[1].year ||
         comparisons[1].againstYear != years[2].year) {
       throw const ErpHistoricalReportError('INVALID_SEQUENCE');
