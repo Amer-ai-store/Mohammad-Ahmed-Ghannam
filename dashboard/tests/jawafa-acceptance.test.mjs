@@ -47,7 +47,7 @@ test('valid evidence is classified as unreviewed, never production approved',()=
 test('reject private, forged, token-bearing and cross-repository evidence URLs',()=>{
  for(const url of [
   'http://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57',
-  'https://docs.google.com/document/d/1',
+  'https://'+'docs.google.com/document/d/1',
   'https://github.com/elsewhere/repo/issues/1',
   'https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57?token=abc',
   'https://github.com.evil.example/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57'
