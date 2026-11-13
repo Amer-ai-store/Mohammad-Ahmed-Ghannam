@@ -1,0 +1,53 @@
+name: Video Vault Android isolated CI
+on:
+  pull_request:
+    paths:
+      - 'apps/video-vault/**'
+      - '.github/workflows/video-vault-android.yml'
+  push:
+    branches:
+      - 'feature/video-vault-compose-media3-subtitles-20261113'
+    paths:
+      - 'apps/video-vault/**'
+      - '.github/workflows/video-vault-android.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: apps/video-vault
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '8.9'
+      - name: Unit tests and APK
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --no-daemon --stacktrace
+      - name: Upload debug APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: video-vault-debug-apk
+          path: apps/video-vault/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: video-vault-unit-test-reports
+          path: apps/video-vault/app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 14
