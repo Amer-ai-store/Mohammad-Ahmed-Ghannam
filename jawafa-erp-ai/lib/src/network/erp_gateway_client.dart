@@ -141,7 +141,15 @@ class ErpGatewayClient implements ErpHistoricalReportReader {
       '/v1/reports/historical-daily-compare?' + query,
       branchId: branchId,
     );
-    return ErpHistoricalComparison.parse(response, requestedDay: date);
+    return ErpHistoricalComparison.parse(
+      response,
+      requestedDay: date,
+      requestedTenantId: tenantId,
+      requestedBranchId: branchId,
+      requestedItemCode: itemCode,
+      requestedFamilyCode: familyCode,
+      requestedSupplierCode: supplierCode,
+    );
   }
 
   Future<List<ErpRemoteCheque>> readCheques() async {

@@ -25,8 +25,15 @@ class FakeReader implements ErpHistoricalReportReader {
     if (fail) throw const ErpHistoricalReportError('NO_AUTH');
     return ErpHistoricalComparison.parse(
       syntheticHistoricalReport(missingOlderYear:true,
-        includeDailySeries:includeTrend),
+        includeDailySeries:includeTrend, branchId:branchId,
+        requestedDay:date, itemCode:itemCode, familyCode:familyCode,
+        supplierCode:supplierCode),
       requestedDay:date,
+      requestedTenantId:'11111111-1111-4111-8111-111111111111',
+      requestedBranchId:branchId,
+      requestedItemCode:itemCode,
+      requestedFamilyCode:familyCode,
+      requestedSupplierCode:supplierCode,
     );
   }
 }

@@ -2,6 +2,12 @@
 Map<String, dynamic> syntheticHistoricalReport({
   bool missingOlderYear = false,
   bool includeDailySeries = false,
+  String tenantId = '11111111-1111-4111-8111-111111111111',
+  String branchId = 'BR-A',
+  String requestedDay = '2026-10-02',
+  String? itemCode,
+  String? familyCode,
+  String? supplierCode,
 }) {
   const columns = [
     'purchase_qty_milli', 'sales_qty_milli', 'stock_delta_qty_milli',
@@ -33,6 +39,14 @@ Map<String, dynamic> syntheticHistoricalReport({
     'sourceCompletenessIndependentlyVerified': false,
     'formulasIndependentlyApproved': false,
     'functionalParityPercent': null,
+    'scope': {
+      'tenantId': tenantId,
+      'branchId': branchId,
+      'day': requestedDay,
+      if (itemCode != null) 'itemCode': itemCode,
+      if (familyCode != null) 'familyCode': familyCode,
+      if (supplierCode != null) 'supplierCode': supplierCode,
+    },
     'years': [
       for (var i = 0; i < 3; i++) {
         'year': 2026 - i,

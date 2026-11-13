@@ -37,6 +37,53 @@ bool validReportDay(String day) {
       value.toIso8601String().substring(0, 10) == day;
 }
 
+bool _validScopeCode(dynamic value) => value is String &&
+    RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$').hasMatch(value);
+
+void _validateRequestedScope(
+  dynamic raw, {
+  required String requestedDay,
+  String? requestedTenantId,
+  String? requestedBranchId,
+  String? requestedItemCode,
+  String? requestedFamilyCode,
+  String? requestedSupplierCode,
+}) {
+  final scope = _object(raw);
+  const requiredKeys = {'tenantId', 'branchId', 'day'};
+  const filterKeys = {'itemCode', 'familyCode', 'supplierCode'};
+  final allowedKeys = {...requiredKeys, ...filterKeys};
+  if (!requiredKeys.every(scope.containsKey) ||
+      scope.keys.any((key) => !allowedKeys.contains(key)) ||
+      scope['tenantId'] is! String ||
+      !_validScopeCode(scope['branchId']) ||
+      scope['day'] != requestedDay ||
+      filterKeys.any((key) =>
+        scope.containsKey(key) && !_validScopeCode(scope[key]))) {
+    throw const ErpHistoricalReportError('INVALID_SCOPE');
+  }
+
+  // Direct/offline parsers may inspect a response without request context.
+  // The authenticated gateway always supplies both identity scope values and
+  // therefore requires an exact key/value match, including absent filters.
+  if ((requestedTenantId == null) != (requestedBranchId == null)) {
+    throw const ErpHistoricalReportError('INVALID_SCOPE');
+  }
+  if (requestedTenantId == null) return;
+  final expected = <String, String>{
+    'tenantId': requestedTenantId,
+    'branchId': requestedBranchId!,
+    'day': requestedDay,
+    if (requestedItemCode != null) 'itemCode': requestedItemCode,
+    if (requestedFamilyCode != null) 'familyCode': requestedFamilyCode,
+    if (requestedSupplierCode != null) 'supplierCode': requestedSupplierCode,
+  };
+  if (scope.length != expected.length ||
+      expected.entries.any((entry) => scope[entry.key] != entry.value)) {
+    throw const ErpHistoricalReportError('INVALID_SCOPE');
+  }
+}
+
 class ErpReportPeriod {
   final String availability;
   final Map<String, int>? totals;
@@ -193,8 +240,14 @@ class ErpHistoricalComparison {
   final List<ErpHistoricalRates> comparisons;
   const ErpHistoricalComparison._(this.years, this.comparisons);
 
-  factory ErpHistoricalComparison.parse(Map<String, dynamic> json,
-      {required String requestedDay}) {
+  factory ErpHistoricalComparison.parse(Map<String, dynamic> json, {
+    required String requestedDay,
+    String? requestedTenantId,
+    String? requestedBranchId,
+    String? requestedItemCode,
+    String? requestedFamilyCode,
+    String? requestedSupplierCode,
+  }) {
     if (!validReportDay(requestedDay) ||
         int.parse(requestedDay.substring(0, 4)) < 2002) {
       throw const ErpHistoricalReportError('INVALID_REQUESTED_DATE');
@@ -207,6 +260,15 @@ class ErpHistoricalComparison {
         json['years'] is! List || json['comparisons'] is! List) {
       throw const ErpHistoricalReportError('INVALID_RESPONSE');
     }
+    _validateRequestedScope(
+      json['scope'],
+      requestedDay: requestedDay,
+      requestedTenantId: requestedTenantId,
+      requestedBranchId: requestedBranchId,
+      requestedItemCode: requestedItemCode,
+      requestedFamilyCode: requestedFamilyCode,
+      requestedSupplierCode: requestedSupplierCode,
+    );
     final years = (json['years'] as List)
         .map(ErpHistoricalYear.parse).toList(growable: false);
     final comparisons = (json['comparisons'] as List)

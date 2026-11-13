@@ -11,6 +11,7 @@ void main() {
 
   Map<String, dynamic> reportForYear(int requestedYear) {
     final raw = syntheticHistoricalReport();
+    (raw['scope'] as Map<String, dynamic>)['day'] = '$requestedYear-10-02';
     final years = raw['years'] as List;
     for (var i = 0; i < years.length; i++) {
       final year = years[i] as Map<String, dynamic>;
@@ -96,6 +97,27 @@ void main() {
       requestedDay:'2026-10-02'), throwsA(isA<ErpHistoricalReportError>()));
   });
 
+  test('authenticated parser rejects tenant, branch and filter scope substitution', () {
+    void rejects(Map<String, dynamic> raw) {
+      expect(() => ErpHistoricalComparison.parse(
+        raw,
+        requestedDay:'2026-10-02',
+        requestedTenantId:tenant,
+        requestedBranchId:'BR-A',
+        requestedItemCode:'SKU-A',
+      ), throwsA(isA<ErpHistoricalReportError>().having(
+        (error) => error.code, 'code', 'INVALID_SCOPE')));
+    }
+
+    rejects(syntheticHistoricalReport(
+      tenantId:'22222222-2222-4222-8222-222222222222',
+      itemCode:'SKU-A',
+    ));
+    rejects(syntheticHistoricalReport(branchId:'BR-B', itemCode:'SKU-A'));
+    rejects(syntheticHistoricalReport(itemCode:'SKU-B'));
+    rejects(syntheticHistoricalReport());
+  });
+
   test('real loopback receives scoped GET and ephemeral JWT, with no writes', () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4,0);
     String? seenMethod, seenPath, seenToken, seenTenant, seenBranch, seenDate;
@@ -107,7 +129,8 @@ void main() {
       seenBranch = req.headers.value('x-erp-branch-id');
       seenDate = req.uri.queryParameters['date'];
       req.response.headers.contentType = ContentType.json;
-      req.response.write(jsonEncode(syntheticHistoricalReport()));
+      req.response.write(jsonEncode(syntheticHistoricalReport(
+        tenantId:tenant, branchId:'BR-A', itemCode:'SKU-A')));
       await req.response.close();
     });
     final client = ErpGatewayClient(
@@ -126,6 +149,32 @@ void main() {
       expect(seenTenant,tenant);
       expect(seenBranch,'BR-A');
       expect(seenToken,'Bearer SYNTHETIC-TOKEN-IN-MEMORY');
+    } finally {
+      client.close();
+      await server.close(force:true);
+    }
+  });
+
+  test('gateway rejects a response for a different authorized scope', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4,0);
+    server.listen((req) async {
+      req.response.headers.contentType = ContentType.json;
+      req.response.write(jsonEncode(syntheticHistoricalReport(
+        tenantId:tenant, branchId:'BR-B', itemCode:'SKU-A')));
+      await req.response.close();
+    });
+    final client = ErpGatewayClient(
+      baseUri:Uri.parse('http://127.0.0.1:' + server.port.toString()),
+      tenantId:tenant, syntheticLoopbackHttpOnly:true,
+      accessTokenProvider:() async => 'SYNTHETIC-TOKEN-IN-MEMORY',
+    );
+    try {
+      await expectLater(
+        client.readHistoricalComparison(
+          date:'2026-10-02', branchId:'BR-A', itemCode:'SKU-A'),
+        throwsA(isA<ErpHistoricalReportError>().having(
+          (error) => error.code, 'code', 'INVALID_SCOPE')),
+      );
     } finally {
       client.close();
       await server.close(force:true);
