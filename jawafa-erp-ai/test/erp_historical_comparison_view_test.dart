@@ -89,6 +89,32 @@ void main() {
       findsNothing);
   });
 
+  testWidgets('invalid date or missing branch fails before gateway access',
+      (tester) async {
+    final fake = FakeReader();
+    await tester.pumpWidget(page(fake));
+
+    await tester.enterText(find.byKey(const Key('erp_history_day')),
+      '2026-02-31');
+    await tester.ensureVisible(find.byKey(const Key('erp_history_refresh')));
+    await tester.tap(find.byKey(const Key('erp_history_refresh')));
+    await tester.pumpAndSettle();
+
+    expect(fake.count, 0);
+    expect(find.byKey(const Key('erp_history_validation_error')),
+      findsOneWidget);
+    expect(find.byKey(const Key('erp_history_year_2026')), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('erp_history_day')),
+      '2026-10-02');
+    await tester.tap(find.byKey(const Key('erp_history_refresh')));
+    await tester.pumpAndSettle();
+
+    expect(fake.count, 0);
+    expect(find.byKey(const Key('erp_history_validation_error')),
+      findsOneWidget);
+  });
+
   testWidgets('daily three-year sales trend displays missing days without fabricated zeros',
       (tester) async {
     final fake = FakeReader()..includeTrend = true;

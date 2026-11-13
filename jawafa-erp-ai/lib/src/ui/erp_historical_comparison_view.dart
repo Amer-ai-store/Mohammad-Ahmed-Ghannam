@@ -32,7 +32,9 @@ class _ErpHistoricalComparisonViewState
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
+    // Jordan has used permanent UTC+3 since 2022. Report dates must follow
+    // the owner's Asia/Amman cut-off rather than the device's local zone.
+    final now = DateTime.now().toUtc().add(const Duration(hours: 3));
     final defaultDay = now.year.toString().padLeft(4, '0') + '-' +
         now.month.toString().padLeft(2, '0') + '-' +
         now.day.toString().padLeft(2, '0');
@@ -54,10 +56,28 @@ class _ErpHistoricalComparisonViewState
     return text.isEmpty ? null : text;
   }
 
+  bool _validIsoDay(String value) {
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
+    if (match == null) return false;
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return false;
+    return parsed.year == int.parse(match.group(1)!) &&
+        parsed.month == int.parse(match.group(2)!) &&
+        parsed.day == int.parse(match.group(3)!);
+  }
+
   Future<void> load() async {
     if (busy || widget.reader == null) return;
     final date = day.text.trim();
     final branchId = branch.text.trim();
+    if (!_validIsoDay(date) || branchId.isEmpty) {
+      setState(() {
+        result = null;
+        requestedDay = null;
+        errorCode = 'INVALID_DATE_OR_BRANCH';
+      });
+      return;
+    }
     setState(() {
       busy = true;
       result = null;
@@ -265,7 +285,13 @@ class _ErpHistoricalComparisonViewState
             ),
             if (busy)
               const LinearProgressIndicator(key: Key('erp_history_loading')),
-            if (errorCode != null)
+            if (errorCode == 'INVALID_DATE_OR_BRANCH')
+              const Text('أدخل تاريخًا صحيحًا بصيغة YYYY-MM-DD ورمز فرع '
+                'مصرحًا به قبل القراءة.',
+                key: Key('erp_history_validation_error'),
+                style: TextStyle(color: ErpPalette.amber)),
+            if (errorCode != null &&
+                errorCode != 'INVALID_DATE_OR_BRANCH')
               const Text('تعذرت القراءة أو الصلاحية غير متاحة. '
                 'لم يتم تحميل قيم مالية.',
                 key: Key('erp_history_error'),
