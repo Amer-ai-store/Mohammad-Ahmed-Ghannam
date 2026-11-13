@@ -1,5 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+test('returns require string references without implicit JavaScript coercion', () => {
+  for (const kind of ['sale_return', 'purchase_return']) {
+    for (const referenceEventId of [123, true, ['SALE-1'], {toString: () => 'SALE-1'}]) {
+      expectError([movement(kind, 100, 50, 0, 0, {referenceEventId})],
+        'RETURN_REFERENCE_REQUIRED');
+    }
+    assert.equal(run([movement(kind, 100, 50, 0, 0,
+      {referenceEventId: '123'})]).postedEventCount, 1);
+  }
+});
 import {
   independentDailyMovement, independentDailyMovementCsv,
   DailyMovementError,
