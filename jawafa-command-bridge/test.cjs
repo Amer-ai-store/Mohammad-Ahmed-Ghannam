@@ -1,8 +1,13 @@
 'use strict';
 const {test}=require('node:test'), assert=require('node:assert/strict'), http=require('node:http'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {createBridge,codeHash}=require('./server.cjs');
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'jawafa-test-'));let app,server,url;const secret='JAWAFA_AGENT_SIGNING_TEST_SECRET_32_BYTES_MIN';const qaSecret='JAWAFA_INDEPENDENT_QA_SIGNING_TEST_SECRET_32_BYTES';
-test.before(async()=>{app=createBridge({databaseFile:path.join(dir,'operational.db'),agentSecret:secret,qaSecret,allowedAgentIds:['worker-test'],verifyUser:async token=>{if(!token)throw Object.assign(Error('AUTH_REQUIRED'),{status:401});return token==='Bearer OWNER'?{uid:'owner-uid',role:'owner'}:{uid:'unauthorized',role:'viewer'}}});server=http.createServer(app.handler);await new Promise(ok=>server.listen(0,'127.0.0.1',ok));url='http://127.0.0.1:'+server.address().port});
+const {createArtifactVerifier}=require('./artifact-verifier.cjs');
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'jawafa-test-'));
+const artifactDir=path.join(dir,'signed-qa');fs.mkdirSync(artifactDir);
+const qaKeys=crypto.generateKeyPairSync('ed25519');
+const verifyEvidence=createArtifactVerifier({directory:artifactDir,publicKey:qaKeys.publicKey.export({format:'pem',type:'spki'})});
+let app,server,url;const secret='JAWAFA_AGENT_SIGNING_TEST_SECRET_32_BYTES_MIN';const qaSecret='JAWAFA_INDEPENDENT_QA_SIGNING_TEST_SECRET_32_BYTES';
+test.before(async()=>{app=createBridge({databaseFile:path.join(dir,'operational.db'),agentSecret:secret,qaSecret,verifyEvidence,allowedAgentIds:['worker-test'],verifyUser:async token=>{if(!token)throw Object.assign(Error('AUTH_REQUIRED'),{status:401});return token==='Bearer OWNER'?{uid:'owner-uid',role:'owner'}:{uid:'unauthorized',role:'viewer'}}});server=http.createServer(app.handler);await new Promise(ok=>server.listen(0,'127.0.0.1',ok));url='http://127.0.0.1:'+server.address().port});
 test.after(async()=>{await new Promise(ok=>server.close(ok));app.close();fs.rmSync(dir,{recursive:true,force:true})});
 const api=async(path,opts={})=>{const r=await fetch(url+path,{headers:{authorization:'Bearer OWNER',...opts.headers},method:opts.method||'GET',body:opts.body?JSON.stringify(opts.body):undefined});return {status:r.status,data:await r.json()}};
 const signed=(method,path,body,nonce)=>{const txt=JSON.stringify(body),t=Date.now().toString();return {method,body:txt,headers:{'x-jawafa-agent':'worker-test','x-jawafa-timestamp':t,'x-jawafa-nonce':nonce,'x-jawafa-signature':crypto.createHmac('sha256',secret).update([method,path,codeHash(Buffer.from(txt)),t,nonce].join('\n')).digest('hex')}}};
@@ -15,7 +20,60 @@ test('Queue, idempotency, signed ACK, RUNNING, verifiable receipt, replay refusa
 const queue=prefix+'agent/queue';const signedGET=signed('GET',queue,{},'nonce-queue-001');signedGET.body=undefined;signedGET.headers['x-jawafa-signature']=crypto.createHmac('sha256',secret).update(['GET',queue,codeHash(Buffer.alloc(0)),signedGET.headers['x-jawafa-timestamp'],signedGET.headers['x-jawafa-nonce']].join('\n')).digest('hex');const qresponse=await fetch(url+queue,signedGET);assert.equal(qresponse.status,200);assert.equal((await qresponse.json()).commands.length,1);const claimpath=prefix+'commands/test-safe-001/claim';const claimbody={};const claim=await agent(claimpath,claimbody,'nonce-claim-001');assert.equal(claim.status,200);assert.equal(claim.data.status,'ACKNOWLEDGED');const replay=await agent(claimpath,claimbody,'nonce-claim-001');assert.equal(replay.status,409);
 const events=prefix+'commands/test-safe-001/events';const premature=await agent(events,{status:'VERIFIED',action:'x',test_result:'PASS',evidence_ref:'evidence1',evidence_sha256:'a'.repeat(64)},'nonce-early-001');assert.equal(premature.status,409);
 const run=await agent(events,{status:'RUNNING',action:'health-check-running'},'nonce-run-001');assert.equal(run.status,200);let invalid=await agent(events,{status:'VERIFIED',action:'health-check',test_result:'PASS'},'nonce-no-proof');assert.equal(invalid.status,422);
-const done=await agent(events,{status:'VERIFIED',action:'test-pass',test_result:'PASS',evidence_ref:'SHA-EVIDENCE-001',evidence_sha256:'a'.repeat(64)},'nonce-done-001');assert.equal(done.status,200);assert.equal(done.data.status,'VERIFIED');const result=await api(prefix+'commands/test-safe-001');assert.equal(result.data.events.length,4);assert.equal(result.data.status,'VERIFIED');assert.equal((await api(prefix+'evidence')).data.evidence.length,1)});
+const forgedReceipt=await agent(events,{status:'VERIFIED',action:'provisional-only',test_result:'PASS',evidence_ref:'SHA-EVIDENCE-001',evidence_sha256:'a'.repeat(64)},'nonce-forged-001');
+assert.equal(forgedReceipt.status,422);
+assert.equal(forgedReceipt.data.error,'EVIDENCE_VERIFICATION_FAILED');
+const evidenceRef='SHA-EVIDENCE-001';
+const payload=JSON.stringify({schema_version:'jawafa.qa-artifact.v1',request_id:'test-safe-001',agent_id:'worker-test',operation:'CHECK_SERVER',source_version:'historical',evidence_ref:evidenceRef,test_result:'PASS',reviewer_id:'independent-reviewer-001',checked_at:new Date().toISOString(),findings:{health:'checked'}});
+const signature=crypto.sign(null,Buffer.from(payload),qaKeys.privateKey).toString('base64');
+const artifact=Buffer.from(JSON.stringify({payload,signature}));
+fs.writeFileSync(path.join(artifactDir,evidenceRef+'.json'),artifact);
+const sha256=crypto.createHash('sha256').update(artifact).digest('hex');
+const invalidHash=await agent(events,{status:'VERIFIED',action:'wrong-sha',test_result:'PASS',evidence_ref:evidenceRef,evidence_sha256:'b'.repeat(64)},'nonce-invalid-sha-001');
+assert.equal(invalidHash.status,422);
+const done=await agent(events,{status:'VERIFIED',action:'test-pass',test_result:'PASS',evidence_ref:evidenceRef,evidence_sha256:sha256},'nonce-done-001');
+assert.equal(done.status,200);assert.equal(done.data.status,'VERIFIED');const result=await api(prefix+'commands/test-safe-001');assert.equal(result.data.events.length,4);assert.equal(result.data.status,'VERIFIED');assert.equal((await api(prefix+'evidence')).data.evidence.length,1)});
+
+
+test('missing independent artifact verifier rejects an otherwise valid QA receipt (no false VERIFIED)',async t=>{
+  const isolated=createBridge({
+    databaseFile:path.join(dir,'no-artifact-verifier.db'),
+    agentSecret:secret,qaSecret,allowedAgentIds:['worker-test'],
+    verifyUser:async token=>token==='Bearer OWNER'?{uid:'owner-uid',role:'owner'}:null
+  });
+  const isolatedServer=http.createServer(isolated.handler);
+  await new Promise(resolve=>isolatedServer.listen(0,'127.0.0.1',resolve));
+  t.after(async()=>{await new Promise(resolve=>isolatedServer.close(resolve));isolated.close()});
+  const endpoint='http://127.0.0.1:'+isolatedServer.address().port;
+  const requestId='no-verifier-001';
+  const owner=await fetch(endpoint+prefix+'commands',{
+    method:'POST',headers:{authorization:'Bearer OWNER','content-type':'application/json'},
+    body:JSON.stringify({request_id:requestId,task_id:'TASK-SAFE-002',operation:'CHECK_SERVER',source_version:'snapshot-001'})
+  });
+  assert.equal(owner.status,202);
+  const sendAgent=async(suffix,body,nonce)=>{
+    const uri=prefix+'commands/'+requestId+'/'+suffix;
+    const args=signed('POST',uri,body,nonce);
+    if(body.status==='VERIFIED')args.headers['x-jawafa-qa-signature']=crypto.createHmac('sha256',qaSecret)
+      .update([requestId,body.evidence_ref,body.evidence_sha256,body.test_result].join(':')).digest('hex');
+    const res=await fetch(endpoint+uri,args);
+    return {status:res.status,data:await res.json()};
+  };
+  assert.equal((await sendAgent('claim',{},'nonce-isolated-claim-001')).status,200);
+  assert.equal((await sendAgent('events',{status:'RUNNING',action:'candidate-running'},'nonce-isolated-run-001')).status,200);
+  const forged=await sendAgent('events',{
+    status:'VERIFIED',action:'fake-completion',test_result:'PASS',
+    evidence_ref:'missing-signed-artifact-001',evidence_sha256:'a'.repeat(64)
+  },'nonce-isolated-verification-001');
+  assert.equal(forged.status,503);
+  assert.equal(forged.data.error,'EVIDENCE_VERIFIER_NOT_CONFIGURED');
+  const status=await fetch(endpoint+prefix+'commands/'+requestId,{headers:{authorization:'Bearer OWNER'}});
+  assert.equal(status.status,200);
+  assert.equal((await status.json()).status,'RUNNING');
+  const evidence=await fetch(endpoint+prefix+'evidence',{headers:{authorization:'Bearer OWNER'}});
+  assert.equal(evidence.status,200);
+  assert.deepEqual((await evidence.json()).evidence,[]);
+});
 
 test('default Firebase verifier denies missing bearer before owner configuration check', async()=>{
   const {firebaseIdentity}=require('./server.cjs');
