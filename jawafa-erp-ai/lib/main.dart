@@ -5,6 +5,7 @@ import 'src/domain/journal.dart';
 import 'src/network/erp_gateway_client.dart';
 import 'src/ui/erp_visual_system.dart';
 import 'src/ui/erp_report_catalog_view.dart';
+import 'src/ui/erp_offline_workspaces.dart';
 
 void main() => runApp(const JawafaErpApp());
 
@@ -225,21 +226,11 @@ class _ErpShellState extends State<ErpShell> {
         return ErpReferenceReadOnlyView(
           gateway: widget.gateway, scope: 'settings');
       case ErpArea.inventory:
-        return const PendingModuleView(
-          title: 'المخزون',
-          details: 'الأصناف والوحدات والتكلفة وحركة المخزون والتحويل والجرد.',
-        );
+        return const InventoryWorksheetView();
       case ErpArea.pointOfSale:
-        return const PendingModuleView(
-          title: 'المبيعات ونقاط البيع',
-          details: 'الفواتير والخصومات والإلغاء والمردود والصناديق والضريبة، '
-            'بما فيها صلاحيات الكاشير الخاصة بهذا القسم.',
-        );
+        return const PosShiftWorksheetView();
       case ErpArea.audit:
-        return const PendingModuleView(
-          title: 'التدقيق والرقابة',
-          details: 'سجل أحداث غير قابل للتعديل وفصل الصلاحيات وأدلة قبل/بعد.',
-        );
+        return const AuditEvidenceWorksheetView();
       case ErpArea.reports:
         return ErpReportCatalogView(historicalReader: widget.gateway);
     }
