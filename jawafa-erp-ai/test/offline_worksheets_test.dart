@@ -13,6 +13,17 @@ void main() {
       expect(formatMilli(1000), '1.000');
     });
 
+    test('accepts Arabic-Indic and Eastern Arabic digits as exact fils', () {
+      expect(parseNonNegativeMilli('١٢٫٣٤٥'), 12345);
+      expect(parseNonNegativeMilli('۱۲.۳۴۵'), 12345);
+      expect(parseNonNegativeMilli(' ٠٫٠٠١ '), 1);
+      expect(parseNonNegativeMilli('١٢.٣٤٥'), 12345);
+      for (final grouped in ['١٢٬٣٤٥', '۱,۲۳۴', '١٫٢٣٤٥']) {
+        expect(() => parseNonNegativeMilli(grouped),
+            throwsA(isA<WorksheetValidation>()), reason: grouped);
+      }
+    });
+
     test('rejects negative, NaN, malformed and excessive precision', () {
       for (final invalid in ['-1', 'NaN', '1.2345', '1,234', '', '.5', '01']) {
         expect(() => parseNonNegativeMilli(invalid),
@@ -194,6 +205,34 @@ void main() {
     await tester.enterText(find.byKey(const Key('inventory_opening')), '10');
     await tester.pump();
     expect(find.byKey(const Key('inventory_error')), findsNothing);
+  });
+
+  testWidgets('Arabic numeral POS entry keeps dinar-fils precision',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(
+      body: SingleChildScrollView(child: PosShiftWorksheetView()),
+    )));
+    const inputs = <String, String>{
+      'openingFloat': '٣٠',
+      'grossSales': '١٢٠',
+      'visa': '٢٥',
+      'cliq': '١٥',
+      'cashRefunds': '٥',
+      'cashPayouts': '١٠',
+      'countedCash': '٩٥',
+    };
+    for (final entry in inputs.entries) {
+      final field = find.byKey(Key('pos_${entry.key}'));
+      await tester.ensureVisible(field);
+      await tester.enterText(field, entry.value);
+      await tester.pump();
+    }
+    final button = find.byKey(const Key('pos_calculate'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump();
+    expect(find.textContaining('النقد المتوقع: 95.000'), findsOneWidget);
+    expect(find.textContaining('المعدود − المتوقع): 0.000'), findsOneWidget);
   });
 
 }

@@ -7,8 +7,26 @@ class WorksheetValidation implements Exception {
   String toString() => 'WorksheetValidation($code)';
 }
 
+// Accept Arabic/Eastern-Arabic numeral keyboards without allowing grouping marks.
+// Arabic decimal separator U+066B is a decimal point, never a thousands mark.
+String _normalizeDecimalNumerals(String value) {
+  final output = StringBuffer();
+  for (final code in value.trim().runes) {
+    if (code >= 0x0660 && code <= 0x0669) {
+      output.writeCharCode(0x30 + code - 0x0660);
+    } else if (code >= 0x06F0 && code <= 0x06F9) {
+      output.writeCharCode(0x30 + code - 0x06F0);
+    } else if (code == 0x066B) {
+      output.write('.');
+    } else {
+      output.writeCharCode(code);
+    }
+  }
+  return output.toString();
+}
+
 int parseNonNegativeMilli(String value) {
-  final s = value.trim();
+  final s = _normalizeDecimalNumerals(value);
   if (!RegExp(r'^(0|[1-9]\d*)(\.\d{1,3})?$').hasMatch(s)) {
     throw const WorksheetValidation('INVALID_NONNEGATIVE_DECIMAL');
   }
