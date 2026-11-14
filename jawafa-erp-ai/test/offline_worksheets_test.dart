@@ -139,4 +139,33 @@ void main() {
     expect(find.byKey(const Key('audit_evaluate')), findsOneWidget);
     expect(find.byKey(const Key('audit_result')), findsNothing);
   });
+
+  testWidgets('editing audit input clears stale completeness outcome',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(
+      body: SingleChildScrollView(child: AuditEvidenceWorksheetView()),
+    )));
+    await tester.ensureVisible(find.byKey(const Key('audit_evaluate')));
+    await tester.tap(find.byKey(const Key('audit_evaluate')));
+    await tester.pump();
+    expect(find.byKey(const Key('audit_result')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('audit_username')), 'operator');
+    await tester.pump();
+    expect(find.byKey(const Key('audit_result')), findsNothing);
+  });
+
+  testWidgets('changing an inventory input invalidates previous error',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(
+      body: SingleChildScrollView(child: InventoryWorksheetView()),
+    )));
+    await tester.ensureVisible(find.byKey(const Key('inventory_calculate')));
+    await tester.tap(find.byKey(const Key('inventory_calculate')));
+    await tester.pump();
+    expect(find.byKey(const Key('inventory_error')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('inventory_opening')), '10');
+    await tester.pump();
+    expect(find.byKey(const Key('inventory_error')), findsNothing);
+  });
+
 }
