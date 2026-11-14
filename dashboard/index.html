@@ -420,7 +420,26 @@ nav.side{gap:.5rem}
 </section>
 <section class="view" data-view="jawafa-export" aria-labelledby="h-jawafa-export" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · EXPORT V5 · READ ONLY</span><h1 id="h-jawafa-export">مراقبة التصدير المباشر</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-export">Jawafa Export Monitor</span> · آخر تحديث: <span data-jawafa-updated="jawafa-export">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-export">NOT_CONNECTED</span></div>
-<div class="panel" data-jawafa-pane="jawafa-export"><p class="muted">قراءة حالة Export v5 فقط. لا توجد أوامر كتابة على Jawafa_DB.</p></div></section>
+<div class="panel" data-jawafa-pane="jawafa-export"><p class="muted">قراءة حالة Export v5 فقط. لا توجد أوامر كتابة على Jawafa_DB.</p></div>
+<div class="panel" id="audit15-recovery-panel">
+<div class="panel-head"><h2>التحقيق في الجداول الـ15 المستعادة</h2><span id="audit15-status" class="pill bad" role="status" aria-live="polite">NOT_CONNECTED</span></div>
+<p class="small muted">نتائج مطابقة نسخة 26 أكتوبر مع تصدير 3 نوفمبر، مع فصل ملفات FULL عن DELTA. المعروض مصدر تاريخي وليس SQL حيًا، ولا يثبت تعمد حذف أو تعديل السندات.</p>
+<div class="toolbar"><button id="audit15-refresh" type="button" class="btn">تحديث الأدلة الخاصة</button>
+<label class="field">بحث عن جدول<input id="audit15-query" type="search" autocomplete="off" placeholder="اسم الجدول أو مجال التدقيق"></label></div>
+<div class="kpis">
+<div class="kpi"><span class="label">الجداول المتحققة</span><strong class="value" id="audit15-table-count">—</strong></div>
+<div class="kpi"><span class="label">تصدير كامل FULL</span><strong class="value" id="audit15-full-count">—</strong></div>
+<div class="kpi"><span class="label">فروقات DELTA</span><strong class="value" id="audit15-delta-count">—</strong></div>
+<div class="kpi"><span class="label">حركات مستخدمين تاريخية مستعادة</span><strong class="value" id="audit15-history-count">—</strong></div>
+</div>
+<p class="small muted" id="audit15-provenance">لا يوجد اتصال موثوق. لم تُنقل السجلات المحاسبية أو المالية إلى GitHub العام.</p>
+<div class="table-wrap"><table><thead><tr><th>الجدول</th><th>الأهمية للتحقيق</th><th>نوع التصدير</th><th>صفوف الملف</th><th>إجمالي الفهرس</th><th>حالة التحقق</th></tr></thead>
+<tbody id="audit15-table-body"><tr><td colspan="6">لا توجد بيانات من مصدر خاص موثق.</td></tr></tbody></table></div>
+<h3>استثناءات مالية تستلزم الفحص</h3>
+<div class="table-wrap"><table><thead><tr><th>الجدول</th><th>سجلات جديدة</th><th>سجلات تغيرت</th><th>سجلات مفقودة بالمقارنة</th><th>نوع الدليل</th></tr></thead>
+<tbody id="audit15-exceptions"><tr><td colspan="5">لا يوجد تقرير تحقق خاص متصل.</td></tr></tbody></table></div>
+<p class="small muted">الاستيراد التاريخي والحالات المالية للقراءة فقط؛ يجب عدم تفسير فروقات الصفوف أو الترحيل باعتبارها مخالفات قبل المطابقة المحاسبية والتحقق من المستخدم والوقت.</p>
+</div></section>
 <section class="view" data-view="jawafa-accounting" aria-labelledby="h-jawafa-accounting" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-accounting">المحاسبة والقيود</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-accounting">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-accounting">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-accounting">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-accounting"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -430,6 +449,46 @@ nav.side{gap:.5rem}
 <section class="view" data-view="jawafa-purchases" aria-labelledby="h-jawafa-purchases" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-purchases">المشتريات والموردون</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-purchases">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-purchases">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-purchases">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-purchases"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<section class="view" data-view="jawafa-audit111" aria-labelledby="h-jawafa-audit111" hidden>
+<div class="view-head"><div><span class="eyebrow">AUDIT-111 · FORENSIC READ ONLY</span><h1 id="h-jawafa-audit111">المهمة 111 — سجل تعديل السندات والفواتير</h1><p class="muted small">فواتير المشتريات ومردوداتها، القيود، الشيكات، القبض، الإيداعات والمبيعات. سجل تاريخي يحتاج بوابة خاصة وصلاحيات مالك.</p></div><span id="audit111-status" class="pill bad" role="status" aria-live="polite">NOT_CONNECTED</span></div>
+<div class="panel"><div class="panel-head"><h2>حالة مصدر التعديل</h2><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/116" target="_blank" rel="noopener noreferrer">المهمة 111 · سجل القبول</a></div>
+<p class="small muted">تُنفّذ مهمة المراقبة المستقلة كل ساعة، ولكن وجودها لا يثبت مزامنة هذه الواجهة. لا تُعرض بيانات محاسبية على GitHub Pages؛ القراءة التفصيلية من بوابة HTTPS خاصة موثقة فقط. لا تفترض أن مقارنة نسختين تعطي هوية المستخدم أو وقت التعديل الفعلي.</p>
+<div class="kpis" aria-label="تصنيف المخاطر">
+<div class="kpi bad"><span class="label">P0 · حرجة</span><strong class="value" id="audit111-P0">—</strong></div>
+<div class="kpi warn"><span class="label">P1 · عالية</span><strong class="value" id="audit111-P1">—</strong></div>
+<div class="kpi"><span class="label">P2 · للمراجعة</span><strong class="value" id="audit111-P2">—</strong></div></div>
+<p class="small muted">وقت اعتماد المصدر: <span id="audit111-verified">—</span> · <span id="audit111-snapshot">لا توجد لقطة متحققة</span></p>
+<div class="toolbar"><button type="button" id="audit111-refresh">تحديث من المصدر الخاص (قراءة فقط)</button>
+<label class="field">نوع السند<select id="audit111-type"><option value="all">جميع الأنواع</option></select></label>
+<label class="field">الخطورة<select id="audit111-risk"><option value="all">جميع المستويات</option><option value="P0">P0</option><option value="P1">P1</option><option value="P2">P2</option></select></label>
+<label class="field">بحث في المعرّف والحقل<input id="audit111-query" type="search" autocomplete="off" placeholder="رقم المستند أو الحدث"></label></div>
+</div>
+<div class="panel" id="audit111-reports-panel">
+<div class="panel-head"><h2>تقارير التحقيق والمقارنات التاريخية</h2><span id="audit111-report-status" class="pill bad" role="status" aria-live="polite">NOT_CONNECTED</span></div>
+<p class="small muted">مصدر خاص محمي: مقارنة نسختي تصدير؛ الأرقام التالية ليست بيانات SQL حية ولا أحكامًا على مخالفات. حقول الأوقات غير معتمدة بسبب عدم مزامنة ساعة الخادم.</p>
+<div class="kpis" aria-label="المؤشرات التاريخية">
+<div class="kpi"><span class="label">الأحداث الجديدة بين التصديرين</span><strong class="value" id="audit111-report-new">—</strong></div>
+<div class="kpi"><span class="label">مشتريات تغيّرت قيمها</span><strong class="value" id="audit111-report-purchases">—</strong></div>
+<div class="kpi"><span class="label">مردودات تغيّرت حالة ترحيلها</span><strong class="value" id="audit111-report-returns">—</strong></div>
+<div class="kpi"><span class="label">فواتير تغيّر مرجع حركتها</span><strong class="value" id="audit111-report-rekeys">—</strong></div></div>
+<p class="small muted">صافي فرق حقل تكلفة المشتريات بين النسختين: <strong id="audit111-report-cost">—</strong> (ليس خسارة مثبتة). مصدر التقرير: <span id="audit111-report-provenance">غير متصل</span></p>
+<h3>فهرس التقارير</h3>
+<div class="table-wrap"><table><thead><tr><th>التقرير</th><th>عدد السجلات المرتبطة</th><th>حالة الدليل</th></tr></thead>
+<tbody id="audit111-report-catalog"><tr><td colspan="3">لا توجد تقارير معتمدة من بوابة خاصة.</td></tr></tbody></table></div>
+<div class="toolbar"><label class="field">تفاصيل التحقيق<select id="audit111-report-kind">
+<option value="purchase_changes">تعديلات المشتريات</option>
+<option value="returns">مردودات المشتريات</option>
+<option value="invoice_rekeys">مرجع الفواتير</option>
+</select></label></div>
+<div class="table-wrap"><table><thead><tr><th>نوع السند</th><th>المرجع</th><th>القيمة السابقة</th><th>القيمة الحالية</th><th>الفرق أو المبلغ</th><th>الدليل والحالة</th></tr></thead>
+<tbody id="audit111-report-records"><tr><td colspan="6">لا توجد بيانات مالية خاصة معتمدة.</td></tr></tbody></table></div>
+<p class="small muted">الاطلاع على التقارير محصور بصلاحية المالك من بوابة HTTPS خاصة. لا تُستخرج هذه الأرقام من صفحة GitHub العامة؛ وعند فشل المصادقة يتم إخفاؤها بالكامل.</p>
+</div>
+<div class="panel"><h2>تسلسل الأحداث — قبل وبعد</h2>
+<div class="table-wrap"><table><thead><tr><th>الخطورة</th><th>نوع المستند</th><th>رقم المستند</th><th>وقت الحدث المثبت</th><th>وقت رصد الفرق</th><th>المستخدم المثبت</th><th>الحقل · قبل ← بعد</th><th>درجة الدليل</th><th>مرجع المصدر</th></tr></thead>
+<tbody id="audit111-rows"><tr><td colspan="9">لا توجد بيانات معتمدة من بوابة خاصة.</td></tr></tbody></table></div>
+<p class="small muted">VERIFIED = سجل تعديل موثق؛ DIFF_ONLY = فرق بين لقطتين دون إثبات هوية المنفذ/زمن الفعل؛ UNVERIFIED = يحتاج دليل. تصنيف الشذوذ لا يثبت التلاعب أو مسؤولية شخص.</p>
+</div></section>
 <section class="view" data-view="jawafa-receiving" aria-labelledby="h-jawafa-receiving" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-receiving">الاستلام والمخزون</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-receiving">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-receiving">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-receiving">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-receiving"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -1222,7 +1281,7 @@ nav.side{gap:.5rem}
       ["jawafa-acceptance","اعتماد اللوحة | Security / QA"],["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
       ["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","TrustSoft"],
       ["jawafa-export","مراقبة التصدير"],["jawafa-accounting","القيود"],
-      ["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","الموردون والمشتريات"],
+      ["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","الموردون والمشتريات"],["jawafa-audit111","111 · تتبع التعديلات"],
       ["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],
       ["jawafa-investigations","التحقيقات القضائية"],["jawafa-forensic-workspace","التحقيق الموسع والأدلة"],["jawafa-agents","مجلس CFO / CPO / GM"],
       ["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],
@@ -2876,6 +2935,8 @@ ${notes ? "ملاحظات صاحب المتجر: " + notes : ""}
 </script>
 <script src="jawafa-integration.js" defer></script>
 <script src="jawafa-periodic-report.js" defer></script>
+<script type="module" src="./audit111-ui.mjs"></script>
+<script type="module" src="./audit15-ui.mjs"></script>
 
 <script src="aas-integration.js" defer></script>
 <script>
