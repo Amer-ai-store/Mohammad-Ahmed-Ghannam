@@ -36,8 +36,13 @@ test('canonical dashboard routes all 14 AAS screens and 17 Jawafa panes',()=>{
   assert.ok(index.includes('id="aas-live-frame"'));
   assert.ok(jawafaRoutes.every(x=>navRoutes.includes(x)&&viewSet.has(x)),'Jawafa pages must be rooted in real screens');
   assert.equal(jawafaRoutes.length,report.public_inventory.jawafa_existing_panes);
-  assert.ok(index.includes('id="trustsoft-frame"'));
+  // PR #147 recovery intentionally replaces the obsolete iframe with a same-page native host.
+  assert.ok(index.includes('id="trustsoft-container"'));
+  assert.ok(index.includes('id="trustsoft-host-status"'));
   assert.ok(index.includes('trustsoft/host-integration.js'));
+  assert.ok(index.includes('trustsoft/app.js'));
+  assert.ok(!index.includes('id="trustsoft-frame"'),'TrustSoft must not silently revert to iframe');
+
   assert.ok(index.includes('aas-integration.js'));
 });
 
