@@ -26,6 +26,6 @@ jobs:
         run: python3 tools/gates/check_jawafa_issue57.py --self-test
       - name: Check live public acceptance register (GET only)
         env:
-          GH_TOKEN: $${{ github.token }}
-          GITHUB_REPOSITORY: ${ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: python3 tools/gates/check_jawafa_issue57.py
