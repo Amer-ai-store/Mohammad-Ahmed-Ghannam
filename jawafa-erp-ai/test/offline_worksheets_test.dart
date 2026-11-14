@@ -103,6 +103,34 @@ void main() {
       expect(r.missingFields, contains('valid_zoned_event_time'));
     });
 
+    test('rejects impossible calendar days and malformed time zones', () {
+      for (final invalid in [
+        '2026-02-30T12:00:00+03:00',
+        '2025-02-29T12:00:00+03:00',
+        '2026-11-14T25:00:00Z',
+        '2026-11-14T12:61:00Z',
+        '2026-11-14T12:00:00+14:30',
+        '2026-11-14T12:00:00+03:99',
+      ]) {
+        final result = checkAuditCompleteness(
+          username: 'operator', device: 'device-01', reference: 'REF-01',
+          eventTime: invalid, independentEvidence: 'independent source',
+        );
+        expect(result.completeForReview, isFalse, reason: invalid);
+        expect(result.missingFields, contains('valid_zoned_event_time'),
+            reason: invalid);
+      }
+    });
+
+    test('accepts real leap day with explicit timezone', () {
+      final result = checkAuditCompleteness(
+        username: 'operator', device: 'device-01', reference: 'REF-01',
+        eventTime: '2024-02-29T23:59:59.123+03:00',
+        independentEvidence: 'independent source',
+      );
+      expect(result.completeForReview, isTrue);
+    });
+
     test('complete fields do not imply authenticity', () {
       final r = checkAuditCompleteness(
         username: 'system', device: 'terminal-01', reference: 'A-1',
