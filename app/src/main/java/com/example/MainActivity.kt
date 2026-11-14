@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.AppDatabase
+import com.example.data.AuthBackend
 import com.example.ui.AuthScreen
 import com.example.ui.MainLayout
 import com.example.ui.MarketViewModel
@@ -23,8 +24,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Mirrors store data to Firestore for the live dashboard; does nothing until Firebase keys are set.
         com.example.data.FirestoreSync.start(applicationContext, AppDatabase.getInstance(applicationContext))
+        val db = AppDatabase.getInstance(applicationContext)
+        val authBackend = AuthBackend.create(applicationContext, db)
         setContent {
-            val db = AppDatabase.getInstance(applicationContext)
             val viewModelFactory = MarketViewModelFactory(
                 db.userDao(),
                 db.productDao(),
@@ -35,9 +37,17 @@ class MainActivity : ComponentActivity() {
                 db.bankCardDao(),
                 db.searchQueryDao(),
                 db.familyShoppingListDao(),
-                db.storedOrganicItemDao()
+                db.storedOrganicItemDao(),
+                authBackend,
+                googleSignOut = { com.example.data.GoogleSignIn.signOut(applicationContext) }
             )
             val viewModel: MarketViewModel = viewModel(factory = viewModelFactory)
+            // Firebase keeps a Google session across launches; reopen that account once.
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                if (viewModel.currentUser.value == null) {
+                    com.example.data.GoogleSignIn.signedInEmail(applicationContext)?.let { viewModel.completeGoogleSignIn(it, null) }
+                }
+            }
             val isDark by viewModel.appDarkMode.collectAsState()
             
             MyApplicationTheme(darkTheme = isDark) {

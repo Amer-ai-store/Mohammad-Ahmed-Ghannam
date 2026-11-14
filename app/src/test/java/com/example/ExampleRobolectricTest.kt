@@ -41,7 +41,8 @@ class ExampleRobolectricTest {
             db.bankCardDao(),
             db.searchQueryDao(),
             db.familyShoppingListDao(),
-            db.storedOrganicItemDao()
+            db.storedOrganicItemDao(),
+            LocalAuthBackend(db.credentialDao())
         )
     }
 

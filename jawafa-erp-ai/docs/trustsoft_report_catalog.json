@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "reference_product": "TrustSoft",
+  "scope": "all_owner_accessible_and_used_reports_across_every_module",
+  "catalog_frozen": false,
+  "reference_version_verified": false,
+  "menu_screen_inventory_complete": false,
+  "report_template_inventory_complete": false,
+  "all_owner_used_reports_enumerated": false,
+  "independent_catalog_approval_ref": null,
+  "evidence_snapshot_sha256": null,
+  "notes": "UNFROZEN and EMPTY intentionally. 3,846 List_Report export rows/9 distinct ReportNo are UI preferences, not the complete reporting universe. Owner requires 100% of TrustSoft reports they used, including exact filters, totals, layout, permissions, tax and export behavior. Never guess or claim 90% parity.",
+  "reports": []
+}

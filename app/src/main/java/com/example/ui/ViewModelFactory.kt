@@ -14,7 +14,9 @@ class MarketViewModelFactory(
     private val bankCardDao: BankCardDao,
     private val searchQueryDao: SearchQueryDao,
     private val familyShoppingListDao: FamilyShoppingListDao,
-    private val storedOrganicItemDao: StoredOrganicItemDao
+    private val storedOrganicItemDao: StoredOrganicItemDao,
+    private val authBackend: AuthBackend,
+    private val googleSignOut: suspend () -> Unit = {}
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MarketViewModel::class.java)) {
@@ -29,7 +31,9 @@ class MarketViewModelFactory(
                 bankCardDao,
                 searchQueryDao,
                 familyShoppingListDao,
-                storedOrganicItemDao
+                storedOrganicItemDao,
+                authBackend,
+                googleSignOut
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

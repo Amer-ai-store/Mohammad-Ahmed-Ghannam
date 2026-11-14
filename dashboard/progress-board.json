@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-08",
+  "source_type": "verified_manual_snapshot",
+  "source_note": "Snapshot compiled from read-only JAWAFFASVR CSV export and verified GitHub Actions; not live SQL telemetry.",
+  "analytical_progress": {
+    "percent": 25,
+    "basis": "تقدير إداري تقريبي وليس نسبة اختبارات أو إنجاز وظائف",
+    "verified": false
+  },
+  "functional_acceptance": {
+    "passed_modules": 0,
+    "total_modules": 10,
+    "required_percent_per_module": 90,
+    "verified": false
+  },
+  "active_work": [
+    "فحص فروقات ترحيل POS والتقريب المحاسبي لعام 2025",
+    "مطابقة 56 معرّف شيك مع السندات والتاريخ البنكي الأصلي",
+    "مراجعة PR #188 الأمني والاختبارات تمهيدًا للقبول"
+  ],
+  "totals": [
+    {
+      "label": "جداول تمت مطابقتها",
+      "value": "1,024",
+      "detail": "فهرسا 26 أكتوبر و8 نوفمبر بعد تصحيح عدد الصفوف"
+    },
+    {
+      "label": "ملفات تصدير سليمة SHA256",
+      "value": "1,023 / 1,023",
+      "detail": "تطابق كامل مع فهرس تصدير 8 نوفمبر"
+    },
+    {
+      "label": "حركات شيكات تحتاج تحققًا",
+      "value": "57",
+      "detail": "56 معرّفًا مميزًا؛ ليست دليل تلاعب"
+    },
+    {
+      "label": "قيود POS بفروق صغيرة",
+      "value": "57",
+      "detail": "سنة 2025، فروق 0.0108–0.0319 دينار لكل قيد"
+    },
+    {
+      "label": "وحدات حققت شرط 90%",
+      "value": "0 / 10",
+      "detail": "لم يتم قبول أي وحدة وظيفية حتى الآن"
+    }
+  ],
+  "evidence": [
+    {
+      "label": "طلب مراجعة أداة التدقيق PR #188",
+      "url": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/pull/188"
+    },
+    {
+      "label": "اختبارات التدقيق الناجحة",
+      "url": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/42520272529"
+    },
+    {
+      "label": "الفحص الأمني الناجح",
+      "url": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/42520272571"
+    }
+  ],
+  "safety_note": "لا تعرض هذه اللوحة العامة أرقام معاملات فردية أو مبالغ حساسة. الأدلة التفصيلية محفوظة في مسار خاص على خادم جوافة. لا تعني سلامة ملفات التصدير قبول نظام الإنتاج.",
+  "workflow": {
+    "as_of": "2026-11-08",
+    "source": "verified_manual_snapshot",
+    "nodes": [
+      {
+        "id": "export",
+        "title": "تصدير البيانات والتحقق",
+        "status": "verified",
+        "subtitle": "1,023 بصمة SHA256 مطابقة",
+        "detail": "سلامة ملفات التصدير المفهرسة بتاريخ 8 نوفمبر مثبتة؛ لا تثبت اكتمال نسخة الإنتاج.",
+        "evidence_url": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/pull/188"
+      },
+      {
+        "id": "analysis",
+        "title": "تحليل العلاقات والاستثناءات",
+        "status": "in_progress",
+        "subtitle": "57 حركة شيك + 57 قيد POS",
+        "detail": "تم استخراج 114 سطر استثناء ضمن مجموعتين مختلفتين، مع حفظ المعاملات الكاملة في مساحة خاصة بالخادم. لا تلاعب مثبت.",
+        "evidence_url": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/pull/188"
+      },
+      {
+        "id": "development",
+        "title": "تطوير أدوات التدقيق",
+        "status": "verified",
+        "subtitle": "أداتا شيكات وقيود مع اختبارات",
+        "detail": "الأدوات البرمجية وُضعت في فرع مراجعة واختُبرت على نسخة تصدير. لا اعتماد إنتاجي حتى الآن.",
+        "evidence_url": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/pull/188"
+      },
+      {
+        "id": "review",
+        "title": "المراجعة الأمنية والوظيفية",
+        "status": "in_progress",
+        "subtitle": "فحوص GitHub ناجحة؛ قبول مستقل غير مثبت",
+        "detail": "اجتازت الأدوات فحوص CI والأمان الآلية، بينما المراجعة المستقلة والمطابقة البنكية ما زالت غير مثبتة.",
+        "evidence_url": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/pull/188"
+      },
+      {
+        "id": "publication",
+        "title": "الدمج والنشر وقبول 90%",
+        "status": "blocked",
+        "subtitle": "0 من 10 وحدات مقبولة",
+        "detail": "يتطلب نشر النسخة الإنتاجية قرار قبول منفصل وأدلة مراجعة، وشرط 90% يُختبر لكل وظيفة فرعية.",
+        "evidence_url": "https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/pull/191"
+      }
+    ],
+    "github_pull_requests": [
+      188,
+      191
+    ]
+  }
+}

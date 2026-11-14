@@ -17,3 +17,22 @@ const queue=prefix+'agent/queue';const signedGET=signed('GET',queue,{},'nonce-qu
 const events=prefix+'commands/test-safe-001/events';const premature=await agent(events,{status:'VERIFIED',action:'x',test_result:'PASS',evidence_ref:'evidence1',evidence_sha256:'a'.repeat(64)},'nonce-early-001');assert.equal(premature.status,409);
 const run=await agent(events,{status:'RUNNING',action:'health-check-running'},'nonce-run-001');assert.equal(run.status,200);let invalid=await agent(events,{status:'VERIFIED',action:'health-check',test_result:'PASS'},'nonce-no-proof');assert.equal(invalid.status,422);
 const done=await agent(events,{status:'VERIFIED',action:'test-pass',test_result:'PASS',evidence_ref:'SHA-EVIDENCE-001',evidence_sha256:'a'.repeat(64)},'nonce-done-001');assert.equal(done.status,200);assert.equal(done.data.status,'VERIFIED');const result=await api(prefix+'commands/test-safe-001');assert.equal(result.data.events.length,4);assert.equal(result.data.status,'VERIFIED');assert.equal((await api(prefix+'evidence')).data.evidence.length,1)});
+
+test('default Firebase verifier denies missing bearer before owner configuration check', async()=>{
+  const {firebaseIdentity}=require('./server.cjs');
+  const saved=process.env.JAWAFA_OWNER_UID;
+  delete process.env.JAWAFA_OWNER_UID;
+  try{
+    await assert.rejects(
+      ()=>firebaseIdentity(undefined,{ownerUid:''}),
+      e=>e.status===401&&e.message==='AUTH_REQUIRED'
+    );
+    await assert.rejects(
+      ()=>firebaseIdentity('Bearer invalid',{ownerUid:''}),
+      e=>e.status===503&&e.message==='OWNER_UID_NOT_CONFIGURED'
+    );
+  }finally{
+    if(saved===undefined)delete process.env.JAWAFA_OWNER_UID;
+    else process.env.JAWAFA_OWNER_UID=saved;
+  }
+});

@@ -4,8 +4,22 @@ rules_version = '2';
 // - The app writes after anonymous sign-in.
 // - Only the owner's Google account can read it (the live dashboard).
 // Note: any installed copy of the app can write; fine for a prototype, add App Check before launch.
+//
+// Multi-company command center (companies/{companyId}/..., invites, profiles). Every company is a
+// tenant: only its members can read it, and only owner/admin/editor members can write its data.
+// Ownership is the ownerUid field; roles[] holds one of the business roles for the others:
+// chairman | general_manager (manage members) | procurement_manager | branch_manager |
+// accountant (write operational data) | auditor | employee (read only, employee may post
+// agent messages and tasks). No role grants access to Jawafa_DB: SQL stays behind the backend.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function myEmail() {
+      return signedIn() && request.auth.token.email is string
+        && request.auth.token.email_verified == true ? request.auth.token.email.lower() : '';
+    }
+
     function isOwner() {
       return request.auth != null
         && request.auth.token.email == 'zxzx.mohammad91@gmail.com'
@@ -19,6 +33,320 @@ service cloud.firestore {
     match /{collection}/{docId} {
       allow read: if isOwner() && isStoreCollection(collection);
       allow write: if request.auth != null && isStoreCollection(collection);
+    }
+
+    // ---------- 2. Companies (tenants) ----------
+    function company(cid) { return get(/databases/$(database)/documents/companies/$(cid)).data; }
+    function roleIn(c) {
+      return !signedIn() ? '' :
+        (c.ownerUid == uid() ? 'owner' :
+          (uid() in c.memberIds && uid() in c.roles && validRole(c.roles[uid()]) ? c.roles[uid()] : ''));
+    }
+    function isMember(cid) { return signedIn() && uid() in company(cid).memberIds; }
+    function canWrite(cid) {
+      return roleIn(company(cid)) in ['owner', 'chairman', 'general_manager',
+        'procurement_manager', 'branch_manager', 'accountant'];
+    }
+    function canManage(cid) { return roleIn(company(cid)) in ['owner', 'chairman', 'general_manager']; }
+    function validRole(r) {
+      return r in ['chairman', 'general_manager', 'procurement_manager', 'branch_manager',
+        'accountant', 'auditor', 'employee'];
+    }
+    function validUrl(u, hosts) { return u == '' || (u is string && u.size() <= 300 && u.matches('https://(www\\.)?(' + hosts + ')/.+')); }
+    function validSocial(s) {
+      return s is map && s.keys().hasOnly(['facebook', 'instagram', 'tiktok'])
+        && validUrl(s.get('facebook', ''), 'facebook\\.com|fb\\.com')
+        && validUrl(s.get('instagram', ''), 'instagram\\.com')
+        && validUrl(s.get('tiktok', ''), 'tiktok\\.com');
+    }
+    function validName(n) { return n is string && n.size() > 0 && n.size() <= 80; }
+
+    match /companies/{cid} {
+      allow read: if signedIn() && uid() in resource.data.memberIds;
+
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == uid()
+        && request.resource.data.memberIds == [uid()]
+        && request.resource.data.roles.size() == 0
+        && request.resource.data.pendingInvites.size() == 0
+        && request.resource.data.members.keys().hasOnly([uid()])
+        && request.resource.data.get('plan', 'free') == 'free'
+        && validName(request.resource.data.name)
+        && validSocial(request.resource.data.get('social', {}));
+
+      // Owner or admin manages the company. Nobody can transfer ownership or drop the owner.
+      allow update: if roleIn(resource.data) in ['owner', 'chairman', 'general_manager']
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && resource.data.ownerUid in request.resource.data.memberIds
+        // The plan (free / premium_plus) is set only by the billing backend (Admin SDK).
+        && request.resource.data.get('plan', 'free') == resource.data.get('plan', 'free')
+        && request.resource.data.get('branchScopes', {}) is map
+        && validName(request.resource.data.name)
+        && validSocial(request.resource.data.get('social', {}));
+
+      // A signed-in user accepts an invitation addressed to their verified email:
+      // they may add only themselves, with exactly the invited role, and clear that invitation.
+      allow update: if signedIn() && myEmail() != ''
+        && !(uid() in resource.data.memberIds)
+        && exists(/databases/$(database)/documents/invites/$(cid + '__' + myEmail()))
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['memberIds', 'roles', 'members', 'pendingInvites'])
+        && request.resource.data.memberIds.toSet() == resource.data.memberIds.toSet().union([uid()].toSet())
+        && request.resource.data.roles.diff(resource.data.roles).affectedKeys().hasOnly([uid()])
+        && request.resource.data.roles[uid()]
+             == get(/databases/$(database)/documents/invites/$(cid + '__' + myEmail())).data.role
+        && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([uid()])
+        && request.resource.data.pendingInvites.diff(resource.data.pendingInvites).affectedKeys().hasOnly([myEmail()])
+        && !(myEmail() in request.resource.data.pendingInvites);
+
+      // A non-owner member leaves: removes only themselves.
+      allow update: if signedIn()
+        && uid() in resource.data.memberIds
+        && resource.data.ownerUid != uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'roles', 'members'])
+        && request.resource.data.memberIds.toSet() == resource.data.memberIds.toSet().difference([uid()].toSet())
+        && !(uid() in request.resource.data.roles)
+        && !(uid() in request.resource.data.members);
+
+      allow delete: if signedIn() && resource.data.ownerUid == uid();
+
+      // Agent message router. Any member may queue a message as themselves; the status can only
+      // move forward (QUEUED -> DELIVERED -> READ -> ACKNOWLEDGED, or -> FAILED) and the body,
+      // sender and recipients never change after creation. Messages are never deleted (audit).
+      match /agentMessages/{msgId} {
+        allow read: if isMember(cid);
+        allow create: if isMember(cid)
+          && request.resource.data.status == 'QUEUED'
+          && request.resource.data.sentBy == uid()
+          && request.resource.data.id == msgId
+          && request.resource.data.to is list && request.resource.data.to.size() > 0
+          && request.resource.data.to.size() <= 20
+          && request.resource.data.body is string && request.resource.data.body.size() <= 4000;
+        allow update: if isMember(cid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'history', 'updatedAt'])
+          && ((resource.data.status == 'QUEUED' && request.resource.data.status in ['DELIVERED', 'FAILED'])
+           || (resource.data.status == 'DELIVERED' && request.resource.data.status in ['READ', 'FAILED'])
+           || (resource.data.status == 'READ' && request.resource.data.status == 'ACKNOWLEDGED'));
+        allow delete: if false;
+      }
+
+      // Audit log: append-only for members, never edited or deleted.
+      match /audit/{eventId} {
+        allow read: if isMember(cid);
+        allow create: if isMember(cid) && request.resource.data.by == uid();
+        allow update, delete: if false;
+      }
+
+      // Tasks: every member except auditors may create; fields are validated; the assignee must be a
+      // member. Only managers, the creator or the assignee update a task, and the creator never changes.
+      // Managers may delete.
+      function taskRole() {
+        return roleIn(company(cid)) in ['owner', 'chairman', 'general_manager',
+          'procurement_manager', 'branch_manager', 'accountant', 'employee'];
+      }
+      function validTask(d) {
+        return d.keys().hasOnly(['title', 'status', 'by', 'at', 'assigneeUid', 'dueDate', 'priority', 'branchId', 'updatedAt', 'doneAt'])
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+          && (!('status' in d) || d.status in ['todo', 'doing', 'done'])
+          && (!('assigneeUid' in d) || d.assigneeUid == null || d.assigneeUid in company(cid).memberIds)
+          && (!('dueDate' in d) || d.dueDate == '' || (d.dueDate is string && d.dueDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+          && (!('priority' in d) || d.priority in ['low', 'normal', 'high'])
+          && (!('branchId' in d) || d.branchId == null || branchExists(d.branchId));
+      }
+      match /tasks/{taskId} {
+        allow read: if isMember(cid);
+        allow create: if taskRole() && validTask(request.resource.data)
+          && request.resource.data.get('by', uid()) == uid();
+        allow update: if taskRole() && validTask(request.resource.data)
+          && (canManage(cid) || resource.data.get('by', '') == uid() || resource.data.get('assigneeUid', '') == uid())
+          && request.resource.data.get('by', '') == resource.data.get('by', '');
+        allow delete: if canManage(cid);
+      }
+
+      // Branches and warehouses: writers maintain them; fields are validated.
+      match /branches/{branchId} {
+        allow read: if isMember(cid);
+        allow create, update: if canWrite(cid)
+          && request.resource.data.keys().hasOnly(['name', 'kind', 'city', 'lat', 'lng', 'by', 'at'])
+          && validName(request.resource.data.name)
+          && request.resource.data.kind in ['market', 'restaurant', 'bakery', 'warehouse', 'office']
+          && (request.resource.data.get('lat', null) == null
+              || (request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+                  && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180));
+        allow delete: if canWrite(cid);
+      }
+
+      // ---------- Phase 2: operations (employees, suppliers, purchase orders) ----------
+      // Branch scope: a member with role branch_manager or employee and a non-empty
+      // company.branchScopes[uid] list sees and writes only records of those branches.
+      // Members without a scope entry, and every other role, are company-wide.
+      function scopeOf(c) {
+        return roleIn(c) in ['branch_manager', 'employee'] && c.get('branchScopes', {}).get(uid(), []).size() > 0
+          ? c.branchScopes[uid()] : null;
+      }
+      function inScope(b) {
+        let s = scopeOf(company(cid));
+        return s == null || b in s;
+      }
+      function branchExists(b) {
+        return b is string && b.size() > 0 && exists(/databases/$(database)/documents/companies/$(cid)/branches/$(b));
+      }
+      function isProcurer() { return roleIn(company(cid)) in ['owner', 'chairman', 'general_manager', 'procurement_manager']; }
+      function isApprover() { return roleIn(company(cid)) in ['owner', 'chairman', 'general_manager']; }
+      function optStr(d, k, max) { return !(k in d) || (d[k] is string && d[k].size() <= max); }
+      // Every purchase-order decision must be written to the audit log in the same batch:
+      // the order names a fresh audit entry by this user, for this order and this action.
+      function auditedAs(poId, action) {
+        let a = request.resource.data.lastAuditId;
+        return a is string && a.size() > 0 && a.size() <= 100
+          && !exists(/databases/$(database)/documents/companies/$(cid)/audit/$(a))
+          && getAfter(/databases/$(database)/documents/companies/$(cid)/audit/$(a)).data.by == uid()
+          && getAfter(/databases/$(database)/documents/companies/$(cid)/audit/$(a)).data.ref == poId
+          && getAfter(/databases/$(database)/documents/companies/$(cid)/audit/$(a)).data.action == action;
+      }
+
+      // Employees (REQ-009): owner/chairman/GM manage all; a branch manager manages employees
+      // of the branches in scope. Everyone else reads (within scope). Never deleted: deactivate.
+      function validEmployee(d) {
+        return d.keys().hasOnly(['name', 'title', 'branchId', 'phone', 'status', 'startDate', 'by', 'at'])
+          && validName(d.name) && optStr(d, 'title', 80) && optStr(d, 'phone', 30)
+          && d.status in ['active', 'inactive']
+          && (!('startDate' in d) || d.startDate == '' || (d.startDate is string && d.startDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+          && d.by == uid() && d.at is number
+          && branchExists(d.branchId);
+      }
+      function canManageEmployees(b) {
+        return canManage(cid) || (roleIn(company(cid)) == 'branch_manager' && inScope(b));
+      }
+      match /employees/{empId} {
+        allow read: if isMember(cid) && inScope(resource.data.branchId);
+        allow create: if canManageEmployees(request.resource.data.branchId) && validEmployee(request.resource.data);
+        allow update: if canManageEmployees(resource.data.branchId)
+          && canManageEmployees(request.resource.data.branchId)
+          && validEmployee(request.resource.data);
+        allow delete: if false;
+      }
+
+      // Suppliers (REQ-013): company-wide list kept by procurement roles. Never deleted.
+      match /suppliers/{supplierId} {
+        allow read: if isMember(cid);
+        allow create, update: if isProcurer()
+          && request.resource.data.keys().hasOnly(['name', 'phone', 'email', 'category', 'status', 'by', 'at'])
+          && validName(request.resource.data.name)
+          && optStr(request.resource.data, 'phone', 30) && optStr(request.resource.data, 'email', 200)
+          && optStr(request.resource.data, 'category', 80)
+          && request.resource.data.status in ['active', 'inactive']
+          && request.resource.data.by == uid();
+        allow delete: if false;
+      }
+
+      // Purchase orders (REQ-003, REQ-030):
+      //   draft -> submitted            procurement roles (draft edits allowed only while draft)
+      //   submitted -> approved|rejected owner / chairman / general manager
+      //   approved -> received          procurement roles, or the branch manager of that branch
+      // Approved, rejected and received orders cannot be edited. Orders are never deleted
+      // except an unsent draft. Each transition carries an audit entry written in the same batch.
+      function validLines(d) {
+        return d.lines is list && d.lines.size() > 0 && d.lines.size() <= 50
+          && d.total is number && d.total >= 0 && d.total <= 100000000;
+      }
+      function draftFields() {
+        return ['supplierId', 'branchId', 'lines', 'total', 'notes', 'status', 'createdBy', 'at', 'updatedAt'];
+      }
+      function transition(from, to, keys) {
+        return resource.data.status == from && request.resource.data.status == to
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+      }
+      match /purchaseOrders/{poId} {
+        allow read: if isMember(cid) && inScope(resource.data.branchId);
+        allow create: if isProcurer()
+          && request.resource.data.keys().hasOnly(draftFields())
+          && request.resource.data.status == 'draft'
+          && request.resource.data.createdBy == uid()
+          && exists(/databases/$(database)/documents/companies/$(cid)/suppliers/$(request.resource.data.supplierId))
+          && branchExists(request.resource.data.branchId)
+          && validLines(request.resource.data)
+          && optStr(request.resource.data, 'notes', 500);
+        allow update: if
+          // edit a draft
+          (isProcurer() && transition('draft', 'draft', ['supplierId', 'branchId', 'lines', 'total', 'notes', 'updatedAt'])
+            && exists(/databases/$(database)/documents/companies/$(cid)/suppliers/$(request.resource.data.supplierId))
+            && branchExists(request.resource.data.branchId)
+            && validLines(request.resource.data) && optStr(request.resource.data, 'notes', 500))
+          // submit for approval
+          || (isProcurer() && transition('draft', 'submitted', ['status', 'submittedBy', 'submittedAt', 'updatedAt', 'lastAuditId'])
+            && request.resource.data.submittedBy == uid() && auditedAs(poId, 'po.submit'))
+          // decide
+          || (isApprover() && resource.data.status == 'submitted'
+            && request.resource.data.status in ['approved', 'rejected']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedBy', 'decidedAt', 'decisionNote', 'updatedAt', 'lastAuditId'])
+            && request.resource.data.decidedBy == uid()
+            && optStr(request.resource.data, 'decisionNote', 500)
+            && auditedAs(poId, request.resource.data.status == 'approved' ? 'po.approve' : 'po.reject'))
+          // receive goods
+          || ((isProcurer() || (roleIn(company(cid)) == 'branch_manager' && inScope(resource.data.branchId)))
+            && transition('approved', 'received', ['status', 'receivedBy', 'receivedAt', 'updatedAt', 'lastAuditId'])
+            && request.resource.data.receivedBy == uid() && auditedAs(poId, 'po.receive'));
+        allow delete: if isProcurer() && resource.data.status == 'draft';
+      }
+
+      // ---------- AI agents and workspaces ----------
+      // An agent's instructions steer an AI model, so only owner/chairman/general manager edit
+      // agents. Writers organise workspaces and pick which agent each one uses. The model name is
+      // checked by shape only (gemini-…); whether a model exists is decided by the AI service.
+      function validAgent(d) {
+        return d.keys().hasOnly(['name', 'systemInstruction', 'model', 'temperature', 'by', 'at'])
+          && validName(d.name)
+          && d.systemInstruction is string && d.systemInstruction.size() > 0 && d.systemInstruction.size() <= 4000
+          && d.model is string && d.model.matches('gemini-[0-9a-z.-]{1,40}')
+          && (d.temperature is int || d.temperature is float) && d.temperature >= 0 && d.temperature <= 2
+          && d.by == uid() && d.at is number;
+      }
+      match /agents/{agentId} {
+        allow read: if isMember(cid);
+        allow create, update: if canManage(cid) && validAgent(request.resource.data);
+        allow delete: if canManage(cid);
+      }
+      match /workspaces/{workspaceId} {
+        allow read: if isMember(cid);
+        allow create, update: if canWrite(cid)
+          && request.resource.data.keys().hasOnly(['name', 'activeAgentId', 'by', 'at'])
+          && validName(request.resource.data.name)
+          && (!('activeAgentId' in request.resource.data) || request.resource.data.activeAgentId == null
+              || (request.resource.data.activeAgentId is string
+                  && exists(/databases/$(database)/documents/companies/$(cid)/agents/$(request.resource.data.activeAgentId))));
+        allow delete: if canWrite(cid);
+      }
+
+      // Other tenant data (operational, non-accounting).
+      // Branch-scoped collections are excluded here so that their own read rules apply.
+      match /{coll}/{docId} {
+        allow read: if isMember(cid) && !(coll in ['employees', 'purchaseOrders']);
+        allow create, update, delete: if canWrite(cid)
+          && coll in ['stages', 'servers', 'bridges', 'designs',
+                      'campaigns', 'activity', 'settings', 'store', 'connections',
+                      'dashboards'];
+      }
+    }
+
+    // Invitations: id = companyId + '__' + lower-case email.
+    match /invites/{inviteId} {
+      allow read: if signedIn()
+        && (resource.data.email == myEmail() || canManage(resource.data.companyId));
+      allow create: if signedIn()
+        && canManage(request.resource.data.companyId)
+        && request.resource.data.email is string
+        && request.resource.data.email == request.resource.data.email.lower()
+        && inviteId == request.resource.data.companyId + '__' + request.resource.data.email
+        && validRole(request.resource.data.role)
+        && request.resource.data.invitedBy == uid();
+      allow delete: if signedIn()
+        && (resource.data.email == myEmail() || canManage(resource.data.companyId));
+    }
+
+    // Per-user profile (display name, last selected company). Private to the user.
+    match /profiles/{userId} {
+      allow read, write: if signedIn() && userId == uid();
     }
   }
 }

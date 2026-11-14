@@ -1,0 +1,29 @@
+name: Central progress board verification
+on:
+  pull_request:
+    paths:
+      - "dashboard/index.html"
+      - "dashboard/progress-board.json"
+      - "dashboard/progress-board.js"
+      - "dashboard/workflow-map.js"
+      - "dashboard/agent-live.js"
+      - "dashboard/progress-board.css"
+      - "dashboard/tests/progress-board.test.cjs"
+      - ".github/workflows/progress-board-check.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout reviewed files
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify snapshot and privacy
+        run: node dashboard/tests/progress-board.test.cjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check dashboard/progress-board.js
+          node --check dashboard/workflow-map.js
+          node --check dashboard/agent-live.js

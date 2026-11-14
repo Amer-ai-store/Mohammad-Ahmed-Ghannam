@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -30,6 +29,9 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import androidx.compose.ui.res.painterResource
 import com.example.R
+import com.example.data.GoogleSignIn
+import com.example.data.GoogleSignInResult
+import kotlinx.coroutines.launch
 
 data class CountryDial(val flag: String, val code: String, val nameEn: String, val nameAr: String)
 
@@ -83,17 +85,28 @@ fun AuthScreen(viewModel: MarketViewModel) {
     val codeSent by viewModel.verificationCodeSent.collectAsState()
     val lang by viewModel.appLanguage.collectAsState()
 
+    // Sign-in errors (e.g. the admin account without its password) are raised in the view model.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+        }
+    }
+
     // Helper to get localized strings
     fun txt(key: String): String = Localization.get(key, lang)
 
     var isLoginMode by remember { mutableStateOf(false) } // false = Sign Up, true = Sign In
-    var showGoogleAccountPicker by remember { mutableStateOf(false) }
-    var showGoogleConsent by remember { mutableStateOf(false) }
+    val isAuthLoading by viewModel.isAuthLoading.collectAsState()
 
     // Sign Up Fields
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var signUpPassword by remember { mutableStateOf("") }
+    var signUpPasswordConfirm by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("Customer") }
     var enteredCode by remember { mutableStateOf("") }
     var selectedCountry by remember { mutableStateOf(worldCountries[0]) } // Jordan is index 0
@@ -104,8 +117,24 @@ fun AuthScreen(viewModel: MarketViewModel) {
     var loginPassword by remember { mutableStateOf("") }
 
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    // Google sign-in (Credential Manager): runs over this Activity, then opens the account in the view model.
+    val googleScope = rememberCoroutineScope()
+    var googleLoading by remember { mutableStateOf(false) }
+    val startGoogleSignIn: () -> Unit = {
+        if (!googleLoading) {
+            googleLoading = true
+            errorMsg = null
+            googleScope.launch {
+                val result = GoogleSignIn.signIn(context)
+                googleLoading = false
+                if (result is GoogleSignInResult.Success) viewModel.completeGoogleSignIn(result.email, result.displayName)
+                else errorMsg = GoogleSignIn.message(result, lang)
+            }
+        }
+    }
 
-    val roles = listOf("Customer", "Merchant", "Delivery", "Admin")
+    // Admin is not offered at sign-up: that account opens only with ADMIN_PASSWORD on the sign-in tab.
+    val roles = listOf("Customer", "Merchant", "Delivery")
 
     Box(
         modifier = Modifier
@@ -366,6 +395,53 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                 )
                             )
 
+                            OutlinedTextField(
+                                value = signUpPassword,
+                                onValueChange = { signUpPassword = it },
+                                label = { Text(txt("password")) },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = SecondaryMint) },
+                                visualTransformation = PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                supportingText = {
+                                    Text(
+                                        text = if (lang == "ar") "6 خانات فأكثر، مع حرف ورقم على الأقل" else "6+ characters, with at least one letter and one digit",
+                                        fontSize = 9.sp,
+                                        color = SoftGrayText
+                                    )
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("signup_password_input"),
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = PrimaryCyan,
+                                    unfocusedBorderColor = SoftGrayText.copy(alpha = 0.3f),
+                                    focusedTextColor = PolarLight,
+                                    unfocusedTextColor = PolarLight
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = signUpPasswordConfirm,
+                                onValueChange = { signUpPasswordConfirm = it },
+                                label = { Text(if (lang == "ar") "تأكيد كلمة المرور" else "Confirm Password") },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = SecondaryMint) },
+                                visualTransformation = PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("signup_password_confirm_input"),
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = PrimaryCyan,
+                                    unfocusedBorderColor = SoftGrayText.copy(alpha = 0.3f),
+                                    focusedTextColor = PolarLight,
+                                    unfocusedTextColor = PolarLight
+                                )
+                            )
+
                             // Role Selection
                             Column {
                                 Text(
@@ -424,11 +500,16 @@ fun AuthScreen(viewModel: MarketViewModel) {
                             // Sign Up buttons
                             Button(
                                 onClick = {
-                                    if (name.trim().isEmpty() || (phone.trim().isEmpty() && email.trim().isEmpty())) {
-                                        errorMsg = if (lang == "ar") "يرجى تعبئة الاسم وإما الهاتف أو البريد الإلكتروني للتسجيل." else "Please fill in Name and either Phone or Email to register."
+                                    if (name.trim().isEmpty() || email.trim().isEmpty()) {
+                                        errorMsg = if (lang == "ar") "يرجى تعبئة الاسم والبريد الإلكتروني للتسجيل." else "Please fill in your name and email to register."
+                                    } else if (!isStrongPassword(signUpPassword)) {
+                                        errorMsg = if (lang == "ar") "كلمة المرور ضعيفة: 6 خانات فأكثر مع حرف ورقم على الأقل." else "Weak password: 6+ characters with at least one letter and one digit."
+                                    } else if (signUpPassword != signUpPasswordConfirm) {
+                                        errorMsg = if (lang == "ar") "كلمتا المرور غير متطابقتين." else "Passwords do not match."
                                     } else {
                                         errorMsg = null
-                                        viewModel.initiateRegister(name, selectedCountry.code + phone, email, role)
+                                        val fullPhone = if (phone.isBlank()) "" else selectedCountry.code + phone.trim()
+                                        viewModel.initiateRegister(name.trim(), fullPhone, email, role, signUpPassword)
                                     }
                                 },
                                 modifier = Modifier
@@ -454,36 +535,6 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Black,
                                         color = onPrimaryColor
-                                    )
-                                }
-                            }
-
-                            // Google Integration Button
-                            OutlinedButton(
-                                onClick = { showGoogleAccountPicker = true },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .testTag("google_signup_btn"),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PolarLight),
-                                shape = RoundedCornerShape(12.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryCyan.copy(alpha = 0.4f))
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AccountBox,
-                                        contentDescription = "Google Logo",
-                                        tint = SecondaryMint,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = txt("google_signup"),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = PolarLight
                                     )
                                 }
                             }
@@ -556,6 +607,7 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                         }
                                     }
                                 },
+                                enabled = !isAuthLoading,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp)
@@ -575,7 +627,7 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = txt("access_platform"),
+                                        text = if (isAuthLoading) (if (lang == "ar") "جارٍ التحقق..." else "Checking...") else txt("access_platform"),
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Black,
                                         color = onPrimaryColor
@@ -583,40 +635,12 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                 }
                             }
 
-                            // Developer Credentials Quick-Fill section
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        loginEmailOrPhone = "zxzx.mohammad91@gmail.com"
-                                    }
-                                    .border(1.dp, WarmAmbar.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
-                                colors = CardDefaults.cardColors(containerColor = SlateDarkBg.copy(alpha = 0.5f))
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Info,
-                                            contentDescription = null,
-                                            tint = WarmAmbar,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Text(
-                                            text = " " + txt("quick_fill"),
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = WarmAmbar
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Email: zxzx.mohammad91@gmail.com\nUsername/Admin: admin",
-                                        fontSize = 8.sp,
-                                        color = SoftGrayText,
-                                        lineHeight = 11.sp
-                                    )
-                                }
-                            }
+                            GoogleSignInButton(
+                                lang = lang,
+                                loading = googleLoading,
+                                enabled = !isAuthLoading,
+                                onClick = startGoogleSignIn
+                            )
                         }
                     }
                 }
@@ -722,6 +746,7 @@ fun AuthScreen(viewModel: MarketViewModel) {
                                             errorMsg = null
                                         }
                                     },
+                                    enabled = !isAuthLoading,
                                     modifier = Modifier
                                         .weight(2f)
                                         .testTag("verify_confirm_button"),
@@ -741,168 +766,32 @@ fun AuthScreen(viewModel: MarketViewModel) {
             }
         }
     }
+}
 
-    // Google Simulated Account Picker Dialog
-    if (showGoogleAccountPicker) {
-        AlertDialog(
-            onDismissRequest = { showGoogleAccountPicker = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.AccountBox,
-                        contentDescription = null,
-                        tint = PrimaryCyan,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(txt("select_google_acc"), color = PolarLight, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        txt("google_picker_desc"),
-                        fontSize = 11.sp,
-                        color = SoftGrayText
-                    )
-
-                    // Active Google user selection matching user email
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                showGoogleAccountPicker = false
-                                showGoogleConsent = true
-                            }
-                            .border(1.dp, PrimaryCyan.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
-                        colors = CardDefaults.cardColors(containerColor = SlateDarkBg),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(PrimaryCyan),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("M", color = SlateDarkBg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                            Column {
-                                Text("Mohammad", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PolarLight)
-                                Text("zxzx.Mohammad91@gmail.com", fontSize = 10.sp, color = SoftGrayText)
-                            }
-                        }
-                    }
-
-                    // Default Guest options
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                showGoogleAccountPicker = false
-                                showGoogleConsent = true
-                            }
-                            .border(1.dp, SoftGrayText.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                        colors = CardDefaults.cardColors(containerColor = SlateDarkBg.copy(alpha = 0.3f)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(SoftGrayText),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("G", color = SlateDarkBg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                            Column {
-                                Text("Market Guest", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PolarLight)
-                                Text("guest.marketplace@gmail.com", fontSize = 10.sp, color = SoftGrayText)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showGoogleAccountPicker = false }) {
-                    Text(txt("cancel"), color = AccentCoral)
-                }
-            },
-            containerColor = CardDarkBg
-        )
+/** "Continue with Google" button for the sign-in form. */
+@Composable
+fun GoogleSignInButton(lang: String, loading: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val label = when {
+        loading -> if (lang == "ar") "جارٍ فتح حسابات Google..." else "Opening Google accounts..."
+        else -> if (lang == "ar") "الدخول عبر Google" else "Continue with Google"
     }
-
-    // Google Simulated Consent Form Dialog
-    if (showGoogleConsent) {
-        AlertDialog(
-            onDismissRequest = { showGoogleConsent = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = SecondaryMint,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(txt("google_consent_title"), color = PolarLight, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        txt("google_consent_desc"),
-                        fontSize = 11.sp,
-                        color = PolarLight
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        txt("google_consent_bullets"),
-                        fontSize = 10.sp,
-                        color = SoftGrayText,
-                        lineHeight = 15.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        txt("google_consent_note"),
-                        fontSize = 9.sp,
-                        color = WarmAmbar,
-                        lineHeight = 13.sp
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showGoogleConsent = false
-                        viewModel.loginWithGoogleSimulated(
-                            name = "Mohammad",
-                            email = "zxzx.mohammad91@gmail.com",
-                            role = role
-                        )
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryCyan)
-                ) {
-                    Text(txt("approve_connect"), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGoogleConsent = false }) {
-                    Text(txt("deny"), color = AccentCoral, fontSize = 11.sp)
-                }
-            },
-            containerColor = CardDarkBg
-        )
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled && !loading,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .testTag("google_sign_in_button"),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryCyan.copy(alpha = 0.6f))
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (loading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Text("G", fontWeight = FontWeight.Black, fontSize = 16.sp, color = PrimaryCyan)
+            }
+            Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        }
     }
 }

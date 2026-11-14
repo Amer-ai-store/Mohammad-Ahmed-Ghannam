@@ -11,7 +11,7 @@
 | Firestore | قاعدة `(default)` في `nam5` |
 | قواعد الأمان | `firestore.rules` منشورة. حلّت محل قواعد «وضع الاختبار» التي انتهت في 14 أغسطس وكانت تمنع الجميع |
 | الدخول المجهول (Anonymous) | مفعّل، وبه يكتب التطبيق |
-| النطاقات المسموح بها | أُضيف `mohammadzxzx1991.github.io` |
+| النطاقات المسموح بها | يجب التحقق من سماح Firebase Authentication للنطاق `amer-ai-store.github.io`؛ الإعداد الفعلي غير مثبت هنا |
 | تطبيق Android | «Amer Store (Android)» للحزمة `com.aistudio.aicommerce.kpqzjx`، وقيمه في `.env.example` |
 | تطبيق الويب | «Amer Live Dashboard»، وإعداداته في `dashboard/firebase-config.js` |
 
@@ -25,11 +25,16 @@ https://console.firebase.google.com/project/ameraistore-1c81d/authentication/pro
 ← **Google** ← **Enable** ← اختر بريد الدعم ← **Save**.
 هذه الخطوة تُنشئ عميل OAuth لا يمكن إنشاؤه من الأوامر.
 
-GitHub Pages مفعّل (Source: GitHub Actions)، واللوحة تُنشر تلقائياً من `dashboard/` عبر `.github/workflows/pages.yml`.
+**تفعيل الدخول بالبريد وكلمة المرور (لحسابات التطبيق) — مطلوب:**
+https://console.firebase.google.com/project/ameraistore-1c81d/authentication/providers
+← **Email/Password** ← **Enable** ← **Save**.
+قبل هذه الخطوة يرفض التطبيق التسجيل والدخول برسالة «الدخول بالبريد وكلمة المرور غير مفعّل في Firebase بعد».
+
+رابط اللوحة المركزية يعمل عبر GitHub Pages، لكن مسار إعادة النشر `pages.yml` متجمد وفق Issue #102 حتى إثبات الاعتماد الأمني والموافقة المستقلة.
 
 ## التجربة
 1. ثبّت أحدث ملف APK من GitHub Actions، وافتح التطبيق مع اتصال بالإنترنت.
-2. افتح https://mohammadzxzx1991.github.io/Mohammad-Ahmed-Ghannam/#store ← **تسجيل الدخول بـ Google** بحساب `zxzx.mohammad91@gmail.com`.
+2. افتح https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/#store ← **تسجيل الدخول بـ Google** بحساب `zxzx.mohammad91@gmail.com`.
 3. أضف طلباً في التطبيق، فيظهر في اللوحة خلال ثوانٍ.
 
 ## ملاحظات
@@ -37,3 +42,23 @@ GitHub Pages مفعّل (Source: GitHub Actions)، واللوحة تُنشر ت�
 - أي نسخة مثبتة من التطبيق تستطيع الكتابة في مجموعات المتجر. هذا مقبول للتجربة، وقبل الإطلاق أضف Firebase App Check.
 - لتغيير حساب المالك: عدّل البريد في `firestore.rules` ثم انشر القواعد من Firebase Console → Firestore → Rules.
 - البيانات التي حُذفت من التطبيق وهو مغلق لا تُحذف من Firestore تلقائياً.
+
+## حسابات المستخدمين في التطبيق
+- عند ضبط مفاتيح `FIREBASE_*` يُنشئ التطبيق الحسابات ويتحقق من كلمات المرور عبر **Firebase Authentication** (بريد + كلمة مرور)، فيعمل الحساب نفسه على أي جهاز وتبقى الجلسة بعد إغلاق التطبيق.
+- يستخدم الدخول تطبيق Firebase مستقلاً (`amer-user-auth`)، فلا يمسّ الجلسة المجهولة التي تكتب بها المزامنة.
+- إذا كانت المفاتيح غير مضبوطة تُحفظ كلمات المرور على الجهاز فقط، مُجزّأة (PBKDF2 مع salt) في جدول `local_credentials`، ولا تُصدَّر أبداً.
+- الدخول برقم الهاتف يعمل عبر البريد المحفوظ في ذلك الحساب.
+- حساب المدير لا يُفتح إلا بكلمة `ADMIN_PASSWORD` من خانة الدخول، ولا يمكن تسجيل بريده كحساب عادي.
+- المستخدمون الذين أنشأتهم النسخ السابقة (دون كلمة مرور) يسجّلون من جديد بالبريد نفسه، فيُربط حسابهم القديم بنقاطه وطلباته.
+
+## الدخول بحساب Google في التطبيق (Credential Manager)
+- زر **الدخول عبر Google** في خانة تسجيل الدخول يفتح قائمة حسابات Google على الجهاز عبر Credential Manager. بعد اختيار الحساب يُسجَّل الدخول في تطبيق Firebase المسمّى `amer-live-store`، وهو نفسه الذي تستخدمه المزامنة، فتستمر المزامنة باسم الحساب.
+- أول دخول بحساب Google يُنشئ على الجهاز ملف عميل (Customer) باسم الحساب، والدخول التالي يفتح الملف نفسه. حساب المدير لا يُفتح عبر Google.
+- عند تسجيل الخروج يُنسى الحساب المختار، وتعود المزامنة إلى جلسة مجهولة.
+- رسائل الخطأ بالعربية: الإلغاء، وعدم وجود حساب Google على الجهاز، وانقطاع الاتصال، وعدم تفعيل الميزة في النسخة.
+
+### التفعيل (مرة واحدة)
+1. Firebase Console ← Authentication ← Sign-in method ← فعّل **Google**.
+2. انسخ **Web client ID** من إعدادات مزوّد Google نفسه (قسم Web SDK configuration)، وضعه في `.env` باسم `FIREBASE_WEB_CLIENT_ID`. في GitHub Actions يُقرأ من السر `FIREBASE_WEB_CLIENT_ID` إن وُجد. هذا معرّف عام وليس كلمة سر.
+3. Firebase Console ← Project settings ← تطبيق Android `com.aistudio.aicommerce.kpqzjx` ← أضف بصمتَي **SHA-1** لمفتاح التوقيع الثابت (`CN=Amer AI Store`) ولمفتاح الـ debug إن كنت تختبر نسخ debug. بدونهما ترفض Google إصدار الرمز.
+- ما دام `FIREBASE_WEB_CLIENT_ID` بقيمته المؤقتة `MY_FIREBASE_WEB_CLIENT_ID` يبقى الزر ظاهرًا، لكنه يعرض رسالة "تسجيل الدخول عبر Google غير مفعّل في هذه النسخة من التطبيق".

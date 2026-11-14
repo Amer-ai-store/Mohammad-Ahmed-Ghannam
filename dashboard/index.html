@@ -1,11 +1,28 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>مركز قيادة عامر</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./command-home.css">
+<link rel="stylesheet" href="./progress-board.css">
 <link rel="stylesheet" href="./live-execution.css">
+<link rel="stylesheet" href="./jawafa-investigation.css">
+<link rel="stylesheet" href="./jawafa-acceptance.css">
+<script src="./jawafa-readonly-kpis.js" defer></script>
+<script src="./jawafa-2100-frame-host.js" defer></script>
+<style>
+/* Give the JAWAFA ERP reference composition the full canvas only while its native route is selected. */
+body:has(#jawafa-2100-screen:not([hidden])) .shell{grid-template-columns:minmax(0,1fr)!important;min-height:0!important}
+body:has(#jawafa-2100-screen:not([hidden])) .sidebar,
+body:has(#jawafa-2100-screen:not([hidden])) .chips{display:none!important}
+body:has(#jawafa-2100-screen:not([hidden])) main#main{padding:0!important;min-height:0!important}
+#jawafa-2100-screen{max-width:none;width:100%;padding:0;margin:0;gap:0;min-height:0!important}
+#jawafa-2100-reference-frame{display:block;width:100%;height:clamp(250px,calc(56.25vw + 85px),950px);min-height:0;border:0;background:#061610;overflow:hidden}
+</style>
+
+
 <style>
 /* Layout: an operations console — fixed right sidebar of sections (chips on phones), one section visible at a time, summary first then detail. Dark-first like the ChatGPT original. */
 :root{
@@ -259,8 +276,61 @@ nav.side{gap:.5rem}
       <div id="nav-breadcrumb" class="nav-breadcrumb" role="status" aria-live="polite"></div>
       <div id="mode-banner" class="banner" hidden></div>
 
-      <!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
+<section class="view" data-view="jawafa-2100" id="jawafa-2100-screen" hidden aria-label="JAWAFA ERP AI — جوافة 2100">
+  <iframe id="jawafa-2100-reference-frame" src="./jawafa-2100-reference.html" title="جوافة 2100 — واجهة ERP المطابقة للصورة المرجعية باللون الأخضر" loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+</section>
+<!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->
 <section class="view" data-view="jawafa" aria-labelledby="h-jawafa" hidden>
+<section class="panel" id="jawafa-secure-kpis" aria-label="مؤشرات Jawafa_DB الخاصة عبر حساب user_read">
+  <div class="panel-head"><div>
+    <span class="eyebrow">JAWAFA DB · PRIVATE API · READ ONLY</span>
+    <h2>مؤشرات قاعدة جوافة — اتصال المالك المحمي</h2>
+    <p class="small muted">تعرض الشاشة النتائج فقط عند إثبات هوية user_read وتشفير TLS وتاريخ الاستعلام. لا تعرض أرقامًا افتراضية أو بيانات مالية في الصفحة العامة.</p>
+  </div><button type="button" id="jawafa-secure-kpis-refresh">التحقق من اتصال البيانات</button></div>
+  <p id="jawafa-secure-kpis-status" class="small muted" role="status" aria-live="polite">NOT_CONNECTED — بانتظار بوابة HTTPS خاصة مع صلاحيات قراءة فقط.</p>
+  <div class="grid3" aria-label="بيانات جوافة المتحققة">
+    <div class="kpi"><span class="label">المبيعات اليوم</span><strong class="value" data-sql-kpi="sales">—</strong></div>
+    <div class="kpi"><span class="label">المشتريات اليوم</span><strong class="value" data-sql-kpi="purchases">—</strong></div>
+    <div class="kpi"><span class="label">المخزون</span><strong class="value" data-sql-kpi="inventory">—</strong></div>
+    <div class="kpi"><span class="label">الذمم المستحقة</span><strong class="value" data-sql-kpi="payables">—</strong></div>
+    <div class="kpi"><span class="label">الشيكات تحت التحصيل</span><strong class="value" data-sql-kpi="postdated_cheques">—</strong></div>
+  </div>
+  <a class="btn" href="#jawafa-2100">فتح شاشة ERP 2100 الخضراء</a>
+</section>
+
+<section class="panel" id="jf-investigation" aria-labelledby="jf-title">
+ <div class="jf-head">
+  <div>
+   <span class="jf-kicker">JAWAFA · FORENSIC EVIDENCE CENTER · READ ONLY</span>
+   <h2 id="jf-title">مركز التحقيق المالي — التقارير والأدلة المرتبطة</h2>
+   <p class="jf-desc">سندات الأستاذ والشيكات والمشتريات والمردودات والمخزون والكاش في شاشة واحدة، مع حالة قبول كل نتيجة ومراجعها على Drive الخاص. البيانات الظاهرة هنا مؤشرات حالة وليست مستندات مالية مفتوحة للجمهور.</p>
+  </div>
+  <span class="jf-status" id="jf-release">النشر الإنتاجي مجمّد — Issue #102</span>
+ </div>
+ <div class="jf-actions">
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">السجل المالي الموحد في Drive — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">آخر تحقيق مستقل F91 — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">المردودات والضريبة F85 — مرجع خاص</span>
+  <button id="jf-reload" type="button">تحديث فهرس الأدلة</button>
+ </div>
+ <p class="jf-label" id="jf-load" aria-live="polite">جاري تحميل بيانات التحقيق المتحقق منها…</p>
+ <div id="jf-summary" class="jf-grid" aria-label="أهم نتائج التحقيق"><div class="jf-card">يجري تحميل المؤشرات</div></div>
+ <h3 class="jf-subheading">حالة التحقيقات ومسارات العمل</h3>
+ <div class="jf-track" id="jf-tracks" aria-label="مسارات التحقيق">بانتظار فهرس الأدلة...</div>
+ <div class="jf-head" style="margin-top:20px">
+   <div><h3 class="jf-subheading" style="margin:0">مكتبة تقارير التحقيق</h3><p class="jf-desc">الروابط تشير إلى ملفات Drive بصلاحياتها الأصلية؛ لا تُنشر تفاصيلها على GitHub Pages.</p></div>
+   <span id="jf-results-count" class="jf-label">بانتظار الفهرس</span>
+ </div>
+ <div id="jf-report-filters" class="jf-filter" role="group" aria-label="تصفية تقارير التحقيق"></div>
+ <div class="jf-table-scroll"><table aria-label="فهرس تقارير التحقيق">
+  <thead><tr><th>معرّف الدليل / التقرير</th><th>المجال والنتيجة</th><th>تاريخ المرجع</th><th>حالة المصدر</th><th>فتح</th></tr></thead>
+  <tbody id="jf-report-rows"><tr><td colspan="5">البيانات قيد القراءة من فهرس المصادر.</td></tr></tbody>
+ </table></div>
+ <h3 class="jf-subheading">المصادر والأرشيف الخاص</h3>
+ <div class="jf-actions" id="jf-evidence"></div>
+ <div class="jf-warning"><strong>حدود القبول:</strong> لا توجد خسارة مالية أو صرف مزدوج أو صلاحية مستخدم مثبتة دون كشف البنك الأصلي، والمستندات التجارية وسجل الصلاحيات. فهرس الأدلة ليس اتصال SQL حيًا. النشر الإنتاجي يتطلب فك التجميد وموافقة مستقلة وفق Issue #102.</div>
+ <p class="jf-foot" id="jf-source-note">التقرير متصل بفهرس ملفات ثابت ومراجَع؛ لا تنقل هذه الشاشة بيانات قاعدة الإنتاج.</p>
+</section>
 <section class="panel" id="jfc-crossproject" aria-label="نتائج التحقيق المالي عبر المشاريع" style="border:1px solid #365d51;background:linear-gradient(160deg,#162b23,#0e1d1a);margin:0 0 16px;padding:18px">
  <div class="panel-head"><div><span class="eyebrow">JAWAFA · CROSS-PROJECT FINANCIAL FORENSICS</span><h2>التحقيق الموحد: السيولة، العهدة، الشيكات، المطعم والمخبز</h2></div><span class="pill warn" id="jfc-state" role="status">تحميل النتائج...</span></div>
  <p class="muted small">أرقام الدفعة الأولى وحالة كل تحقيق مستمدة من مصادر متعددة. لا تنشر هذه اللوحة العامة مبالغ العهدة أو معلومات البنوك الحساسة. النتائج التفصيلية في Drive الخاص.</p>
@@ -275,15 +345,15 @@ nav.side{gap:.5rem}
  <p class="muted small" id="jfc-cash-updated">فحص معادلة الكاش قيد القراءة من المصدر</p>
  <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:580px"><thead><tr><th style="padding:10px;text-align:right">المسار</th><th style="padding:10px;text-align:right">الحالة</th><th style="padding:10px;text-align:right">النتيجة المثبتة والمتبقي</th></tr></thead><tbody id="jfc-rows"><tr><td colspan="3" style="padding:12px">بانتظار مصدر البيانات الموثق</td></tr></tbody></table></div>
  <div class="toolbar" style="margin-top:12px">
-  <a class="btn" href="https://drive.google.com/file/d/1APPSY5no07wsz3TBhcc8qsku3meCYKxt/view" target="_blank" rel="noopener noreferrer">فتح التقرير التفصيلي المعتمد في Drive الخاص</a>
-  <a class="btn" href="https://drive.google.com/file/d/1sSjwVwdXzXbg_FkCdOHtj_NbNOqAdN3d/view" target="_blank" rel="noopener noreferrer">تقرير آخر تصدير والتحقيق التفصيلي</a>
-  <a class="btn" href="https://drive.google.com/file/d/1PaxR4NskDvbOCjalO_M2giqkmLmKzu1U/view" target="_blank" rel="noopener noreferrer">تقرير استرداد السندات والأصول التاريخية</a>
-  <a class="btn" href="https://drive.google.com/file/d/1io_Hy7wgL9F7mi13oJ1j11lOkYYpNzIF/view" target="_blank" rel="noopener noreferrer">تقرير 31 أكتوبر للشيكات والكاش</a>
-  <a class="btn" href="https://drive.google.com/file/d/1H1t1H-joDHawF5Hf8FVsCWvh22B-WIr4/view" target="_blank" rel="noopener noreferrer">ملحق تحليل وظائف ترحيل الشيكات</a>
-  <a class="btn" href="https://drive.google.com/file/d/1Uy74SfEr2zCC41RvfKN5Ps-_Z7yDOlVi/view" target="_blank" rel="noopener noreferrer">نسخة التصدير الأحدث المؤكدة على Drive</a>
-  <a class="btn" href="https://drive.google.com/file/d/1GUyeYtBp1yILOYj5T5CwJIgmPVpV_e0V/view" target="_blank" rel="noopener noreferrer">حزمة الأدلة الخام الخاصة (ZIP)</a>
-  <a class="btn" href="https://drive.google.com/file/d/1z7EkbUAXMEAi-dJIJOpS8WWV3IugEZ4F/view" target="_blank" rel="noopener noreferrer">نسخة التصدير v5 على Drive الخاص</a>
-  <a class="btn" href="https://drive.google.com/drive/folders/129egLvg29jiNcEYtTQ4cG0XPz0zhpnpL" target="_blank" rel="noopener noreferrer">إثبات نقل الجداول الـ15</a>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">فتح التقرير التفصيلي المعتمد في Drive الخاص — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">تقرير آخر تصدير والتحقيق التفصيلي — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">تقرير استرداد السندات والأصول التاريخية — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">تقرير 31 أكتوبر للشيكات والكاش — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">ملحق تحليل وظائف ترحيل الشيكات — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">نسخة التصدير الأحدث المؤكدة على Drive — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">حزمة الأدلة الخام الخاصة (ZIP) — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">نسخة التصدير v5 على Drive الخاص — مرجع خاص</span>
+  <span class="muted small" title="المرجع متاح من خلال نظام خاص">إثبات نقل الجداول الـ15 — مرجع خاص</span>
   <a class="btn" href="#jawafa-tasks">متابعة المهام</a>
  </div>
  <p id="jfc-note" class="muted small" style="margin-top:10px">بيانات تاريخية وليست اتصالاً حيًا بكشف البنك أو SQL.</p>
@@ -291,7 +361,7 @@ nav.side{gap:.5rem}
 <section class="panel" id="trustsoft-handoff-entry" aria-label="TrustSoft handoff and read-only connector">
  <div class="panel-head"><div><span class="eyebrow">TRUSTSOFT · HANDOFF · READ ONLY</span><h2>استلام لوحة TrustSoft وربطها بمركز جوافة</h2></div><span class="pill warn">تسليم جزئي — قبول التشغيل غير مثبت</span></div>
  <p class="small muted">مرجع التسليم 29 أكتوبر 2026: موصل موقّع وقراءات تجريبية موثقة تاريخيًا. لا يُعد ذلك إثباتًا لاتصال الهاتف أو اكتمال اختبارات OCR أو دمج كود AppDeploy في هذا المستودع. لا تُعرض هنا بيانات مالية أو مفاتيح أو مستندات التحقيق الخاصة.</p>
- <div class="toolbar"><a class="btn" href="#jawafa-trustsoft">فتح TrustSoft داخل القيادة المركزية</a><a href="https://trustcontrol-jawafa-h3gws3.v2.appdeploy.ai/?v=1793080626996" target="_blank" rel="noopener noreferrer">مرجع لوحة التسليم السابقة</a><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57" target="_blank" rel="noopener noreferrer">متابعة أدلة القبول</a></div>
+ <div class="toolbar"><a class="btn" href="./appdeploy-modules.html">الوحدات الموحّدة: جوافة وTrustSoft وAmer AI Store</a><a class="btn" href="#jawafa-trustsoft">فتح TrustSoft داخل القيادة المركزية</a><a href="https://trustcontrol-jawafa-h3gws3.v2.appdeploy.ai/?v=1793080626996" target="_blank" rel="noopener noreferrer">مرجع لوحة التسليم السابقة</a><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57" target="_blank" rel="noopener noreferrer">متابعة أدلة القبول</a></div>
  <details id="trustsoft-features"><summary>عرض أقسام TrustSoft العشرة ووظائفها</summary>
  <div class="toolbar"><a href="https://trustcontrol-jawafa-h3gws3.v2.appdeploy.ai/" target="_blank" rel="noopener noreferrer">فتح الوظائف الأصلية مع تسجيل الدخول</a></div>
  <ul>
@@ -315,6 +385,7 @@ nav.side{gap:.5rem}
   <p class="small muted">أقسام الاستمرارية والمراقبة والتصدير والمهام معروضة داخل هذه الصفحة، دون إطارات أو لوحة منفصلة. تعرض اللقطة التاريخية بتاريخها عند تعذر المصدر الحي، ولا تُعد اتصالًا مباشرًا بقاعدة Jawafa_DB.</p>
   <div class="toolbar">
     <a href="#jawafa-monitor" class="btn">مراقبة الخادم</a>
+    <a href="./release-evidence/index.html" class="btn" target="_self">مصفوفة أدلة النشر والقبول</a>
     <a href="#jawafa-export" class="btn">التصدير</a>
     <a href="#jawafa-backups" class="btn">النسخ والاستعادة</a>
     <a href="#jawafa-tasks" class="btn">المهام</a>
@@ -427,9 +498,91 @@ nav.side{gap:.5rem}
 <section class="view" data-view="jawafa-investigations" aria-labelledby="h-jawafa-investigations" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-investigations">التحقيقات القضائية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-investigations">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-investigations">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-investigations">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-investigations"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<style>
+/* CCA999 visual journey: public metadata; unknown phases never look completed. */
+#cca999-flow-journeys{display:grid;gap:1rem;margin-top:.9rem}
+.cca999-journey-card{border:1px solid var(--line);border-radius:12px;padding:1rem;background:var(--surface-2)}
+.cca999-journey-card h3{margin:0 0 .5rem;font-size:1rem}
+.cca999-journey-stages{list-style:none;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.35rem;margin:1rem 0;padding:0}
+.cca999-stage{display:flex;flex-direction:column;gap:.2rem;min-width:0;padding:.7rem .45rem;border-radius:9px;border:1px dashed var(--line);background:var(--surface);position:relative}
+.cca999-stage:not(:last-child)::after{content:"◀";position:absolute;left:-.44rem;top:35%;color:var(--muted);z-index:1}
+.cca999-stage strong{font-size:.84rem;overflow-wrap:anywhere}
+.cca999-stage a{font-size:.75rem;overflow-wrap:anywhere}
+.cca999-stage-verified{border:1px solid var(--ok);background:var(--ok-soft)}
+.cca999-stage-unverified{opacity:.73}
+@media(max-width:800px){.cca999-journey-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.cca999-stage::after{display:none}}
+@media(max-width:380px){.cca999-journey-stages{grid-template-columns:1fr}}
+</style>
+<section class="view" data-view="cca999-task-flow" aria-labelledby="h-cca999-task-flow" hidden>
+<div class="view-head"><div><span class="eyebrow">CCA999 · TASK HANDOFF MONITOR · PUBLIC METADATA ONLY</span><h1 id="h-cca999-task-flow">انتقال المهام والاستجابة — 999 CCA N1</h1><p class="muted">لوحة فرعية داخل القيادة المركزية، تقرأ تعليقات التنسيق العامة دون الوصول إلى بيانات جوافة المالية أو محادثات ChatGPT الخاصة.</p></div></div>
+<div class="panel">
+<div class="toolbar"><button type="button" id="cca999-flow-refresh">تحديث من سجل المراسلات</button><a href="#project-messages" class="btn">مركز المراسلات</a><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/168" target="_blank" rel="noopener noreferrer">سجل GitHub العام</a></div>
+<p id="cca999-flow-status" role="status" aria-live="polite" class="muted">لم تُجلب الحالة بعد.</p>
+<div id="cca999-flow-summary" class="toolbar" aria-label="ملخص حالات التسليم"></div>
+<div class="table-wrap" id="cca999-flow-table" aria-label="جدول انتقال المهام"></div>
+<h2>مسار المهمة من الإرسال حتى إثبات التنفيذ</h2>
+<div id="cca999-flow-journeys" aria-label="مراحل انتقال المهام والتحقق"></div>
+<p class="small muted">SENT: وجود تعليق أصلي. RESPONSE: تعليق رد مرتبط بمعرّف المهمة مع هوية دردشة غير مثبتة. DELIVERED / READ / ACKNOWLEDGED / EXECUTED: تتطلب أدلة مستقلة ولا تُستنتج من GitHub العام.</p>
+<div class="panel" aria-label="وكيل المراسلات API">
+<h2>وكيل المراسلات API — استلام وتنظيم وإثبات الرد</h2>
+<p>خدمة مستقلة بصلاحيات محددة لكل محادثة. تختبر هذه البطاقة جاهزية API وقاعدة البيانات فقط؛ لا ترسل الرسائل أو تزعم تسليمها إلى دردشات ChatGPT.</p>
+<div class="toolbar"><button type="button" id="cca999-agent-api-refresh">فحص اتصال API الآن</button>
+<a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/blob/main/docs/cca999-message-agent.md" target="_blank" rel="noopener noreferrer">تعليمات ربط الوكلاء والردود</a></div>
+<p id="cca999-agent-api-status" class="muted" role="status" aria-live="polite">لم يُفحص اتصال API بعد.</p>
+</div>
+</div>
+</section>
+<section class="view" data-view="project-messages" aria-labelledby="h-project-messages" hidden>
+  <div class="view-head"><div><span class="eyebrow">AMER · DISPATCHER-TO-DISPATCHER ONLY</span><h1 id="h-project-messages">ربط موزّعي المهام</h1><p>موزع المهام 1 (التقرير النهائي) ↔ موزع المهام 2 (gpt). كل موزّع يوزع الطلبات داخليًا على وكلاء مشروعه.</p></div></div>
+  <div class="panel">
+    <h2>ربط محادثتين فقط</h2>
+    <form id="pm-links-form" style="display:grid;gap:.85rem;max-width:850px">
+      <label>ربط محادثة 1 — موزع المهام 1 (التقرير النهائي)
+        <input id="pm-chat-one" name="dispatcher_one" type="url" autocomplete="off" required placeholder="https://chatgpt.com/.../c/...">
+      </label>
+      <label>ربط محادثة 2 — موزع المهام 2 (gpt)
+        <input id="pm-chat-two" name="dispatcher_two" type="url" autocomplete="off" required placeholder="https://chatgpt.com/.../c/...">
+      </label>
+      <button type="submit" class="button">حفظ ربط المحادثتين</button>
+    </form>
+    <p class="small muted" id="pm-links-status" role="status" aria-live="polite">الروابط تُحفظ على جهازك فقط، ولا تُنشر على GitHub.</p>
+    <div id="pm-chat-links" class="small"></div>
+  </div>
+  <div class="panel">
+    <h2>تنسيق مباشر بين الموزّعين</h2>
+    <p class="small muted">أنشئ أمرًا لإرساله من محادثة الموزع المختار عبر GitHub Issue #168. الرسالة لا تنتقل إلى ChatGPT تلقائيًا من هذه الصفحة؛ يتولى الموزّع المستلم توزيعها على وكلاء مشروعه.</p>
+    <form id="pm-compose" style="display:grid;gap:.85rem;max-width:850px">
+      <label>الموضوع <input name="subject" maxlength="160" required placeholder="موضوع التنسيق"></label>
+      <label>نص التنسيق غير الحساس <textarea name="body" rows="3" maxlength="500" required placeholder="رسالة تنسيق فقط، دون بيانات مالية أو أسرار أو روابط خاصة"></textarea></label>
+      <div class="row" style="display:flex;gap:.8rem;flex-wrap:wrap">
+        <button type="submit" id="pm-send-one" value="1to2" class="button">من موزع 1 إلى موزع 2</button>
+        <button type="submit" id="pm-send-two" value="2to1" class="button">من موزع 2 إلى موزع 1</button>
+      </div>
+    </form>
+    <textarea id="pm-output" rows="8" hidden readonly aria-label="أمر الإرسال الجاهز للنسخ" style="width:100%;margin-top:1rem"></textarea>
+  </div>
+  <div class="panel">
+    <h2>دليل المراسلات بين الموزّعين</h2>
+    <p class="small muted">صندوق GitHub #168 عام: التنسيق غير الحساس فقط. تعليق GitHub يثبت SENT إلى الصندوق؛ ولا يثبت استلام محادثة ChatGPT أو قراءتها دون ACK مستقل.</p>
+    <p><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/168" target="_blank" rel="noopener noreferrer">فتح صندوق المراسلات</a></p>
+    <button type="button" class="button" id="pm-refresh">تحديث دليل التعليقات</button>
+    <p id="pm-status" class="muted small" role="status" aria-live="polite">لم يتم فحص سجل GitHub بعد.</p>
+    <div id="pm-list" aria-live="polite"></div>
+  </div>
+</section>
+<section class="view" data-view="jawafa-acceptance" aria-labelledby="h-jawafa-acceptance" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · CENTRAL ACCEPTANCE · EVIDENCE-GATED</span><h1 id="h-jawafa-acceptance">متابعة إكمال واعتماد لوحة جوافة المركزية</h1><p>فحص الحالة العامة وPreview والإنتاج والمصادقة والتقارير والأوامر والهاتف، مع بقاء القبول الأمني والمالي مستقلًا.</p></div><span class="pill warn">PRODUCTION NOT ACCEPTED</span></div>
+<div id="jawafa-acceptance-root"></div>
+</section>
+<section class="view" data-view="release-verification" aria-labelledby="h-release-verification" hidden><div class="view-head"><div><span class="eyebrow">AMER · RELEASE EVIDENCE</span><h1 id="h-release-verification">التحقق والإصدارات</h1><p>طلبات السحب وعمليات GitHub Actions وبوابات القبول في اللوحة المركزية.</p></div></div><div class="panel" id="central-dashboard-run-proof"><h2>مرجع نشر لوحة القيادة المركزية المثبت</h2><p><a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/41757350444" target="_blank" rel="noopener noreferrer" data-release-proof="41757350444">Run #41757350444 — GitHub Pages: نجاح النشر والتحقق الحي (4 نوفمبر 2026)</a></p><p class="muted">مرجع للواجهة العامة فقط؛ لا يعني اكتمال قبول GATE-15 أو نشر PR #148.</p></div><section class="panel" id="central-transfer-audit-root" aria-label="التحقق من نقل اللوحات والوكلاء والوظائف"><h2>مطابقة نقل اللوحات والوكلاء والوظائف</h2><p class="muted">ستظهر نتيجة التحقق من ملفات النشر والمصادر وحالة اتصال الخدمات بصورة منفصلة.</p></section><p><a href="#jawafa-acceptance">فتح مصفوفة قبول جوافة ومتابعة Security / QA</a></p><div id="release-verification-root"></div></section>
+<section class="view" data-view="jawafa-forensic-workspace" aria-labelledby="h-jawafa-forensic-workspace" hidden>
+<div class="view-head"><div><span class="eyebrow">JAWAFA · FORENSIC INVESTIGATION · OWNER-ONLY DETAIL</span><h1 id="h-jawafa-forensic-workspace">مساحة التحقيق الموسع — الأدلة والقرائن</h1>
+<p class="muted small">محاور عامة غير حساسة على اللوحة؛ التفاصيل القانونية والمالية في ملف المالك الخاص، وقراءة المصدر لا تتم إلا عبر HTTPS ومصادقة مستقلة.</p></div><span class="pill warn">SOURCE_VERIFICATION_REQUIRED</span></div>
+<div class="panel" id="jawafa-forensic-workspace-root"><p class="muted">تُحمّل أولويات التحقيق وسجل إحالة المدير دون نشر تفاصيل المستندات.</p></div>
+</section>
 <section class="view" data-view="jawafa-agents" aria-labelledby="h-jawafa-agents" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-agents">مجلس CFO / CPO / GM</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-agents">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-agents">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-agents">NOT_CONNECTED</span></div>
-<div class="panel" data-jawafa-pane="jawafa-agents"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
+<p><a class="button" href="#release-verification">فتح مركز التحقق والإصدارات</a></p><div class="panel" data-jawafa-pane="jawafa-agents"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
 <section class="view" data-view="jawafa-commands" aria-labelledby="h-jawafa-commands" hidden>
 <div class="view-head"><div><span class="eyebrow">JAWAFA · UNIFIED COMMAND · FORENSIC READ ONLY</span><h1 id="h-jawafa-commands">الأوامر التنفيذية</h1><p class="muted small">المصدر: <span data-jawafa-source="jawafa-commands">مرجع تاريخي — لم يُعتمد مصدر حي</span> · آخر تحديث: <span data-jawafa-updated="jawafa-commands">غير متوفر</span></p></div><span class="pill warn" data-jawafa-status="jawafa-commands">NOT_CONNECTED</span></div>
 <div class="panel" data-jawafa-pane="jawafa-commands"><p class="muted">سجل تشغيل جوافة مستقل عن البيانات الأصلية. لا توجد بيانات SQL متصلة بهذه الواجهة حتى اجتياز اختبارات مصدر القراءة.</p></div></section>
@@ -502,8 +655,8 @@ nav.side{gap:.5rem}
   <h3>الإصلاحات التي تم التحقق منها</h3>
   <p class="small">تصحيح 11 علامة إنجاز غير مثبتة في Issue #57. ثم تحقق مستقل من 515 ملف v5: تطابقت جميع بصمات SHA-256 والأحجام، وانتهى العمال الثلاثة. بقي ملف v4 دون manifest نهائي، وظهر فرق صفين بين فهرس التصدير وCSV في جدول واحد؛ السبب غير مثبت. اتحاد أسماء v4/v5 يغطي 1,024 اسمًا فقط، ولا يثبت اكتمال البيانات أو قبول GATE-15. الساعة غير متزامنة، ومراجعات الوصول الأمني والتسليم مفتوحة.</p>
   <div class="toolbar">
-    <a class="btn" href="https://docs.google.com/document/d/1iXcukurqJRDPflVlf1ifdCKqvvDf_wupxLbY_OUOLzk/edit" target="_blank" rel="noopener noreferrer">التقرير الكامل: الأعطال والأولويات (صلاحية خاصة)</a>
-    <a class="btn" href="https://docs.google.com/document/d/1NGg_i1ZzQ0rj6XSLr4yEbx3bJXC06wtR4B62gB8bRTY/edit" target="_blank" rel="noopener noreferrer">التقرير الكامل: الإصلاحات والأدلة (صلاحية خاصة)</a>
+    <span class="muted small" title="المرجع متاح من خلال نظام خاص">التقرير الكامل: الأعطال والأولويات (صلاحية خاصة) — مرجع خاص</span>
+    <span class="muted small" title="المرجع متاح من خلال نظام خاص">التقرير الكامل: الإصلاحات والأدلة (صلاحية خاصة) — مرجع خاص</span>
     <a class="btn" href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/57" target="_blank" rel="noopener noreferrer">سجل القبول على GitHub</a>
   </div>
   <p class="small muted">هذه الواجهة العامة لا تحتوي على تفاصيل الحسابات، عناوين الخوادم الداخلية، بيانات الشيكات، الأدلة الخام، أو أسرار الاتصال. لا تعديل على Jawafa_DB.</p>
@@ -524,6 +677,71 @@ nav.side{gap:.5rem}
       </section>
 
       <section class="view command-home" data-view="home" aria-labelledby="h-home" data-density="comfortable" data-edit-layout="false">
+        <section id="central-progress-board" aria-labelledby="cpb-heading">
+          <div class="cpb-head">
+            <div>
+              <h2 id="cpb-heading">نسبة الإنجاز والعمل الجاري والنتائج الإجمالية</h2>
+              <div class="cpb-note" data-progress-date>جارٍ قراءة تاريخ آخر تحديث موثق...</div>
+            </div>
+            <button type="button" data-progress-refresh>تحديث لقطة المؤشرات</button>
+          </div>
+          <p class="cpb-note" role="status" aria-live="polite" data-progress-state>جارٍ تحميل مؤشرات التحقق...</p>
+          <div class="cpb-two">
+            <div class="cpb-column">
+              <span>التقدم التحليلي التقديري</span>
+              <strong class="cpb-big" data-progress-percent>—</strong>
+              <progress data-progress-bar max="100" aria-label="نسبة التقدم التحليلي التقديرية"></progress>
+              <p class="cpb-note" data-progress-basis>لا يتم افتراض اكتمال دون سند.</p>
+              <p><strong>الوحدات المقبولة وفق شرط 90%:</strong> <span data-progress-acceptance>—</span></p>
+            </div>
+            <div class="cpb-column">
+              <h3>يجري العمل حاليًا</h3>
+              <ul data-progress-items><li>لا توجد بيانات عمل موثقة محمّلة.</li></ul>
+            </div>
+          </div>
+          <h3>النتائج الإجمالية المثبتة من آخر دورة</h3>
+          <div class="cpb-metrics" data-progress-totals><p class="cpb-note">لا توجد مؤشرات حديثة محمّلة.</p></div>
+          <p class="cpb-note" data-progress-safety>لا تُعرض بيانات مالية تفصيلية في اللوحة العامة.</p>
+          <section id="central-agent-live" class="cpb-agent-panel" aria-labelledby="cpb-agent-title">
+            <div class="cpb-head">
+              <div><h3 id="cpb-agent-title">الوكيل أثناء تنفيذ المهام — عرض مباشر موثّق</h3>
+                <p class="cpb-note">عرض بصري لنشاط GitHub Actions الفعلي، لا بث كاميرا ولا تشغيل افتراضي لوكلاء ChatGPT.</p>
+              </div>
+              <button type="button" data-agent-refresh>فحص النشاط الآن</button>
+            </div>
+            <div class="cpb-agent-stage">
+              <div class="cpb-agent-avatar" data-agent-emblem role="img" aria-label="حالة نشاط منفذ GitHub">
+                <span class="cpb-agent-head" aria-hidden="true"><i></i><i></i></span>
+                <span class="cpb-agent-body" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="cpb-agent-pulse" aria-hidden="true"></span>
+              </div>
+              <div>
+                <strong class="cpb-agent-number" data-agent-running-count>—</strong>
+                <span>عمليات GitHub تعمل حاليًا</span>
+                <p class="cpb-note" data-agent-last-check>بانتظار الاتصال...</p>
+                <p role="status" aria-live="polite" data-agent-status>جارٍ فحص النشاط الحقيقي...</p>
+              </div>
+            </div>
+            <div class="cpb-agent-columns">
+              <div><h4>المهام الجارية وأحدث النتائج</h4><div data-agent-runs class="cpb-agent-runs"></div></div>
+              <div><h4>ما الذي ينفّذه الوكيل الآن؟</h4>
+                <div data-agent-detail class="cpb-agent-detail"><p class="cpb-note">اختر تشغيلًا موثقًا لعرض خطواته.</p></div>
+              </div>
+            </div>
+            <p class="cpb-note">تُفحص الحالات مباشرة عند الفتح، ثم كل 3 دقائق أثناء عرض الصفحة. عند توقف الاتصال تتوقف الحركة ويُعرض «غير مثبت» بدل الادعاء بالتنفيذ. لا تُعرض بيانات مالية أو سجلات تنفيذ حساسة.</p>
+          </section>
+          <section class="cpb-workflow" aria-labelledby="cpb-workflow-title">
+            <div class="cpb-head"><div>
+              <h3 id="cpb-workflow-title">مخطط مكان ومسار العمل</h3>
+              <p class="cpb-note">اختر مرحلة لعرض سبب حالتها ومصدر الإثبات. تدفق البيانات المالية لقطة مؤرخة؛ حالات PR تُفحص مباشرة من GitHub.</p>
+            </div><button type="button" data-workflow-refresh>فحص المسار والطلبات الآن</button></div>
+            <p class="cpb-note" role="status" aria-live="polite" data-workflow-connection>جارٍ تحميل مسار العمل...</p>
+            <div class="cpb-flow-track" data-workflow-map aria-label="خريطة مراحل التدقيق"></div>
+            <div class="cpb-workflow-detail" data-workflow-details aria-live="polite"></div>
+            <div class="cpb-github-live" data-workflow-github aria-label="حالة طلبات الدمج على GitHub">جارٍ الاتصال...</div>
+          </section>
+          <div class="cpb-links" data-progress-evidence aria-label="روابط أدلة التحقق"></div>
+        </section>
         <header class="command-hero">
           <div>
             <div class="command-kicker"><span>JAWAFA · AMER AI STORE</span><span aria-hidden="true">/</span><span>UNIFIED COMMAND CENTER</span></div>
@@ -536,22 +754,29 @@ nav.side{gap:.5rem}
             <button type="button" data-action="new-task">إنشاء مهمة تنفيذية</button>
           </div>
         </header>
+        <section class="panel" id="central-dashboard-release-pin" aria-labelledby="central-dashboard-release-pin-title">
+          <h2 id="central-dashboard-release-pin-title">لوحة القيادة والتحكم المركزية الوحيدة — مرجع النشر المثبت</h2>
+          <p>العنوان المعتمد لفتح لوحة القيادة: <a href="https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/" target="_blank" rel="noopener noreferrer">لوحة Amer AI Store / Jawafa المركزية</a>.</p>
+          <p>سجل إثبات النشر الذي حدده المالك: <a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/actions/runs/41757350444" target="_blank" rel="noopener noreferrer" data-canonical-dashboard-run="41757350444">GitHub Actions — Run #41757350444</a> · 4 نوفمبر 2026 · نتيجة التشغيل: نجاح · SHA: <code>13533114082f4f365d4658285766fc58903f86e2</code>.</p>
+          <p class="muted small">هذا الرابط سجل إثبات نشر GitHub Pages للواجهة العامة فقط، وليس رابط فتح اللوحة أو دليل قبول الاتصال المالي الحي أو دمج PR #148. لا يُنشر أي مصدر مالي خاص من هذه الشاشة.</p>
+          <p><a href="#release-verification">عرض عمليات GitHub Actions ومصفوفة نقل اللوحات والوكلاء وبوابات القبول في اللوحة</a></p>
+        </section>
         <div class="command-section-heading"><h2>مناطق العمل الرئيسية</h2><p>اختر الوظيفة، أو خصص ترتيب البطاقات أدناه.</p></div>
         <section id="command-zones" class="command-zones" aria-label="مناطق العمل المقسّمة">
           <article class="command-zone" data-zone="workbench">
             <div class="command-zone-head"><span class="command-zone-symbol">⌘</span><span class="command-zone-label">بيئة التطبيق</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة بيئة التطبيق">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة بيئة التطبيق">↓</button></span></div>
             <h3>استوديو تطوير لُقطة</h3><p>تعديل المظهر والإعدادات، إدارة طلبات تطوير الشاشات، ومتابعة حالة الجسر التشغيلي من نفس الجلسة.</p>
-            <div class="command-zone-links"><a href="#luqta/workspace">فتح الاستوديو</a><a href="#luqta/appearance">تعديل التصميم</a><a href="#luqta/agents">مهام المطورين</a></div>
+            <div class="command-zone-links"><a href="#luqta/workspace">فتح الاستوديو</a><a href="#luqta/appearance">تعديل التصميم</a><a href="#luqta/agents">مهام المطورين</a><a href="#luqta/features">إدارة المشروع (125 ميزة)</a></div>
           </article>
           <article class="command-zone" data-zone="commerce">
             <div class="command-zone-head"><span class="command-zone-symbol">▤</span><span class="command-zone-label">التجارة</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة المتجر">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة المتجر">↓</button></span></div>
             <h3>المتجر والطلبات</h3><p>إدارة الكتالوج والطلبات والعملاء والتوصيل، من خلال API محمي يتطلب تسجيل دخول المدير.</p>
-            <div class="command-zone-links"><a href="#luqta/products">الأصناف</a><a href="#luqta/orders">الطلبات</a><a href="#luqta/users">العملاء</a></div>
+            <div class="command-zone-links"><a href="#luqta/products">الأصناف</a><a href="#luqta/orders">الطلبات</a><a href="#luqta/users">العملاء</a><a href="#luqta/reports">التقارير</a><a href="#luqta/vendors">البائعون</a><a href="#luqta/chats">محادثات الدعم</a></div>
           </article>
           <article class="command-zone" data-zone="inventory">
             <div class="command-zone-head"><span class="command-zone-symbol">≋</span><span class="command-zone-label">البيانات</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة المخزون">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة المخزون">↓</button></span></div>
             <h3>مخزون جوافة والعروض</h3><p>فحص مصدر جوافة بالقراءة فقط، معاينة الأصناف والعائلات، ثم اعتماد العروض والكميات بعد مطابقة المصدر.</p>
-            <div class="command-zone-links"><a href="#luqta/inventory">المخزون</a><a href="#luqta/offers">العروض</a><a href="#jawafa-receiving">الاستلام</a></div>
+            <div class="command-zone-links"><a href="#luqta/inventory">المخزون</a><a href="#luqta/offers">العروض</a><a href="#jawafa-receiving">الاستلام</a><a href="#luqta/sync">المزامنة المركزية</a><a href="#luqta/branches">الفروع</a><a href="#luqta/exports">التصدير</a></div>
           </article>
           <article class="command-zone" data-zone="investigation">
             <div class="command-zone-head"><span class="command-zone-symbol">◎</span><span class="command-zone-label">التحقيق المالي</span><span class="command-zone-moves"><button type="button" data-zone-move="up" aria-label="رفع بطاقة التحقيق">↑</button><button type="button" data-zone-move="down" aria-label="خفض بطاقة التحقيق">↓</button></span></div>
@@ -836,7 +1061,7 @@ nav.side{gap:.5rem}
           <h3>الاتصال بجوجل درايف — مصدر بيانات بديل للخادم</h3>
           <p class="small muted">استخدم Google OAuth بحساب مخوّل وبصلاحية قراءة فقط. مفتاح API وحده لا يتيح الوصول إلى ملفات Drive الخاصة؛ يُحفظ رمز OAuth في خدمة خلفية محمية، وليس في هذه الصفحة.</p>
           <div class="toolbar">
-            <a class="btn" href="https://drive.google.com/drive/folders/1X9MuorGVaaAwolc25_MG4kgKQGPiWard" target="_blank" rel="noopener noreferrer">فتح مجلد Jawafa_DB_Exports</a>
+            <span class="muted small" title="المرجع متاح من خلال نظام خاص">فتح مجلد Jawafa_DB_Exports — مرجع خاص</span>
             <button type="button" id="jawafa-drive-check">فحص اتصال وكيل Drive</button>
             <button type="button" id="jawafa-drive-import" disabled>استيراد وتنظيم الجداول — بعد التحقق</button>
           </div>
@@ -873,6 +1098,94 @@ nav.side{gap:.5rem}
           <label class="field">الفرع الافتراضي<input id="set-branch" type="text" class="ltr" maxlength="120"></label>
           <div class="toolbar"><button class="primary" type="submit" data-write>حفظ الإعدادات</button></div>
         </form>
+        <section class="panel" id="owner-security-root" aria-labelledby="owner-security-heading">
+          <h2 id="owner-security-heading">أمان حساب المالك — تسجيل موحّد وتغيير كلمة المرور</h2>
+          <p class="small muted">المعرّف الإداري المعروض: <strong>admin</strong> (اسم عرض فقط، وليس كلمة مرور أو تصريحًا تلقائيًا). سجّل الدخول مرة واحدة إلى Firebase بحساب Google المعتمد؛ تُعاد الاستفادة من الجلسة داخل شاشات اللوحة نفسها.</p>
+          <p id="owner-sso-status" role="status" aria-live="polite">جارٍ فحص حالة المصادقة...</p>
+          <p>الحساب المتصل: <span id="owner-sso-email" class="ltr">—</span></p>
+          <div class="toolbar">
+            <button type="button" id="owner-sso-login" class="primary">دخول المالك عبر Google</button>
+            <button type="button" id="owner-sso-logout" hidden>تسجيل الخروج من جميع شاشات هذه اللوحة</button>
+          </div>
+          <form id="owner-email-signin-form" autocomplete="off">
+            <h3>تسجيل دخول واحد بالبريد وكلمة المرور (للحسابات المفعّلة في Firebase)</h3>
+            <label class="field">بريد الحساب المعتمد
+              <input type="email" name="owner-login-email" autocomplete="username" maxlength="160" required>
+            </label>
+            <label class="field">كلمة مرور Firebase الحالية
+              <input type="password" name="owner-login-password" autocomplete="current-password" required>
+            </label>
+            <button class="primary" type="submit">تسجيل الدخول لجميع شاشات اللوحة</button>
+          </form>
+          <form id="owner-phone-signin-form" autocomplete="off">
+            <h3>تسجيل الدخول برقم الهاتف ورمز SMS</h3>
+            <p class="small muted">يُختار مفتاح الدولة تلقائيًا حسب لغة الجهاز عند الإمكان، ويمكن تغييره يدويًا. لا ترسل رمز SMS في المحادثة.</p>
+            <label class="field" for="owner-country-code">الدولة ومفتاح الاتصال
+              <select id="owner-country-code" name="owner-country-code" autocomplete="tel-country-code" required>
+                <option value="+962" data-region="JO">الأردن (+962)</option>
+                <option value="+970" data-region="PS">فلسطين (+970)</option>
+                <option value="+966" data-region="SA">السعودية (+966)</option>
+                <option value="+971" data-region="AE">الإمارات (+971)</option>
+                <option value="+965" data-region="KW">الكويت (+965)</option>
+                <option value="+974" data-region="QA">قطر (+974)</option>
+                <option value="+973" data-region="BH">البحرين (+973)</option>
+                <option value="+968" data-region="OM">عُمان (+968)</option>
+                <option value="+20" data-region="EG">مصر (+20)</option>
+                <option value="+964" data-region="IQ">العراق (+964)</option>
+                <option value="+963" data-region="SY">سوريا (+963)</option>
+                <option value="+961" data-region="LB">لبنان (+961)</option>
+                <option value="+967" data-region="YE">اليمن (+967)</option>
+                <option value="+218" data-region="LY">ليبيا (+218)</option>
+                <option value="+216" data-region="TN">تونس (+216)</option>
+                <option value="+213" data-region="DZ">الجزائر (+213)</option>
+                <option value="+212" data-region="MA">المغرب (+212)</option>
+                <option value="+249" data-region="SD">السودان (+249)</option>
+                <option value="+90" data-region="TR">تركيا (+90)</option>
+                <option value="+44" data-region="GB">المملكة المتحدة (+44)</option>
+                <option value="+1" data-region="US">الولايات المتحدة (+1)</option>
+                <option value="+1" data-region="CA">كندا (+1)</option>
+                <option value="+49" data-region="DE">ألمانيا (+49)</option>
+                <option value="+33" data-region="FR">فرنسا (+33)</option>
+                <option value="+39" data-region="IT">إيطاليا (+39)</option>
+                <option value="+91" data-region="IN">الهند (+91)</option>
+              </select>
+            </label>
+            <p id="owner-country-detection" class="small muted" role="status">الأردن (+962) هو الخيار الافتراضي حتى يتحدد إعداد لغة الجهاز.</p>
+            <label class="field" for="owner-phone-number">رقم الهاتف المحلي
+              <input id="owner-phone-number" type="tel" name="owner-phone-number" autocomplete="tel-national" inputmode="tel" placeholder="07XXXXXXXX" maxlength="24" required>
+            </label>
+            <p class="small muted">الخطوة 1: اضغط «تحضير التحقق»، ثم أكمل مربع «أنا لست روبوتًا» الذي سيظهر هنا. الخطوة 2: بعد اكتمال التحقق اضغط «إرسال SMS الآن». لن يبقى الزر في تحميل غير محدود.</p>
+            <div id="owner-phone-recaptcha" aria-label="التحقق من عدم استخدام روبوت"></div>
+            <p id="owner-phone-status" class="small" role="status" aria-live="polite">لم يُرسل رمز SMS بعد. تحقّق من رقمك ومفتاح الدولة.</p>
+            <button type="submit" class="primary">تحضير التحقق وإرسال رمز SMS</button>
+          </form>
+          <form id="owner-phone-confirm-form" autocomplete="off" hidden>
+            <h3>التحقق من رمز SMS</h3>
+            <label class="field" for="owner-sms-code">الرمز الذي وصل إلى هاتفك
+              <input id="owner-sms-code" name="owner-sms-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required>
+            </label>
+            <button type="submit" class="primary">تأكيد الرمز والدخول</button>
+          </form>
+          <p class="small muted">الحساب الجديد يُعامل كمستخدم عادي، بصلاحية النظرة العامة فقط بعد اعتماد صلاحيات الخادم. لا تُمنح ملكية النظام تلقائيًا لأول شخص يدخل رقم هاتفه؛ يلزم اعتماد رقم المالك من حساب إداري موثوق.</p>
+          <form id="owner-password-form" autocomplete="off" hidden>
+            <h3>تغيير كلمة مرور حساب Firebase بالبريد وكلمة المرور</h3>
+            <p class="small muted">يتطلب إدخال كلمة المرور الحالية لإعادة إثبات الهوية. لن تُحفَظ كلمات المرور في اللوحة أو GitHub.</p>
+            <label class="field">كلمة المرور الحالية
+              <input type="password" name="current-password" autocomplete="current-password" required>
+            </label>
+            <label class="field">كلمة المرور الجديدة (14 محرفًا على الأقل)
+              <input type="password" name="new-password" autocomplete="new-password" minlength="14" required>
+            </label>
+            <label class="field">تأكيد كلمة المرور الجديدة
+              <input type="password" name="confirm-password" autocomplete="new-password" minlength="14" required>
+            </label>
+            <button class="primary" type="submit">تغيير كلمة المرور والتحقق من التنفيذ</button>
+          </form>
+          <a id="owner-google-security" class="btn" href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" hidden>تغيير كلمة مرور حساب Google من صفحة الأمان الرسمية</a>
+          <p id="owner-password-result" role="status" aria-live="polite"></p>
+          <p class="small muted">شاشات القيادة وجوافة ضمن هذا الموقع تعيد استخدام جلسة Firebase نفسها، وتجدد الرمز عند الطلب. لا تُخزَّن كلمة مرور SQL أو يُنشر رمز الدخول.</p>
+          <p class="small muted">حالة الربط بين النطاقات: جسر AAS الخاص وبوابة TrustSoft يحتاجان اعتماد الخادم للتحقق من Firebase قبل إلغاء شاشة الدخول المنفصلة. هذا الربط لم يُقبل إنتاجيًا بعد. <a href="https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/219" target="_blank" rel="noopener noreferrer">متابعة الربط الموحد الآمن #219</a>.</p>
+        </section>
       </section>
     </main>
   </div>
@@ -887,6 +1200,7 @@ nav.side{gap:.5rem}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="firebase-config.js"></script>
+<script src="owner-auth.js"></script>
 <script src="./aman-monitor/host-integration.js" defer></script>
 <script src="./trustsoft/host-integration.js" defer></script>
 <script>
@@ -930,7 +1244,7 @@ nav.side{gap:.5rem}
   const NAV = [
     ["القيادة والمشاريع", [
       ["home","نظرة عامة"],["tasks","المهام","tasks"],["stages","مراحل التنفيذ","stages"],
-      ["workspaces","مساحات العمل","workspaces"],["map","الهيكل وخريطة العمل"]
+      ["workspaces","مساحات العمل","workspaces"],["project-messages","مركز مراسلات المشاريع"],["cca999-task-flow","انتقال المهام والاستجابة"],["map","الهيكل وخريطة العمل"]
     ]],
     ["الذكاء الاصطناعي والوكلاء", [
       ["agents","فريق الوكلاء","agents"],["agent-directory","دليل الوكلاء"],
@@ -954,23 +1268,29 @@ nav.side{gap:.5rem}
       ["luqta/coupons","الخصومات والكوبونات"],["luqta/returns","المرتجعات"],
       ["luqta/tickets","دعم العملاء"],["luqta/agents","وكلاء المتجر"],
       ["luqta/settings","إعدادات المتجر"],["luqta/audit","سجل التغييرات"],
+      ["luqta/reports","التقارير والتقييمات"],["luqta/categories","أقسام الكتالوج"],
+      ["luqta/flash","العروض الخاطفة"],["luqta/campaigns","الحملات واللافتات"],["luqta/questions","أسئلة المنتجات"],
+      ["luqta/giftcards","بطاقات الهدايا"],["luqta/chats","محادثات الدعم"],["luqta/faqs","مركز المساعدة"],
+      ["luqta/branches","الفروع ومخزونها"],["luqta/zones","مناطق ومواعيد التوصيل"],["luqta/vendors","البائعون"],
+      ["luqta/reorder","إعادة الطلب"],["luqta/exports","تصدير البيانات"],["luqta/sync","المزامنة المركزية"],
+      ["luqta/features","إدارة المشروع (125 ميزة)"],
       ["aas-commerce","لقطات تطبيق AAS"]
     ]],
     ["جوافة | المالية والتحقيق", [
-      ["jawafa","القيادة المركزية"],["jawafa-tasks","الخطة والمهام"],
-      ["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
+      ["jawafa","القيادة المركزية"],["jawafa-2100","جوافة 2100 • ERP الأخضر"],["jawafa-tasks","الخطة والمهام"],
+      ["jawafa-acceptance","اعتماد اللوحة | Security / QA"],["jawafa-gate15","معايير GATE-15"],["jawafa-backups","النسخ والاستعادة"],
       ["jawafa-monitor","مراقبة الخادم"],["jawafa-trustsoft","TrustSoft"],
       ["jawafa-export","مراقبة التصدير"],["jawafa-accounting","القيود"],
       ["jawafa-checks","الشيكات والبنوك"],["jawafa-purchases","الموردون والمشتريات"],["jawafa-audit111","111 · تتبع التعديلات"],
       ["jawafa-receiving","الاستلام والمخزون"],["jawafa-people","الموظفون والأجهزة"],
-      ["jawafa-investigations","التحقيقات القضائية"],["jawafa-agents","مجلس CFO / CPO / GM"],
+      ["jawafa-investigations","التحقيقات القضائية"],["jawafa-forensic-workspace","التحقيق الموسع والأدلة"],["jawafa-agents","مجلس CFO / CPO / GM"],
       ["jawafa-commands","الأوامر التنفيذية"],["jawafa-evidence","سجل الأدلة"],
       ["jawafa-periodic","تقرير الاتصال"],["jawafa-reports","التقارير المالية"],
       ["jawafa-errors","الأخطاء والإنجاز"]
     ]],
     ["البنية | البيانات والإعدادات", [
       ["database","قواعد البيانات"],["servers","الخوادم والاتصالات","servers"],
-      ["github","المستودع والتطوير"],["activity","سجل النشاط"],["settings","الإعدادات"]
+      ["github","المستودع والتطوير"],["release-verification","التحقق والإصدارات"],["activity","سجل النشاط"],["settings","الإعدادات"]
     ]]
   ];
   const VIEWS = NAV.flatMap(([, items]) => items.map(i => i[0]));
@@ -1804,8 +2124,14 @@ nav.side{gap:.5rem}
       liveBox(el("p", { class: "small muted" }, "لم تُضبط إعدادات Firebase بعد. اتبع الدليل docs/firebase-setup.md ثم ضع إعدادات تطبيق الويب في dashboard/firebase-config.js."));
       return;
     }
-    try { for (const m of ["app", "auth", "firestore"]) await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-${m}-compat.js`); }
-    catch { liveBox(el("p", { class: "small", style: "color:var(--coral)" }, "تعذّر تحميل مكتبة Firebase. تحقق من الاتصال ثم أعد تحميل الصفحة.")); return; }
+    try {
+      // Central owner session loads app+auth once for every dashboard screen.
+      if(window.AAS_OWNER_AUTH) await window.AAS_OWNER_AUTH.ready;
+      else for (const m of ["app", "auth"]) await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-${m}-compat.js`);
+      if(typeof window.firebase?.firestore!=="function")
+        await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_VERSION}/firebase-firestore-compat.js`);
+    }
+    catch { liveBox(el("p", { class: "small", style: "color:var(--coral)" }, "تعذّر تحميل مكتبة Firebase أو تهيئة جلسة المالك؛ لا تُعرض بيانات حية.")); return; }
     const fb = window.firebase;
     const app = fb.apps.length ? fb.app() : fb.initializeApp(cfg);
     const auth = app.auth(), firestore = app.firestore();
@@ -2666,7 +2992,19 @@ reload();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)reload()});
 })();
 </script>
+<script src="jawafa-investigation.js" defer></script>
+<script src="jawafa-forensic-workspace.js" defer></script>
 <script src="command-home.js" defer></script>
+<script src="progress-board.js" defer></script>
+<script src="workflow-map.js" defer></script>
+<script src="agent-live.js" defer></script>
 <script src="live-execution.js" defer></script>
 <script src="luqta-api.js" defer></script>
 <script src="luqta-integration.js" defer></script>
+
+<script type="module" src="project-messages.mjs"></script>
+<script type="module" src="cca999-task-flow.mjs"></script>
+<script type="module" src="cca999-api-health.mjs"></script>
+<script type="module" src="release-verification.mjs"></script>
+<script type="module" src="jawafa-acceptance.mjs"></script>
+<script type="module" src="central-transfer-audit.mjs"></script>

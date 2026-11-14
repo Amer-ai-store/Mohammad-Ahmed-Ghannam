@@ -1,0 +1,83 @@
+
+/* JAWAFA 2100 reference-inspired green ERP shell. Scoped to avoid affecting existing central modules. */
+#jawafa-2100-screen{--j21-bg:#06130e;--j21-panel:#0c1f1a;--j21-panel2:#102b20;--j21-line:#246447;--j21-ink:#f1fff5;--j21-muted:#a3c7b5;--j21-accent:#4dff89;--j21-gold:#efc263;color:var(--j21-ink);font-family:"IBM Plex Sans Arabic",Tahoma,sans-serif;max-width:1480px;direction:rtl;gap:0}
+#jawafa-2100-screen *{box-sizing:border-box}
+#jawafa-2100-screen .j21-wrap{background:radial-gradient(ellipse 50% 38% at 50% 9%,#123c2a 0%,transparent 80%),linear-gradient(155deg,#04100d,#0a1915 63%,#07100f);padding:clamp(12px,2.1vw,28px);border:1px solid #2d694c;border-radius:23px;box-shadow:0 20px 75px #0009,0 0 32px #2fe47a13;overflow:hidden}
+#jawafa-2100-screen .j21-top{display:flex;align-items:flex-start;gap:17px;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px}
+#jawafa-2100-screen .j21-logo{display:flex;align-items:center;gap:12px}
+#jawafa-2100-screen .j21-logo svg{width:54px;height:54px;flex:none;filter:drop-shadow(0 0 7px #46f58475)}
+#jawafa-2100-screen .j21-logo strong{display:block;font-size:1.12rem}
+#jawafa-2100-screen .j21-logo small{display:block;color:var(--j21-muted)}
+#jawafa-2100-screen .j21-title{text-align:center;flex:1;min-width:230px}
+#jawafa-2100-screen .j21-title h1{font-family:Arial,sans-serif;font-size:clamp(28px,4vw,53px);line-height:1.06;letter-spacing:1px;color:#fff;text-shadow:0 0 14px #50ff9655}
+#jawafa-2100-screen .j21-title h1 em{font-style:normal;color:#4cff91}
+#jawafa-2100-screen .j21-title p{font-weight:700;color:#a0f1c3;margin:5px 0 0}
+#jawafa-2100-screen .j21-features{display:flex;flex-wrap:wrap;gap:7px;max-width:360px;justify-content:flex-end}
+#jawafa-2100-screen .j21-features span{border:1px solid #44c88183;border-radius:12px;padding:8px 11px;background:#0b2b2399;font-size:.74rem;font-weight:800;color:#eaffef;box-shadow:inset 0 0 12px #3ddb7330}
+#jawafa-2100-screen .j21-ticker{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid #376e51;background:#081e16;padding:9px 13px;border-radius:12px;color:#ccebd6;font-size:.83rem;margin-bottom:14px;flex-wrap:wrap}
+#jawafa-2100-screen .j21-ticker strong{color:#f3d88c}
+#jawafa-2100-screen .j21-ticker .j21-source{font-family:monospace;direction:ltr;unicode-bidi:isolate}
+#jawafa-2100-screen .j21-workspace{border:3px solid #619b79;border-radius:22px;padding:8px;background:linear-gradient(#122521,#030e0b);box-shadow:0 0 0 4px #0a1411,0 25px 30px #0008,0 0 23px #3ef48b2a;min-width:0}
+#jawafa-2100-screen .j21-appbar{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 13px;background:#0b241b;border-radius:12px 12px 0 0;border-bottom:1px solid #337e54;flex-wrap:wrap}
+#jawafa-2100-screen .j21-appbar strong{color:#d7ffe5;letter-spacing:.4px;white-space:nowrap}
+#jawafa-2100-screen .j21-appbar .j21-search{color:#b4dac3;background:#15392b;border:1px solid #275b42;border-radius:8px;padding:7px 12px;min-width:160px;max-width:360px;flex:1;font-size:.77rem}
+#jawafa-2100-screen .j21-appbar .j21-bells{color:#93ffb4}
+#jawafa-2100-screen .j21-shell{display:grid;grid-template-columns:177px minmax(0,1fr);direction:ltr;min-height:425px}
+#jawafa-2100-screen .j21-side{direction:rtl;background:linear-gradient(180deg,#103528,#092119);padding:13px 7px;display:grid;align-content:start;gap:5px;border-right:1px solid #31694c}
+#jawafa-2100-screen .j21-profile{text-align:center;font-size:.72rem;border-bottom:1px solid #2e6044;padding-bottom:12px;margin-bottom:8px;color:#cae4d5}
+#jawafa-2100-screen .j21-profile b{display:block;color:#fff;font-size:.84rem}
+#jawafa-2100-screen .j21-nav{border-radius:8px;color:#cee6d8;text-decoration:none;font-size:.79rem;padding:8px 10px;display:flex;gap:9px;align-items:center;transition:.15s background}
+#jawafa-2100-screen .j21-nav:hover,#jawafa-2100-screen .j21-nav:focus-visible{background:#265a3c;color:#fff}
+#jawafa-2100-screen .j21-nav.active{background:linear-gradient(90deg,#176637,#1abc5b);color:white;font-weight:800}
+#jawafa-2100-screen .j21-content{direction:rtl;padding:12px;background:radial-gradient(circle at 30% 15%,#113124,#061911 65%);min-width:0}
+#jawafa-2100-screen .j21-content-head{font-weight:800;font-size:.88rem;color:#effff2;padding:3px 4px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+#jawafa-2100-screen .j21-status{border-radius:20px;padding:4px 10px;background:#46341f;color:#ffda91;border:1px solid #a67d40;font-weight:700;font-size:.67rem}
+#jawafa-2100-screen .j21-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+#jawafa-2100-screen .j21-kpi{background:linear-gradient(140deg,#1d5434,#0d3121);border:1px solid #347858;border-radius:11px;text-align:center;min-width:0;padding:12px 5px 10px;box-shadow:inset 0 0 18px #8cf5b50d,0 6px 14px #0004;min-height:112px}
+#jawafa-2100-screen .j21-kpi:nth-child(2){background:linear-gradient(130deg,#124c38,#102a27)}
+#jawafa-2100-screen .j21-kpi:nth-child(3){background:linear-gradient(130deg,#345232,#1c2d1a)}
+#jawafa-2100-screen .j21-kpi:nth-child(4){background:linear-gradient(130deg,#554329,#29291a)}
+#jawafa-2100-screen .j21-kpi:nth-child(5){background:linear-gradient(130deg,#4b2828,#26191a)}
+#jawafa-2100-screen .j21-kpi .j21-kicon{display:block;font-size:1.3rem;color:#72ff9d}
+#jawafa-2100-screen .j21-kpi .j21-klabel{font-size:.69rem;display:block;font-weight:700;color:#f5fff3;margin-top:4px;min-height:2.5em}
+#jawafa-2100-screen .j21-kpi .j21-kvalue{direction:ltr;unicode-bidi:isolate;display:block;font-family:Arial,sans-serif;font-size:clamp(14px,1.75vw,25px);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+#jawafa-2100-screen .j21-kpi .j21-ksub{display:block;font-size:.64rem;color:#c8e5d3}
+#jawafa-2100-screen .j21-stats{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(180px,.83fr) minmax(150px,.76fr);gap:10px;margin-top:12px}
+#jawafa-2100-screen .j21-box{background:#0d241c;border:1px solid #2b5a43;border-radius:11px;padding:12px;min-width:0}
+#jawafa-2100-screen .j21-box h2{font-size:.85rem;font-family:inherit;text-align:right;margin:0 0 10px}
+#jawafa-2100-screen #j21-linechart{width:100%;height:168px;display:block}
+#jawafa-2100-screen #j21-linechart text{fill:#9cb8a7;font-size:9px}
+#jawafa-2100-screen #j21-linechart .gridline{stroke:#294b39;stroke-width:1}
+#jawafa-2100-screen .j21-chart-legend{display:flex;gap:10px;font-size:.68rem;flex-wrap:wrap;color:#cde9d8;margin-top:2px}
+#jawafa-2100-screen .j21-legend-dot{display:inline-block;height:7px;width:7px;border-radius:50%;margin-inline-end:5px}
+#jawafa-2100-screen .j21-donut{width:116px;height:116px;border-radius:50%;margin:10px auto;display:grid;place-items:center;background:conic-gradient(#2cf287 0 40%,#8bdb4f 40% 75%,#e1ae51 75% 90%,#44896c 90% 100%);position:relative}
+#jawafa-2100-screen .j21-donut::before{content:"";position:absolute;inset:23px;background:#0d241c;border-radius:50%}
+#jawafa-2100-screen .j21-donut span{position:relative;z-index:1;font-size:.76rem;font-weight:800;color:#9bfbbb}
+#jawafa-2100-screen .j21-departments{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:.75rem}
+#jawafa-2100-screen .j21-departments li{display:flex;justify-content:space-between;gap:8px}
+#jawafa-2100-screen .j21-alerts{display:grid;gap:7px;align-content:start}
+#jawafa-2100-screen .j21-alert{background:#173225;border:1px solid #3b7a4e;border-radius:8px;padding:9px;color:#d7f4dc;font-size:.74rem}
+#jawafa-2100-screen .j21-alert strong{display:block}
+#jawafa-2100-screen .j21-alert.warn{background:#3e3120;border-color:#816937}
+#jawafa-2100-screen .j21-alert.danger{background:#4b2828;border-color:#974747}
+#jawafa-2100-screen .j21-quick{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:10px}
+#jawafa-2100-screen .j21-quick a{background:linear-gradient(#163c2d,#0b2a21);border:1px solid #358053;border-radius:9px;color:#f0fff5;text-align:center;text-decoration:none;padding:11px 5px 9px;font-size:.68rem;font-weight:800}
+#jawafa-2100-screen .j21-quick a:hover{background:#1a713d}
+#jawafa-2100-screen .j21-quick .symbol{display:block;font-size:1.4rem;color:#58fd91;margin-bottom:2px}
+#jawafa-2100-screen .j21-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
+#jawafa-2100-screen .j21-btn{border:1px solid #58b778;border-radius:9px;background:#155835;color:#eaffe8;padding:10px 14px;font-weight:800;font-size:.8rem;cursor:pointer;text-decoration:none}
+#jawafa-2100-screen .j21-btn:hover{background:#227747}
+#jawafa-2100-screen .j21-btn.primary{background:#38d778;color:#042115}
+#jawafa-2100-screen .j21-btn:disabled{opacity:.4}
+#jawafa-2100-screen .j21-panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-top:17px}
+#jawafa-2100-screen .j21-bottom{background:linear-gradient(150deg,#103127,#0b1d17);border:1px solid #3c9965;border-radius:17px;padding:14px;min-height:155px}
+#jawafa-2100-screen .j21-bottom h3{color:#eafff0;text-align:center;font-size:.96rem;margin-bottom:8px;border-bottom:1px solid #266a45;padding-bottom:8px}
+#jawafa-2100-screen .j21-bottom p,#jawafa-2100-screen .j21-bottom li{color:#c3e3d0;font-size:.78rem;line-height:1.8}
+#jawafa-2100-screen .j21-bottom ul{padding-right:17px;margin:0}
+#jawafa-2100-screen .j21-pill{background:#16452c;border:1px solid #47845d;border-radius:9px;padding:6px;margin:5px;font-size:.73rem;display:inline-block}
+#jawafa-2100-screen .j21-foot{margin-top:11px;font-size:.74rem;color:#acd9b9;line-height:1.8}
+#jawafa-2100-screen .j21-foot a{color:#70f49f}
+#jawafa-2100-screen input[type=file]{display:none}
+@media(max-width:1180px){#jawafa-2100-screen .j21-top{justify-content:center}#jawafa-2100-screen .j21-logo{margin-inline-end:auto}#jawafa-2100-screen .j21-features{max-width:none}#jawafa-2100-screen .j21-stats{grid-template-columns:1.2fr .8fr}#jawafa-2100-screen .j21-alerts{grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){#jawafa-2100-screen .j21-top{display:grid;justify-items:center}#jawafa-2100-screen .j21-logo{margin:auto}#jawafa-2100-screen .j21-shell{grid-template-columns:1fr}#jawafa-2100-screen .j21-side{display:flex;overflow-x:auto;gap:4px;direction:rtl}#jawafa-2100-screen .j21-profile{display:none}#jawafa-2100-screen .j21-nav{white-space:nowrap}#jawafa-2100-screen .j21-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#jawafa-2100-screen .j21-kpi:last-child{grid-column:1/-1}#jawafa-2100-screen .j21-stats{grid-template-columns:1fr}#jawafa-2100-screen .j21-alerts{grid-template-columns:1fr}#jawafa-2100-screen .j21-quick{grid-template-columns:repeat(3,minmax(0,1fr))}#jawafa-2100-screen .j21-panels{grid-template-columns:1fr}#jawafa-2100-screen .j21-features{justify-content:center}}
+@media print{#jawafa-2100-screen .j21-controls{display:none}#jawafa-2100-screen .j21-wrap{box-shadow:none}#jawafa-2100-screen .j21-panels{grid-template-columns:repeat(3,1fr)}}

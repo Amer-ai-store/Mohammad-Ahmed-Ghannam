@@ -40,9 +40,10 @@ jobs:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
         run: |
           cp .env.example .env
-          for k in FIREBASE_API_KEY FIREBASE_APP_ID FIREBASE_PROJECT_ID; do
+          for k in FIREBASE_API_KEY FIREBASE_APP_ID FIREBASE_PROJECT_ID FIREBASE_WEB_CLIENT_ID; do
             v="${!k}"
             if [ -n "$v" ]; then
               grep -v "^$k=" .env > .env.tmp && mv .env.tmp .env
@@ -52,7 +53,7 @@ jobs:
       - name: Compile, run unit tests and build the debug APK
         run: gradle :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --no-daemon
       - name: Upload debug APK
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: amer-store-debug-apk
           path: app/build/outputs/apk/debug/*.apk
@@ -60,7 +61,7 @@ jobs:
           retention-days: 7
       - name: Upload unit test reports
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unit-test-reports
           path: app/build/reports/tests/

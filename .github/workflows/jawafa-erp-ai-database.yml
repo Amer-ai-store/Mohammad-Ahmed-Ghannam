@@ -1,0 +1,94 @@
+name: JAWAFA ERP AI — isolated PostgreSQL schema acceptance
+on:
+  push:
+    branches: [main, feature/jawafa-erp-report-inventory-20261110]
+    paths:
+      - 'jawafa-erp-ai/backend/**'
+      - 'jawafa-erp-ai/api/**'
+      - '.github/workflows/jawafa-erp-ai-database.yml'
+  pull_request:
+    paths:
+      - 'jawafa-erp-ai/backend/**'
+      - 'jawafa-erp-ai/api/**'
+      - '.github/workflows/jawafa-erp-ai-database.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-erp-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jawafa_erp_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-never-production
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jawafa_erp_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGDATABASE: jawafa_erp_ci
+      PGUSER: postgres
+      PGPASSWORD: ci-only-never-production
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Check disposable PostgreSQL service
+        run: |
+          psql --version
+          pg_isready -h localhost -p 5432 -U postgres
+      - name: Migrate only NEW synthetic ERP database
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0001_erp_initial.sql
+      - name: Create tenant-safe journal balance view (new ERP only)
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0002_journal_draft_balance.sql
+      - name: Install cheque event guard and read-only state projection (new ERP only)
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0003_cheque_lifecycle_guard.sql
+      - name: Validate row security, financial immutability and tenant FK
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_schema_ci.sql
+      - name: Verify synthetic cheque lifecycle and denied mutations
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_cheque_lifecycle_ci.sql
+      - name: Install read-only authenticated API membership model
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0004_api_tenant_memberships.sql
+      - name: Create independent suppliers and immutable purchase invoices
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0005_supplier_invoice_guards.sql
+      - name: Test duplicate supplier invoices, quantities and RLS without modifying originals
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_supplier_invoice_ci.sql
+      - name: Install HR directory, permissions and settings history (new ERP only)
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0006_personnel_permissions_settings.sql
+      - name: Verify personnel RLS, setting revisions, permissions and denied mutations
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_personnel_settings_ci.sql
+      - name: Install new ERP-only immutable daily movement schema with tenant/branch RLS
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/migrations/0007_independent_item_movement_events.sql
+      - name: Seed synthetic users and cheques in disposable database
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/api/test/ci_seed.sql
+      - name: Reject movement and branch grant edits, cross-company returns and unauthorized SQL writes
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_daily_movement_ci.sql
+      - name: Assert single and cumulative refund value VAT and cost caps using synthetic SQL
+        run: psql -X -v ON_ERROR_STOP=1 -f jawafa-erp-ai/backend/tests/erp_return_financial_limits_ci.sql
+      - name: Challenge simultaneous partial refunds against same original in isolated CI database
+        env:
+          ERP_ALLOW_RETURN_RACE_CI: '1'
+        run: python3 jawafa-erp-ai/backend/tests/erp_return_concurrency_ci.py
+      - name: Install pinned Node API dependencies
+        working-directory: jawafa-erp-ai/api
+        run: npm install --no-audit --no-fund
+      - name: Check API source syntax
+        working-directory: jawafa-erp-ai/api
+        run: npm run check
+      - name: Verify OIDC JWT, tenant separation, RLS and no-write API
+        working-directory: jawafa-erp-ai/api
+        env:
+          ERP_TEST_DATABASE_URL: postgresql://erp_ci_api_login:ci-only-synthetic-never-production@localhost:5432/jawafa_erp_ci
+        run: npm test

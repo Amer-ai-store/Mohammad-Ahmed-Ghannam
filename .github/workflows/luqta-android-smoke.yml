@@ -1,0 +1,84 @@
+name: Luqta Android crash smoke test
+# Runs the real Android app, not the web build: the e2e tests cover the screens in Chromium, but a crash in a native
+# library (such as react-native-svg rejecting path data) only happens on a phone. This builds the app for an x86_64
+# emulator, opens it in the classic and the Rafiq designs at two screen widths, and fails when the app process dies
+# or Android records a fatal exception. It never reads signing secrets, publishes, or deploys.
+on:
+  pull_request:
+    paths:
+      - 'luqta-mobile/**'
+      - '.github/workflows/luqta-android-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: luqta-android-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: luqta-mobile
+    env:
+      PKG: com.luqta.store
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: luqta-mobile/package-lock.json
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@651bceb6f9ca583f16b8d75b62c36ded2ae6fc9c # v4.0.0
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0 ndk;27.1.12297006'
+      - uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+      - name: Install the app's dependencies
+        run: npm ci
+      - name: Generate the native Android project
+        run: |
+          npx expo prebuild --platform android --no-install
+          sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g/' android/gradle.properties
+      # The same release build as the published APK (JavaScript bundled, Hermes), for the emulator's x86_64 ABI and
+      # signed with the template's debug key, which is enough to install it on an emulator.
+      - name: Build the app for the emulator
+        run: |
+          (cd android && ./gradlew :app:assembleRelease --no-daemon -PreactNativeArchitectures=x86_64)
+          ls -lh android/app/build/outputs/apk/release/app-release.apk
+      - name: Enable hardware acceleration for the emulator
+        working-directory: .
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      # The standard emulator action creates the AVD, waits for boot with a time limit, and runs the smoke script.
+      - name: Run the app on an Android 14 emulator and look for crashes
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          SMOKE_SHOTS: ${{ runner.temp }}/smoke
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          force-avd-creation: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none
+          disable-animations: true
+          working-directory: luqta-mobile
+          script: bash scripts/android-smoke.sh
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: luqta-android-smoke-screens
+          path: ${{ runner.temp }}/smoke
+          if-no-files-found: ignore
+          retention-days: 14

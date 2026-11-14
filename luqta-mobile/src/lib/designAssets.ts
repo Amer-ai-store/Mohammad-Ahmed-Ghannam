@@ -1,6 +1,5 @@
 // Bitmaps cut from the Amer AI Store | لُقطة reference designs (tools/extract_assets.py)
 // plus the original bundled product photos. Keys are stable ids used by screens & data.
-/* eslint-disable @typescript-eslint/no-require-imports */
 export const designAssets = {
   logoMark: require("../../assets/design/logo-mark.png"),
   catFood: require("../../assets/design/cat-food.png"),
@@ -40,8 +39,7 @@ export const productImages: Record<string, ReturnType<typeof require>> = {
   headphones: require("../../assets/design/p-headphones.png"),
   "headphones-2": require("../../assets/design/p-headphones-2.png"),
   "headphones-3": require("../../assets/design/p-headphones-3.png"),
-  "headphones-4": require("../../assets/design/p-headphones-4.png"),
-  armchair: require("../../assets/design/p-chair.png"),
+  chair: require("../../assets/design/p-chair.png"),
   speaker: require("../../assets/products/speaker.jpg"),
   keyboard: require("../../assets/products/keyboard.jpg"),
   lamp: require("../../assets/products/lamp.jpg"),
@@ -52,4 +50,23 @@ export const productImages: Record<string, ReturnType<typeof require>> = {
   serum: require("../../assets/products/serum.jpg"),
   fragrance: require("../../assets/products/fragrance.jpg"),
   diffuser: require("../../assets/products/diffuser.jpg"),
+};
+
+// Cut-outs on a transparent background are shown whole (contain), not cropped like photos.
+export const cutoutImages = new Set(["rice", "milk", "banana", "headphones", "headphones-2", "headphones-3", "chair"]);
+
+// Extra views of a product from the mockups, shown after its own photos in the product gallery.
+// (p-headphones-4.png is the mockup's video thumbnail, with a play icon drawn on it, so it is not used.)
+export const productGalleries: Record<string, string[]> = { headphones: ["headphones-2", "headphones-3"] };
+
+// A gallery entry that points at a bundled image instead of a URL, e.g. "asset:headphones-2".
+export const ASSET_URI = "asset:";
+
+// The four departments on the mockups' home screen, in their order, with their illustrations.
+export const FEATURED_CATEGORIES = ["fresh", "electronics", "fashion", "home"];
+export const categoryArt: Record<string, ReturnType<typeof require>> = {
+  fresh: designAssets.catFood,
+  electronics: designAssets.catElectronics,
+  fashion: designAssets.catFashion,
+  home: designAssets.catHome,
 };

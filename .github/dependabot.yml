@@ -1,0 +1,11 @@
+# Maintain GitHub Actions dependencies; defer newly published releases for
+# seven days to reduce supply-chain risk.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5

@@ -57,4 +57,15 @@ test('Jawafa actual stock, offers, appearance and permissions work only in Luqta
   assert.equal(settings.body.settings.storefront.heroTitle,'عروض جوافة');
   assert.equal(settings.body.settings.storefront.showAssistant,false);
   assert.equal((await request('PATCH','/admin/settings',{storefront:{accentColor:'bad'}},token)).status,400);
+  // The store's Instagram and Facebook pages: official hosts over HTTPS only, saved without query strings.
+  const social = await request('PATCH','/admin/settings',{storefront:{instagram:'https://www.instagram.com/luqta.store/?utm=x',facebook:'https://facebook.com/LuqtaStore'}},token);
+  assert.equal(social.status,200,JSON.stringify(social.body));
+  const shown = (await request('GET','/settings')).body.settings.storefront;
+  assert.equal(shown.instagram,'https://www.instagram.com/luqta.store');
+  assert.equal(shown.facebook,'https://facebook.com/LuqtaStore');
+  assert.equal(shown.heroTitle,'عروض جوافة','other storefront settings are kept');
+  for (const bad of ['http://instagram.com/x','https://instagram.com.evil.example/x','https://evil.example/instagram.com','javascript:alert(1)','https://user:pw@instagram.com/x','https://instagram.com/']) assert.equal((await request('PATCH','/admin/settings',{storefront:{instagram:bad}},token)).status,400,bad);
+  assert.equal((await request('PATCH','/admin/settings',{storefront:{facebook:'https://facebook.com/x" onmouseover="y'}},token)).status,400);
+  assert.equal((await request('PATCH','/admin/settings',{storefront:{instagram:''}},token)).status,200);
+  assert.equal((await request('GET','/settings')).body.settings.storefront.instagram,undefined);
 });

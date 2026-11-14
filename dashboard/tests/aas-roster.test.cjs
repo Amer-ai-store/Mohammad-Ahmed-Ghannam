@@ -10,9 +10,11 @@ test('29 historical source-backed profiles and advisor in unified directory',()=
   assert.equal((page.match(/data-source="advisor"/g)||[]).length,1);
   assert.ok(page.includes('NOT RUNTIME-VERIFIED'));
 });
-test('central dashboard navigation and directory view keep original live agents route',()=>{
-  assert.ok(host.includes('["agent-directory", "دليل الوكلاء والمستشارين"]'));
+test('central dashboard preserves source directory and AAS agent routes',()=>{
+  // The source-backed roster is not a claim of live runtime verification.
+  // Match the actual navigation IDs and labels; allow harmless whitespace changes.
+  assert.match(host,/\["agent-directory"\s*,\s*"دليل الوكلاء"\]/);
   assert.ok(host.includes('data-view="agent-directory"'));
   assert.ok(host.includes('src="./aas-roster.html"'));
-  assert.ok(host.includes('["aas-agents", "الوكلاء في النظام الحي"]'));
+  assert.match(host,/\["aas-agents"\s*,\s*"وكلاء AAS"\]/);
 });

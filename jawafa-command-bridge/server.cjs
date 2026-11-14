@@ -1,6 +1,7 @@
 'use strict';
 const http=require('node:http'), crypto=require('node:crypto'), fs=require('node:fs'), path=require('node:path');
 const {DatabaseSync}=require('node:sqlite');
+const {privatePerformance}=require('./performance-upstream.cjs');
 const codeHash=v=>crypto.createHash('sha256').update(v).digest('hex');
 const ID=/^[\w.:-]{5,128}$/;
 const SAFE=new Set('CHECK_SERVER CHECK_DATABASE CHECK_LATEST_BACKUP CHECK_EXPORTS REVIEW_RESTORE_TESTS REVERIFY_G15 REVIEW_DIFFERENCES CHECK_SESSIONS CHECK_TASKS REVIEW_JOURNALS REVIEW_CHEQUEBOOK RECONCILE_BANK REVIEW_PURCHASES REVIEW_RECEIVING REVIEW_ACCESS_LOGS INVESTIGATION_REQUEST CFO_REVIEW CPO_REVIEW GM_SYNTHESIS CHECK_COMMANDS CHECK_EVIDENCE REVIEW_REPORTS CHECK_ERRORS'.split(' '));
@@ -42,13 +43,19 @@ db.prepare('INSERT OR IGNORE INTO tasks(task_id,status,source,source_version,blo
  'https://github.com/Amer-ai-store/Mohammad-Ahmed-Ghannam/issues/116');
 return db}
 async function firebaseIdentity(auth,options={}){
+  if(typeof auth!=='string'||!auth.startsWith('Bearer '))throw error('AUTH_REQUIRED',401);
   const {verifyFirebaseOwner}=require('./owner-auth.cjs');
-  return verifyFirebaseOwner(auth,{
-    ...options,
-    ownerUid:options.ownerUid||process.env.JAWAFA_OWNER_UID,
-    ownerEmail:options.ownerEmail||process.env.JAWAFA_OWNER_EMAIL,
-    ownerUidFile:options.ownerUidFile||process.env.JAWAFA_OWNER_UID_FILE
-  });
+  try{
+    return await verifyFirebaseOwner(auth,{
+      ...options,
+      ownerUid:options.ownerUid||process.env.JAWAFA_OWNER_UID,
+      ownerEmail:options.ownerEmail||process.env.JAWAFA_OWNER_EMAIL,
+      ownerUidFile:options.ownerUidFile||process.env.JAWAFA_OWNER_UID_FILE
+    });
+  }catch(e){
+    if(e?.message==='OWNER_IDENTITY_NOT_CONFIGURED')throw error('OWNER_UID_NOT_CONFIGURED',503);
+    throw e;
+  }
 }
 function agentAuth(req,bytes,db,secret,allowed){if(!secret||secret.length<32)throw error('AGENT_SECRET_NOT_CONFIGURED',503);const a=req.headers['x-jawafa-agent'],ts=req.headers['x-jawafa-timestamp'],nonce=req.headers['x-jawafa-nonce'],sig=req.headers['x-jawafa-signature'];if(!Array.isArray(allowed)||allowed.length===0)throw error('AGENT_ALLOWLIST_NOT_CONFIGURED',503);if(!allowed.includes(a))throw error('AGENT_NOT_AUTHORIZED',403);if(!ID.test(a||'')||!ID.test(nonce||'')||!/^[0-9a-f]{64}$/i.test(sig||''))throw error('AGENT_AUTH_REQUIRED',401);if(!Number.isInteger(+ts)||Math.abs(Date.now()- +ts)>90000)throw error('AGENT_TIMESTAMP_INVALID',401);const expected=crypto.createHmac('sha256',secret).update([req.method,new URL(req.url,'http://local').pathname,codeHash(bytes),ts,nonce].join('\n')).digest('hex');if(!crypto.timingSafeEqual(Buffer.from(expected,'hex'),Buffer.from(sig,'hex')))throw error('AGENT_SIGNATURE_INVALID',401);db.prepare('DELETE FROM nonces WHERE created_at<?').run(Date.now()-180000);try{db.prepare('INSERT INTO nonces VALUES(?,?)').run(nonce,Date.now())}catch{throw error('REPLAY_REJECTED',409)}return a}
 const audit=(db,id,st,agent,action,test,ref,hash)=>db.prepare('INSERT INTO events(request_id,status,agent_id,event_time,action,test_result,evidence_ref,evidence_sha256) VALUES(?,?,?,?,?,?,?,?)').run(id,st,agent||null,new Date().toISOString(),action,test||null,ref||null,hash||null);
@@ -95,7 +102,7 @@ const actor=await verify(req.headers.authorization);if(!actor||actor.role!=='own
     return response(res,503,{error:'AUDIT111_UNVERIFIED_ARCHIVE'});
    return response(res,200,payload);
   }
-  if(p==='/api/jawafa/v1/export-status')return response(res,200,await liveExportStatus());if(p==='/api/jawafa/v1/dashboard')return response(res,200,baseline(db));if(p==='/api/jawafa/v1/gates/15')return response(res,200,baseline(db).gate);if(p==='/api/jawafa/v1/backups')return response(res,200,baseline(db).backup_restore);if(p==='/api/jawafa/v1/tasks')return response(res,200,{tasks:db.prepare('SELECT * FROM tasks ORDER BY task_id').all(),source:'isolated-operational-ledger'});if(p==='/api/jawafa/v1/evidence')return response(res,200,{evidence:db.prepare('SELECT * FROM evidence ORDER BY submitted_at DESC LIMIT 100').all()});const m=p.match(/^\/api\/jawafa\/v1\/commands\/([\w.:-]+)$/);if(m){const c=command(db,m[1]);return c?response(res,200,{...c,events:db.prepare('SELECT status,agent_id,event_time,action,test_result,evidence_ref,evidence_sha256 FROM events WHERE request_id=? ORDER BY id').all(m[1])}):response(res,404,{error:'COMMAND_NOT_FOUND'})}}
+  if(p==='/api/jawafa/v1/export-status')return response(res,200,await liveExportStatus());if(p==='/api/jawafa/v1/performance')return response(res,200,await privatePerformance());if(p==='/api/jawafa/v1/dashboard')return response(res,200,baseline(db));if(p==='/api/jawafa/v1/gates/15')return response(res,200,baseline(db).gate);if(p==='/api/jawafa/v1/backups')return response(res,200,baseline(db).backup_restore);if(p==='/api/jawafa/v1/tasks')return response(res,200,{tasks:db.prepare('SELECT * FROM tasks ORDER BY task_id').all(),source:'isolated-operational-ledger'});if(p==='/api/jawafa/v1/evidence')return response(res,200,{evidence:db.prepare('SELECT * FROM evidence ORDER BY submitted_at DESC LIMIT 100').all()});const m=p.match(/^\/api\/jawafa\/v1\/commands\/([\w.:-]+)$/);if(m){const c=command(db,m[1]);return c?response(res,200,{...c,events:db.prepare('SELECT status,agent_id,event_time,action,test_result,evidence_ref,evidence_sha256 FROM events WHERE request_id=? ORDER BY id').all(m[1])}):response(res,404,{error:'COMMAND_NOT_FOUND'})}}
 if(req.method==='POST'&&p==='/api/jawafa/v1/commands'){const {request_id,task_id,operation,params={},source_version=null}=body;if(!ID.test(request_id||'')||!(ID.test(task_id||'')||/^F(0[1-9]|1[0-4])$/.test(task_id||''))||!SAFE.has(operation)||!params||typeof params!=='object'||Array.isArray(params)||Object.keys(params).length>20)return response(res,422,{error:'INVALID_OR_DISALLOWED_COMMAND'});const hash=codeHash(JSON.stringify({task_id,operation,params,source_version})),prior=db.prepare('SELECT payload_hash,status FROM commands WHERE request_id=?').get(request_id);if(prior)return prior.payload_hash===hash?response(res,200,{request_id,status:prior.status,idempotent:true}):response(res,409,{error:'IDEMPOTENCY_CONFLICT'});const blocked=operation==='RECONCILE_BANK'||/^F(0[1-9]|1[0-4])$/.test(task_id),status=blocked?'BLOCKED':'QUEUED',time=new Date().toISOString();db.exec('BEGIN IMMEDIATE');try{db.prepare('INSERT INTO commands(request_id,task_id,operation,payload_hash,source_version,requested_by,created_at,status) VALUES(?,?,?,?,?,?,?,?)').run(request_id,task_id,operation,hash,source_version,actor.uid,time,status);audit(db,request_id,status,null,blocked?'GATE_15_BLOCKED':'OPERATOR_QUEUED');db.exec('COMMIT')}catch(e){db.exec('ROLLBACK');throw e}return response(res,202,{request_id,status,created_at:time,execution_verified:false})}return response(res,405,{error:'METHOD_NOT_ALLOWED'})}catch(e){return response(res,e.status||500,{error:e.status?e.message:'INTERNAL_ERROR'})}}
 return{handler,db,close:()=>db.close()}}
 if(require.main===module){const host=process.env.JAWAFA_BIND_HOST||'127.0.0.1';if(!['127.0.0.1','::1'].includes(host))throw Error('Only loopback binding is permitted');const service=createBridge({databaseFile:process.env.JAWAFA_LEDGER_DB});http.createServer(service.handler).listen(Number(process.env.JAWAFA_PORT||8787),host,()=>console.log('Jawafa private command bridge — provisional, not SQL-live'))}

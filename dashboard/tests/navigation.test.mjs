@@ -38,7 +38,9 @@ test('mobile navigation is scoped to one group and reports active page', () => {
   assert.match(index,/class:"nav-section"/);
 });
 test('all Luqta sub-screens have deep links and can select their actual code', () => {
-  const tabs = ['overview','products','inventory','offers','appearance','orders','users','coupons','returns','tickets','agents','settings','audit'];
+  // Every section the Luqta integration can draw must be reachable by a deep link, or the router falls back to overview.
+  const tabs = [...luqta.match(/const tabs = \[([\s\S]*?)\];/)[1].matchAll(/\["([a-z]+)",/g)].map(m => m[1]);
+  assert.ok(tabs.length >= 29, 'all integration tabs parsed');
   const ids = new Set(nav.flatMap(group => group[1].map(row => row[0])));
   assert.ok(ids.has('luqta'));
   tabs.filter(x=>x!=='overview').forEach(tab => assert.ok(ids.has('luqta/'+tab)));
@@ -56,4 +58,21 @@ test('inline scripts and integrations parse as valid JavaScript', () => {
   assert.ok(n>0, 'at least one inline script tested');
   new Script(luqta, {filename:'luqta-integration.js'});
   new Script(api, {filename:'luqta-api.js'});
+});
+
+test('central dashboard declares mobile viewport to avoid desktop-scale rendering on phones', () => {
+  assert.match(index, /<meta\s+name="viewport"\s+content="width=device-width,\s*initial-scale=1"\s*>/);
+});
+
+test('external app preview supports close and clears iframe without claiming provider logout', () => {
+  const portal = readFileSync(resolve('dashboard/appdeploy-modules.html'), 'utf8');
+  assert.match(portal, /id="closeViewer"/);
+  assert.match(portal, /closeViewer\.addEventListener\("click",clearPreview\)/);
+  assert.match(portal, /window\.addEventListener\("pagehide",clearPreview\)/);
+  assert.match(portal, /frame\.src="about:blank"/);
+  assert.match(portal, /btn\.addEventListener\("click",\(\)=>\{clearPreview\(\)/);
+  assert.match(portal, /ولا يسجّل الخروج من التطبيق الأصلي/);
+  for (const [, script] of portal.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
+    if (script.trim()) new Script(script, {filename:'appdeploy-inline.js'});
+  }
 });
