@@ -98,6 +98,8 @@ $script:Report = [ordered]@{
     sql_connection_opened = $false
     tls_client_certificate_validated = $false
     sql_identity_verified = $false
+    database_level_permissions_checked = $false
+    # This probe does NOT enumerate schema/table grants; independent DBA review required.
     schema_permissions_checked = $false
     approved_views_checked = 0
     approved_views_passed = 0
@@ -208,7 +210,8 @@ SELECT CAST(ORIGINAL_LOGIN() AS NVARCHAR(128)) AS login_name,
 
     $script:Report.sql_identity_verified =
         ($facts['login'] -ceq 'user_read' -and $facts['database'] -ceq 'Jawafa_DB')
-    $script:Report.schema_permissions_checked = $true
+    # The query above checks database-level rights, not schema/table-level grants.
+    $script:Report.database_level_permissions_checked = $true
     $allViewsPass = $true
     foreach ($view in $ApprovedViews) {
         $objectCommand = $connection.CreateCommand()
@@ -265,7 +268,7 @@ SELECT CASE WHEN OBJECT_ID(@obj, N'V') IS NOT NULL THEN 1 ELSE 0 END,
     $facts['views_verified'] = $allViewsPass
     if (Test-SessionFacts $facts) {
         $script:Report.result = 'SESSION_GATE_PASS_NOT_RELEASE_APPROVAL'
-        $script:Report.reason_code = 'INDEPENDENT_DBA_AND_SECURITY_ACCEPTANCE_PENDING'
+        $script:Report.reason_code = 'INDEPENDENT_DBA_SCHEMA_TABLE_PRIVILEGE_REVIEW_AND_SECURITY_ACCEPTANCE_PENDING'
         $script:Report | ConvertTo-Json -Depth 6 -Compress
         exit 0
     }
