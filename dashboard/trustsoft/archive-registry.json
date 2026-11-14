@@ -1,0 +1,165 @@
+{
+  "format": "trustsoft-archive-registry-v1",
+  "status": "SCHEMA_ONLY_NO_LIVE_SYNC",
+  "origin": {
+    "host": "JAWAFFASVR",
+    "database": "Jawafa_DB",
+    "mode": "READ_ONLY",
+    "catalogTablesObserved": 1024,
+    "sqlObjectMappings": "REQUIRE_AUTHORIZED_CATALOG_REVIEW"
+  },
+  "storage": {
+    "drive": {
+      "rootFolderBinding": "PRIVATE_TRUSTSOFT_ARCHIVE_ROOT",
+      "immutableSnapshotsBinding": "PRIVATE_DRIVE_IMMUTABLE_SNAPSHOTS",
+      "deltasBinding": "PRIVATE_DRIVE_INCREMENTAL_DELTAS",
+      "evidenceBinding": "PRIVATE_DRIVE_AUDIT_EVIDENCE"
+    },
+    "firestore": {
+      "connected": false,
+      "collections": [
+        "archive_runs",
+        "table_catalog",
+        "snapshot_shards",
+        "evidence_ledger",
+        "reconciliation_findings",
+        "analysis_jobs",
+        "access_audit"
+      ],
+      "rawFinancialRows": false
+    }
+  },
+  "views": [
+    {
+      "view": "overview",
+      "label": "نظرة عامة",
+      "domain": "catalog_status",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "control",
+      "label": "المراقبة والسيطرة",
+      "domain": "agent_heartbeat",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "sales",
+      "label": "المبيعات",
+      "domain": "sales",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "purchases",
+      "label": "المشتريات",
+      "domain": "purchases",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "accounting",
+      "label": "المحاسبة",
+      "domain": "journal",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "checks",
+      "label": "الشيكات",
+      "domain": "cheques",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "inventory",
+      "label": "المخزون",
+      "domain": "inventory",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "users",
+      "label": "المستخدمون",
+      "domain": "access_audit",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "operations",
+      "label": "التقارير التشغيلية",
+      "domain": "operations",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "financial",
+      "label": "التقارير المالية",
+      "domain": "financial",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "investigation",
+      "label": "التحقيق المالي",
+      "domain": "forensic",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    },
+    {
+      "view": "schema",
+      "label": "المخطط والعلاقات",
+      "domain": "schema",
+      "sqlTables": [],
+      "mappingStatus": "NOT_VALIDATED",
+      "dataExposure": "AUTHENTICATED_READ_ONLY"
+    }
+  ],
+  "manifestFields": [
+    "run_id",
+    "source_server",
+    "source_database",
+    "schema_name",
+    "table_name",
+    "primary_key_columns",
+    "source_query_id",
+    "extract_start_utc",
+    "extract_end_utc",
+    "source_database_utc",
+    "snapshot_sha256",
+    "previous_manifest_sha256",
+    "bytes",
+    "rows",
+    "schema_fingerprint",
+    "storage_uri",
+    "storage_version_id",
+    "quality_state",
+    "evidence_ids",
+    "created_by"
+  ],
+  "enforce": {
+    "appendOnly": true,
+    "denyUnauthenticated": true,
+    "drivePrivate": true,
+    "requireSourceTime": true,
+    "requireSha256": true,
+    "requireSchemaMapping": true,
+    "noProductionSqlWrites": true,
+    "denyPublishingRawFinance": true,
+    "neverStorePasswordsInDrive": true,
+    "firestoreOnlyIndexesBeforeSecurityReview": true,
+    "restoreRehearsalRequired": true
+  }
+}

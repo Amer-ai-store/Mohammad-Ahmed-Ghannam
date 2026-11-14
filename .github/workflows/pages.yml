@@ -27,6 +27,8 @@ jobs:
           node-version: '24'
       - name: Node tests — native navigation and private-link fail-closed guard
         run: node --test dashboard/tests/navigation.test.mjs dashboard/tests/jawafa-investigation.test.mjs dashboard/tests/release-verification.test.mjs dashboard/tests/central-transfer-audit.test.mjs dashboard/tests/jawafa-forensic-workspace.test.mjs dashboard/tests/cca999-task-flow.test.mjs dashboard/tests/cca999-api-health.test.mjs dashboard/tests/owner-sso.test.mjs dashboard/tests/jawafa-2100-layout.test.mjs dashboard/tests/jawafa-acceptance.test.mjs
+      - name: TrustSoft viewer/admin and local archive tests before any public Pages publish
+        run: node --test dashboard/tests/trustsoft-native-embed.test.cjs tools/trustsoft-archive/build-manifest.test.cjs
       - name: Publication preflight — reject private links in entire dashboard artifact
         shell: bash
         run: |
