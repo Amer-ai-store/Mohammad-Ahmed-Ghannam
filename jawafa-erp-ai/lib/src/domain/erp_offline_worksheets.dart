@@ -96,31 +96,7 @@ class AuditWorksheetResult {
 // Reject invalid local calendar dates and normalized overflow timestamps.
 bool _validZonedEventTime(String value) {
   final match = RegExp(
-    r'^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:0\d|1[0-3]):[0-5]\d|[+-]14:00)
-  required String username,
-  required String device,
-  required String reference,
-  required String eventTime,
-  required String independentEvidence,
-}) {
-  final values = <String, String>{
-    'username': username,
-    'device': device,
-    'reference': reference,
-    'event_time': eventTime,
-    'independent_evidence': independentEvidence,
-  };
-  final missing = values.entries
-      .where((item) => item.value.trim().isEmpty)
-      .map((item) => item.key)
-      .toList(growable: false);
-  final time = eventTime.trim();
-  if (time.isNotEmpty && !_validZonedEventTime(time)) {
-    return AuditWorksheetResult([...missing, 'valid_zoned_event_time']);
-  }
-  return AuditWorksheetResult(missing);
-}
-,
+    r'^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:0\d|1[0-3]):[0-5]\d|[+-]14:00)$',
     caseSensitive: false,
   ).firstMatch(value);
   if (match == null || DateTime.tryParse(value) == null) return false;
