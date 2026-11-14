@@ -61,11 +61,38 @@ void main() {
     });
   }
 
+  test('central dashboard URL guard supports protected QA without unsafe redirects', () {
+    expect(approvedCentralDashboardUri(centralDashboardUrl), isNotNull);
+    expect(
+      approvedCentralDashboardUri(
+        'https://jawafa-erp-dashboard-preview.vercel.app/#erp-app'),
+      isNotNull,
+    );
+    expect(
+      approvedCentralDashboardUri(
+        'https://jawafa-erp-dashboard-preview-git-feature-central-1af96a-a-1857.vercel.app/#erp-app'),
+      isNotNull,
+    );
+    for (final unsafe in [
+      'http://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/index.html#erp-app',
+      'https://attacker.example/#erp-app',
+      'https://jawafa-erp-dashboard-preview.vercel.app.evil.test/#erp-app',
+      'https://user:password@jawafa-erp-dashboard-preview.vercel.app/#erp-app',
+      'https://jawafa-erp-dashboard-preview.vercel.app/?token=secret#erp-app',
+      'https://jawafa-erp-dashboard-preview.vercel.app/#home',
+      'https://jawafa-erp-dashboard-preview.vercel.app:8443/#erp-app',
+    ]) {
+      expect(approvedCentralDashboardUri(unsafe), isNull, reason: unsafe);
+    }
+  });
+
   testWidgets('approved dark ERP dashboard has five owner-required departments',
       (tester) async {
     await tester.pumpWidget(const JawafaErpApp());
     expect(find.byKey(const Key('erp_desktop_nav')), findsOneWidget);
     expect(find.byKey(const Key('erp_module_search')), findsOneWidget);
+    expect(find.byKey(const Key('central_dashboard_link')), findsOneWidget);
+    expect(centralDashboardUrl, 'https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/index.html#erp-app');
     expect(find.text('لا توجد بيانات حية'), findsNWidgets(4));
     // The desktop menu is scrollable/lazily built. Verify the full
     // owner-approved catalog directly, and test one rendered navigation group.
