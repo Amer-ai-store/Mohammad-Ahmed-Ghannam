@@ -54,7 +54,11 @@ namespace JawafaForensicGuard {
           ClassifyTablesStatus(HttpStatusCode.NotFound).HasValue ||
           ClassifyTablesStatus(HttpStatusCode.Redirect).HasValue)
         throw new InvalidOperationException("HTTP authorization probe classification failed.");
-      Console.WriteLine("SELF_TEST_PASS application_gate=true csv_rfc4180_cases=true auth_probe_classification=true");
+      bool traversalRejected = false;
+      try { SafeSnapshotCsvPath(Path.GetTempPath(),"../escape"); }
+      catch (InvalidDataException) { traversalRejected = true; }
+      if (!traversalRejected) throw new InvalidOperationException("CSV snapshot path traversal was permitted.");
+      Console.WriteLine("SELF_TEST_PASS application_gate=true csv_rfc4180_cases=true auth_probe_classification=true snapshot_path_protected=true");
       return 0;
     }
     static int Health(string origin) {
@@ -159,6 +163,14 @@ namespace JawafaForensicGuard {
       if(hasContent)records++;
       return Math.Max(0,records-1);
     }
+    static string SafeSnapshotCsvPath(string folder,string name) {
+      string root = Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+      string candidate = Path.GetFullPath(Path.Combine(folder,name+".csv"));
+      if (!candidate.StartsWith(root,StringComparison.OrdinalIgnoreCase))
+        throw new InvalidDataException("CSV target escapes the specified snapshot directory.");
+      return candidate;
+    }
     static int Inventory(string index,string folder,string destination,string targets) {
       if (!File.Exists(index) || !Directory.Exists(folder))throw new FileNotFoundException("Read-only snapshot input missing.");
       string[] lines=File.ReadAllLines(index,Encoding.UTF8);
@@ -174,20 +186,22 @@ namespace JawafaForensicGuard {
         if(columns>0&&cells%columns==0){divisible++;if(request.Contains(name))targetMap.Add(name,cells/columns);}
         else invalid++;
       }
-      var comparisons=new List<object>();int mismatch=0;
+      var comparisons=new List<object>();int mismatch=0,checkedFiles=0;
       foreach(string name in request){
         long inferred;
         if(!targetMap.TryGetValue(name,out inferred)){comparisons.Add(new{table=name,status="not_in_metadata"});mismatch++;continue;}
-        string file=Path.Combine(folder,name+".csv");
+        string file=SafeSnapshotCsvPath(folder,name);
         if(!File.Exists(file)){comparisons.Add(new{table=name,status="file_missing"});mismatch++;continue;}
         long actual;
         using(var reader=new StreamReader(file,Encoding.UTF8,true,131072)){actual=CountCsvRows(reader);}
+        checkedFiles++;
         bool match=actual==inferred;if(!match)mismatch++;
         comparisons.Add(new {table=name,inferredRows=inferred,actualRows=actual,
           difference=actual-inferred,match=match,source="CSV and metadata; historical snapshot"});
       }
       var report=new {generatedAtUtc=DateTime.UtcNow.ToString("o"),source="historical CSV snapshot",tables=total,nonzero,
-        divisibleByDeclaredColumns=divisible,invalidFormula=invalid,compared=targetMap.Count,
+        divisibleByDeclaredColumns=divisible,invalidFormula=invalid,requestedTargets=request.Count,
+        matchedMetadataTargets=targetMap.Count,compared=checkedFiles,
         mismatch,comparisons,warning="Never write to Jawafa_DB; inferred count is not a live database row count."};
       string json=Json.Serialize(report);
       string parent=Path.GetDirectoryName(Path.GetFullPath(destination));if(!Directory.Exists(parent))throw new DirectoryNotFoundException(parent);
