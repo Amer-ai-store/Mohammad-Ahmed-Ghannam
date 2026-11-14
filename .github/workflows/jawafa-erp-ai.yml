@@ -25,8 +25,9 @@ permissions:
 
 # Complete Android, Windows and iOS build artifacts even if more commits arrive.
 # Repeated PR updates previously cancelled Gradle/Xcode in the middle of builds.
+# Version the group to isolate new runs from reruns of old workflow revisions.
 concurrency:
-  group: jawafa-erp-flutter-${{ github.event.pull_request.number || github.ref }}
+  group: jawafa-erp-flutter-v2-keep-builds-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
