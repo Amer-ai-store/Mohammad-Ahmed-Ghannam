@@ -7,6 +7,8 @@ import test from 'node:test';
 const index = readFileSync(resolve('dashboard/index.html'), 'utf8');
 const luqta = readFileSync(resolve('dashboard/luqta-integration.js'), 'utf8');
 const api = readFileSync(resolve('dashboard/luqta-api.js'), 'utf8');
+// Case-insensitive HTML tags: include uppercase <SCRIPT> elements in syntax checks.
+const inlineScriptPattern = /<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi;
 const navSource = index.match(/  const NAV = (\[[\s\S]*?\n  \]);\n  const VIEWS/);
 assert.ok(navSource, 'Primary NAV array is present');
 const nav = runInNewContext('(' + navSource[1] + ')');
@@ -51,13 +53,20 @@ test('all Luqta sub-screens have deep links and can select their actual code', (
 });
 test('inline scripts and integrations parse as valid JavaScript', () => {
   let n=0;
-  for (const match of index.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
+  for (const match of index.matchAll(inlineScriptPattern)) {
     if (!match[1].trim()) continue;
     new Script(match[1], {filename:'inline-'+(++n)+'.js'});
   }
   assert.ok(n>0, 'at least one inline script tested');
   new Script(luqta, {filename:'luqta-integration.js'});
   new Script(api, {filename:'luqta-api.js'});
+});
+
+test('inline-script parser covers uppercase SCRIPT tags', () => {
+  const fixture = '<SCRIPT type="text/javascript">const upperCaseScript = 1;</SCRIPT>';
+  const matches = [...fixture.matchAll(inlineScriptPattern)];
+  assert.equal(matches.length, 1);
+  assert.doesNotThrow(() => new Script(matches[0][1], {filename:'uppercase-inline.js'}));
 });
 
 test('central dashboard declares mobile viewport to avoid desktop-scale rendering on phones', () => {
@@ -72,7 +81,7 @@ test('external app preview supports close and clears iframe without claiming pro
   assert.match(portal, /frame\.src="about:blank"/);
   assert.match(portal, /btn\.addEventListener\("click",\(\)=>\{clearPreview\(\)/);
   assert.match(portal, /ولا يسجّل الخروج من التطبيق الأصلي/);
-  for (const [, script] of portal.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
+  for (const [, script] of portal.matchAll(inlineScriptPattern)) {
     if (script.trim()) new Script(script, {filename:'appdeploy-inline.js'});
   }
 });
