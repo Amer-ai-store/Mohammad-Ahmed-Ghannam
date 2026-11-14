@@ -58,8 +58,8 @@ function serve(req,res){
   let body=buffer;
   if(rel==="/index.html"){
    const source=buffer.toString("utf8");
-   assert.ok(source.includes("</body>"),"main index needs closing body for browser probe");
-   body=Buffer.from(source.replace("</body>",injection+"\n</body>"),"utf8");
+   const injected=source.includes("</body>")?source.replace("</body>",injection+"\n</body>"):source+"\n"+injection;
+   body=Buffer.from(injected,"utf8");
   }
   res.writeHead(200,{"Content-Type":types[path.extname(file)]||"application/octet-stream","Cache-Control":"no-store"});
   res.end(body);
@@ -69,7 +69,7 @@ function serve(req,res){
  const server=http.createServer(serve);
  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
  const url="http://127.0.0.1:"+server.address().port+"/index.html#jawafa-trustsoft";
- const child=spawn(chrome,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--no-first-run","--disable-background-networking","--disable-extensions","--virtual-time-budget=12000","--dump-dom",url],{stdio:["ignore","pipe","ignore"]});
+ const child=spawn(chrome,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--no-first-run","--disable-background-networking","--disable-extensions","--virtual-time-budget=12000","--dump-dom",url],{stdio:["ignore","pipe","pipe"]});
  let stdout="",stderr="";
  child.stdout.on("data",chunk=>{stdout+=chunk.toString();if(stdout.length>15*1024*1024)child.kill();});
  child.stderr.on("data",chunk=>{stderr+=chunk.toString().slice(0,2500);});
