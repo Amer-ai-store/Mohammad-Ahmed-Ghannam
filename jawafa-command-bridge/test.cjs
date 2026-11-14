@@ -34,6 +34,47 @@ assert.equal(invalidHash.status,422);
 const done=await agent(events,{status:'VERIFIED',action:'test-pass',test_result:'PASS',evidence_ref:evidenceRef,evidence_sha256:sha256},'nonce-done-001');
 assert.equal(done.status,200);assert.equal(done.data.status,'VERIFIED');const result=await api(prefix+'commands/test-safe-001');assert.equal(result.data.events.length,4);assert.equal(result.data.status,'VERIFIED');assert.equal((await api(prefix+'evidence')).data.evidence.length,1)});
 
+
+test('missing independent artifact verifier rejects an otherwise valid QA receipt (no false VERIFIED)',async t=>{
+  const isolated=createBridge({
+    databaseFile:path.join(dir,'no-artifact-verifier.db'),
+    agentSecret:secret,qaSecret,allowedAgentIds:['worker-test'],
+    verifyUser:async token=>token==='Bearer OWNER'?{uid:'owner-uid',role:'owner'}:null
+  });
+  const isolatedServer=http.createServer(isolated.handler);
+  await new Promise(resolve=>isolatedServer.listen(0,'127.0.0.1',resolve));
+  t.after(async()=>{await new Promise(resolve=>isolatedServer.close(resolve));isolated.close()});
+  const endpoint='http://127.0.0.1:'+isolatedServer.address().port;
+  const requestId='no-verifier-001';
+  const owner=await fetch(endpoint+prefix+'commands',{
+    method:'POST',headers:{authorization:'Bearer OWNER','content-type':'application/json'},
+    body:JSON.stringify({request_id:requestId,task_id:'TASK-SAFE-002',operation:'CHECK_SERVER',source_version:'snapshot-001'})
+  });
+  assert.equal(owner.status,202);
+  const sendAgent=async(suffix,body,nonce)=>{
+    const uri=prefix+'commands/'+requestId+'/'+suffix;
+    const args=signed('POST',uri,body,nonce);
+    if(body.status==='VERIFIED')args.headers['x-jawafa-qa-signature']=crypto.createHmac('sha256',qaSecret)
+      .update([requestId,body.evidence_ref,body.evidence_sha256,body.test_result].join(':')).digest('hex');
+    const res=await fetch(endpoint+uri,args);
+    return {status:res.status,data:await res.json()};
+  };
+  assert.equal((await sendAgent('claim',{},'nonce-isolated-claim-001')).status,200);
+  assert.equal((await sendAgent('events',{status:'RUNNING',action:'candidate-running'},'nonce-isolated-run-001')).status,200);
+  const forged=await sendAgent('events',{
+    status:'VERIFIED',action:'fake-completion',test_result:'PASS',
+    evidence_ref:'missing-signed-artifact-001',evidence_sha256:'a'.repeat(64)
+  },'nonce-isolated-verification-001');
+  assert.equal(forged.status,503);
+  assert.equal(forged.data.error,'EVIDENCE_VERIFIER_NOT_CONFIGURED');
+  const status=await fetch(endpoint+prefix+'commands/'+requestId,{headers:{authorization:'Bearer OWNER'}});
+  assert.equal(status.status,200);
+  assert.equal((await status.json()).status,'RUNNING');
+  const evidence=await fetch(endpoint+prefix+'evidence',{headers:{authorization:'Bearer OWNER'}});
+  assert.equal(evidence.status,200);
+  assert.deepEqual((await evidence.json()).evidence,[]);
+});
+
 test('default Firebase verifier denies missing bearer before owner configuration check', async()=>{
   const {firebaseIdentity}=require('./server.cjs');
   const saved=process.env.JAWAFA_OWNER_UID;
