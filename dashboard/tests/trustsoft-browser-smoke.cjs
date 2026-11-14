@@ -7,7 +7,7 @@ const http = require("node:http");
 const os = require("node:os");
 const {spawn,execFileSync} = require("node:child_process");
 const dashboard = path.resolve(__dirname,"..");
-const injection = String.raw\`
+const injection = String.raw`
 <script>
 (() => {
   function result(pass,reason) {
@@ -41,7 +41,7 @@ const injection = String.raw\`
   }
   window.addEventListener('load',()=>setTimeout(()=>check().catch(e=>result(false,String(e))),200),{once:true});
 })();
-</script>\`;
+</script>`;
 const chrome = process.env.CHROME||["google-chrome","chromium","chromium-browser"].find(c=>{
   try{execFileSync("which",[c],{stdio:"ignore"});return true;}catch{return false;}
 });
