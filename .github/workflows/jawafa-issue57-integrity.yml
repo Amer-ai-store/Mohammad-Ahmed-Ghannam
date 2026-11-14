@@ -1,0 +1,31 @@
+name: Jawafa Issue 57 evidence-register integrity (read only)
+# Detect recurring false-positive acceptance checkboxes. Never changes issues, deploys or SQL.
+on:
+  issues:
+    types: [edited, reopened, closed]
+  schedule:
+    - cron: '17 */6 * * *'
+  pull_request:
+    paths:
+      - '.github/workflows/jawafa-issue57-integrity.yml'
+      - 'tools/gates/check_jawafa_issue57.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: read
+jobs:
+  monitor:
+    if: github.event_name != 'issues' || github.event.issue.number == 57
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify fail-closed synthetic cases
+        run: python3 tools/gates/check_jawafa_issue57.py --self-test
+      - name: Check live public acceptance register (GET only)
+        env:
+          GH_TOKEN: $${{ github.token }}
+          GITHUB_REPOSITORY: ${ github.repository }}
+        run: python3 tools/gates/check_jawafa_issue57.py
