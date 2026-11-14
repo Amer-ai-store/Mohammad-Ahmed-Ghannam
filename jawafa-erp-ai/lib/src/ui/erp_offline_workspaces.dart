@@ -9,11 +9,13 @@ class _ManualField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final bool numeric;
+  final ValueChanged<String>? onChanged;
   const _ManualField({
     required this.fieldKey,
     required this.label,
     required this.controller,
     this.numeric = true,
+    this.onChanged,
   });
 
   @override
@@ -22,6 +24,7 @@ class _ManualField extends StatelessWidget {
     child: TextField(
       key: Key(fieldKey),
       controller: controller,
+      onChanged: onChanged,
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
@@ -96,6 +99,7 @@ class _InventoryWorksheetViewState extends State<InventoryWorksheetView> {
               fieldKey: 'inventory_' + entry.key,
               label: entry.value,
               controller: fields[entry.key]!,
+              onChanged: (_) => setState(() { result = null; error = null; }),
             ),
           FilledButton(
             key: const Key('inventory_calculate'),
@@ -196,6 +200,7 @@ class _PosShiftWorksheetViewState extends State<PosShiftWorksheetView> {
               fieldKey: 'pos_' + entry.key,
               label: entry.value,
               controller: fields[entry.key]!,
+              onChanged: (_) => setState(() { result = null; error = null; }),
             ),
           FilledButton(
             key: const Key('pos_calculate'),
@@ -283,6 +288,7 @@ class _AuditEvidenceWorksheetViewState extends State<AuditEvidenceWorksheetView>
               label: entry.value,
               controller: fields[entry.key]!,
               numeric: false,
+              onChanged: (_) => setState(() { result = null; }),
             ),
           FilledButton(
             key: const Key('audit_evaluate'),
