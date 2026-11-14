@@ -42,7 +42,10 @@ function Test-SessionFacts {
         $Facts['db_insert'] -eq 0 -and
         $Facts['db_update'] -eq 0 -and
         $Facts['db_delete'] -eq 0 -and
-        $Facts['db_control'] -eq 0
+        $Facts['db_control'] -eq 0 -and
+        $Facts['db_execute'] -eq 0 -and
+        $Facts['db_alter'] -eq 0 -and
+        $Facts['db_take_ownership'] -eq 0
     )
 }
 
@@ -53,7 +56,8 @@ if ($SelfTest) {
         db_owner = 0; db_securityadmin = 0; db_ddladmin = 0
         db_accessadmin = 0; db_datareader = 0; db_datawriter = 0
         sysadmin = 0; db_insert = 0; db_update = 0; db_delete = 0
-        db_control = 0
+        db_control = 0; db_execute = 0; db_alter = 0
+        db_take_ownership = 0
     }
     $cases = @(
         @{ Name = 'positive synthetic'; Change = @{}; Expected = $true },
@@ -68,7 +72,10 @@ if ($SelfTest) {
         @{ Name = 'deny insert'; Change = @{db_insert=1}; Expected = $false },
         @{ Name = 'deny update'; Change = @{db_update=1}; Expected = $false },
         @{ Name = 'deny delete'; Change = @{db_delete=1}; Expected = $false },
-        @{ Name = 'deny control'; Change = @{db_control=1}; Expected = $false }
+        @{ Name = 'deny control'; Change = @{db_control=1}; Expected = $false },
+        @{ Name = 'deny database execute'; Change = @{db_execute=1}; Expected = $false },
+        @{ Name = 'deny database alter'; Change = @{db_alter=1}; Expected = $false },
+        @{ Name = 'deny ownership takeover'; Change = @{db_take_ownership=1}; Expected = $false }
     )
     foreach ($case in $cases) {
         $facts = @{}
@@ -174,7 +181,10 @@ SELECT CAST(ORIGINAL_LOGIN() AS NVARCHAR(128)) AS login_name,
        ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'INSERT'), -1) AS db_insert,
        ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'UPDATE'), -1) AS db_update,
        ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'DELETE'), -1) AS db_delete,
-       ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'CONTROL'), -1) AS db_control
+       ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'CONTROL'), -1) AS db_control,
+       ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'EXECUTE'), -1) AS db_execute,
+       ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'ALTER'), -1) AS db_alter,
+       ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'TAKE OWNERSHIP'), -1) AS db_take_ownership
 '@
     $command = $connection.CreateCommand()
     $command.CommandText = $sql
@@ -191,7 +201,8 @@ SELECT CAST(ORIGINAL_LOGIN() AS NVARCHAR(128)) AS login_name,
         foreach ($field in @(
             'db_owner','db_securityadmin','db_ddladmin','db_accessadmin',
             'db_datareader','db_datawriter','sysadmin','db_insert',
-            'db_update','db_delete','db_control'
+            'db_update','db_delete','db_control','db_execute',
+            'db_alter','db_take_ownership'
         )) { $facts[$field] = [int]$reader[$field] }
     } finally { $reader.Close(); $command.Dispose() }
 
@@ -207,7 +218,9 @@ SELECT CASE WHEN OBJECT_ID(@obj, N'V') IS NOT NULL THEN 1 ELSE 0 END,
        ISNULL(HAS_PERMS_BY_NAME(@obj, N'OBJECT', N'SELECT'), -1),
        ISNULL(HAS_PERMS_BY_NAME(@obj, N'OBJECT', N'INSERT'), -1),
        ISNULL(HAS_PERMS_BY_NAME(@obj, N'OBJECT', N'UPDATE'), -1),
-       ISNULL(HAS_PERMS_BY_NAME(@obj, N'OBJECT', N'DELETE'), -1)
+       ISNULL(HAS_PERMS_BY_NAME(@obj, N'OBJECT', N'DELETE'), -1),
+       ISNULL(HAS_PERMS_BY_NAME(@obj, N'OBJECT', N'ALTER'), -1),
+       ISNULL(HAS_PERMS_BY_NAME(@obj, N'OBJECT', N'CONTROL'), -1)
 '@
         [void]$objectCommand.Parameters.Add('@obj', [System.Data.SqlDbType]::NVarChar, 261)
         $objectCommand.Parameters['@obj'].Value = $view
@@ -219,7 +232,9 @@ SELECT CASE WHEN OBJECT_ID(@obj, N'V') IS NOT NULL THEN 1 ELSE 0 END,
             $noWrites = (
                 [int]$viewReader.GetValue(2) -eq 0 -and
                 [int]$viewReader.GetValue(3) -eq 0 -and
-                [int]$viewReader.GetValue(4) -eq 0
+                [int]$viewReader.GetValue(4) -eq 0 -and
+                [int]$viewReader.GetValue(5) -eq 0 -and
+                [int]$viewReader.GetValue(6) -eq 0
             )
         } finally { $viewReader.Close(); $objectCommand.Dispose() }
 
