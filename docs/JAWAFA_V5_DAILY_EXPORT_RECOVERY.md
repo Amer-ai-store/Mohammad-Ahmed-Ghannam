@@ -15,7 +15,7 @@ From repository root:
 
     python3 -m unittest discover -s tests -p 'test_jawafa_drive_v5_*.py' -v
 
-23 cases cover complete, missing, swapped, duplicate, corrupted data, faulty modes, misidentified baseline, CSV headers/BOM, stale-run selection and digest streaming. Tests do **not** prove the live Drive inventory was downloaded.
+25 cases cover complete, missing, swapped, duplicate, corrupted data, faulty modes, misidentified baseline, CSV headers/BOM, stale-run selection and digest streaming. Tests do **not** prove the live Drive inventory was downloaded.
 
 ## Private runner — only after WIF and owner access is approved
 - Use the existing .github/workflows/jawafa-drive-inventory.yml (fails closed if JAWAFA_WIF_PROVIDER or JAWAFA_WIF_SERVICE_ACCOUNT is absent). Credential must have Drive **read-only** scope and folder access.
@@ -26,7 +26,7 @@ From repository root:
 1. Check SentinelX host **online**, scheduled task JawafaDailyV5-ReadinessOnly actual 00:50 result and run receipts. This is **readiness only**, not a backup.
 2. Independently inspect local export directories and SQL Agent jobs for newer versions **before** any run/retry. Preserve every old ZIP and metadata file.
 3. Use a dedicated approved SELECT-only account, **never** shared LOCAL SERVICE with broad SQL rights or plaintext sa credentials. Recheck 1023 table permissions, workload/space and 01:00 Asia/Amman window.
-4. Check output counts (1023 CSV + baseline status), per-file sha256, ZIP integrity, row counts, historical coverage and an independent restore/replay procedure. READ UNCOMMITTED records are not a transactional backup.
+4. Check output counts (1023 CSV + baseline status), per-file sha256, ZIP integrity, row counts and source-vs-export FULL/DELTA row-counts, historical coverage and an independent restore/replay procedure. READ UNCOMMITTED records are not a transactional backup.
 5. Verify actual Google Drive upload with authenticated file IDs and readback; preserve newest locally and transfer older confirmed versions only per retention policy. Do not delete, overwrite or rewrite dated snapshots. Keep private exports out of GitHub and GitHub Pages.
 6. Record only verified outcomes in the same MASTER_CONTINUITY.md Drive reference, increment version and reread it. Do not mark #265 resolved just because CI unit tests pass.
 
