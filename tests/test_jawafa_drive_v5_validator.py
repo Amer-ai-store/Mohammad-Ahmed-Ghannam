@@ -95,6 +95,16 @@ class V5ValidatorTest(unittest.TestCase):
         manifests.append(dict(file="dbo.Extra.csv", bytes="1", sha256="a"*64))
         self.assertFalse(check(manifest=manifests)["verified"])
 
+    def test_full_row_count_mismatch(self):
+        _, rows, _, _ = sample()
+        rows[0]["rows"] = "2"
+        self.assertTrue(any(x.startswith("full_row_count_mismatch") for x in check(results=rows)["issues"]))
+
+    def test_delta_exceeds_inventory(self):
+        _, rows, _, _ = sample()
+        rows[2]["rows"] = "2"
+        self.assertTrue(any(x.startswith("delta_exceeds_inventory") for x in check(results=rows)["issues"]))
+
     def test_invalid_csv_columns(self):
         with self.assertRaisesRegex(ValueError, "invalid_columns"):
             parse_csv(b"schema_name,table_name,rows,cols\ndbo,Branches,1,2\n", ("schema", "table", "rows", "cols"), "inventory")
