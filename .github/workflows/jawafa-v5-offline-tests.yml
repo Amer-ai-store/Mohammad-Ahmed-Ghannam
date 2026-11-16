@@ -1,0 +1,31 @@
+name: Jawafa V5 — synthetic verifier regressions only
+
+on:
+  pull_request:
+    paths:
+      - "tools/jawafa_drive_v5_validator.py"
+      - "tools/jawafa_drive_readonly_verify.py"
+      - "tests/test_jawafa_drive_v5_*.py"
+      - "docs/JAWAFA_V5_DAILY_EXPORT_RECOVERY.md"
+      - ".github/workflows/jawafa-v5-offline-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-verifier-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4.2.2
+      - name: Standard-library tests, no network, credentials or financial data
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_jawafa_drive_v5_*.py' -v
+      - name: Parse patched source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/jawafa_drive_v5_validator.py tools/jawafa_drive_readonly_verify.py
