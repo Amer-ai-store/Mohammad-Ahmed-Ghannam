@@ -106,6 +106,13 @@ def validate_v5(
             valid_results.add(name + ".csv")
         if not _nonnegative_int(row.get("rows")):
             errors.append("invalid_result_rows:" + name)
+        elif name in inv and _nonnegative_int(inv[name].get("rows")) and status == "OK":
+            exported_rows = int(row["rows"])
+            inventory_rows = int(inv[name]["rows"])
+            if mode == "FULL" and exported_rows != inventory_rows:
+                errors.append("full_row_count_mismatch:" + name)
+            if mode == "DELTA" and exported_rows > inventory_rows:
+                errors.append("delta_exceeds_inventory:" + name)
     if refs != 1 or reference not in inv:
         errors.append("missing_reference")
 
