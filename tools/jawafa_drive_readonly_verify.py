@@ -162,6 +162,21 @@ def main() -> int:
         results = parse_csv(download_small(api, root["export_results.csv"]["id"]), ("table", "mode", "rows", "status"), "results")
 
         data_items = list(children(api, root["data"]["id"]))
+        # Fail before downloading 1023 private CSVs if listing or recorded
+        # sizes are already inconsistent. These copied SHA256 values are
+        # structural placeholders ONLY; they are never content proof.
+        declared = {entry["file"]: entry for entry in manifest}
+        structural_listing = [
+            {"name": entry["name"], "size": str(entry.get("size", "")),
+             "sha256": declared.get(entry["name"], {}).get("sha256", "")}
+            for entry in data_items
+        ]
+        preflight = validate_v5(inventory, results, manifest, structural_listing)
+        if not preflight["verified"]:
+            preflight["verification_phase"] = "METADATA_PREFLIGHT_FAILED_NO_CONTENT_HASHES_VERIFIED"
+            preflight["sha256_files_checked"] = 0
+            print(json.dumps(preflight, ensure_ascii=False, sort_keys=True))
+            return 2
         drive = []
         for entry in data_items:
             if entry.get("mimeType") == FOLDER_MIME:
