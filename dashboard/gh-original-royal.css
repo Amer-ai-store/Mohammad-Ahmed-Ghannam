@@ -1,0 +1,59 @@
+/* GH royal-navy design proposal — visual-only; does not change financial reports or access rights. */
+@property --gh-original-phase{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes gh-original-border{to{--gh-original-phase:360deg}}
+:root,:root[data-theme="dark"],:root[data-theme="light"]{
+ --bg:#071326!important;--surface:#12223d!important;--surface-2:#172c4b!important;
+ --line:#657391!important;--fg:#f2f6ff!important;--muted:#c7d1e3!important;
+ --accent:#f4d187!important;--accent-ink:#1b1c30!important;--accent-soft:#253f60!important;
+ --code-bg:#0a1831!important;--code-fg:#dfdff5!important;
+ --info:#9ecafb!important;--info-soft:#1e375a!important;
+ --amber:#f2b85d!important;--amber-soft:#463728!important;--coral:#ed8aa0!important;
+ --coral-soft:#44293c!important;
+ --gold:#f2d58d;--silver:#e6eefb;--royal-navy:#142744;--royal-wine:#4c1f38
+}
+html{background:#081428!important;color-scheme:dark!important}
+body{background:radial-gradient(ellipse at 85% 5%,#25466b88,transparent 56%),radial-gradient(ellipse at 14% 70%,#14294999,transparent 58%),linear-gradient(125deg,#071024,#112642 66%,#281b34)!important;color:#f0f4ff!important}
+.sidebar,.chips{background:linear-gradient(150deg,#162a46,#0b1a31 82%,#321e37)!important;border-color:#b2956a!important}
+nav.side a[aria-current="page"],.chips nav a[aria-current="page"],button.primary,.btn.primary{background:linear-gradient(150deg,#fff0c1,#d4ab5f)!important;color:#211b22!important;border-color:#f6df9d!important}
+button,.btn,.toolbar a{background:linear-gradient(155deg,#214064,#132842 72%,#3a2037)!important;border-color:#a49279!important;color:#fff0d0!important}
+button.primary,.btn.primary{color:#231a10!important}
+.panel,.item,.kpi,.nav-landing-card,.command-home .command-card,.command-home .command-hero{background:linear-gradient(125deg,#19304d,#0e1e37 69%,#2b1b31)!important;border-color:#998b7c!important;box-shadow:0 5px 0 #080f1e,0 12px 28px #0007!important}
+.hero,.command-home .command-hero{background:linear-gradient(115deg,#223c60,#11213a 72%,#3f2037)!important}
+a{color:var(--accent)}
+h1,h2,h3,.brand-mark{color:#f8dca0!important}
+:focus-visible{outline:3px solid #ffdc99!important;outline-offset:3px!important}
+:where(.command-home .command-hero,.command-home .command-card,.nav-landing-card,.kpi,.panel){position:relative;isolation:isolate;border-radius:12px}
+:where(.command-home .command-hero,.command-home .command-card,.nav-landing-card,.kpi)::after{
+ content:"";position:absolute;inset:-2px;padding:2px;border-radius:inherit;z-index:4;pointer-events:none;
+ background:conic-gradient(from var(--gh-original-phase),transparent 0%,#385d81 15%,#f7d585 22%,#fffefa 27%,#dcb26a 32%,transparent 42%,#1c456e 64%,#e4ecf8 73%,#edcc7f 76%,transparent 85%);
+ -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;
+ mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;
+ animation:gh-original-border 8s linear infinite
+}
+:where(.command-home .command-hero)::after{padding:3px;animation-duration:6s}
+#jawafa-2100-reference-frame{background:#0c1a31!important;border:2px solid #c9a96b!important;border-radius:13px;box-shadow:0 0 18px #eac57522}
+:where(.stage,.monitor-body,.phone,.bottom-panel){position:relative;isolation:isolate}
+.stage{background:radial-gradient(ellipse at 50% 30%,#1d3a5f80,transparent 75%),linear-gradient(125deg,#08172c,#102544 63%,#311d35)!important}
+.stage:after{background:radial-gradient(ellipse,#385e9c31,transparent 70%)!important}
+.hero-brand h1 em,.hero-brand strong{color:#f1d38d!important;text-shadow:0 0 18px #e5c17866!important}
+.hero-logo .mark{color:#ead08b!important}
+.hero-pills span,.bottom-panel,.monitor-body,.phone{border-color:#bcaa81!important;background-color:#112542!important}
+.monitor-body,.bottom-panel,.phone{box-shadow:0 0 14px #eac57a38,0 5px 18px #0009!important}
+.monitor-apphead,.monitor-sidebar,.monitor-inner,.monitor-content,.monitor-bottom,.phone-screen.dark-phone{background:linear-gradient(135deg,#112844,#0c1b34 70%,#251a30)!important}
+.metric-card,.chart-card,.connection-panel,.modules-panel,.intelligence-panel{border-color:#d3b674!important;background-color:#142845!important}
+.metric-card{background:linear-gradient(145deg,#1d3858,#111e38)!important}
+.phone-kpis>div{background:linear-gradient(140deg,#193a5c,#122341)!important}
+.hero-pills svg,.module-grid svg,.central-database svg{color:#f2d28a!important;filter:drop-shadow(0 0 4px #e3ca7b55)}
+.function-tools,.functional-tools{background:#122540!important;color:#f1e4c5!important;border-top:1px solid #b4a477!important}
+.export-actions button,.export-actions a{background:linear-gradient(130deg,#214365,#152a45)!important;border-color:#c9a56d!important;color:#f5deaa!important}
+.module-grid a{background:linear-gradient(135deg,#f8f9ff,#d3dceb)!important;color:#182845!important}
+:where(.monitor-body,.bottom-panel,.phone)::after{
+ content:"";position:absolute;inset:-2px;padding:2.2px;border-radius:inherit;z-index:18;pointer-events:none;
+ background:conic-gradient(from var(--gh-original-phase),transparent 0%,#c3d4e7 12%,#f4d389 23%,#fff 26%,#ba9e68 30%,transparent 48%,#627ab0 66%,#f7e3a5 76%,transparent 85%);
+ -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;
+ mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;
+ animation:gh-original-border 9s linear infinite
+}
+@media(max-width:959px){.stage{padding:12px!important}.hero-brand h1{font-size:clamp(30px,8vw,52px)!important}}
+@media(prefers-reduced-motion:reduce){:where(.command-home .command-hero,.command-home .command-card,.nav-landing-card,.kpi,.monitor-body,.bottom-panel,.phone)::after{animation:none!important}}
+@media print{:where(.command-home .command-hero,.command-home .command-card,.nav-landing-card,.kpi,.monitor-body,.bottom-panel,.phone)::after{display:none!important}}
