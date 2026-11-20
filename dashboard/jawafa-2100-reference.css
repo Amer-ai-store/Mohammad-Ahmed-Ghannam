@@ -168,3 +168,24 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor}
  .intelligence-panel li{white-space:normal;font-size:12px}
  .functional-tools{font-size:11px}.export-actions button,.export-actions a{font-size:11px}
 }
+
+/* GH royal navy / burgundy / silver / gold design — no financial logic changes. */
+:root{--bg:#06152b;--mint:#f1d28a;--lime:#ffe8b0;--glow:#f0c878;--dark:#0d223e;--line:#bc9a68;--silver:#dae3f2;--text:#f6f7fd}
+html{background:#08162c!important}
+body{background:radial-gradient(ellipse at 52% 11%,#28476e7c,transparent 75%),linear-gradient(115deg,#081426,#132a48 55%,#24182d)!important}
+.stage{background:radial-gradient(ellipse at 50% 35%,#38587a7a,transparent 75%),radial-gradient(ellipse at 99% 75%,#4b253b55,transparent 68%),linear-gradient(130deg,#09172d,#152e4e 57%,#160f24)!important}
+.stage:before{background:repeating-linear-gradient(116deg,transparent 0 77px,#e8c47611 79px,transparent 80px)!important}
+.stage:after{background:radial-gradient(ellipse,#ebc87833,transparent 73%)!important}
+.hero-logo .mark,.hero-brand h1 em,.hero-brand strong,.hero-pills svg{color:#f7d691!important;text-shadow:0 0 13px #efbf735e!important}
+.hero-pills span,.bottom-panel,.phone{background:linear-gradient(145deg,#203b60,#0e213e 82%,#381d35)!important;border-color:#d6b06d!important;box-shadow:0 0 16px #edd48e24,inset 0 1px 3px #fff2!important}
+.monitor-body,.monitor-inner,.monitor-content,.monitor-sidebar{background:linear-gradient(128deg,#102b4b,#0b1a31 75%,#2a1c35)!important}
+.monitor-apphead,.monitor-menu,.monitor-bottom{background:linear-gradient(130deg,#1b3455,#111c34)!important;border-color:#b99c6b!important}
+.metric-card,.chart-card,.alert-stack,.dashboard-charts{background:linear-gradient(145deg,#172d4a,#101d35 72%,#302034)!important;border-color:#b6a076!important}
+.phone-kpis>div,.connection-items span{background:linear-gradient(130deg,#1d4160,#142b49)!important;color:#f8f5eb!important}
+.phone-head svg,.module-grid svg,.central-database svg{color:#f2d18a!important}
+.phone-greet b,.bottom-panel h2,.monitor-brand{color:#ffe9bb!important}
+.quick-actions a,.module-grid a{border-color:#bd9d72!important}
+.module-grid a:hover,.quick-actions a:hover{background:#dbe7f6!important}
+.functional-tools{background:#0c203b!important;color:#e5ecf7!important;border-top-color:#c1a76e!important}
+.export-actions button,.export-actions a{background:linear-gradient(125deg,#253e62,#261d3b)!important;color:#ffe7ad!important;border-color:#e7c37e!important}
+@media(prefers-reduced-motion:reduce){.stage *{animation:none!important;transition:none!important}}
