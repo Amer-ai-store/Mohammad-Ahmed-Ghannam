@@ -88,3 +88,27 @@
 #luqta-root .command-workspace .toolbar{gap:.5rem}
 #luqta-root .command-workspace .btn{min-height:38px}
 @media(max-width:680px){.command-workspace{padding:.85rem}#luqta-root .command-workspace .toolbar a{flex:1;justify-content:center}}
+
+/* GH royal navy visual system — presentation-only, retains alert semantics and original data routes. */
+:root, :root[data-theme="light"], :root[data-theme="dark"]{
+  --bg:#071223!important;--surface:#0f213c!important;--surface-2:#192e4b!important;
+  --line:#50627c!important;--fg:#f2f5fd!important;--muted:#c0cee2!important;
+  --accent:#f2d28b!important;--accent-ink:#231b12!important;--accent-soft:#263b56!important;
+  --code-bg:#091528!important;--code-fg:#eff3fb!important;color-scheme:dark!important;
+}
+html,body{background:radial-gradient(ellipse at 85% 0%,#203e6588,transparent 56%),linear-gradient(125deg,#061021 0%,#10223c 64%,#29192b 100%)!important;color:#f2f5fd!important}
+.sidebar,.chips{background:linear-gradient(140deg,#0e213d,#0b182d 85%,#27172c)!important;border-color:#856f65!important}
+.command-home .command-hero,.view .hero,.panel,.card,.kpi,.item,.nav-landing-card{
+ background:linear-gradient(140deg,#1b3455,#0f1f37 71%,#261b32)!important;border-color:#726783!important;
+ box-shadow:inset 0 1px 1px #ffffff22,0 6px 18px #0005!important
+}
+.command-home .command-hero,.view .hero{border-color:#c5a96c!important}
+button,.btn,nav.side a[aria-current="page"],.chips nav a[aria-current="page"]{border-color:#d3b977;color:var(--fg)}
+button.primary,.btn.primary,nav.side a[aria-current="page"],.chips nav a[aria-current="page"]{
+ background:linear-gradient(145deg,#ffe7a3,#dcb86e 70%,#b48737)!important;color:#211c19!important
+}
+nav.side a,.view-head h1,.panel h2,.brand b{color:#f1f5ff!important}
+.panel .eyebrow,.command-home .eyebrow{color:#f4d895!important}
+.view .metric-card,.view .chart-card{background:#102642!important;border-color:#b49766!important}
+input,select,textarea{background:#09192e!important;color:#e9eff8!important;border-color:#66738f!important}
+@media (prefers-reduced-motion:reduce){.command-home *{transition:none!important}}
