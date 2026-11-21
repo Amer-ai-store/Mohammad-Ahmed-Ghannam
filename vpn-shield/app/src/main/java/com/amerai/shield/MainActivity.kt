@@ -129,20 +129,23 @@ private fun Root() {
 
     // شاشة اختيار التطبيقات (طبقة فوق المحتوى)
     if (picker != null) {
-        val (title, selected, onToggle) = when (picker) {
-            Picker.SPLIT -> Triple("تطبيقات VPN المحددة", store.splitApps) { pkg: String ->
+        val cfg: Triple<String, Set<String>, (String) -> Unit> = when (picker) {
+            Picker.SPLIT -> Triple("تطبيقات VPN المحددة", store.splitApps, { pkg: String ->
                 store.splitApps = store.splitApps.toMutableSet().apply { if (!add(pkg)) remove(pkg) }
                 refresh++
-            }
-            Picker.LOCKED -> Triple("التطبيقات المقفلة", store.lockedApps) { pkg: String ->
+            })
+            Picker.LOCKED -> Triple("التطبيقات المقفلة", store.lockedApps, { pkg: String ->
                 store.lockedApps = store.lockedApps.toMutableSet().apply { if (!add(pkg)) remove(pkg) }
                 refresh++
-            }
-            else -> Triple("المستثنى من التسريع", store.cleanWhitelist) { pkg: String ->
+            })
+            else -> Triple("المستثنى من التسريع", store.cleanWhitelist, { pkg: String ->
                 store.cleanWhitelist = store.cleanWhitelist.toMutableSet().apply { if (!add(pkg)) remove(pkg) }
                 refresh++
-            }
+            })
         }
+        val title = cfg.first
+        val selected = cfg.second
+        val onToggle = cfg.third
         Scaffold(
             containerColor = Ink,
             topBar = {
