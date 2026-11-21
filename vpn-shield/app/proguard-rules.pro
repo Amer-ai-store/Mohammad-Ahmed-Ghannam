@@ -1,0 +1,2 @@
+-keep class com.wireguard.** { *; }
+-keep class rikka.shizuku.** { *; }
