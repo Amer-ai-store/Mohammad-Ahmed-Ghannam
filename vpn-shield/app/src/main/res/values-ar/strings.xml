@@ -1,3 +1,4 @@
 <resources>
   <string name="app_name">درع عامر</string>
+  <string name="a11y_desc">يكتشف فتح تطبيق مقفل ليطلب رقمك السري. لا يقرأ محتوى الشاشة.</string>
 </resources>

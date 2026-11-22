@@ -36,6 +36,7 @@ fun VpnScreen(
     onToggleMain: () -> Unit,
     onSelect: (String) -> Unit,
     onImport: () -> Unit,
+    onPaste: () -> Unit,
     onToggleSplit: (Boolean) -> Unit,
     onEditSplitApps: () -> Unit
 ) {
@@ -130,8 +131,19 @@ fun VpnScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Add, null, tint = SkyBright, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("استيراد ملف", color = SkyBright, fontSize = 13.sp)
+                        Text("ملف", color = SkyBright, fontSize = 13.sp)
                     }
+                }
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(InkElevated)
+                        .clickable { onPaste() }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("لصق", color = SkyBright, fontSize = 13.sp)
                 }
             }
             Spacer(Modifier.height(12.dp))

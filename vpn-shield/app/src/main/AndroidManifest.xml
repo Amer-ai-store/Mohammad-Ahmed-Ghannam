@@ -57,6 +57,28 @@
             </intent-filter>
         </service>
 
+        <!-- شاشة القفل التي تظهر فوق التطبيقات المقفلة -->
+        <activity
+            android:name=".lock.LockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.AmerShield" />
+
+        <!-- خدمة إمكانية الوصول: تكتشف فتح تطبيق مقفل لتطلب الرقم السري. لا تقرأ المحتوى. -->
+        <service
+            android:name=".lock.LockAccessibilityService"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/lock_accessibility" />
+        </service>
+
         <!-- إعادة التشغيل بعد الإقلاع (بأمر المستخدم فقط) -->
         <receiver
             android:name=".vpn.BootReceiver"

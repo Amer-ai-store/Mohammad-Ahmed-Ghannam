@@ -1,3 +1,4 @@
 <resources>
   <string name="app_name">Amer Shield</string>
+  <string name="a11y_desc">Detects when a locked app opens, to ask for your PIN. It does not read screen content.</string>
 </resources>

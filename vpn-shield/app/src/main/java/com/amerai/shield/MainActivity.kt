@@ -11,6 +11,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
@@ -23,8 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.amerai.shield.clean.CleanWorker
+import com.amerai.shield.clean.Cleaner
 import com.amerai.shield.clean.ShizukuOps
+import com.amerai.shield.lock.LockSetup
 import com.amerai.shield.data.AppInfo
 import com.amerai.shield.data.AppsRepository
 import com.amerai.shield.data.ShieldStore
@@ -61,6 +67,9 @@ private fun Root() {
     var tab by remember { mutableIntStateOf(0) }
     var picker by remember { mutableStateOf<Picker?>(null) }
     var pendingConnect by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var showPaste by remember { mutableStateOf(false) }
+    var pasteText by remember { mutableStateOf("") }
+    var pasteName by remember { mutableStateOf("") }
 
     val apps by produceState(initialValue = emptyList<AppInfo>()) {
         value = AppsRepository.launchableApps(context)
@@ -125,6 +134,48 @@ private fun Root() {
         } else {
             doConnect()
         }
+    }
+
+    fun addPastedProfile() {
+        val text = pasteText.trim()
+        if (text.isBlank() || !text.contains("[Interface]")) {
+            Toast.makeText(context, "الصق محتوى ملف WireGuard صحيحًا", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val nm = pasteName.ifBlank { "خادم" }
+        val p = VpnProfile(
+            id = System.currentTimeMillis().toString(),
+            name = nm, country = guessCountry(nm), conf = text
+        )
+        store.addProfile(p)
+        if (store.selectedProfileId == null) store.selectedProfileId = p.id
+        showPaste = false; pasteText = ""; pasteName = ""; refresh++
+        Toast.makeText(context, "تم إضافة الخادم: $nm", Toast.LENGTH_SHORT).show()
+    }
+
+    if (showPaste) {
+        AlertDialog(
+            onDismissRequest = { showPaste = false },
+            confirmButton = { TextButton(onClick = { addPastedProfile() }) { Text("إضافة", color = SkyBright) } },
+            dismissButton = { TextButton(onClick = { showPaste = false }) { Text("إلغاء", color = TextLo) } },
+            title = { Text("لصق إعداد WireGuard", color = TextHi) },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    OutlinedTextField(
+                        value = pasteName, onValueChange = { pasteName = it },
+                        label = { Text("اسم الخادم (مثال: France)") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth()
+                    )
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = pasteText, onValueChange = { pasteText = it },
+                        label = { Text("الصق محتوى ملف .conf هنا") },
+                        modifier = Modifier.fillMaxWidth().height(180.dp)
+                    )
+                }
+            },
+            containerColor = InkCard
+        )
     }
 
     // شاشة اختيار التطبيقات (طبقة فوق المحتوى)
@@ -206,23 +257,41 @@ private fun Root() {
                     onToggleMain = { toggleMain() },
                     onSelect = { store.selectedProfileId = it; selectedId = it; refresh++ },
                     onImport = { importer.launch("*/*") },
+                    onPaste = { showPaste = true },
                     onToggleSplit = { store.splitEnabled = it; refresh++ },
                     onEditSplitApps = { picker = Picker.SPLIT }
                 )
                 1 -> AppsLockScreen(
                     hasPin = store.hasPin(),
                     lockedCount = store.lockedApps.size,
+                    accessibilityEnabled = LockSetup.accessibilityEnabled(context),
                     onSetPin = { store.setPin(it); refresh++ },
-                    onPickLockedApps = { picker = Picker.LOCKED }
+                    onPickLockedApps = { picker = Picker.LOCKED },
+                    onEnableAccessibility = {
+                        runCatching {
+                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        }
+                    }
                 )
                 2 -> CleanScreen(
                     shizukuReady = ShizukuOps.ready(),
                     autoClean = store.cleanerAuto,
                     whitelistCount = store.cleanWhitelist.size,
                     onCleanNow = {
-                        Toast.makeText(context, "التسريع الفعلي يُفعّل عبر Shizuku (قريبًا في التحديث)", Toast.LENGTH_LONG).show()
+                        val r = Cleaner.cleanNow(context)
+                        if (r.usedShizuku) {
+                            Toast.makeText(context, "تم إيقاف ${r.stopped} تطبيق", Toast.LENGTH_SHORT).show()
+                        } else if (!LockSetup.usageAccessGranted(context)) {
+                            Toast.makeText(context, "امنح «الوصول إلى الاستخدام» أولًا", Toast.LENGTH_LONG).show()
+                            runCatching { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
+                        } else {
+                            Toast.makeText(context, "فعّل Shizuku للإيقاف الفعلي (${r.candidates.size} مرشح)", Toast.LENGTH_LONG).show()
+                        }
                     },
-                    onToggleAuto = { store.cleanerAuto = it; refresh++ },
+                    onToggleAuto = {
+                        store.cleanerAuto = it; refresh++
+                        if (it) CleanWorker.schedule(context) else CleanWorker.cancel(context)
+                    },
                     onEditWhitelist = { picker = Picker.WHITELIST },
                     onSetupShizuku = { ShizukuOps.requestPermission() }
                 )

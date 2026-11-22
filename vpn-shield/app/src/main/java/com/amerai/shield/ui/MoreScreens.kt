@@ -69,8 +69,10 @@ fun AppPickerScreen(
 fun AppsLockScreen(
     hasPin: Boolean,
     lockedCount: Int,
+    accessibilityEnabled: Boolean,
     onSetPin: (String) -> Unit,
-    onPickLockedApps: () -> Unit
+    onPickLockedApps: () -> Unit,
+    onEnableAccessibility: () -> Unit
 ) {
     var pin by remember { mutableStateOf("") }
     var pin2 by remember { mutableStateOf("") }
@@ -136,11 +138,28 @@ fun AppsLockScreen(
                 Icon(Icons.Filled.ArrowForwardIos, null, tint = TextLo, modifier = Modifier.size(16.dp))
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Text(
-            "القفل يطلب الرقم السري عند فتح التطبيقات التي تختارها. كل شيء بأمرك أنت، ويظل التطبيق قابلًا للإلغاء من جهازك.",
-            color = TextLo, fontSize = 12.sp
-        )
+        Spacer(Modifier.height(16.dp))
+        if (!accessibilityEnabled) {
+            GlassCard {
+                Text("تفعيل القفل", color = TextHi, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "لكي يعمل القفل فعليًا، فعّل خدمة إمكانية الوصول «درع عامر». هي تكتشف فتح التطبيق المقفل فقط لتطلب رقمك، ولا تقرأ محتوى شاشتك.",
+                    color = TextLo, fontSize = 12.sp
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = onEnableAccessibility,
+                    colors = ButtonDefaults.buttonColors(containerColor = Violet),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("فتح إعدادات إمكانية الوصول", color = TextHi) }
+            }
+        } else {
+            Text(
+                "القفل مفعّل. يطلب الرقم السري عند فتح التطبيقات التي تختارها. كل شيء بأمرك، ويظل التطبيق قابلًا للإلغاء من جهازك.",
+                color = Emerald, fontSize = 12.sp
+            )
+        }
     }
 }
 
