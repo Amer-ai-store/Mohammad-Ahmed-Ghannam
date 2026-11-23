@@ -25,3 +25,6 @@ jobs:
         stale-pr-message: 'Stale pull request message'
         stale-issue-label: 'no-issue-activity'
         stale-pr-label: 'no-pr-activity'
+        # Keep stale labeling for triage; NEVER automatically close investigation/ERP issues or PRs.
+        # Closing is a separate, evidence-backed owner decision, not a scheduled automation.
+        days-before-close: -1
