@@ -1,4 +1,4 @@
-param([ValidateRange(1000,200000)][int]$RecentRows=10000)
+﻿param([ValidateRange(1000,200000)][int]$RecentRows=10000)
 $ErrorActionPreference='Stop'
 $base='http://127.0.0.2:3456'
 $root='C:\ProgramData\SentinelXService\workspace'
