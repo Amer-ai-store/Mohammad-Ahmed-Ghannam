@@ -1,0 +1,35 @@
+name: ERP local worker — synthetic fail-closed QA
+
+on:
+  pull_request:
+    paths:
+      - 'aas-cc/runtime/local-worker-v1/**'
+      - '.github/workflows/erp-local-worker-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-queue:
+    name: Node local queue lock, replay and digest validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify runner version
+        run: node --version
+      - name: Run six synthetic-only fail-closed cases
+        run: node --test aas-cc/runtime/local-worker-v1/queue.test.cjs
+      - name: Assert no forbidden production integration in isolated queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          file=aas-cc/runtime/local-worker-v1/queue.cjs
+          if grep -Ein 'require\(.node:(https|net|tls|http|dgram)|SELECT |INSERT |UPDATE |DELETE |DATABASE_URL|SUPABASE|JAWAFFA_DB|eval\(' "$file"; then
+            echo "Unsafe production integration in standalone local queue" >&2
+            exit 1
+          fi
+          echo 'PASS: deterministic synthetic queue without database/network integration'
