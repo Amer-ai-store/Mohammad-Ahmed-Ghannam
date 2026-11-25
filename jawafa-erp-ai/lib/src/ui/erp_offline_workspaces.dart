@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../domain/erp_offline_worksheets.dart';
 import 'erp_visual_system.dart';
+import 'bank_deposit_worksheet.dart';
 
 /// All three forms are volatile: no local disk, network, database or exports.
 class _ManualField extends StatelessWidget {
@@ -223,6 +224,8 @@ class _PosShiftWorksheetViewState extends State<PosShiftWorksheetView> {
               const Text('هذه نتيجة حسابية للمدخلات وليست إيداعًا بنكيًا مثبتًا.'),
             ],
           )),
+        if (result != null)
+          BankDepositWorksheetView(shift: result!),
       ],
     );
   }
