@@ -104,6 +104,45 @@ PosWorksheetResult reconcilePos({
   return PosWorksheetResult(expected, countedCash);
 }
 
+/// Manual-only comparison between a counted cash drawer and a declared bank
+/// deposit. This does NOT verify a real bank credit or cash-in-transit.
+class DepositWorksheetResult {
+  final int expectedDepositFils;
+  final int declaredDepositFils;
+  final int retainedCashFils;
+
+  const DepositWorksheetResult({
+    required this.expectedDepositFils,
+    required this.declaredDepositFils,
+    required this.retainedCashFils,
+  });
+
+  /// Positive means the declared deposit exceeds the physical amount
+  /// available after retaining the float. Negative is an under-declaration.
+  int get depositVarianceFils => declaredDepositFils - expectedDepositFils;
+}
+
+/// Uses cash counted physically, not theoretical POS sales, so that the
+/// independently reported drawer variance remains visible rather than being
+/// silently folded into the bank deposit comparison.
+DepositWorksheetResult reconcileBankDeposit({
+  required PosWorksheetResult shift,
+  required int retainedCash,
+  required int declaredDeposit,
+}) {
+  if (retainedCash < 0 || declaredDeposit < 0) {
+    throw const WorksheetValidation('NEGATIVE_DEPOSIT_INPUT');
+  }
+  if (retainedCash > shift.countedCashFils) {
+    throw const WorksheetValidation('RETAINED_EXCEEDS_COUNTED_CASH');
+  }
+  return DepositWorksheetResult(
+    expectedDepositFils: shift.countedCashFils - retainedCash,
+    declaredDepositFils: declaredDeposit,
+    retainedCashFils: retainedCash,
+  );
+}
+
 /// Completeness, NOT identity attribution or document authenticity.
 class AuditWorksheetResult {
   final List<String> missingFields;
