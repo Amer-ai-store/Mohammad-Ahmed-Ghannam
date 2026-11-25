@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../domain/erp_offline_worksheets.dart';
 import 'erp_visual_system.dart';
 import 'bank_deposit_worksheet.dart';
+import 'document_sequence_review_view.dart';
 
 /// All three forms are volatile: no local disk, network, database or exports.
 class _ManualField extends StatelessWidget {
@@ -307,6 +308,7 @@ class _AuditEvidenceWorksheetViewState extends State<AuditEvidenceWorksheetView>
                     result!.missingFields.join(', '),
             key: const Key('audit_result'),
           )),
+        const DocumentSequenceReviewView(),
       ],
     );
   }
