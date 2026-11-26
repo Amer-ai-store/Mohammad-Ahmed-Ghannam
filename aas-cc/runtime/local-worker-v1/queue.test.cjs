@@ -64,8 +64,14 @@ test("lock collision prevents unreviewed duplicate execution",t=>{
 });
 test("invalid runner digest cannot become validated output",t=>{
  const d=lab(t);job(d);
- fs.writeFileSync(path.join(d,"runner.cjs"),
-  'console.log(JSON.stringify({id:"test-a",kind:"INVENTORY_CHECK",state:"VALIDATED_CALCULATION",output:"13",request_sha256:"bad",output_sha256:"bad"}));');
+ const badRunner='console.log(JSON.stringify({id:"test-a",kind:"INVENTORY_CHECK",state:"VALIDATED_CALCULATION",output:"13",request_sha256:"bad",output_sha256:"bad"}));';
+ fs.writeFileSync(path.join(d,"runner.cjs"),badRunner);
+ // Simulate a trusted, known-hash runner with a faulty receipt. The separate
+ // tampering test keeps the original trusted hash and proves exit code 5.
+ const current=fs.readFileSync(path.join(d,"queue.cjs"),"utf8");
+ const trusted=current.match(/const EXPECTED_RUNNER_SHA256="([a-f0-9]{64})"/)[1];
+ const knownBadDigest=require("node:crypto").createHash("sha256").update(badRunner).digest("hex");
+ fs.writeFileSync(path.join(d,"queue.cjs"),current.replace(trusted,knownBadDigest));
  const r=run(d);assert.equal(r.exit,2);assert.equal(r.body.rejected,1);
  assert.equal(fs.existsSync(path.join(d,"results","test-a.json")),false);
 });
