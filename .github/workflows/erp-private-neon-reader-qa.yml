@@ -1,0 +1,39 @@
+name: ERP private independent reporting reader — policy QA
+
+on:
+  pull_request:
+    paths:
+      - 'api/erp-reader-health.js'
+      - 'api/_erp_reader_policy.mjs'
+      - 'api/package.json'
+      - 'tests/erp-private-reader-policy.test.mjs'
+      - '.github/workflows/erp-private-neon-reader-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reader-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Local-only security and identity contract checks
+        run: node --test tests/erp-private-reader-policy.test.mjs
+      - name: Disallow financial data or SQL writes in the private health route
+        shell: bash
+        run: |
+          set -euo pipefail
+          file=api/erp-reader-health.js
+          if grep -Ein '\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|EXECUTE)\b[[:space:]]+.*(table|into|from|user|role|public)' "$file"; then
+            echo "Production SQL write detected" >&2
+            exit 1
+          fi
+          if grep -Ein 'console\.(log|error).*\b(uri|password|token|sql|databaseUrl)\b' "$file"; then
+            echo "Potential connection secret in logging" >&2
+            exit 1
+          fi
+          echo 'PASS: no business SQL or credential logging in health route'
