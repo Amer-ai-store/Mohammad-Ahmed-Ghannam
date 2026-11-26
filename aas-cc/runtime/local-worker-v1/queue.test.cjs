@@ -14,7 +14,11 @@ const fakeRunner=[
 function lab(t){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),"aas-queue-"));
  t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
- fs.copyFileSync(src,path.join(dir,"queue.cjs"));
+ const expectedHash="c9b16de46ffef2092d32a59a65c124d274fe3486d66ad851c94b1cec5126c280";
+ const fakeSha=require("node:crypto").createHash("sha256").update(fakeRunner).digest("hex");
+ const source=fs.readFileSync(src,"utf8");
+ assert.ok(source.includes(expectedHash),"trusted runner constant changed");
+ fs.writeFileSync(path.join(dir,"queue.cjs"),source.replace(expectedHash,fakeSha));
  fs.writeFileSync(path.join(dir,"runner.cjs"),fakeRunner);
  fs.mkdirSync(path.join(dir,"inbox"));
  return dir;
@@ -64,4 +68,15 @@ test("invalid runner digest cannot become validated output",t=>{
   'console.log(JSON.stringify({id:"test-a",kind:"INVENTORY_CHECK",state:"VALIDATED_CALCULATION",output:"13",request_sha256:"bad",output_sha256:"bad"}));');
  const r=run(d);assert.equal(r.exit,2);assert.equal(r.body.rejected,1);
  assert.equal(fs.existsSync(path.join(d,"results","test-a.json")),false);
+});
+
+test("tampering with trusted runner stops processing and preserves incoming work",t=>{
+ const d=lab(t);job(d);
+ fs.appendFileSync(path.join(d,"runner.cjs"),"\n// untrusted altered code\n");
+ const r=run(d);
+ assert.equal(r.exit,5);
+ assert.equal(r.body.status,"RUNNER_INTEGRITY_FAILURE");
+ assert.equal(fs.existsSync(path.join(d,"inbox","test-a.json")),true);
+ assert.equal(fs.existsSync(path.join(d,"results","test-a.json")),false);
+ assert.equal(fs.existsSync(path.join(d,"queue.lock")),false);
 });
