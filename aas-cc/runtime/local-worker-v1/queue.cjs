@@ -4,7 +4,18 @@ const dir=__dirname, folders=["inbox","results","archive","rejected"];
 for(const folder of folders)fs.mkdirSync(path.join(dir,folder),{recursive:true});
 const sha=x=>crypto.createHash("sha256").update(x).digest("hex");
 const lock=path.join(dir,"queue.lock");
+const EXPECTED_RUNNER_SHA256="c9b16de46ffef2092d32a59a65c124d274fe3486d66ad851c94b1cec5126c280";
 const summary={schema:1,mode:"LOCAL_ONLY_NO_SQL_NO_REMOTE",at:new Date().toISOString(),processed:0,validated:0,replayed:0,rejected:0};
+// Reject all work before touching the inbox if the immutable deterministic
+// calculator has changed. This protects against accidental or malicious edits.
+// SHA256 is an integrity check, NOT an authentication signature.
+const runnerPath=path.join(dir,"runner.cjs");
+try{
+ if(sha(fs.readFileSync(runnerPath))!==EXPECTED_RUNNER_SHA256)throw Error("MISMATCH");
+}catch{
+ console.log(JSON.stringify({...summary,status:"RUNNER_INTEGRITY_FAILURE"}));
+ process.exit(5);
+}
 let fd;
 try{fd=fs.openSync(lock,"wx")}catch(e){console.log(JSON.stringify({...summary,status:"BUSY_REQUIRES_REVIEW"}));process.exit(3);}
 try{
