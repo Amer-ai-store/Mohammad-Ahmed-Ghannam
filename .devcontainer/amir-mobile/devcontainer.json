@@ -1,0 +1,5 @@
+{
+  "name": "Amir Mobile & Payments",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "node --version && node --test apps/amir-mobile/payments.test.cjs"
+}
