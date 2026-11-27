@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Amir AI Store — بوابة الوصول",
+  "short_name": "Amir AI Store",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#187530",
+  "background_color": "#12251b",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
