@@ -29,6 +29,20 @@ test('all navigation entries are unique and resolve to an existing view', () => 
   }
   assert.ok(seen.size > 50);
 });
+test('ERP application portal is reachable from central dashboard with no invented live connection', () => {
+  const erpGroup = nav.find(([, entries]) => entries.some(([id]) => id === 'erp-app'));
+  assert.ok(erpGroup, 'ERP must be part of the existing Jawafa group');
+  assert.ok(erpGroup[0].includes('جوافة'));
+  assert.match(index, /data-view="erp-app" id="erp-app-screen" hidden/);
+  assert.match(index, /href="#erp-app">ربط تطبيق ERP الذكي<\/a>/);
+  assert.match(index, /href="#jawafa-2100">واجهة جوافة 2100 الخضراء<\/a>/);
+  assert.match(index, /حالة الربط: تنقّل واجهات فقط/);
+  const portal = index.split('<!-- One shared public navigation entry for the independent ERP prototype.')[1]
+    ?.split('<!-- JAWAFA INTEGRATED NATIVE VIEWS; NO IFRAME -->')[0];
+  assert.ok(portal, 'ERP portal content exists');
+  assert.doesNotMatch(portal, /<iframe|\b(?:user_read|sa)\s*[:=]|DATABASE_URL|GITHUB_TOKEN/);
+});
+
 test('mobile navigation is scoped to one group and reports active page', () => {
   assert.match(index,/id="nav-group-select"/);
   assert.match(index,/id="nav-breadcrumb"/);

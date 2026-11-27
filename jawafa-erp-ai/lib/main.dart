@@ -1,10 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'src/domain/cheque.dart';
 import 'src/domain/journal.dart';
 import 'src/network/erp_gateway_client.dart';
 import 'src/ui/erp_visual_system.dart';
 import 'src/ui/erp_report_catalog_view.dart';
+
+// Keep canonical production navigation as default. Pre-release QA can compile
+// an SSO-protected dashboard URL with --dart-define=CENTRAL_DASHBOARD_URL=...
+// No authentication tokens, financial rows or tenant identifiers are appended.
+const centralDashboardUrl = String.fromEnvironment(
+  'CENTRAL_DASHBOARD_URL',
+  defaultValue: 'https://amer-ai-store.github.io/Mohammad-Ahmed-Ghannam/index.html#erp-app',
+);
+
+/// Fail closed for non-HTTPS, foreign, query-bearing or credential-bearing links.
+/// This is URL allowlisting, NOT evidence of preview authentication or owner E2E.
+Uri? approvedCentralDashboardUri(String raw) {
+  final uri = Uri.tryParse(raw);
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      !uri.hasAuthority ||
+      uri.userInfo.isNotEmpty ||
+      uri.hasQuery ||
+      uri.port != 443 ||
+      uri.fragment != 'erp-app') {
+    return null;
+  }
+  final canonical =
+      uri.host == 'amer-ai-store.github.io' &&
+      uri.path == '/Mohammad-Ahmed-Ghannam/index.html';
+  final previewHost =
+      uri.host == 'jawafa-erp-dashboard-preview.vercel.app' ||
+      (uri.host.startsWith('jawafa-erp-dashboard-preview-') &&
+          uri.host.endsWith('-a-1857.vercel.app'));
+  final protectedPreview = previewHost &&
+      (uri.path.isEmpty || uri.path == '/' || uri.path == '/index.html');
+  return (canonical || protectedPreview) ? uri : null;
+}
 
 void main() => runApp(const JawafaErpApp());
 
@@ -102,6 +137,31 @@ class _ErpShellState extends State<ErpShell> {
       selected = ErpArea.overview;
     });
     if (closeDrawer) Navigator.maybePop(context);
+  }
+
+  Future<void> openCentralDashboard() async {
+    // Public navigation only; never send tokens, financial data or tenant identifiers.
+    final uri = approvedCentralDashboardUri(centralDashboardUrl);
+    if (uri == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('رابط لوحة القيادة غير معتمد؛ لم يتم فتحه.'),
+      ));
+      return;
+    }
+    bool opened = false;
+    try {
+      opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened) {
+      await Clipboard.setData(const ClipboardData(text: centralDashboardUrl));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('تعذّر فتح لوحة القيادة؛ تم نسخ رابطها.'),
+      ));
+    }
   }
 
   void searchDepartments() {
@@ -257,6 +317,12 @@ class _ErpShellState extends State<ErpShell> {
           title: Text('JAWAFA ERP AI • $title',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           actions: [
+            IconButton(
+              key: const Key('central_dashboard_link'),
+              onPressed: () { openCentralDashboard(); },
+              icon: const Icon(Icons.open_in_new),
+              tooltip: 'فتح لوحة القيادة المركزية',
+            ),
             IconButton(
               key: const Key('erp_module_search'),
               onPressed: searchDepartments,
