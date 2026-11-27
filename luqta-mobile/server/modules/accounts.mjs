@@ -34,6 +34,9 @@ export function install(c, api) {
     CREATE TABLE IF NOT EXISTS vendors(id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',status TEXT NOT NULL CHECK(status IN ('active','suspended')),commission REAL NOT NULL DEFAULT 0,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS vendor_members(vendor_id TEXT NOT NULL REFERENCES vendors(id),user_id TEXT NOT NULL REFERENCES users(id),role TEXT NOT NULL CHECK(role IN ('owner','staff')),created_at TEXT NOT NULL,PRIMARY KEY(vendor_id,user_id));
   `);
+  // Existing installations already have vendors; add the classification without replacing rows.
+  if (!all('PRAGMA table_info(vendors)').some((column) => column.name === 'kind'))
+    db.exec("ALTER TABLE vendors ADD COLUMN kind TEXT NOT NULL DEFAULT 'store' CHECK(kind IN ('store','restaurant'))");
 
   // ---- preferences ----
   const preferences = (userId) => {
@@ -161,7 +164,7 @@ export function install(c, api) {
   });
 
   // ---- merchants (vendors) ----
-  const vendorItem = (v) => ({ id: v.id, name: v.name, description: v.description, status: v.status, commission: v.commission, createdAt: v.created_at,
+  const vendorItem = (v) => ({ id: v.id, name: v.name, description: v.description, kind: v.kind, status: v.status, commission: v.commission, createdAt: v.created_at,
     members: all('SELECT m.user_id AS userId,m.role,u.name,u.email FROM vendor_members m JOIN users u ON u.id=m.user_id WHERE m.vendor_id=? ORDER BY m.created_at', v.id),
     products: get("SELECT COUNT(*) AS n FROM products WHERE json_extract(data,'$.vendorId')=?", v.id).n });
   const membership = (req, vendorId) => {
@@ -172,17 +175,27 @@ export function install(c, api) {
     return { actor, role: member?.role || 'admin' };
   };
   api.provide('vendorOf', (productData) => productData?.vendorId || null);
+  api.route('GET', '/restaurants', () => ({ restaurants: all("SELECT id,name,description FROM vendors WHERE kind='restaurant' AND status='active' ORDER BY name").map((v) => ({
+    ...v, products: get("SELECT COUNT(*) AS n FROM products WHERE active=1 AND json_extract(data,'$.vendorId')=?", v.id).n,
+  })) }));
+  api.route('GET', '/restaurants/:restaurantId/menu', ({ params }) => {
+    const restaurant = get("SELECT id,name,description FROM vendors WHERE id=? AND kind='restaurant' AND status='active'", params.restaurantId);
+    if (!restaurant) fail(404, 'المطعم غير موجود', 'not_found');
+    return { restaurant, products: all("SELECT * FROM products WHERE active=1 AND json_extract(data,'$.vendorId')=? ORDER BY updated_at DESC", restaurant.id).map(c.product) };
+  });
   api.route('GET', '/admin/vendors', ({ req }) => { admin(req); return { vendors: all('SELECT * FROM vendors ORDER BY created_at DESC').map(vendorItem) }; });
   api.route('POST', '/admin/vendors', ({ req, body }) => {
     const actor = admin(req), vendorId = id('vnd');
-    run('INSERT INTO vendors VALUES(?,?,?,?,?,?)', vendorId, text(body.name, 'اسم التاجر', 2, 120), body.description ? text(body.description, 'وصف التاجر', 1, 1000) : '', 'active', body.commission == null ? 0 : number(body.commission, 'نسبة العمولة', 0, 50), now());
+    if (body.kind !== undefined && !['store', 'restaurant'].includes(body.kind)) fail(400, 'نوع المتجر غير صالح');
+    run('INSERT INTO vendors(id,name,description,status,commission,created_at,kind) VALUES(?,?,?,?,?,?,?)', vendorId, text(body.name, 'اسم التاجر', 2, 120), body.description ? text(body.description, 'وصف التاجر', 1, 1000) : '', 'active', body.commission == null ? 0 : number(body.commission, 'نسبة العمولة', 0, 50), now(), body.kind || 'store');
     audit(actor, 'vendor.create', vendorId);
     return [201, { vendor: vendorItem(get('SELECT * FROM vendors WHERE id=?', vendorId)) }];
   });
   api.route('PATCH', '/admin/vendors/:vendorId', ({ req, body, params }) => {
     const actor = admin(req), v = get('SELECT * FROM vendors WHERE id=?', params.vendorId); if (!v) fail(404, 'التاجر غير موجود', 'not_found');
     if (body.status !== undefined && !['active', 'suspended'].includes(body.status)) fail(400, 'حالة التاجر غير صالحة');
-    run('UPDATE vendors SET name=?,description=?,status=?,commission=? WHERE id=?', body.name !== undefined ? text(body.name, 'اسم التاجر', 2, 120) : v.name, body.description !== undefined ? String(body.description).slice(0, 1000) : v.description, body.status ?? v.status, body.commission !== undefined ? number(body.commission, 'نسبة العمولة', 0, 50) : v.commission, v.id);
+    if (body.kind !== undefined && !['store', 'restaurant'].includes(body.kind)) fail(400, 'نوع المتجر غير صالح');
+    run('UPDATE vendors SET name=?,description=?,status=?,commission=?,kind=? WHERE id=?', body.name !== undefined ? text(body.name, 'اسم التاجر', 2, 120) : v.name, body.description !== undefined ? text(body.description, 'وصف التاجر', 0, 1000) : v.description, body.status ?? v.status, body.commission !== undefined ? number(body.commission, 'نسبة العمولة', 0, 50) : v.commission, body.kind ?? v.kind, v.id);
     audit(actor, 'vendor.update', v.id, { status: body.status });
     return { vendor: vendorItem(get('SELECT * FROM vendors WHERE id=?', v.id)) };
   });
