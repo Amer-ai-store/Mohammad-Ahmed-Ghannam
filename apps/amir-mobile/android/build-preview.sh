@@ -15,6 +15,6 @@ zip -j build/unsigned.apk build/dex/classes.dex
 keytool -genkeypair -keystore build/preview.jks -storepass android -keypass android -alias preview -keyalg RSA -keysize 2048 -validity 30 -dname 'CN=Amir preview only' >/dev/null 2>&1
 "$bt/apksigner" sign --ks build/preview.jks --ks-key-alias preview --ks-pass pass:android --key-pass pass:android --out dist/Amir-AI-Store-preview.apk build/aligned.apk
 "$bt/apksigner" verify --verbose dist/Amir-AI-Store-preview.apk
-"$bt/aapt2" dump badging dist/Amir-AI-Store-preview.apk | head -n 8
+"$bt/aapt2" dump badging dist/Amir-AI-Store-preview.apk | sed -n '1,8p'
 sha256sum dist/Amir-AI-Store-preview.apk > dist/SHA256SUMS.txt
 echo AMIR_ANDROID_PREVIEW_BUILD_OK
