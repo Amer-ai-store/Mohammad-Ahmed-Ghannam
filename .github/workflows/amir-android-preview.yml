@@ -1,0 +1,27 @@
+name: Amir Android preview APK
+on:
+  pull_request:
+    paths:
+      - 'apps/amir-mobile/android/**'
+      - '.github/workflows/amir-android-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Ensure Android SDK platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Build and verify preview APK
+        run: bash apps/amir-mobile/android/build-preview.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: Amir-AI-Store-Android-preview
+          path: apps/amir-mobile/android/dist/
+          if-no-files-found: error
+          retention-days: 14
