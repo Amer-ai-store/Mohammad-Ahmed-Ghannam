@@ -31,7 +31,7 @@ jobs:
           assert.equal(m.dir,'rtl');
           for(const i of m.icons){const b=fs.readFileSync(d+i.src);const n=parseInt(i.sizes);assert.equal(b.readUInt32BE(16),n);assert.equal(b.readUInt32BE(20),n);}
           const h=fs.readFileSync(d+'/index.html','utf8');
-          assert(h.includes('id="checkoutTrigger" disabled'));assert(h.includes('id="amirInstall"'));assert(h.includes('id="amirPayStatus"'));
+          assert(h.includes('id="checkoutTrigger" disabled'));assert(h.includes('<link rel="manifest" href="/manifest.webmanifest">'));assert(h.includes('id="amirInstall"'));assert(h.includes('id="amirPayStatus"'));
           const sw=fs.readFileSync(d+'/amir-app-sw.js','utf8');
           assert(sw.includes("u.pathname.startsWith('/api/')"));
           assert(fs.existsSync(d+'/offline-amir.html'));
