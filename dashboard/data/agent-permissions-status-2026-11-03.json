@@ -1,0 +1,35 @@
+{
+  "schema": "jawafa.agent-permissions.status.v1",
+  "checked_at": "2026-11-03",
+  "environment": "JAWAFFASVR",
+  "status": "BLOCKED",
+  "evidence": [
+    {
+      "id": "DC-CONFIG-20261103",
+      "status": "VERIFIED",
+      "finding": "Desktop Commander blockedCommands contains net, runas, sc, reg; net user rejected as Command not allowed."
+    },
+    {
+      "id": "WIN-ACCOUNT-20261103",
+      "status": "VERIFIED",
+      "finding": "Get-LocalUser confirmed JawafaAuditSvc does not exist."
+    },
+    {
+      "id": "WATCH-20261103-033838",
+      "status": "VERIFIED",
+      "finding": "Jawafa Forensic Watch v5 last run 03:38:38 server local, result 0, missed runs 0."
+    }
+  ],
+  "not_completed": [
+    "No service account created",
+    "No permissions modified",
+    "No SQL role changes",
+    "No dashboard live integration verified"
+  ],
+  "restrictions": [
+    "No modifications to financial/accounting/numeric production records",
+    "No modifications to protected tasks",
+    "No production deployment until release gate acceptance"
+  ],
+  "next_action": "Use authorized administrative channel to provision separate least-privilege read-only SQL and evidence archive service identities; independently verify."
+}

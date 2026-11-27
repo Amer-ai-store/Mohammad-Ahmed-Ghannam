@@ -21,15 +21,17 @@ const jawafaBlock=jawafa.match(/const PAGES=(\{[\s\S]*?\});\nconst TITLES/);
 assert.ok(jawafaBlock,'Jawafa integration routes exist');
 const jawafaRoutes=[...jawafaBlock[1].matchAll(/^"([^"]+)":\{/gm)].map(x=>x[1]);
 
-test('canonical dashboard routes all 14 AAS screens and 17 Jawafa panes',()=>{
+test('canonical dashboard routes all 14 AAS screens, 17 baseline Jawafa panes and gated AUDIT-111 draft',()=>{
   assert.equal(nav.length,report.public_inventory.main_groups);
   // Snapshot inventory describes the previously published dashboard. Count
   // proposed views only for structural CI; do not claim them as published.
   const proposedViews=['project-messages','cca999-task-flow','jawafa-2100']
     .filter(id=>navRoutes.includes(id)&&viewSet.has(id)).length;
   const acceptanceDraft=Number(navRoutes.includes('jawafa-acceptance')&&viewSet.has('jawafa-acceptance'));
-  assert.equal(viewSet.size,report.public_inventory.main_native_views+proposedViews+acceptanceDraft);
-  assert.equal(navRoutes.length,report.public_inventory.main_navigation_destinations+proposedViews+acceptanceDraft);
+  const gatedAudit111Draft=Number(navRoutes.includes('jawafa-audit111')&&viewSet.has('jawafa-audit111'));
+  assert.equal(gatedAudit111Draft,1,'AUDIT-111 must be represented as a gated review-only draft');
+  assert.equal(viewSet.size,report.public_inventory.main_native_views+proposedViews+acceptanceDraft+gatedAudit111Draft);
+  assert.equal(navRoutes.length,report.public_inventory.main_navigation_destinations+proposedViews+acceptanceDraft+gatedAudit111Draft);
   assert.equal(manifest.routes.length,14);
   assert.equal(new Set(manifest.routes).size,14);
   assert.ok(manifest.routes.every(x=>navRoutes.includes('aas-'+x)),'all AAS routes must be navigable');
