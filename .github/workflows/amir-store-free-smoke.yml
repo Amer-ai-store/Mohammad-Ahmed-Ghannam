@@ -1,5 +1,10 @@
 name: Amir AI Store — free browser smoke checks
 on:
+  push:
+    branches: ['feature/amir-free-playwright-e2e-20261127']
+    paths:
+      - '.github/workflows/amir-store-free-smoke.yml'
+      - 'tests/amir-store-free-smoke/**'
   pull_request:
     paths:
       - '.github/workflows/amir-store-free-smoke.yml'
