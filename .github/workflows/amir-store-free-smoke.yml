@@ -1,0 +1,28 @@
+name: Amir AI Store — free browser smoke checks
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/amir-store-free-smoke.yml'
+      - 'tests/amir-store-free-smoke/**'
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * *'
+permissions:
+  contents: read
+jobs:
+  public-browser-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned free Playwright on GH-hosted runner
+        run: |
+          python3 -m venv "$RUNNER_TEMP/store-smoke-venv"
+          "$RUNNER_TEMP/store-smoke-venv/bin/python" -m pip install --disable-pip-version-check playwright==1.57.0
+          "$RUNNER_TEMP/store-smoke-venv/bin/python" -m playwright install --with-deps chromium
+      - name: Run unauthenticated read-only browser and API smoke checks
+        env:
+          STORE_BASE_URL: https://amir-ai-store.vercel.app
+        run: "$RUNNER_TEMP/store-smoke-venv/bin/python" tests/amir-store-free-smoke/smoke.py
