@@ -30,4 +30,5 @@ jobs:
       - name: Run unauthenticated read-only browser and API smoke checks
         env:
           STORE_BASE_URL: https://amir-ai-store.vercel.app
-        run: "$RUNNER_TEMP/store-smoke-venv/bin/python" tests/amir-store-free-smoke/smoke.py
+        run: |
+          "$RUNNER_TEMP/store-smoke-venv/bin/python" tests/amir-store-free-smoke/smoke.py
