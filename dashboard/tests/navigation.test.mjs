@@ -76,3 +76,19 @@ test('external app preview supports close and clears iframe without claiming pro
     if (script.trim()) new Script(script, {filename:'appdeploy-inline.js'});
   }
 });
+
+test('Amir Store owner is reachable from central store and security views without sharing credentials',()=>{
+  const modules=readFileSync(resolve('dashboard/appdeploy-modules.html'),'utf8');
+  const store=index.match(/<section class="panel" id="amir-owner-bridge"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(store,'store ownership bridge panel is present');
+  assert.match(store,/id="amir-owner-direct-link"/);
+  assert.match(store,/href="https:\/\/amir-ai-store\.vercel\.app\/owner\.html" target="_blank" rel="noopener noreferrer"/);
+  assert.match(store,/href="https:\/\/amir-ai-store\.vercel\.app\/\?auth=login"/);
+  assert.match(index,/id="amir-owner-security-link"/);
+  assert.match(modules,/Amir AI Store — إدارة المالك/);
+  assert.match(modules,/url:"https:\/\/amir-ai-store\.vercel\.app\/owner\.html"[^}]*embed:false/);
+  assert.match(modules,/if\(a\.embed!==false\)d\.append\(btn\)/);
+  assert.doesNotMatch(index,/<iframe[^>]*src="https:\/\/amir-ai-store\.vercel\.app\//);
+  assert.doesNotMatch(index,/OWNER_LINKED_USER_ID|OWNER_LINKED_PHONE|ROYAL_SECURITY_SALT|royal_session=/);
+  assert.doesNotMatch(modules,/MoAn320222m@91|OWNER_LINKED_USER_ID|OWNER_LINKED_PHONE/);
+});
