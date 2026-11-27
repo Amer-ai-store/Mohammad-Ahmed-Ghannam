@@ -951,6 +951,20 @@ nav.side{gap:.5rem}
           <div class="toolbar"><span id="store-source" class="pill warn">بيانات تجريبية</span>
             <label class="btn" for="import-file">استيراد بيانات التطبيق</label><input id="import-file" class="sr" type="file" accept="application/json,.json">
             <button id="clear-store" type="button" hidden>العودة للبيانات التجريبية</button></div></div>
+        
+        <!-- AMIR_OWNER_CENTRAL_BRIDGE: direct, safe cross-origin entry; authorization remains on Vercel. -->
+        <section class="panel" id="amir-owner-bridge" aria-labelledby="amir-owner-bridge-title">
+          <div class="panel-head"><div><span class="eyebrow">AMIR AI STORE · CENTRAL LINK</span>
+            <h2 id="amir-owner-bridge-title">لوحة مالك المتجر — من مركز القيادة</h2>
+            <p class="small muted">مدخل مباشر إلى المتجر الإنتاجي باستخدام حساب المتجر الموجود. تتحقق الصلاحيات داخل خادم Amir AI Store؛ لا تُنسخ كلمة مرور أو جلسة دخول أو بيانات مالية إلى صفحة القيادة العامة.</p>
+          </div></div>
+          <div class="toolbar">
+            <a id="amir-owner-direct-link" class="btn" href="https://amir-ai-store.vercel.app/owner.html" target="_blank" rel="noopener noreferrer">فتح لوحة المالك المحمية</a>
+            <a class="btn" href="https://amir-ai-store.vercel.app/?auth=login" target="_blank" rel="noopener noreferrer">الدخول بحساب المتجر</a>
+            <a class="btn" href="https://amir-ai-store.vercel.app/" target="_blank" rel="noopener noreferrer">فتح المتجر الفعلي</a>
+          </div>
+          <p class="small muted">حالة الربط: بوابة الربط الخادمية مهيأة؛ يتطلب التحقق النهائي دخولًا ناجحًا من صاحب الحساب على نطاق المتجر. مصادقة Firebase للوحة المركزية مستقلة، ولا تُنشئ تسجيل دخول مشتركًا بين النطاقين. الطلبات والمخزون الظاهرة أدناه مرجعية أو مستوردة وليست أرقام المتجر الإنتاجي المعتمدة.</p>
+        </section>
         <div class="panel" id="live-box" aria-live="polite"><h3>المتجر الحي (Firebase)</h3><p class="small muted">جارٍ الفحص...</p></div>
         <div id="store-notice" class="banner"><strong>بيانات تجريبية:</strong> المنتجات هي منتجات التطبيق الافتراضية، والمستخدمون والطلبات والنزاعات أمثلة. لعرض بياناتك صدّرها من شاشة الأدمن في التطبيق (زر «تصدير البيانات للوحة الويب») ثم اضغط «استيراد بيانات التطبيق». تبقى البيانات المستوردة في متصفحك فقط.</div>
         <div class="kpis" id="s-kpis"></div>
@@ -1041,6 +1055,12 @@ nav.side{gap:.5rem}
         </form>
         <section class="panel" id="owner-security-root" aria-labelledby="owner-security-heading">
           <h2 id="owner-security-heading">أمان حساب المالك — تسجيل موحّد وتغيير كلمة المرور</h2>
+          <div id="amir-owner-security-link" class="toolbar" role="group" aria-label="إدارة مالك متجر أمير">
+            <a class="btn" href="https://amir-ai-store.vercel.app/owner.html" target="_blank" rel="noopener noreferrer">فتح إدارة Amir AI Store بصلاحية المالك</a>
+            <a class="btn" href="https://amir-ai-store.vercel.app/?auth=login" target="_blank" rel="noopener noreferrer">تسجيل دخول حساب المتجر</a>
+          </div>
+          <p class="small muted">تنبيه: حساب المالك داخل Amir AI Store منفصل عن Firebase المستخدم في مركز القيادة. تظل المصادقة والتفويض على الخادم الأصلي؛ لن تمنح هذه الروابط صلاحية لأي زائر غير مصرح له.</p>
+          
           <p class="small muted">المعرّف الإداري المعروض: <strong>admin</strong> (اسم عرض فقط، وليس كلمة مرور أو تصريحًا تلقائيًا). سجّل الدخول مرة واحدة إلى Firebase بحساب Google المعتمد؛ تُعاد الاستفادة من الجلسة داخل شاشات اللوحة نفسها.</p>
           <p id="owner-sso-status" role="status" aria-live="polite">جارٍ فحص حالة المصادقة...</p>
           <p>الحساب المتصل: <span id="owner-sso-email" class="ltr">—</span></p>
