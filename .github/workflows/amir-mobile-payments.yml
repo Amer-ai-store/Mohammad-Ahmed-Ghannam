@@ -1,0 +1,18 @@
+name: Amir mobile payment unit tests
+on:
+  pull_request:
+    paths:
+      - 'apps/amir-mobile/**'
+      - '.github/workflows/amir-mobile-payments.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: node --test apps/amir-mobile/payments.test.cjs
+      - run: node --check apps/amir-mobile/app-build.cjs
