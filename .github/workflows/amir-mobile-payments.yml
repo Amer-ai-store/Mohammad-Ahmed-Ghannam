@@ -16,3 +16,24 @@ jobs:
           persist-credentials: false
       - run: node --test apps/amir-mobile/payments.test.cjs
       - run: node --check apps/amir-mobile/app-build.cjs
+      - name: Build installable app from public storefront HTML (read only)
+        shell: bash
+        run: |
+          d="$(mktemp -d)"
+          curl --fail --silent --show-error --location --max-time 40 https://amir-ai-store.vercel.app/ -o "$d/index.html"
+          node apps/amir-mobile/app-build.cjs "$d"
+          node --check "$d/amir-mobile.js"
+          node --check "$d/amir-app-sw.js"
+          node - "$d" <<'JS'
+          const fs=require('node:fs'), assert=require('node:assert/strict'), d=process.argv[2];
+          const m=JSON.parse(fs.readFileSync(d+'/manifest.webmanifest'));
+          assert.equal(m.display,'standalone');
+          assert.equal(m.dir,'rtl');
+          for(const i of m.icons){const b=fs.readFileSync(d+i.src);const n=parseInt(i.sizes);assert.equal(b.readUInt32BE(16),n);assert.equal(b.readUInt32BE(20),n);}
+          const h=fs.readFileSync(d+'/index.html','utf8');
+          assert(h.includes('id="checkoutTrigger" disabled'));assert(h.includes('id="amirInstall"'));assert(h.includes('id="amirPayStatus"'));
+          const sw=fs.readFileSync(d+'/amir-app-sw.js','utf8');
+          assert(sw.includes("u.pathname.startsWith('/api/')"));
+          assert(fs.existsSync(d+'/offline-amir.html'));
+          console.log('PWA_BUILD_ACCEPTANCE_PASS; 192/512 icons; install UI; offline; checkout locked');
+          JS
