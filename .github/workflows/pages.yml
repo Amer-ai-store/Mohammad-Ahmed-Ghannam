@@ -1,5 +1,8 @@
 name: Public-safe unified command dashboard — GitHub Pages
 # Owner-authorized static-only release. No financial backend, secrets, or PR deployment.
+# SECURITY GATE #102: push/PR only validates; publish needs an explicit manual dispatch.
+# GitHub admins must also configure reviewers and branch protection independently.
+# Vercel auto-production deployments are separate and are NOT guarded by this workflow.
 on:
   pull_request:
     paths:
@@ -54,7 +57,7 @@ jobs:
           print("PASS: static public status only; all private evidence URLs withheld")
           PY
   package-static-site:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     needs: verify-public-artifact
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -69,7 +72,7 @@ jobs:
         with:
           path: ./dashboard
   publish:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     needs: package-static-site
     runs-on: ubuntu-24.04
     timeout-minutes: 10

@@ -37,6 +37,37 @@ test('public status view is GET-only with no backend commands or persistent stor
  assert.doesNotMatch(js,/\bmethod:\s*['"](?:POST|PUT|DELETE|PATCH)['"]/);
  assert.doesNotMatch(js,/fetch\(['"]https:\/\/(?:docs|drive)\.google\.com/);
 });
+test('deployment READY and acceptance are represented separately in same canonical screen',()=>{
+ const build=ITEMS.find(x=>x.id==='vercel-build');
+ const prod=ITEMS.find(x=>x.id==='production');
+ const pages=ITEMS.find(x=>x.id==='public');
+ const gate=ITEMS.find(x=>x.id==='main-gate');
+ assert.equal(build.status,'مثبت');
+ assert.match(build.scope,/لا اعتماد/);
+ assert.equal(prod.status,'غير مثبت');
+ assert.match(prod.current,/READY/);
+ assert.match(prod.current,/Firebase UID/);
+ assert.match(pages.ref,/43533970613/);
+ assert.match(gate.current,/protected=false/);
+ assert.equal(approvalStatus(),'غير معتمد إنتاجيًا');
+ assert.ok(TIMELINE.some(x=>x.ref.includes('Ruleset #25729710')));
+});
+test('GitHub Pages cannot auto-publish on a push to main',()=>{
+ const workflow=readFileSync('.github/workflows/pages.yml','utf8');
+ const packageJob=workflow.match(/^  package-static-site:\n([\s\S]*?)(?=^  publish:)/m);
+ const publishJob=workflow.match(/^  publish:\n([\s\S]*?)(?=^  verify-live:)/m);
+ assert.ok(packageJob && publishJob);
+ for(const job of [packageJob[1],publishJob[1]]){
+  const gate=job.match(/^    if: (.*)$/m);
+  assert.ok(gate);
+  assert.match(gate[1],/github\.event_name == 'workflow_dispatch'/);
+  assert.match(gate[1],/github\.ref == 'refs\/heads\/main'/);
+  assert.doesNotMatch(gate[1],/'push'/);
+  assert.doesNotMatch(gate[1],/\|\|/);
+ }
+ assert.match(workflow,/^  push:/m);
+ assert.match(workflow,/^  workflow_dispatch:/m);
+});
 test('valid evidence is classified as unreviewed, never production approved',()=>{
  const result=validateEvidence(good);
  assert.equal(result.review,'USER_SUPPLIED_UNREVIEWED');
