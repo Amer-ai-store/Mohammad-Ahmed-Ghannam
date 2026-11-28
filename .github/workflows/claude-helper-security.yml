@@ -1,0 +1,26 @@
+name: Claude OAuth helper safety regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/save-claude-token.sh'
+      - 'scripts/tests/test_secure_claude_helper.sh'
+      - '.github/workflows/claude-helper-security.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/save-claude-token.sh'
+      - 'scripts/tests/test_secure_claude_helper.sh'
+      - '.github/workflows/claude-helper-security.yml'
+permissions:
+  contents: read
+jobs:
+  no-credential-transcript:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # pinned
+        with:
+          persist-credentials: false
+      - name: Test helper syntax and no-secret fail-closed paths
+        run: bash scripts/tests/test_secure_claude_helper.sh

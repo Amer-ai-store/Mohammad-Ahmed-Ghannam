@@ -1,0 +1,28 @@
+# Repository-native, no-cost supplemental DCO check.
+# Verifies actual author/committer trailers; does not impersonate the DCO GitHub App.
+name: DCO contributor sign-off safety
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+jobs:
+  verify-dco:
+    name: verify-commit-signoffs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # pinned
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject unsigned and spoofed test commits
+        shell: bash
+        run: bash scripts/tests/test_pr_dco.sh
+      - name: Verify original PR commits and contributor attestation
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/tests/check_pr_dco.sh "$BASE_SHA" "$HEAD_SHA"
