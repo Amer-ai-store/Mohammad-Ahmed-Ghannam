@@ -13,6 +13,10 @@ on:
       - "dashboard/tests/jawafa-auth-guard.test.cjs"
       - "dashboard/tests/advisor-fallback.test.cjs"
       - "dashboard/tests/advisor-browser-smoke.cjs"
+      - "dashboard/trustsoft/**"
+      - "dashboard/tests/trustsoft-native-embed.test.cjs"
+      - "dashboard/tests/trustsoft-browser-smoke.cjs"
+      - "tools/trustsoft-archive/**"
       - "jawafa-command-bridge/**"
       - "jawafa-private-tailnet/**"
       - ".github/workflows/jawafa-unified-qa.yml"
@@ -28,6 +32,10 @@ on:
       - "dashboard/tests/jawafa-native-integration.test.cjs"
       - "dashboard/tests/advisor-fallback.test.cjs"
       - "dashboard/tests/advisor-browser-smoke.cjs"
+      - "dashboard/trustsoft/**"
+      - "dashboard/tests/trustsoft-native-embed.test.cjs"
+      - "dashboard/tests/trustsoft-browser-smoke.cjs"
+      - "tools/trustsoft-archive/**"
       - "jawafa-command-bridge/**"
       - "jawafa-private-tailnet/**"
       - ".github/workflows/jawafa-unified-qa.yml"
@@ -46,6 +54,10 @@ jobs:
         run: node --test jawafa-command-bridge/test.cjs jawafa-command-bridge/performance-upstream.test.cjs jawafa-private-tailnet/secure-central-router.test.cjs
       - name: Run native integration and code safety tests
         run: node --test dashboard/tests/jawafa-native-integration.test.cjs dashboard/tests/jawafa-auth-guard.test.cjs dashboard/tests/jawafa-export-monitor.test.cjs dashboard/tests/advisor-fallback.test.cjs dashboard/tests/jawafa-readonly-bridge.test.cjs
+      - name: TrustSoft native, viewer/admin auth and offline archive integrity regressions
+        run: node --test dashboard/tests/trustsoft-native-embed.test.cjs tools/trustsoft-archive/build-manifest.test.cjs
+      - name: Chromium E2E — real TrustSoft ShadowRoot, viewer default and session close
+        run: node dashboard/tests/trustsoft-browser-smoke.cjs
       - name: Browser navigation, real DOM, no iframe
         shell: bash
         run: |

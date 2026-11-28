@@ -1,4 +1,7 @@
 'use strict';
+/* Shared TrustSoft client: standalone and native host use the same 12-screen implementation. */
+(function(){
+function initializeTrustSoft(document){
 const labels={overview:'نظرة عامة',control:'المراقبة والسيطرة',sales:'المبيعات',purchases:'المشتريات',accounting:'المحاسبة',checks:'الشيكات',inventory:'المخزون',users:'المستخدمون',operations:'التقارير التشغيلية',financial:'التقارير المالية',investigation:'التحقيق المالي',schema:'المخطط والعلاقات'};
 const errors={agent_sql_not_verified:'لم يثبت اتصال SQL بواسطة وكيل الخادم',sql_not_configured:'اتصال SQL غير مهيأ',sql_driver_missing:'برنامج تشغيل SQL غير مثبت',sql_connection_or_query_failed:'تعذر الاتصال أو تنفيذ الاستعلام',read_only_principal_required:'الحساب يملك صلاحيات تتجاوز القراءة؛ أُوقفت القراءة',tls_configuration_required:'يلزم اتصال مشفر بشهادة موثوقة',wrong_server:'الخادم لا يطابق JAWAFFASVR',dashboard_unreachable:'تعذر الاتصال بخدمة اللوحة',wrong_database:'قاعدة البيانات لا تطابق Jawafa_DB',invalid_mapping:'ربط الأعمدة غير صالح'};
 const $=id=>document.getElementById(id);
@@ -7,9 +10,10 @@ const portalApi=document.body?.dataset.apiOrigin;
 const portalClient=portalApi==='https://trustsoft-control.zxzx-mohammad91.workers.dev'&&globalThis.location?.origin==='https://amer-ai-store.github.io';
 const invalidPortal=Boolean(portalApi)&&!portalClient;
 let portalSession='',portalGeneration=0;
-async function acceptPortalLogin(response){
+async function acceptPortalLogin(response, expectedGeneration=portalGeneration){
  if(!portalClient)return;
  const data=await response.json();
+ if(expectedGeneration!==portalGeneration)throw Error('portal_session_closed');
  if(typeof data.session!=='string'||data.session.length>4096||data.session.length<32)throw Error('portal_session_missing');
  portalSession=data.session;
 }
@@ -43,13 +47,35 @@ if(localFile){
 
 const dedicatedControl=document.body?.dataset.startSection==='control';
 const adminEntry=dedicatedControl||(portalClient&&document.body?.dataset.portalAdmin==='true');
+const roleSelect=$('login-role'),loginTokenLabel=$('login-token-label');
+if(roleSelect&&loginTokenLabel){
+ const syncLoginRole=()=>{loginTokenLabel.textContent=roleSelect.value==='admin'?'مفتاح إدارة TrustSoft':'مفتاح العرض (قراءة فقط)';};
+ roleSelect.addEventListener('change',syncLoginRole);syncLoginRole();
+}
 let selected=dedicatedControl||document.body?.dataset.defaultSection==='control'?'control':'overview',snapshot=null,busy=false,timer;
 function el(tag,text){const n=document.createElement(tag);n.textContent=text;return n;}
 for(const [key,label] of Object.entries(labels)){if(dedicatedControl&&key!=='control')continue;const b=el('button',label);b.onclick=()=>{selected=key;render();};b.dataset.section=key;$('nav').append(b);}
 function table(rows){if(!rows?.length)return el('div','لا توجد نتائج مثبتة لهذا العرض.');const wrap=document.createElement('div'),t=document.createElement('table'),head=document.createElement('thead'),body=document.createElement('tbody'),keys=[...new Set(rows.flatMap(Object.keys))],tr=document.createElement('tr');keys.forEach(k=>tr.append(el('th',k)));head.append(tr);rows.forEach(row=>{const r=document.createElement('tr');keys.forEach(k=>r.append(el('td',typeof row[k]==='object'?JSON.stringify(row[k]):String(row[k]??'—'))));body.append(r);});t.append(head,body);wrap.className='table-scroll';wrap.append(t);return wrap;}
 function render(){if(!snapshot)return;
  $('title').textContent=labels[selected];document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',String(b.dataset.section===selected)));
- const s=snapshot,d=s.data,ok=s.state==='connected'&&!s.stale;
+ const s=snapshot,raw=s.data;
+ const d=raw&&typeof raw==='object'?{
+  ...raw,
+  catalog:Array.isArray(raw.catalog)?raw.catalog.filter(x=>x&&typeof x==='object'):[],
+  relations:Array.isArray(raw.relations)?raw.relations:[],
+  sections:raw.sections&&typeof raw.sections==='object'&&!Array.isArray(raw.sections)?raw.sections:{},
+  investigation:{findings:Array.isArray(raw.investigation?.findings)?raw.investigation.findings:[]}
+ }:null;
+ const report=globalThis.TrustSoftInsights?.analyze(s);
+ const ok=s.state==='connected'&&!s.stale&&Boolean(d)&&report?.evidence==='AUTHENTICATED_SAMPLE_ONLY';
+ if(report && $('insights')){
+  const target=$('insights');target.replaceChildren();
+  target.append(el('p','حالة الدليل: '+report.evidence+' • عدد جداول الفهرس المرئية: '+report.tableCatalogCount+' • صفوف العينات: '+report.sampleRowCount));
+  target.append(el('p','وحدة الحسابات تعرض عينات فقط ولا تعتمد المجاميع المالية أو استنتاجات الذكاء الاصطناعي دون تحقق مستقل.'));
+  if(report.anomalies.length)target.append(table(report.anomalies.map(x=>({ملاحظة:x}))));
+  if(report.sections.length)target.append(table(report.sections.map(x=>({القسم:x.section,صفوف_العينة:x.sampleRows,حالة_المصدر:x.state,النطاق:x.scope}))));
+ }
+
  $('status').textContent=ok?'متصل • استعلام ناجح':'غير متصل / بيانات غير حديثة';$('status').dataset.ok=String(ok);
  $('alert').hidden=ok;$('alert').textContent=(errors[s.error]||s.error||'بانتظار التحقق')+' — لا توجد بيانات حية مؤكدة. أي بيانات سابقة أدناه قديمة.';
  $('updated').textContent='آخر قراءة ناجحة: '+(s.last_success?new Date(s.last_success*1000).toLocaleString('ar'):'لم تحدث');
@@ -57,13 +83,19 @@ function render(){if(!snapshot)return;
  $('control-panel').hidden=selected!=='control';$('data-panel').hidden=selected==='control';if(selected==='control'){$('cards').hidden=!controlState;$('alert').hidden=true;$('status').textContent='قناة الإدارة • جارٍ التحقق';refreshControl();return renderEvents();}$('cards').hidden=false;
  $('panel-title').textContent=labels[selected];$('scope').textContent='';$('content').replaceChildren();
  if(!d){$('content').append(el('div','لم يتم جلب بيانات من TrustSoft. لا تُعرض بيانات تجريبية.'));return renderEvents();}
- if(selected==='overview'){$('content').append(table(Object.entries(d.sections).map(([k,v])=>({القسم:labels[k]||k,الحالة:v.state,صفوف_العينة:v.rows.length}))));}
+ if(selected==='overview'){$('content').append(table(Object.entries(d.sections).map(([k,v])=>({القسم:labels[k]||k,الحالة:v?.state||'unverified',صفوف_العينة:Array.isArray(v?.rows)?v.rows.length:0}))));}
  else if(selected==='schema'){$('scope').textContent=(d.schema_state==='sample'?'عينة محدودة من المخطط؛ ':d.schema_state==='not_discovered'?'لم يُكتشف المخطط بعد؛ ':'')+'المخطط المرئي للحساب فقط؛ غياب علاقة معلنة لا يثبت غياب علاقة أعمال.';$('content').append(table(d.catalog),el('h3','العلاقات المعلنة'),table(d.relations));}
  else if(selected==='investigation'){$('scope').textContent='نطاق عينة فقط. فحص السندات المفقودة غير منفذ حتى إثبات اكتمال التسلسل والإلغاءات.';$('content').append(table(d.investigation.findings));}
  else{const section=d.sections[selected];$('scope').textContent=section?.state==='sample'?'عينة بحد أقصى 200 صف • '+section.scope:'لم يُعتمد ربط هذا القسم بجداول TrustSoft بعد.';$('content').append(table(section?.rows));}
  renderEvents();
 }
-function renderEvents(){$('events').replaceChildren(table((snapshot.events||[]).slice().reverse().map(e=>({الحدث:e.type,الوقت:new Date(e.utc_epoch*1000).toISOString()}))));}
+function renderEvents(){
+ const events=Array.isArray(snapshot?.events)?snapshot.events:[];
+ $('events').replaceChildren(table(events.slice().reverse().map(e=>({
+  الحدث:e?.type||'غير معروف',
+  الوقت:Number.isFinite(e?.utc_epoch)?new Date(e.utc_epoch*1000).toISOString():'غير معروف'
+ }))));
+}
 async function refresh(){
  if(localFile||busy)return false;busy=true;clearTimeout(timer);$('refresh').disabled=true;
  try{
@@ -88,17 +120,19 @@ async function refresh(){
 
 $('login').onsubmit=async e=>{
  e.preventDefault();if(localFile)return;
+ const loginGeneration=portalGeneration;
  $('login-submit').disabled=true;
  try{
   if(portalClient)portalSession='';
-  const r=await apiRequest(adminEntry?'/api/admin/login':'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:$('token').value})});
+  const loginAsAdmin=$('login-role')?.value==='admin'||(!$('login-role')&&adminEntry);
+  const r=await apiRequest(loginAsAdmin?'/api/admin/login':'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:$('token').value})});
   $('token').value='';
   if(!r.ok){
    const failure=await r.json();
    $('login-error').textContent=failure.error==='admin_not_configured'?'خدمة إدارة الموقع لم تُهيأ بعد؛ يلزم إعداد مضيف الويب.':'لم يُقبل مفتاح الدخول. تحقق من المفتاح الخاص بهذا الموقع.';
    return;
   }
-  await acceptPortalLogin(r);
+  await acceptPortalLogin(r,loginGeneration);
   $('login-error').textContent='';
   if(!await refresh())$('login-error').textContent='لم تثبت جلسة الدخول. استخدم رابط HTTPS للموقع واسمح بملفات ارتباطه، ثم أعد المحاولة.';
  }catch{
@@ -169,9 +203,10 @@ async function submitAction(action){
 }
 $('admin-login').onsubmit=async e=>{
  e.preventDefault();if(localFile)return;
+ const loginGeneration=portalGeneration;
  try{
   const r=await apiRequest('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:$('admin-token').value})});
-  $('admin-token').value='';if(!r.ok)throw Error();await acceptPortalLogin(r);await refreshControl();
+  $('admin-token').value='';if(!r.ok)throw Error();await acceptPortalLogin(r,loginGeneration);await refreshControl();
  }catch{$('control-message').textContent='تعذر دخول الإدارة؛ تحقق من المفتاح وإعداد الخدمة.';}
 };
 
@@ -192,3 +227,25 @@ document.addEventListener?.('visibilitychange',()=>{
  if(document.visibilityState==='visible'&&$('auto').checked&&!localFile)refresh();
 });
 refresh();
+
+return Object.freeze({close:clearPortalState, refresh});
+}
+globalThis.TrustSoftEmbedded = Object.freeze({
+ mount(shadowRoot){
+  if(!shadowRoot || typeof shadowRoot.getElementById!=='function') throw Error('TRUSTSOFT_HOST_REQUIRED');
+  const page=globalThis.document;
+  const scoped={
+   getElementById(id){return shadowRoot.getElementById(id);},
+   querySelectorAll(selector){return shadowRoot.querySelectorAll(selector);},
+   createElement(tag){return page.createElement(tag);},
+   body:{dataset:{apiOrigin:'https://trustsoft-control.zxzx-mohammad91.workers.dev',portalAdmin:'false',defaultSection:'overview'}},
+   addEventListener(type,handler){page.addEventListener(type,handler);},
+   get visibilityState(){return page.visibilityState;}
+  };
+  const roleSelect=shadowRoot.getElementById('login-role');
+  if(roleSelect)roleSelect.value='viewer';
+  return initializeTrustSoft(scoped);
+ }
+});
+if(globalThis.document?.body?.dataset?.apiOrigin)initializeTrustSoft(globalThis.document);
+})();
