@@ -1926,5 +1926,15 @@ export const EN: Record<string, string> = {
   "المتابعة كضيف دون خادم": "Continue as guest without a server",
   "خيار تسجيل الدخول التجاري أو استكشاف المتجر كضيف.": "Sign in to the store or explore as a guest.",
   "الحساب التجاري يحتاج اتصالًا بخادم آمن، لكن يمكنك تصفح المنتجات وتخصيص جوازك دون خادم.": "A store account needs a secure server, but you can browse products and personalize your passport without one.",
-  "من اهتماماتك على هذا الجهاز": "From your interests on this device"
+  "من اهتماماتك على هذا الجهاز": "From your interests on this device",
+  "عرض قائمة": "View menu for",
+  "صنف متاح": "available items",
+  "قائمة": "Menu of",
+  "لا تتوفر أصناف حاليًا.": "No menu items are available right now.",
+  "تصفح جميع المنتجات": "Browse all products",
+  "المطاعم": "Restaurants",
+  "اختر مطعمًا، ثم أضف أصنافه إلى سلتك": "Choose a restaurant and add its items to your cart",
+  "اربط خادم المتجر لعرض المطاعم وأصنافها الفعلية.": "Connect the store server to see real restaurants and their menus.",
+  "لا توجد مطاعم متاحة": "No restaurants available",
+  "تظهر المطاعم النشطة التي أضافها مدير المتجر هنا.": "Active restaurants added by the store manager appear here."
 };
